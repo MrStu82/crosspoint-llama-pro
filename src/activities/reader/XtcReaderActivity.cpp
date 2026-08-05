@@ -23,6 +23,7 @@
 #include "XtcReaderChapterSelectionActivity.h"
 #include "components/UITheme.h"
 #include "fontIds.h"
+#include "util/BookProgressBadge.h"
 
 void XtcReaderActivity::onEnter() {
   Activity::onEnter();
@@ -435,6 +436,14 @@ void XtcReaderActivity::saveProgress() const {
   data[3] = (currentPage >> 24) & 0xFF;
   if (!ProgressFile::writeAtomic(xtc->getCachePath(), data, sizeof(data))) {
     LOG_ERR("XTR", "Failed to save progress: page %lu", currentPage);
+    return;
+  }
+
+  const uint32_t pageCount = xtc->getPageCount();
+  if (pageCount > 0) {
+    // Clamp to last valid page to avoid sentinel value (currentPage == pageCount)
+    const uint32_t clampedPage = (currentPage >= pageCount) ? pageCount - 1 : currentPage;
+    BookProgressBadge::write(xtc->getCachePath(), xtc->calculateProgress(clampedPage));
   }
 }
 

@@ -28,10 +28,11 @@ namespace ProgressFile {
 // repair an already-corrupted progress.bin -- removing the stale file may itself
 // fail at the FAT level, in which case recovery still requires fsck on a host.
 //
-// Returns true only if the new progress.bin is fully in place.
-inline bool writeAtomic(const std::string& cachePath, const uint8_t* data, size_t len) {
-  const std::string finalPath = cachePath + "/progress.bin";
-  const std::string tmpPath = cachePath + "/progress.bin.tmp";
+// Returns true only if the new file is fully in place.
+inline bool writeAtomic(const std::string& cachePath, const uint8_t* data, size_t len,
+                        const std::string& filename = "progress.bin") {
+  const std::string finalPath = cachePath + "/" + filename;
+  const std::string tmpPath = cachePath + "/" + filename + ".tmp";
 
   {
     HalFile f;

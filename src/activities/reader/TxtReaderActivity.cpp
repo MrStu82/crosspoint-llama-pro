@@ -16,6 +16,7 @@
 #include "RecentBooksStore.h"
 #include "components/UITheme.h"
 #include "fontIds.h"
+#include "util/BookProgressBadge.h"
 
 namespace {
 constexpr size_t CHUNK_SIZE = 8 * 1024;  // 8KB chunk for reading
@@ -424,6 +425,13 @@ void TxtReaderActivity::saveProgress() const {
   data[3] = 0;
   if (!ProgressFile::writeAtomic(txt->getCachePath(), data, sizeof(data))) {
     LOG_ERR("TRS", "Failed to save progress: page %d", currentPage);
+    return;
+  }
+
+  if (totalPages > 0) {
+    int percent = static_cast<int>((currentPage + 1) * 100.0f / totalPages + 0.5f);
+    if (percent > 100) percent = 100;
+    BookProgressBadge::write(txt->getCachePath(), percent);
   }
 }
 

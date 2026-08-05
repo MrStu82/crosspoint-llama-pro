@@ -6,6 +6,7 @@
 #include <optional>
 
 #include "ProgressFile.h"
+#include "util/BookProgressBadge.h"
 
 namespace EpubReaderUtils {
 
@@ -35,6 +36,13 @@ inline bool saveProgress(const Epub& epub, int spineIndex, int pageNumber, int p
   if (!ProgressFile::writeAtomic(epub.getCachePath(), data, dataSize)) {
     return false;
   }
+
+  if (pageCount > 0) {
+    const float chapterProgress = static_cast<float>(pageNumber) / static_cast<float>(pageCount);
+    const int percent = static_cast<int>(epub.calculateProgress(spineIndex, chapterProgress) * 100.0f + 0.5f);
+    BookProgressBadge::write(epub.getCachePath(), percent);
+  }
+
   LOG_DBG("ERS", "Progress saved: spine=%d offset=%u page=%d", spineIndex, visibleTextOffset.value_or(0), pageNumber);
   return true;
 }

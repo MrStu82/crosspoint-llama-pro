@@ -74,6 +74,41 @@ void Lyra3CoversTheme::drawRecentBookCover(GfxRenderer& renderer, Rect rect, con
                             true);
           renderer.drawIcon(CoverIcon, tileX + hPaddingInSelection + 24, tileY + hPaddingInSelection + 24, 32);
         }
+
+        // Draw progress badge in bottom-right of cover
+        if (recentBooks[i].progressPercent >= 0) {
+          bool isComplete = (recentBooks[i].progressPercent >= 100);
+          char progressStr[8];
+          if (!isComplete) {
+            snprintf(progressStr, sizeof(progressStr), "%d%%", recentBooks[i].progressPercent);
+          }
+
+          int textH = renderer.getTextHeight(SMALL_FONT_ID);
+          int badgeH = textH + 6;
+          int badgeW;
+          if (isComplete) {
+            badgeW = badgeH;  // square for checkmark
+          } else {
+            badgeW = renderer.getTextWidth(SMALL_FONT_ID, progressStr) + 8;
+          }
+          int badgeX = tileX + tileWidth - hPaddingInSelection - badgeW - 2;
+          int badgeY = tileY + hPaddingInSelection + Lyra3CoversMetrics::values.homeCoverHeight - badgeH - 4;
+          renderer.fillRect(badgeX, badgeY, badgeW, badgeH, false);  // white fill
+          renderer.drawRect(badgeX, badgeY, badgeW, badgeH, true);   // black border
+
+          if (isComplete) {
+            // Draw checkmark using lines
+            int cx = badgeX + badgeW / 2;
+            int cy = badgeY + badgeH / 2;
+            renderer.drawLine(cx - 5, cy, cx - 1, cy + 4, true);
+            renderer.drawLine(cx - 1, cy + 4, cx + 5, cy - 4, true);
+            // Thicken the lines
+            renderer.drawLine(cx - 5, cy + 1, cx - 1, cy + 5, true);
+            renderer.drawLine(cx - 1, cy + 5, cx + 5, cy - 3, true);
+          } else {
+            renderer.drawText(SMALL_FONT_ID, badgeX + 4, badgeY + 3, progressStr, true);
+          }
+        }
       }
 
       coverBufferStored = storeCoverBuffer();

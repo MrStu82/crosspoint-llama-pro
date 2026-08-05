@@ -11,6 +11,10 @@ struct RecentBook {
   std::string author;
   std::string coverBmpPath;
 
+  // Whole-book read progress (0-100), or -1 if unknown. Populated at load time from
+  // BookProgressBadge, not persisted here -- it would just go stale between reads.
+  int progressPercent = -1;
+
   bool operator==(const RecentBook& other) const { return path == other.path; }
 };
 

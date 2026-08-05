@@ -19,6 +19,7 @@
 #include "RecentBooksStore.h"
 #include "components/UITheme.h"
 #include "fontIds.h"
+#include "util/BookProgressBadge.h"
 
 int HomeActivity::getMenuItemCount() const {
   int count = 4;  // File Browser, Recents, File transfer, Settings
@@ -47,7 +48,9 @@ void HomeActivity::loadRecentBooks(int maxBooks) {
       continue;
     }
 
-    recentBooks.push_back(book);
+    RecentBook bookWithProgress = book;
+    bookWithProgress.progressPercent = BookProgressBadge::read(book.path).value_or(-1);
+    recentBooks.push_back(bookWithProgress);
   }
 }
 

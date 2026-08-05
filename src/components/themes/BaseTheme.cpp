@@ -547,6 +547,20 @@ void BaseTheme::drawRecentBookCover(GfxRenderer& renderer, Rect rect, const std:
           // Draw border around the card
           renderer.drawRect(bookX, bookY, bookWidth, bookHeight);
 
+          // Draw progress badge in top-right of cover
+          if (recentBooks[0].progressPercent >= 0) {
+            char progressStr[8];
+            snprintf(progressStr, sizeof(progressStr), "%d%%", recentBooks[0].progressPercent);
+            int textW = renderer.getTextWidth(SMALL_FONT_ID, progressStr);
+            int badgeW = textW + 8;
+            int badgeH = 16;
+            int badgeX = bookX + bookWidth - badgeW - 4;
+            int badgeY = bookY + 4;
+            renderer.fillRect(badgeX, badgeY, badgeW, badgeH, false);
+            renderer.drawRect(badgeX, badgeY, badgeW, badgeH, true);
+            renderer.drawText(SMALL_FONT_ID, badgeX + 4, badgeY + 2, progressStr, true);
+          }
+
           // No bookmark ribbon when cover is shown - it would just cover the art
 
           // Store the buffer with cover image for fast navigation

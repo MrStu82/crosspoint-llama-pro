@@ -14,6 +14,7 @@
 #include "ProgressFile.h"
 #include "ReaderUtils.h"
 #include "RecentBooksStore.h"
+#include "activities/home/StatsManager.h"
 #include "components/UITheme.h"
 #include "fontIds.h"
 #include "util/BookProgressBadge.h"
@@ -42,6 +43,8 @@ void TxtReaderActivity::onEnter() {
   APP_STATE.openEpubPath = filePath;
   APP_STATE.saveToFile();
   RECENT_BOOKS.addBook(filePath, fileName, "", "");
+  StatsManager::getInstance().incrementBooksOpened();
+  sessionStartTime = millis();
 
   // Trigger first update
   requestUpdate();
@@ -49,6 +52,13 @@ void TxtReaderActivity::onEnter() {
 
 void TxtReaderActivity::onExit() {
   Activity::onExit();
+
+  if (sessionStartTime != 0UL) {
+    const unsigned long sessionDurationMs = millis() - sessionStartTime;
+    StatsManager::getInstance().addReadingTimeSeconds(sessionDurationMs / 1000);
+    sessionStartTime = 0UL;
+  }
+  StatsManager::getInstance().save();
 
   // Reset orientation back to portrait for the rest of the UI
   renderer.setOrientation(GfxRenderer::Orientation::Portrait);
@@ -76,10 +86,12 @@ void TxtReaderActivity::loop() {
 
   if (prevTriggered && currentPage > 0) {
     currentPage--;
+    StatsManager::getInstance().incrementPagesRead();
     requestUpdate();
   } else if (nextTriggered) {
     if (currentPage < totalPages - 1) {
       currentPage++;
+      StatsManager::getInstance().incrementPagesRead();
       requestUpdate();
     } else {
       onGoHome();

@@ -30,6 +30,10 @@ class TxtReaderActivity final : public Activity {
   int cachedOrientedMarginBottom = 0;
   int cachedOrientedMarginLeft = 0;
 
+  // Reading-session timer, started in onEnter(), consumed in onExit() to
+  // record elapsed reading time via StatsManager::addReadingTimeSeconds.
+  unsigned long sessionStartTime = 0UL;
+
   void renderPage();
   void renderStatusBar() const;
 

@@ -21,6 +21,7 @@
 #include "ReaderUtils.h"
 #include "RecentBooksStore.h"
 #include "XtcReaderChapterSelectionActivity.h"
+#include "activities/home/StatsManager.h"
 #include "components/UITheme.h"
 #include "fontIds.h"
 #include "util/BookProgressBadge.h"
@@ -41,6 +42,8 @@ void XtcReaderActivity::onEnter() {
   APP_STATE.openEpubPath = xtc->getPath();
   APP_STATE.saveToFile();
   RECENT_BOOKS.addBook(xtc->getPath(), xtc->getTitle(), xtc->getAuthor(), xtc->getThumbBmpPath());
+  StatsManager::getInstance().incrementBooksOpened();
+  sessionStartTime = millis();
 
   // Trigger first update
   requestUpdate();
@@ -48,6 +51,13 @@ void XtcReaderActivity::onEnter() {
 
 void XtcReaderActivity::onExit() {
   Activity::onExit();
+
+  if (sessionStartTime != 0UL) {
+    const unsigned long sessionDurationMs = millis() - sessionStartTime;
+    StatsManager::getInstance().addReadingTimeSeconds(sessionDurationMs / 1000);
+    sessionStartTime = 0UL;
+  }
+  StatsManager::getInstance().save();
 
   APP_STATE.readerActivityLoadCount = 0;
   APP_STATE.saveToFile();
@@ -144,12 +154,14 @@ void XtcReaderActivity::loop() {
     } else {
       currentPage = 0;
     }
+    StatsManager::getInstance().incrementPagesRead();
     requestUpdate();
   } else if (nextTriggered) {
     currentPage += skipAmount;
     if (currentPage >= xtc->getPageCount()) {
       currentPage = xtc->getPageCount();  // Allow showing "End of book"
     }
+    StatsManager::getInstance().incrementPagesRead();
     requestUpdate();
   }
 }
@@ -161,6 +173,10 @@ void XtcReaderActivity::render(RenderLock&&) {
 
   // Bounds check
   if (currentPage >= xtc->getPageCount()) {
+    if (!bookFinishedLogged) {
+      bookFinishedLogged = true;
+      StatsManager::getInstance().incrementBooksFinished();
+    }
     // Show end of book screen. Sole load site: runs on the render task (serialized by
     // RenderLock); the main task only reads the suggestions once the flag is published.
     endOfBookOptions.loadOnce(xtc->getPath());

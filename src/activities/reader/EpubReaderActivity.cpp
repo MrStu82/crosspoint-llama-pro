@@ -34,6 +34,7 @@
 #include "ReaderUtils.h"
 #include "RecentBooksStore.h"
 #include "SdCardFontSystem.h"
+#include "activities/home/StatsManager.h"
 #include "activities/settings/TextSettingsActivity.h"
 #include "components/UITheme.h"
 #include "fontIds.h"
@@ -211,6 +212,8 @@ void EpubReaderActivity::onEnter() {
   APP_STATE.openEpubPath = epub->getPath();
   APP_STATE.saveToFile();
   RECENT_BOOKS.addBook(epub->getPath(), epub->getTitle(), epub->getAuthor(), epub->getThumbBmpPath());
+  StatsManager::getInstance().incrementBooksOpened();
+  sessionStartTime = millis();
 
   loadCachedBookmarks();
 
@@ -220,6 +223,13 @@ void EpubReaderActivity::onEnter() {
 
 void EpubReaderActivity::onExit() {
   Activity::onExit();
+
+  if (sessionStartTime != 0UL) {
+    const unsigned long sessionDurationMs = millis() - sessionStartTime;
+    StatsManager::getInstance().addReadingTimeSeconds(sessionDurationMs / 1000);
+    sessionStartTime = 0UL;
+  }
+  StatsManager::getInstance().save();
 
   // The extractor holds a raw pointer to this activity's epub; drop it before
   // the activity (and the shared_ptr) goes away.
@@ -1052,6 +1062,10 @@ void EpubReaderActivity::pageTurn(bool isForwardTurn) {
         RenderLock lock(*this);
         nextPageNumber = 0;
         currentSpineIndex++;
+        if (currentSpineIndex >= epub->getSpineItemsCount() && !bookFinishedLogged) {
+          bookFinishedLogged = true;
+          StatsManager::getInstance().incrementBooksFinished();
+        }
         section.reset();
       }
     }
@@ -1070,6 +1084,7 @@ void EpubReaderActivity::pageTurn(bool isForwardTurn) {
     }
   }
   lastPageTurnTime = millis();
+  StatsManager::getInstance().incrementPagesRead();
   requestUpdate();
 }
 

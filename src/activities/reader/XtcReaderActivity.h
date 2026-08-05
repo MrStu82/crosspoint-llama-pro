@@ -22,6 +22,12 @@ class XtcReaderActivity final : public Activity {
   int pagesUntilFullRefresh = 0;
   // Next-book suggestion menu for the End-of-Book screen
   EndOfBookOptions endOfBookOptions;
+  // Reading-session timer, started in onEnter(), consumed in onExit() to
+  // record elapsed reading time via StatsManager::addReadingTimeSeconds.
+  unsigned long sessionStartTime = 0UL;
+  // One-shot guard so reaching end-of-book only increments the finished-books
+  // stat once per session, not on every re-render of the EOB screen.
+  bool bookFinishedLogged = false;
 
   enum class StatusBarOverlayPosition { Bottom, Top };
   struct StatusBarInfo {

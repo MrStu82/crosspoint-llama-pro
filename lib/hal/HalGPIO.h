@@ -85,6 +85,10 @@ class HalGPIO {
   // GT911 capacitive Home key (X4 Pro): true once on release of a short press.
   // See InputManager::wasHomeKeyTapped() for the underlying edge detection.
   bool wasHomeKeyTapped() const;
+  // True once when the home key has been held past the SDK's long-press
+  // threshold (~700ms, InputManager::HOME_KEY_LONG_PRESS_MS), while still down.
+  // See InputManager::wasHomeKeyLongPressed().
+  bool wasHomeKeyLongPressed() const;
 
   // Verify power button was held long enough after wakeup.
   // Returns true if verification succeeded, false if device should return to sleep.

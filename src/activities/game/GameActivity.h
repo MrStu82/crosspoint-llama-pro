@@ -18,6 +18,11 @@ class GameActivity final : public Activity {
   void loop() override;
   void render(RenderLock&&) override;
   bool preventAutoSleep() override { return true; }
+  // A mid-run home-key long-hold/swipe would otherwise fall through to
+  // ActivityManager's default goHome(), silently abandoning the current run
+  // with no save prompt. Route it into the existing pause menu instead, same
+  // as EpubReaderMenuActivity does for its own modal.
+  bool handleHomeGesture() override;
 
  private:
   // Level data (~5.5KB total)

@@ -181,6 +181,11 @@ void GameActivity::openGameMenu() {
                          [this](const ActivityResult& result) { onGameMenuResult(result); });
 }
 
+bool GameActivity::handleHomeGesture() {
+  openGameMenu();
+  return true;
+}
+
 void GameActivity::onGameMenuResult(const ActivityResult& result) {
   const auto* menuResult = std::get_if<MenuResult>(&result.data);
   auto action =

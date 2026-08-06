@@ -293,10 +293,26 @@ bool MappedInputManager::wasMenuGesture() const {
   return hit;
 }
 
+bool MappedInputManager::wasHomeKeyBackGesture() const {
+  if (!gpio.wasHomeKeyTapped()) return false;
+  // Tap = zero-duration Back edge by definition. Force getHeldTime() to 0 via
+  // the override so it can never cross GO_BACK_OR_HOME_MS-style thresholds
+  // (isPressed(Back) is also never true for this synthetic edge, since it
+  // isn't backed by mapButton()'s physical-button state at all — so the
+  // "isPressed && heldTime >= threshold" long-press branch used throughout
+  // the reader/file browser can never fire for a home-key tap either way).
+  touchHeldOverrideValid = true;
+  touchHeldOverrideMs = 0;
+  touchHeldOverrideAt = millis();
+  return true;
+}
+
 bool MappedInputManager::wasHomeGesture() const {
-  // Physical capacitive Home key (X4 Pro's GT911): same "go home" action as
-  // the swipe gesture below, just via the hardware key instead of touch.
-  if (gpio.wasHomeKeyTapped()) return true;
+  // Physical capacitive Home key (X4 Pro's GT911) LONG-HOLD: short taps are
+  // synthesized into Back (see wasHomeKeyBackGesture()); only a hold past the
+  // SDK's long-press threshold triggers the app-wide "go home" gesture, same
+  // as the swipe gesture below.
+  if (gpio.wasHomeKeyLongPressed()) return true;
 
   int sx = 0;
   int sy = 0;
@@ -346,12 +362,23 @@ bool MappedInputManager::wasTextSizeGesture() const {
 }
 
 bool MappedInputManager::wasPressed(const Button button) const {
-  if (button == Button::Back && wasBackGesture()) return true;
+  if (button == Button::Back) {
+    // Evaluate both unconditionally (not `||` short-circuited) so a home-key
+    // tap is never left un-consumed just because a touch back-swipe was also
+    // live this frame.
+    const bool backSwipe = wasBackGesture();
+    const bool homeKeyBack = wasHomeKeyBackGesture();
+    if (backSwipe || homeKeyBack) return true;
+  }
   return mapButton(button, &HalGPIO::wasPressed);
 }
 
 bool MappedInputManager::wasReleased(const Button button) const {
-  if (button == Button::Back && wasBackGesture()) return true;
+  if (button == Button::Back) {
+    const bool backSwipe = wasBackGesture();
+    const bool homeKeyBack = wasHomeKeyBackGesture();
+    if (backSwipe || homeKeyBack) return true;
+  }
   return mapButton(button, &HalGPIO::wasReleased);
 }
 

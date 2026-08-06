@@ -290,6 +290,54 @@ void StatsActivity::render(RenderLock&&) {
 
   yPos += 85;
 
+  yPos += 15;
+
+  // --- LAST 7 DAYS SECTION ---
+  // Heat strip: one cell per day (oldest to newest, left to right), shaded to one of the
+  // four e-ink levels the display can actually produce (solid white / 25% dither LightGray /
+  // 50% checkerboard DarkGray / solid black) — see fillRectDither()'s Color cases. A day with
+  // an unknown date (RTC was unset that far back) or zero minutes both render as plain white;
+  // the numeral label distinguishes "no data" (a dash) from "read nothing that day" (a date).
+  renderer.fillRectDither(sidePad, yPos, screenWidth - sidePad * 2, 24, Color::LightGray);
+  renderer.drawText(UI_10_FONT_ID, sidePad + 10, yPos + 3, tr(STR_STATS_LAST_7_DAYS));
+  yPos += 45;
+
+  uint16_t last7Minutes[DAILY_HISTORY_SLOTS];
+  int last7Dates[DAILY_HISTORY_SLOTS];
+  READING_STATS.getLast7DaysMinutes(last7Minutes, last7Dates);
+
+  const int stripW = screenWidth - sidePad * 2;
+  const int cellW = stripW / DAILY_HISTORY_SLOTS;
+  const int stripH = 60;
+
+  for (int i = 0; i < DAILY_HISTORY_SLOTS; i++) {
+    const int cellX = sidePad + i * cellW;
+
+    Color level;
+    if (last7Dates[i] == 0 || last7Minutes[i] == 0) {
+      level = Color::White;
+    } else if (last7Minutes[i] < 15) {
+      level = Color::LightGray;
+    } else if (last7Minutes[i] < 45) {
+      level = Color::DarkGray;
+    } else {
+      level = Color::Black;
+    }
+
+    renderer.fillRectDither(cellX + 2, yPos, cellW - 4, stripH, level);
+    renderer.drawRect(cellX + 2, yPos, cellW - 4, stripH);
+
+    char dayLabel[4];
+    if (last7Dates[i] != 0) {
+      snprintf(dayLabel, sizeof(dayLabel), "%d", last7Dates[i] % 100);
+    } else {
+      snprintf(dayLabel, sizeof(dayLabel), "-");
+    }
+    drawCentered(UI_10_FONT_ID, dayLabel, cellX + cellW / 2, yPos + stripH + 18);
+  }
+
+  yPos += stripH + 40;
+
   const auto labels = mappedInput.mapLabels(tr(STR_BACK), tr(STR_SELECT), "", "");
   GUI.drawButtonHints(renderer, labels.btn1, labels.btn2, labels.btn3, labels.btn4);
 

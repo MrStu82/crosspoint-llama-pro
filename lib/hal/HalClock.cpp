@@ -12,13 +12,12 @@ void HalClock::begin() {
   LOG_INF("CLK", _available ? "SDK RTC found" : "RTC not found");
 }
 
-bool HalClock::getTime(uint8_t& hour, uint8_t& minute) const {
+bool HalClock::pollRtc(Rtc::DateTime& out) const {
   if (!_available) return false;
 
   const unsigned long now = millis();
   if (_lastPollMs != 0 && (now - _lastPollMs) < CLOCK_POLL_MS) {
-    hour = _cachedHour;
-    minute = _cachedMinute;
+    out = _cachedDt;
     return true;
   }
 
@@ -26,16 +25,47 @@ bool HalClock::getTime(uint8_t& hour, uint8_t& minute) const {
   if (!_sdkRtc.now(dt)) {
     if (!_hasCachedTime) return false;
     _lastPollMs = now;
-    hour = _cachedHour;
-    minute = _cachedMinute;
+    out = _cachedDt;
     return true;
   }
-  _cachedHour = dt.hour;
-  _cachedMinute = dt.minute;
+  _cachedDt = dt;
   _lastPollMs = now;
   _hasCachedTime = true;
-  hour = _cachedHour;
-  minute = _cachedMinute;
+  out = _cachedDt;
+  return true;
+}
+
+bool HalClock::getTime(uint8_t& hour, uint8_t& minute) const {
+  Rtc::DateTime dt;
+  if (!pollRtc(dt)) return false;
+  hour = dt.hour;
+  minute = dt.minute;
+  return true;
+}
+
+bool HalClock::getDate(int& yyyymmdd, uint8_t utcOffsetQuarterHoursBiased) const {
+  Rtc::DateTime dt;
+  if (!pollRtc(dt)) return false;
+
+  // Clamp against corrupted persisted values, mirroring formatTime()'s guard.
+  if (utcOffsetQuarterHoursBiased > 104) utcOffsetQuarterHoursBiased = 104;
+  const int offsetSeconds = (static_cast<int>(utcOffsetQuarterHoursBiased) - 48) * 15 * 60;
+
+  // Round-trip through mktime so day/month/year carries are calendar-correct when the
+  // offset pushes across a day boundary. Same pattern as Rtc::adjust() — the RTC stores
+  // UTC (NTP sync writes it via configTzTime("UTC0", ...)), so this is the one place that
+  // turns it into the user's local calendar day.
+  struct tm t{};
+  t.tm_year = dt.year - 1900;
+  t.tm_mon = dt.month - 1;
+  t.tm_mday = dt.day;
+  t.tm_hour = dt.hour;
+  t.tm_min = dt.minute;
+  t.tm_sec = dt.second;
+  time_t epoch = mktime(&t) + offsetSeconds;
+  localtime_r(&epoch, &t);
+
+  yyyymmdd = (t.tm_year + 1900) * 10000 + (t.tm_mon + 1) * 100 + t.tm_mday;
   return true;
 }
 
@@ -95,8 +125,7 @@ bool HalClock::syncFromNTP() {
       dt.weekday = static_cast<uint8_t>(timeinfo.tm_wday);
       if (_sdkRtc.set(dt)) {
         _lastPollMs = 0;
-        _cachedHour = dt.hour;
-        _cachedMinute = dt.minute;
+        _cachedDt = dt;
         _hasCachedTime = true;
         LOG_INF("CLK", "RTC set to %04u-%02u-%02u %02u:%02u:%02u UTC", dt.year, dt.month, dt.day, dt.hour, dt.minute,
                 dt.second);

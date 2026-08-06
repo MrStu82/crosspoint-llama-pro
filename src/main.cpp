@@ -21,6 +21,7 @@
 
 #include "CrossPointSettings.h"
 #include "CrossPointState.h"
+#include "Frontlight.h"
 #include "KOReaderCredentialStore.h"
 #include "MappedInputManager.h"
 #include "OpdsServerStore.h"
@@ -41,6 +42,7 @@ ActivityManager activityManager(renderer, mappedInputManager);
 FontDecompressor fontDecompressor;
 SdCardFontSystem sdFontSystem;
 FontCacheManager fontCacheManager(renderer.getFontMap(), renderer.getSdCardFonts());
+FrontlightManager frontlightManager;
 static unsigned long allowSleepAt = 0;
 
 // Fonts
@@ -292,6 +294,7 @@ void setup() {
   powerManager.begin();
   halTiltSensor.begin();
   halClock.begin();
+  frontlightManager.begin();
 
   LOG_INF("MAIN", "Hardware detect: %s", gpio.deviceIsX3() ? "X3" : "X4");
 
@@ -307,6 +310,11 @@ void setup() {
   HalSystem::checkPanic();
 
   SETTINGS.loadFromFile();
+  // Apply the persisted level now that settings are loaded. begin() above already
+  // left the frontlight off (setBrightness(0)) — this is the only place a non-zero
+  // value gets applied on boot, and only from a value the user explicitly set.
+  frontlightManager.setColorTemperature(SETTINGS.frontlightWarmPercent);
+  frontlightManager.setBrightness(SETTINGS.frontlightBrightness);
   APP_STATE.loadFromFile();
   RECENT_BOOKS.loadFromFile();
   I18N.setLanguage(static_cast<Language>(SETTINGS.language));

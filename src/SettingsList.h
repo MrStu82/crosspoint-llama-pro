@@ -402,6 +402,18 @@ inline std::vector<SettingInfo> getSettingsList(const SdCardFontRegistry* regist
         // on next WiFi connect, which is useful when crossing time zones.
         SettingInfo::Toggle(StrId::STR_CLOCK_SYNCED, &CrossPointSettings::clockHasBeenSynced, "clockHasBeenSynced",
                             StrId::STR_CUSTOMISE_STATUS_BAR),
+        // Frontlight (web settings only; device UI uses FrontlightActivity). Category is
+        // STR_FRONTLIGHT (not one of the four device categories), so these fall through
+        // rebuildSettingsLists()'s if/else-if chain untouched and never double-appear in
+        // the generic Display list — only reachable through the dedicated activity.
+        SettingInfo::Value(StrId::STR_BRIGHTNESS, &CrossPointSettings::frontlightBrightness,
+                           {CrossPointSettings::FRONTLIGHT_MIN, CrossPointSettings::FRONTLIGHT_MAX,
+                            CrossPointSettings::FRONTLIGHT_STEP},
+                           "frontlightBrightness", StrId::STR_FRONTLIGHT),
+        SettingInfo::Value(StrId::STR_WARM_COOL_BALANCE, &CrossPointSettings::frontlightWarmPercent,
+                           {CrossPointSettings::FRONTLIGHT_MIN, CrossPointSettings::FRONTLIGHT_MAX,
+                            CrossPointSettings::FRONTLIGHT_STEP},
+                           "frontlightWarmPercent", StrId::STR_FRONTLIGHT),
     };
     // Only show tilt page turn setting when the QMI8658 IMU is present (X3)
     if (halTiltSensor.isAvailable()) {

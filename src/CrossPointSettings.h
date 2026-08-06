@@ -241,6 +241,17 @@ class CrossPointSettings : public PersistableStore<CrossPointSettings> {
   // 2=Title). See OpdsFilenameFormat. Persisted via a category-less SettingInfo::Enum,
   // edited from the OPDS server list; hidden from the on-device Settings screen.
   uint8_t opdsFilenameFormat = 0;
+  // Frontlight brightness/warm-cool balance, 0-100. Persisted via a category-less
+  // SettingInfo::Value in SettingsList.h (web API + auto-persistence only; the
+  // on-device UI lives in FrontlightActivity, not the generic Settings list).
+  // Brightness defaults to 0 (off) deliberately: the GPIO8/GPIO9 mapping is an
+  // unconfirmed hardware hypothesis, so a fresh boot must never drive the pins
+  // non-zero on its own — see crosspoint-llama-device-validation.md.
+  static constexpr uint8_t FRONTLIGHT_MIN = 0;
+  static constexpr uint8_t FRONTLIGHT_MAX = 100;
+  static constexpr uint8_t FRONTLIGHT_STEP = 5;
+  uint8_t frontlightBrightness = 0;
+  uint8_t frontlightWarmPercent = 50;
   // Hide battery percentage
   uint8_t hideBatteryPercentage = HIDE_NEVER;
   // Long-press page turn button behavior

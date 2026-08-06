@@ -74,6 +74,69 @@ HalGPIO::DeviceType nvsToDeviceType(NvsDeviceValue value) {
   return value == NvsDeviceValue::X3 ? HalGPIO::DeviceType::X3 : HalGPIO::DeviceType::X4;
 }
 
+constexpr char NVS_KEY_DISP_OVERRIDE[] = "disp_ovr";  // 0=auto, 1=force SSD1677, 2=force UC8179
+
+enum class DisplayControllerOverride : uint8_t { Auto = 0, ForceSsd1677 = 1, ForceUc8179 = 2 };
+
+DisplayControllerOverride readDisplayControllerOverride() {
+  Preferences prefs;
+  if (!prefs.begin(HW_NAMESPACE, true)) {
+    return DisplayControllerOverride::Auto;
+  }
+  const uint8_t raw = prefs.getUChar(NVS_KEY_DISP_OVERRIDE, static_cast<uint8_t>(DisplayControllerOverride::Auto));
+  prefs.end();
+  if (raw > static_cast<uint8_t>(DisplayControllerOverride::ForceUc8179)) {
+    return DisplayControllerOverride::Auto;
+  }
+  return static_cast<DisplayControllerOverride>(raw);
+}
+
+const char* displayControllerName(BoardConfig::DisplayController c) {
+  switch (c) {
+    case BoardConfig::DisplayController::SSD1677: return "SSD1677";
+    case BoardConfig::DisplayController::UC8253: return "UC8253";
+    case BoardConfig::DisplayController::ED2208: return "ED2208";
+    case BoardConfig::DisplayController::LgfxEpd: return "LgfxEpd";
+    case BoardConfig::DisplayController::IT8951: return "IT8951";
+    case BoardConfig::DisplayController::UC8279: return "UC8279";
+    case BoardConfig::DisplayController::UC8179: return "UC8179";
+  }
+  return "unknown";
+}
+
+// Resolves BoardConfig::ACTIVE.displayController and logs, on every boot, which
+// of three sources decided it — so a misread on silicon the bus probe has never
+// run against before (X4 Pro, see the FREEINK_DEVICE_X4PRO block in begin()
+// below) is a one-line serial read, not a guess:
+//   - "override"          : forced via NVS cphw/disp_ovr, a recovery/support
+//                            escape hatch. The probe never runs in this case.
+//   - "bus probe"         : freeink::applyXteinkDisplayController() confirmed
+//                            an UltraChip (UC81xx) part via the live half-duplex
+//                            SPI read and promoted the profile default.
+//   - "fallback default"  : probe found no UltraChip signature; the profile's
+//                            compile-time default (BoardConfig::ACTIVE literal)
+//                            stands unchanged.
+// The OEM hw_calib/screenType NVS value is read and logged separately, inside
+// applyXteinkDisplayController() itself — it is diagnostic-only by design
+// (unreliable in the field: a full-flash from another unit overwrites it), so
+// it never decides the outcome and deliberately never appears as a source here.
+void applyDisplayControllerWithOverride() {
+  const DisplayControllerOverride ovr = readDisplayControllerOverride();
+  if (ovr == DisplayControllerOverride::ForceSsd1677 || ovr == DisplayControllerOverride::ForceUc8179) {
+    BoardConfig::ACTIVE.displayController = ovr == DisplayControllerOverride::ForceSsd1677
+                                                 ? BoardConfig::DisplayController::SSD1677
+                                                 : BoardConfig::DisplayController::UC8179;
+    BoardConfig::ACTIVE.displayControllerVariant = 0;
+    LOG_INF("HW", "Display controller: %s (source: override, probe skipped)",
+            displayControllerName(BoardConfig::ACTIVE.displayController));
+    return;
+  }
+
+  const bool promoted = freeink::applyXteinkDisplayController();
+  LOG_INF("HW", "Display controller: %s (source: %s)", displayControllerName(BoardConfig::ACTIVE.displayController),
+          promoted ? "bus probe" : "fallback default");
+}
+
 HalGPIO::DeviceType detectDeviceTypeWithFingerprint() {
   // Explicit override for recovery/support:
   // 0 = auto, 1 = force X4, 2 = force X3
@@ -121,7 +184,7 @@ void HalGPIO::begin() {
   // checks the OEM hw_calib/screenType value first, then falls back to its
   // two-pass display-bus probe. X3's facade keys panel selection off the sibling
   // board profile, so preserve a detected UC8279 through setDisplayX3().
-  freeink::applyXteinkDisplayController();
+  applyDisplayControllerWithOverride();
   if (deviceIsX3() && BoardConfig::ACTIVE.displayController == BoardConfig::DisplayController::UC8279) {
     BoardConfig::selectDevice(BoardConfig::Board::XteinkX3Uc8279);
   }
@@ -134,6 +197,22 @@ void HalGPIO::begin() {
   }
 #else
   _deviceType = DeviceType::X4;
+
+#if FREEINK_DEVICE_X4PRO
+  // X4 Pro carries the same SSD1677/UC8179 batch variance as X4 (C3), but this
+  // device is FREEINK_MCU_S3, not FREEINK_MCU_C3, so it fell outside the probe
+  // call above entirely — BoardConfig::ACTIVE.displayController stayed pinned
+  // at its compile-time SSD1677 default on every boot regardless of the unit's
+  // actual silicon. Device-scoped (not FREEINK_MCU_S3-wide): the other S3
+  // boards (M5/Murphy/de-link/LilyGo/Sticky) don't have this batch variance.
+  // Runs before EpdBus::begin()'s SPI.begin() (FreeInkDisplay.cpp) claims the
+  // display pins for the real driver, same ordering constraint as the X3/X4
+  // probe above. The probe is stateless (XteinkDetect.cpp writes nothing to
+  // NVS), so it re-reads live silicon on every boot — no cached verdict to
+  // invalidate. Same override + boot-time outcome log used by the X3/X4 path
+  // above; see applyDisplayControllerWithOverride() for the NVS key/log shape.
+  applyDisplayControllerWithOverride();
+#endif
 #endif
   inputMgr.begin();
 }

@@ -225,8 +225,8 @@ void EpubReaderActivity::onExit() {
   Activity::onExit();
 
   if (sessionStartTime != 0UL) {
-    const unsigned long sessionDurationMs = millis() - sessionStartTime;
-    StatsManager::getInstance().addReadingTimeSeconds(sessionDurationMs / 1000);
+    const unsigned long secs = (millis() - sessionStartTime) / 1000;
+    StatsManager::getInstance().addReadingTimeSeconds(secs);
     sessionStartTime = 0UL;
   }
   StatsManager::getInstance().save();
@@ -1084,6 +1084,11 @@ void EpubReaderActivity::pageTurn(bool isForwardTurn) {
     }
   }
   lastPageTurnTime = millis();
+  if (sessionStartTime != 0UL) {
+    const unsigned long secs = (millis() - sessionStartTime) / 1000;
+    StatsManager::getInstance().addReadingTimeSeconds(secs);
+    sessionStartTime += secs * 1000;
+  }
   StatsManager::getInstance().incrementPagesRead();
   requestUpdate();
 }

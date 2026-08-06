@@ -193,6 +193,45 @@ void StatsActivity::render(RenderLock&&) {
 
   int colWidth = (screenWidth - (sidePad * 2)) / 3;
 
+  // The three stat blocks below (Today / All Time / All Items) plus the 7-day heat
+  // strip were laid out at fixed pixel spacing that was never checked against the
+  // real panel height, and ran off the bottom of the screen. Measure how much height
+  // they actually need against what's really left above the button-hints row, and if
+  // it doesn't fit, compress the spacing (not the content) by a single scale factor
+  // derived from that measurement — rather than hand-picking new fixed offsets that
+  // would only happen to work for today's strings/fonts/screen.
+  constexpr int kBlockValueOffset = 34;   // value baseline -> first label line
+  constexpr int kBlockLabel2Offset = 52;  // value baseline -> second label line
+  constexpr int kBlockDividerHeight = 65;
+  constexpr int kSectionHeaderGap = 45;  // header strip -> block start
+  constexpr int kBlockGap = 85;          // block start -> next section header
+  constexpr int kSectionGap = 15;        // extra breathing room after each block
+  constexpr int kBaseStripH = 60;
+  constexpr int kStripLabelGap = 18;     // strip bottom -> day-number label
+  constexpr int kStripLabelHeight = 16;  // label text height allowance
+
+  const int naturalHeight = 3 * (kSectionHeaderGap + kBlockGap + kSectionGap) + kSectionHeaderGap + kBaseStripH +
+                            kStripLabelGap + kStripLabelHeight;
+
+  const int screenHeight = renderer.getScreenHeight();
+  const int bottomReserved = metrics.buttonHintsHeight + 10;  // hints row + a small safety margin
+  const int availableHeight = screenHeight - bottomReserved - yPos;
+
+  float scale = 1.0f;
+  if (naturalHeight > 0 && naturalHeight > availableHeight) {
+    scale = static_cast<float>(availableHeight) / static_cast<float>(naturalHeight);
+    if (scale < 0.6f) scale = 0.6f;  // floor so labels never fully overlap their values
+  }
+
+  const int sectionHeaderGap = static_cast<int>(kSectionHeaderGap * scale);
+  const int blockGap = static_cast<int>(kBlockGap * scale);
+  const int sectionGap = static_cast<int>(kSectionGap * scale);
+  const int stripH = static_cast<int>(kBaseStripH * scale);
+  const int stripLabelGap = static_cast<int>(kStripLabelGap * scale);
+  const int blockValueOffset = static_cast<int>(kBlockValueOffset * scale);
+  const int blockLabel2Offset = static_cast<int>(kBlockLabel2Offset * scale);
+  const int blockDividerHeight = static_cast<int>(kBlockDividerHeight * scale);
+
   auto drawTrio = [&](int startY, const char* val1, const char* label1a, const char* label1b, const char* val2,
                       const char* label2a, const char* label2b, const char* val3, const char* label3a,
                       const char* label3b) {
@@ -201,20 +240,20 @@ void StatsActivity::render(RenderLock&&) {
     int cx3 = sidePad + colWidth * 2 + colWidth / 2;
 
     drawCentered(UI_12_FONT_ID, val1, cx1, startY, EpdFontFamily::BOLD);
-    drawCentered(UI_10_FONT_ID, label1a, cx1, startY + 34);
-    drawCentered(UI_10_FONT_ID, label1b, cx1, startY + 52);
+    drawCentered(UI_10_FONT_ID, label1a, cx1, startY + blockValueOffset);
+    drawCentered(UI_10_FONT_ID, label1b, cx1, startY + blockLabel2Offset);
 
-    renderer.drawLine(sidePad + colWidth, startY, sidePad + colWidth, startY + 65, 1, true);
+    renderer.drawLine(sidePad + colWidth, startY, sidePad + colWidth, startY + blockDividerHeight, 1, true);
 
     drawCentered(UI_12_FONT_ID, val2, cx2, startY, EpdFontFamily::BOLD);
-    drawCentered(UI_10_FONT_ID, label2a, cx2, startY + 34);
-    drawCentered(UI_10_FONT_ID, label2b, cx2, startY + 52);
+    drawCentered(UI_10_FONT_ID, label2a, cx2, startY + blockValueOffset);
+    drawCentered(UI_10_FONT_ID, label2b, cx2, startY + blockLabel2Offset);
 
-    renderer.drawLine(sidePad + colWidth * 2, startY, sidePad + colWidth * 2, startY + 65, 1, true);
+    renderer.drawLine(sidePad + colWidth * 2, startY, sidePad + colWidth * 2, startY + blockDividerHeight, 1, true);
 
     drawCentered(UI_12_FONT_ID, val3, cx3, startY, EpdFontFamily::BOLD);
-    drawCentered(UI_10_FONT_ID, label3a, cx3, startY + 34);
-    drawCentered(UI_10_FONT_ID, label3b, cx3, startY + 52);
+    drawCentered(UI_10_FONT_ID, label3a, cx3, startY + blockValueOffset);
+    drawCentered(UI_10_FONT_ID, label3b, cx3, startY + blockLabel2Offset);
   };
 
   auto drawDuo = [&](int startY, const char* val1, const char* label1a, const char* label1b, const char* val2,
@@ -223,21 +262,21 @@ void StatsActivity::render(RenderLock&&) {
     int cx2 = sidePad + 3 * (screenWidth - sidePad * 2) / 4;
 
     drawCentered(UI_12_FONT_ID, val1, cx1, startY, EpdFontFamily::BOLD);
-    drawCentered(UI_10_FONT_ID, label1a, cx1, startY + 34);
-    drawCentered(UI_10_FONT_ID, label1b, cx1, startY + 52);
+    drawCentered(UI_10_FONT_ID, label1a, cx1, startY + blockValueOffset);
+    drawCentered(UI_10_FONT_ID, label1b, cx1, startY + blockLabel2Offset);
 
     renderer.drawLine(sidePad + (screenWidth - sidePad * 2) / 2, startY, sidePad + (screenWidth - sidePad * 2) / 2,
-                      startY + 65, 1, true);
+                      startY + blockDividerHeight, 1, true);
 
     drawCentered(UI_12_FONT_ID, val2, cx2, startY, EpdFontFamily::BOLD);
-    drawCentered(UI_10_FONT_ID, label2a, cx2, startY + 34);
-    drawCentered(UI_10_FONT_ID, label2b, cx2, startY + 52);
+    drawCentered(UI_10_FONT_ID, label2a, cx2, startY + blockValueOffset);
+    drawCentered(UI_10_FONT_ID, label2b, cx2, startY + blockLabel2Offset);
   };
 
   // --- TODAY SECTION ---
   renderer.fillRectDither(sidePad, yPos, screenWidth - sidePad * 2, 24, Color::LightGray);
   renderer.drawText(UI_10_FONT_ID, sidePad + 10, yPos + 3, tr(STR_STATS_TODAY));
-  yPos += 45;
+  yPos += sectionHeaderGap;
 
   char t_val1[16];
   snprintf(t_val1, sizeof(t_val1), "%lu", static_cast<unsigned long>(stats.readingTimeTodaySeconds / 60));
@@ -251,14 +290,14 @@ void StatsActivity::render(RenderLock&&) {
 
   drawTrio(yPos, t_val1, tr(STR_STATS_MINUTES), "", t_val2, tr(STR_STATS_PAGES), "", t_val3,
            tr(STR_STATS_PAGES_PER_MIN), "");
-  yPos += 85;
+  yPos += blockGap;
 
-  yPos += 15;
+  yPos += sectionGap;
 
   // --- ALL TIME SECTION ---
   renderer.fillRectDither(sidePad, yPos, screenWidth - sidePad * 2, 24, Color::LightGray);
   renderer.drawText(UI_10_FONT_ID, sidePad + 10, yPos + 3, tr(STR_STATS_ALL_TIME));
-  yPos += 45;
+  yPos += sectionHeaderGap;
 
   char a_val1[16];
   snprintf(a_val1, sizeof(a_val1), "%.1f", stats.totalReadingTimeSeconds / 3600.0f);
@@ -272,14 +311,14 @@ void StatsActivity::render(RenderLock&&) {
 
   drawTrio(yPos, a_val1, tr(STR_STATS_HOURS), "", a_val2, tr(STR_STATS_PAGES), "", a_val3, tr(STR_STATS_PAGES_PER_MIN),
            "");
-  yPos += 85;
+  yPos += blockGap;
 
-  yPos += 15;
+  yPos += sectionGap;
 
   // --- ALL ITEMS SECTION ---
   renderer.fillRectDither(sidePad, yPos, screenWidth - sidePad * 2, 24, Color::LightGray);
   renderer.drawText(UI_10_FONT_ID, sidePad + 10, yPos + 3, tr(STR_STATS_ALL_ITEMS));
-  yPos += 45;
+  yPos += sectionHeaderGap;
 
   char i_val1[16];
   snprintf(i_val1, sizeof(i_val1), "%lu", static_cast<unsigned long>(stats.booksFinished));
@@ -288,9 +327,9 @@ void StatsActivity::render(RenderLock&&) {
 
   drawDuo(yPos, i_val1, tr(STR_STATS_BOOKS), tr(STR_STATS_FINISHED), i_val2, tr(STR_STATS_TOTAL), tr(STR_STATS_BOOKS));
 
-  yPos += 85;
+  yPos += blockGap;
 
-  yPos += 15;
+  yPos += sectionGap;
 
   // --- LAST 7 DAYS SECTION ---
   // Heat strip: one cell per day (oldest to newest, left to right), shaded to one of the
@@ -300,7 +339,7 @@ void StatsActivity::render(RenderLock&&) {
   // the numeral label distinguishes "no data" (a dash) from "read nothing that day" (a date).
   renderer.fillRectDither(sidePad, yPos, screenWidth - sidePad * 2, 24, Color::LightGray);
   renderer.drawText(UI_10_FONT_ID, sidePad + 10, yPos + 3, tr(STR_STATS_LAST_7_DAYS));
-  yPos += 45;
+  yPos += sectionHeaderGap;
 
   uint16_t last7Minutes[DAILY_HISTORY_SLOTS];
   int last7Dates[DAILY_HISTORY_SLOTS];
@@ -308,7 +347,6 @@ void StatsActivity::render(RenderLock&&) {
 
   const int stripW = screenWidth - sidePad * 2;
   const int cellW = stripW / DAILY_HISTORY_SLOTS;
-  const int stripH = 60;
 
   for (int i = 0; i < DAILY_HISTORY_SLOTS; i++) {
     const int cellX = sidePad + i * cellW;
@@ -333,10 +371,10 @@ void StatsActivity::render(RenderLock&&) {
     } else {
       snprintf(dayLabel, sizeof(dayLabel), "-");
     }
-    drawCentered(UI_10_FONT_ID, dayLabel, cellX + cellW / 2, yPos + stripH + 18);
+    drawCentered(UI_10_FONT_ID, dayLabel, cellX + cellW / 2, yPos + stripH + stripLabelGap);
   }
 
-  yPos += stripH + 40;
+  yPos += stripH + stripLabelGap + kStripLabelHeight;
 
   const auto labels = mappedInput.mapLabels(tr(STR_BACK), tr(STR_SELECT), "", "");
   GUI.drawButtonHints(renderer, labels.btn1, labels.btn2, labels.btn3, labels.btn4);

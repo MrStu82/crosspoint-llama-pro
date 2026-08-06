@@ -256,7 +256,12 @@ void XtcReaderActivity::renderStatusBarOverlay(const StatusBarOverlayPosition po
 
   const int pageCount = static_cast<int>(xtc->getPageCount());
   const int displayPage = static_cast<int>(currentPage) + 1;
-  const float progress = pageCount > 0 ? (static_cast<float>(displayPage) * 100.0f) / pageCount : 0.0f;
+  float progress = pageCount > 0 ? (static_cast<float>(displayPage) * 100.0f) / pageCount : 0.0f;
+  if (progress > 100.0f) {
+    LOG_ERR("XTR", "progress %.1f%% exceeds 100 (displayPage=%d, pageCount=%d) - page count drifted, clamping",
+            progress, displayPage, pageCount);
+    progress = 100.0f;
+  }
   const auto pageInfo = getStatusBarInfo();
   GUI.drawStatusBar(renderer, progress, pageInfo.currentPage, pageInfo.pageCount, pageInfo.title, paddingBottom);
 }

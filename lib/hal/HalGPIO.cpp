@@ -175,6 +175,24 @@ HalGPIO::DeviceType detectDeviceTypeWithFingerprint() {
 
 }  // namespace
 
+const char* HalGPIO::setDisplayControllerOverride(uint8_t rawValue) {
+  if (rawValue > static_cast<uint8_t>(DisplayControllerOverride::ForceUc8179)) {
+    return nullptr;
+  }
+  Preferences prefs;
+  if (!prefs.begin(HW_NAMESPACE, false)) {
+    return nullptr;
+  }
+  prefs.putUChar(NVS_KEY_DISP_OVERRIDE, rawValue);
+  prefs.end();
+  switch (static_cast<DisplayControllerOverride>(rawValue)) {
+    case DisplayControllerOverride::Auto: return "auto";
+    case DisplayControllerOverride::ForceSsd1677: return "SSD1677";
+    case DisplayControllerOverride::ForceUc8179: return "UC8179";
+  }
+  return nullptr;
+}
+
 void HalGPIO::begin() {
 #if FREEINK_MCU_C3
   _deviceType = detectDeviceTypeWithFingerprint();

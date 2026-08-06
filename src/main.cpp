@@ -494,6 +494,16 @@ void loop() {
         uint8_t* buf = display.getFrameBuffer();
         logSerial.write(buf, bufferSize);
         logSerial.printf("SCREENSHOT_END\n");
+      } else if (cmd.startsWith("DISP_OVR=")) {
+        const long raw = cmd.substring(strlen("DISP_OVR=")).toInt();
+        const char* name = (raw >= 0 && raw <= 255)
+                                ? HalGPIO::setDisplayControllerOverride(static_cast<uint8_t>(raw))
+                                : nullptr;
+        if (name != nullptr) {
+          logSerial.printf("DISP_OVR_SET:%ld (%s) - reboot to apply\n", raw, name);
+        } else {
+          logSerial.printf("DISP_OVR_ERR: invalid value '%s', expected 0-2\n", cmd.substring(strlen("DISP_OVR=")).c_str());
+        }
       }
     }
   }

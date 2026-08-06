@@ -97,6 +97,13 @@ class HalGPIO {
 
   WakeupReason getWakeupReason() const;
 
+  // Serial recovery hatch (see the "CMD:DISP_OVR=" handler in main.cpp): forces
+  // cphw/disp_ovr to rawValue (0=auto, 1=SSD1677, 2=UC8179) without needing a working
+  // panel. Returns the resolved controller name ("auto"/"SSD1677"/"UC8179") on success
+  // so the caller can echo confirmation over serial, or nullptr if rawValue isn't 0-2.
+  // Takes effect on next boot, via applyDisplayControllerWithOverride() in HalGPIO.cpp.
+  static const char* setDisplayControllerOverride(uint8_t rawValue);
+
   // Button indices
   static constexpr uint8_t BTN_BACK = 0;
   static constexpr uint8_t BTN_CONFIRM = 1;

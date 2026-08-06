@@ -2,6 +2,33 @@
 
 [![Fund contributors](https://img.shields.io/badge/%F0%9F%91%91_Fund_contributors-royalty.dev-BB953A?style=for-the-badge&labelColor=1a1a1a)](https://app.royalty.dev/crosspoint-reader/crosspoint-reader)
 
+## ⚠️ This fork: `crosspoint-llama-pro` status
+
+This fork targets the **Xteink X4 Pro** (ESP32-S3, distinct from the ESP32-C3
+`X4`/`X3` this README otherwise describes), based on upstream
+[`4e61903`](https://github.com/crosspoint-reader/crosspoint-reader/commit/4e61903578cb2b9972ea56ae1f98e6b104bcd27c),
+plus four ported mods (chapter progress bar, cover progress indicator, reader
+stats, and Deep Mines — a dungeon-crawler mini-game).
+
+**What's unvalidated, and why it matters before you flash this:**
+
+- **The Pro's own hardware support is largely unbenched.** The display, SDMMC
+  storage, RTC, and I²C bus map are confirmed working on real hardware (see
+  `freeink-sdk/docs/xteink-x4pro-support.md` for the bring-up detail). The
+  **frontlight pin mapping (GPIO8/GPIO9, dual warm/cool PWM) came from an OEM
+  firmware dump and has never been run on a bench** — treat it as a hypothesis,
+  not a fact, until you've watched it light up on your own device.
+- **All four ported mods compile clean and pass static analysis, and nothing
+  more.** None have been run on real hardware. See
+  `crosspoint-llama-device-validation.md` at the repo root for the specific,
+  concrete things to check on-device for each one — button reachability, save
+  persistence across a power cycle, redraw speed on this panel, and more. That
+  file is written to be run through without needing to ask anyone a question
+  first.
+- **If you're flashing this fork today**, budget time to work through that
+  checklist before trusting it for daily reading — this is a bring-up-stage fork,
+  not a released build.
+
 CrossPoint is open-source e-reader firmware - community-built, fully hackable, free forever. It's maintained by a growing community of developers and readers who believe your device should do what you want - not what a manufacturer decided for you.
 
 **Now running on:** ESP32C3-based Xteink [X4](https://www.xteink.com/products/xteink-x4) and [X3](https://www.xteink.com/products/xteink-x3).

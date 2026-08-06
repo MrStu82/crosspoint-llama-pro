@@ -28,6 +28,14 @@ class GameMenuActivity final : public Activity {
   void renderInventory();
   void renderCharacter();
 
+  // Touch support for the Screen::Menu row list (Resume/Inventory/Character/Save &
+  // Quit/Abandon Run), additive alongside the existing physical-button navigation.
+  // Single-tap-to-activate: a tap on a row both selects it and immediately fires the
+  // same action the Confirm button would. Row geometry mirrors BaseTheme::drawButtonMenu()
+  // exactly (see GameMenuActivity.cpp) so hit-test rects always match what's drawn.
+  // Returns true if the tap was consumed (landed on a menu row).
+  bool handleMenuTouch();
+
   Screen currentScreen = Screen::Menu;
   int selectedIndex = 0;
   ButtonNavigator buttonNavigator;

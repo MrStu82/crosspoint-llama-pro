@@ -13,7 +13,7 @@ void GameRenderer::init(GfxRenderer& renderer) {
   screenH = renderer.getScreenHeight();
 
   // Compute viewport dimensions
-  viewportEndY = screenH - MESSAGE_H - HINTS_H;
+  viewportEndY = screenH - MESSAGE_H - CONTROLS_H;
   viewportH = viewportEndY - VIEWPORT_Y;
   viewportW = screenW;
 
@@ -24,7 +24,7 @@ void GameRenderer::init(GfxRenderer& renderer) {
   gridOffsetX = (viewportW - viewCols * CELL_W) / 2;
 
   messageY = viewportEndY;
-  hintsY = screenH - HINTS_H;
+  controlsY = screenH - CONTROLS_H;
 }
 
 void GameRenderer::draw(GfxRenderer& renderer, const game::Tile* tiles, const uint8_t* fogOfWar,
@@ -35,12 +35,12 @@ void GameRenderer::draw(GfxRenderer& renderer, const game::Tile* tiles, const ui
   drawStatusBar(renderer);
   drawViewport(renderer, tiles, fogOfWar, monsters, monsterCount, items, itemCount, visible);
   drawMessages(renderer);
-  drawHints(renderer);
+  drawControls(renderer);
 
   // Separator lines
   renderer.drawLine(0, STATUS_H, screenW, STATUS_H);
   renderer.drawLine(0, viewportEndY, screenW, viewportEndY);
-  renderer.drawLine(0, hintsY, screenW, hintsY);
+  renderer.drawLine(0, controlsY, screenW, controlsY);
 
   renderer.displayBuffer(HalDisplay::FAST_REFRESH);
 }
@@ -176,51 +176,125 @@ void GameRenderer::drawMessages(GfxRenderer& renderer) const {
   }
 }
 
-// --- Button Hints / Touch Controls ---
+// --- On-Screen Controls (D-Pad + Action/Menu) ---
 
 namespace {
-// Order must match GameRenderer::hitTestHints()'s column order.
-constexpr StrId kHintLabelIds[GameRenderer::HINT_BUTTON_COUNT] = {
-    StrId::STR_DM_HINT_MENU, StrId::STR_DM_HINT_ACTION, StrId::STR_DM_HINT_LEFT,
-    StrId::STR_DM_HINT_RIGHT, StrId::STR_DM_HINT_UP,    StrId::STR_DM_HINT_DOWN,
-};
+// Draws a simple filled triangle arrow glyph centered in [cx, cy], pointing in the
+// given direction. Uses GfxRenderer::fillPolygon (no reusable arrow icon glyph exists
+// elsewhere in the codebase — UIIcon only covers file-browser/nav iconography).
+enum class ArrowDir { Up, Down, Left, Right };
+
+void drawArrow(GfxRenderer& renderer, int cx, int cy, ArrowDir dir) {
+  constexpr int kArrowSize = 10;  // Half-extent of the arrow glyph, in pixels
+  int xs[3];
+  int ys[3];
+  switch (dir) {
+    case ArrowDir::Up:
+      xs[0] = cx - kArrowSize; ys[0] = cy + kArrowSize;
+      xs[1] = cx + kArrowSize; ys[1] = cy + kArrowSize;
+      xs[2] = cx;              ys[2] = cy - kArrowSize;
+      break;
+    case ArrowDir::Down:
+      xs[0] = cx - kArrowSize; ys[0] = cy - kArrowSize;
+      xs[1] = cx + kArrowSize; ys[1] = cy - kArrowSize;
+      xs[2] = cx;              ys[2] = cy + kArrowSize;
+      break;
+    case ArrowDir::Left:
+      xs[0] = cx + kArrowSize; ys[0] = cy - kArrowSize;
+      xs[1] = cx + kArrowSize; ys[1] = cy + kArrowSize;
+      xs[2] = cx - kArrowSize; ys[2] = cy;
+      break;
+    case ArrowDir::Right:
+      xs[0] = cx - kArrowSize; ys[0] = cy - kArrowSize;
+      xs[1] = cx - kArrowSize; ys[1] = cy + kArrowSize;
+      xs[2] = cx + kArrowSize; ys[2] = cy;
+      break;
+  }
+  renderer.fillPolygon(xs, ys, 3, true);
+}
 }  // namespace
 
-void GameRenderer::drawHints(GfxRenderer& renderer) const {
-  // The hints bar is also the on-screen touch control strip: 6 equal-width columns,
-  // each both a text label and a tap target (see hitTestHints()). Column separators
-  // give a visible affordance that the bar is tappable, not just informational text.
-  const int colWidth = screenW / HINT_BUTTON_COUNT;
-  const int textY = hintsY + (HINTS_H / 2) - 6;
+void GameRenderer::drawControls(GfxRenderer& renderer) const {
+  // Left side: 3x3 d-pad cross (Up/Left/Right/Down), no visible borders on the
+  // individual cells — the cross shape itself is the affordance, matching common
+  // on-screen d-pad conventions. Center cell is decorative/unused (no button there).
+  const int dpadRow0Y = controlsY;
+  const int dpadRow1Y = controlsY + CONTROL_ROW_H;
+  const int dpadRow2Y = controlsY + CONTROL_ROW_H * 2;
 
-  for (int i = 0; i < HINT_BUTTON_COUNT; i++) {
-    const int colX = i * colWidth;
-    if (i > 0) {
-      renderer.drawLine(colX, hintsY, colX, screenH);
-    }
-    const char* label = I18n::getInstance().get(kHintLabelIds[i]);
+  const int dpadColMidX = DPAD_COL_W + DPAD_COL_W / 2;       // center of middle column
+  const int dpadColLeftX = DPAD_COL_W / 2;                   // center of left column
+  const int dpadColRightX = DPAD_COL_W * 2 + DPAD_COL_W / 2; // center of right column
+
+  drawArrow(renderer, dpadColMidX, dpadRow0Y + CONTROL_ROW_H / 2, ArrowDir::Up);
+  drawArrow(renderer, dpadColLeftX, dpadRow1Y + CONTROL_ROW_H / 2, ArrowDir::Left);
+  drawArrow(renderer, dpadColRightX, dpadRow1Y + CONTROL_ROW_H / 2, ArrowDir::Right);
+  drawArrow(renderer, dpadColMidX, dpadRow2Y + CONTROL_ROW_H / 2, ArrowDir::Down);
+
+  // Right side: Action (top) / Menu (bottom) bordered buttons, stacked, spanning the
+  // remaining width. Each is CONTROL_ROW_H tall with a visible border rectangle.
+  const int buttonX = DPAD_W;
+  const int buttonW = screenW - DPAD_W;
+  const int buttonH = (CONTROLS_H) / ACTION_MENU_BUTTON_COUNT;
+
+  static constexpr StrId kButtonLabelIds[ACTION_MENU_BUTTON_COUNT] = {
+      StrId::STR_DM_HINT_ACTION,
+      StrId::STR_DM_HINT_MENU,
+  };
+
+  for (int i = 0; i < ACTION_MENU_BUTTON_COUNT; i++) {
+    const int buttonY = controlsY + i * buttonH;
+    renderer.drawRect(buttonX, buttonY, buttonW, buttonH);
+
+    const char* label = I18n::getInstance().get(kButtonLabelIds[i]);
     const int textW = renderer.getTextWidth(SMALL_FONT_ID, label);
-    const int textX = colX + (colWidth - textW) / 2;
+    const int textH = renderer.getLineHeight(SMALL_FONT_ID);
+    const int textX = buttonX + (buttonW - textW) / 2;
+    const int textY = buttonY + (buttonH - textH) / 2;
     renderer.drawText(SMALL_FONT_ID, textX, textY, label);
   }
 }
 
-bool GameRenderer::hitTestHints(int x, int y, MappedInputManager::Button& outButton) const {
-  if (y < hintsY || y >= screenH || x < 0 || x >= screenW) {
+bool GameRenderer::hitTestControls(int x, int y, MappedInputManager::Button& outButton) const {
+  if (y < controlsY || y >= screenH || x < 0 || x >= screenW) {
     return false;
   }
 
-  static constexpr MappedInputManager::Button kColumnButtons[HINT_BUTTON_COUNT] = {
-      MappedInputManager::Button::Back, MappedInputManager::Button::Confirm, MappedInputManager::Button::Left,
-      MappedInputManager::Button::Right, MappedInputManager::Button::Up, MappedInputManager::Button::Down,
-  };
+  if (x < DPAD_W) {
+    // D-pad region: 3x3 grid. Row 0 => Up, Row 1 => Left/[center: no-op]/Right, Row 2 => Down.
+    int row = (y - controlsY) / CONTROL_ROW_H;
+    if (row > 2) row = 2;  // absorb any rounding remainder pixels
+    int col = x / DPAD_COL_W;
+    if (col > 2) col = 2;
 
-  const int colWidth = screenW / HINT_BUTTON_COUNT;
-  int col = x / colWidth;
-  if (col >= HINT_BUTTON_COUNT) {
-    col = HINT_BUTTON_COUNT - 1;  // last column absorbs any rounding remainder pixels
+    if (row == 0 && col == 1) {
+      outButton = MappedInputManager::Button::Up;
+      return true;
+    }
+    if (row == 2 && col == 1) {
+      outButton = MappedInputManager::Button::Down;
+      return true;
+    }
+    if (row == 1 && col == 0) {
+      outButton = MappedInputManager::Button::Left;
+      return true;
+    }
+    if (row == 1 && col == 2) {
+      outButton = MappedInputManager::Button::Right;
+      return true;
+    }
+    // Decorative center cell (row 1, col 1) and the four corner cells are not
+    // mapped to any button — fall through to "no hit".
+    return false;
   }
 
-  outButton = kColumnButtons[col];
+  // Action/Menu region: two stacked bordered buttons.
+  const int buttonH = CONTROLS_H / ACTION_MENU_BUTTON_COUNT;
+  int buttonIndex = (y - controlsY) / buttonH;
+  if (buttonIndex >= ACTION_MENU_BUTTON_COUNT) {
+    buttonIndex = ACTION_MENU_BUTTON_COUNT - 1;  // absorb any rounding remainder pixels
+  }
+
+  outButton = (buttonIndex == 0) ? MappedInputManager::Button::Confirm : MappedInputManager::Button::Back;
   return true;
 }

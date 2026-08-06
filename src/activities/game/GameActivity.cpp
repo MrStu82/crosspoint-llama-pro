@@ -139,11 +139,11 @@ void GameActivity::loop() {
     pressed = Button::Back;
     hasButton = true;
   } else {
-    // On-screen touch controls: the hints bar doubles as a 6-column tap strip.
-    // Routed through the same handleMove/handleAction/openGameMenu calls as
-    // physical buttons, so there's exactly one dispatch path either way.
+    // On-screen touch controls: the control area doubles as a d-pad + Action/Menu
+    // tap surface. Routed through the same handleMove/handleAction/openGameMenu
+    // calls as physical buttons, so there's exactly one dispatch path either way.
     int tx, ty;
-    if (mappedInput.wasScreenTapped(tx, ty) && gameRenderer.hitTestHints(tx, ty, pressed)) {
+    if (mappedInput.wasScreenTapped(tx, ty) && gameRenderer.hitTestControls(tx, ty, pressed)) {
       hasButton = true;
     }
   }

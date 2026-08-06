@@ -7,9 +7,10 @@
 
 class GameState;
 
-// Renders the dungeon viewport, status bar, message log, and button hints.
-// The hints bar also doubles as the on-screen touch control strip: each of its
-// 6 columns is both a text label and a tap target (see hitTestHints()).
+// Renders the dungeon viewport, status bar, message log, and on-screen controls.
+// The control area is also the touch control surface: a left-side d-pad (Up/Down/
+// Left/Right, arranged in a 3-row cross) plus two bordered buttons on the right
+// (Action, Menu) — see hitTestControls().
 // Stateless — all data passed in or accessed via GameState singleton.
 class GameRenderer {
  public:
@@ -22,11 +23,21 @@ class GameRenderer {
   static constexpr int STATUS_H = 26;
   static constexpr int VIEWPORT_Y = STATUS_H + 2;
   static constexpr int MESSAGE_H = 38;
-  // 56px gives 6 equal ~80px-wide touch columns at 480px screen width — comfortably
-  // above the 44x44 minimum recommended touch target, while only costing one fewer
-  // dungeon row than the old 34px text-only hint bar.
-  static constexpr int HINTS_H = 56;
-  static constexpr int HINT_BUTTON_COUNT = 6;
+  // Control area: 3 rows of the same 56px touch-target row height used by the old
+  // hints bar ("comfortably above the 44x44 minimum recommended touch target"),
+  // stacked to fit a 3-row-tall d-pad cross alongside two bordered action buttons.
+  static constexpr int CONTROL_ROW_H = 56;
+  static constexpr int CONTROLS_H = CONTROL_ROW_H * 3;
+
+  // D-pad occupies the left half of the control area, laid out as 3 columns x 3 rows
+  // (Up centered in the top row's middle column, Left/[decorative center]/Right in the
+  // middle row, Down centered in the bottom row's middle column).
+  static constexpr int DPAD_W = 168;         // Total d-pad width (3 equal columns)
+  static constexpr int DPAD_COL_W = DPAD_W / 3;
+
+  // Action/Menu bordered buttons occupy the right half of the control area, stacked
+  // vertically (Action on top, Menu below), each spanning the remaining width.
+  static constexpr int ACTION_MENU_BUTTON_COUNT = 2;
 
   // Computed at init
   int viewportW = 0;   // Pixels
@@ -35,7 +46,7 @@ class GameRenderer {
   int viewRows = 0;    // Grid rows
   int viewportEndY = 0;
   int messageY = 0;
-  int hintsY = 0;
+  int controlsY = 0;
   int screenW = 0;
   int screenH = 0;
   int gridOffsetX = 0; // Left padding to center grid
@@ -46,10 +57,9 @@ class GameRenderer {
   void draw(GfxRenderer& renderer, const game::Tile* tiles, const uint8_t* fogOfWar, const game::Monster* monsters,
             uint8_t monsterCount, const game::Item* items, uint8_t itemCount, const bool* visible);
 
-  // Hit-tests a tap point against the hints bar's 6 touch columns (Back, Confirm,
-  // Left, Right, Up, Down — same order as drawHints() draws them). Returns true and
-  // sets outButton if the tap landed on a column, false otherwise.
-  bool hitTestHints(int x, int y, MappedInputManager::Button& outButton) const;
+  // Hit-tests a tap point against the control area (d-pad + Action/Menu buttons).
+  // Returns true and sets outButton if the tap landed on a control, false otherwise.
+  bool hitTestControls(int x, int y, MappedInputManager::Button& outButton) const;
 
  private:
   void drawStatusBar(GfxRenderer& renderer) const;
@@ -58,5 +68,5 @@ class GameRenderer {
                     const bool* visible) const;
   void drawCell(GfxRenderer& renderer, int screenX, int screenY, char glyph, bool isVisible, bool isExplored) const;
   void drawMessages(GfxRenderer& renderer) const;
-  void drawHints(GfxRenderer& renderer) const;
+  void drawControls(GfxRenderer& renderer) const;
 };

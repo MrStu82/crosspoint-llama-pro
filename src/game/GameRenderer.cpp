@@ -176,12 +176,51 @@ void GameRenderer::drawMessages(GfxRenderer& renderer) const {
   }
 }
 
-// --- Button Hints ---
+// --- Button Hints / Touch Controls ---
+
+namespace {
+// Order must match GameRenderer::hitTestHints()'s column order.
+constexpr StrId kHintLabelIds[GameRenderer::HINT_BUTTON_COUNT] = {
+    StrId::STR_DM_HINT_MENU, StrId::STR_DM_HINT_ACTION, StrId::STR_DM_HINT_LEFT,
+    StrId::STR_DM_HINT_RIGHT, StrId::STR_DM_HINT_UP,    StrId::STR_DM_HINT_DOWN,
+};
+}  // namespace
 
 void GameRenderer::drawHints(GfxRenderer& renderer) const {
-  // Simple text hints for the 4 front buttons
-  renderer.drawText(SMALL_FONT_ID, 8, hintsY + 6, tr(STR_DM_HINT_MENU));
-  renderer.drawText(SMALL_FONT_ID, 120, hintsY + 6, tr(STR_DM_HINT_ACTION));
-  renderer.drawText(SMALL_FONT_ID, 260, hintsY + 6, tr(STR_DM_HINT_LEFT));
-  renderer.drawText(SMALL_FONT_ID, 390, hintsY + 6, tr(STR_DM_HINT_RIGHT));
+  // The hints bar is also the on-screen touch control strip: 6 equal-width columns,
+  // each both a text label and a tap target (see hitTestHints()). Column separators
+  // give a visible affordance that the bar is tappable, not just informational text.
+  const int colWidth = screenW / HINT_BUTTON_COUNT;
+  const int textY = hintsY + (HINTS_H / 2) - 6;
+
+  for (int i = 0; i < HINT_BUTTON_COUNT; i++) {
+    const int colX = i * colWidth;
+    if (i > 0) {
+      renderer.drawLine(colX, hintsY, colX, screenH);
+    }
+    const char* label = I18n::getInstance().get(kHintLabelIds[i]);
+    const int textW = renderer.getTextWidth(SMALL_FONT_ID, label);
+    const int textX = colX + (colWidth - textW) / 2;
+    renderer.drawText(SMALL_FONT_ID, textX, textY, label);
+  }
+}
+
+bool GameRenderer::hitTestHints(int x, int y, MappedInputManager::Button& outButton) const {
+  if (y < hintsY || y >= screenH || x < 0 || x >= screenW) {
+    return false;
+  }
+
+  static constexpr MappedInputManager::Button kColumnButtons[HINT_BUTTON_COUNT] = {
+      MappedInputManager::Button::Back, MappedInputManager::Button::Confirm, MappedInputManager::Button::Left,
+      MappedInputManager::Button::Right, MappedInputManager::Button::Up, MappedInputManager::Button::Down,
+  };
+
+  const int colWidth = screenW / HINT_BUTTON_COUNT;
+  int col = x / colWidth;
+  if (col >= HINT_BUTTON_COUNT) {
+    col = HINT_BUTTON_COUNT - 1;  // last column absorbs any rounding remainder pixels
+  }
+
+  outButton = kColumnButtons[col];
+  return true;
 }

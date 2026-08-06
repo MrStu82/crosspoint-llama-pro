@@ -1206,26 +1206,27 @@ void GfxRenderer::fillRoundedRect(const int x, const int y, const int width, con
 }
 
 void GfxRenderer::drawImage(const uint8_t bitmap[], const int x, const int y, const int width, const int height) const {
-  int rotatedX = 0;
-  int rotatedY = 0;
-  rotateCoordinates(orientation, x, y, &rotatedX, &rotatedY, panelWidth, panelHeight);
-  // Rotate origin corner
-  switch (orientation) {
-    case Portrait:
-      rotatedY = rotatedY - height;
-      break;
-    case PortraitInverted:
-      rotatedX = rotatedX - width;
-      break;
-    case LandscapeClockwise:
-      rotatedY = rotatedY - height;
-      rotatedX = rotatedX - width;
-      break;
-    case LandscapeCounterClockwise:
-      break;
+  // Plot pixel-by-pixel through drawPixel (which applies the orientation transform
+  // per pixel) instead of blitting the raw row-major bytes straight into the native
+  // framebuffer. The old blit only rotated the origin corner and left a "// TODO:
+  // Rotate bits" — it moved the image's bounding box but never rotated its content,
+  // so images (unlike text, which already goes through drawPixel) came out sideways
+  // on any orientation other than LandscapeCounterClockwise.
+  // x, y are LOGICAL (unrotated) coordinates — do not rotate them here; drawPixel()
+  // rotates each plotted pixel internally, so pre-rotating the origin would rotate
+  // it twice and place a correctly-oriented image in the wrong corner.
+  // 1bpp, MSB-first, row-major, bit==0 = ink (same convention as drawIcon). Unlike
+  // drawIcon, both ink and non-ink pixels are written (opaque full-rect overwrite) to
+  // preserve the original blit's behavior of overwriting whatever was already drawn
+  // (e.g. MoonIcon overlaid on the last-read page with no preceding clearScreen).
+  const int rowBytes = (width + 7) / 8;
+  for (int row = 0; row < height; row++) {
+    for (int col = 0; col < width; col++) {
+      const uint8_t byte = bitmap[row * rowBytes + (col >> 3)];
+      const bool ink = ((byte >> (7 - (col & 7))) & 1) == 0;
+      drawPixel(x + col, y + row, ink);
+    }
   }
-  // TODO: Rotate bits
-  display.drawImage(bitmap, rotatedX, rotatedY, width, height);
 }
 
 void GfxRenderer::drawIcon(const uint8_t bitmap[], const int x, const int y, const int size) const {

@@ -294,6 +294,10 @@ bool MappedInputManager::wasMenuGesture() const {
 }
 
 bool MappedInputManager::wasHomeGesture() const {
+  // Physical capacitive Home key (X4 Pro's GT911): same "go home" action as
+  // the swipe gesture below, just via the hardware key instead of touch.
+  if (gpio.wasHomeKeyTapped()) return true;
+
   int sx = 0;
   int sy = 0;
   int ex = 0;

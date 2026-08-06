@@ -63,6 +63,11 @@ class MappedInputManager {
   SwipeDir wasSwipe() const;
   bool wasHomeGesture() const;
   bool wasMenuGesture() const;
+  // Mid-screen vertical swipe quick-settings gestures (reader-only). Both require the swipe to
+  // *start* outside the top/bottom edge bands already claimed by wasMenuGesture()/wasHomeGesture(),
+  // so they can't steal or be stolen by those gestures within the same frame.
+  bool wasBrightnessGesture() const;  // mid-screen upward swipe -> backlight quick-picker
+  bool wasTextSizeGesture() const;    // mid-screen downward swipe -> text-settings quick-picker
   bool wasAnyPressed() const;
   bool wasAnyReleased() const;
   unsigned long getHeldTime() const;

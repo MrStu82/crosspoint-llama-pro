@@ -22,6 +22,7 @@
 #include "RecentBooksStore.h"
 #include "XtcReaderChapterSelectionActivity.h"
 #include "activities/home/StatsManager.h"
+#include "activities/settings/FrontlightActivity.h"
 #include "components/UITheme.h"
 #include "fontIds.h"
 #include "util/BookProgressBadge.h"
@@ -112,6 +113,14 @@ void XtcReaderActivity::loop() {
   // Enter chapter selection activity
   if (mappedInput.wasReleased(MappedInputManager::Button::Confirm) || ReaderUtils::isTouchMenuGesture(mappedInput)) {
     openChapterSelection();
+  }
+
+  // Mid-screen swipe-up quick-settings drawer: backlight. No text-size equivalent here —
+  // XTC pages are pre-rendered images, font size doesn't apply.
+  if (mappedInput.wasBrightnessGesture()) {
+    startActivityForResult(std::make_unique<FrontlightActivity>(renderer, mappedInput),
+                           [this](const ActivityResult&) { requestUpdate(); });
+    return;
   }
 
   if (ReaderUtils::handleBackNavigation(mappedInput, activityManager, xtc ? xtc->getPath().c_str() : "",

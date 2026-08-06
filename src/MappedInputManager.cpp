@@ -313,6 +313,38 @@ bool MappedInputManager::wasHomeGesture() const {
   return false;
 }
 
+bool MappedInputManager::wasBrightnessGesture() const {
+  int sx = 0;
+  int sy = 0;
+  int ex = 0;
+  int ey = 0;
+  if (!decodeSwipe(sx, sy, ex, ey)) return false;
+  const int topEdgeBottom = static_cast<int>(renderer.getScreenHeight() * TOP_EDGE_MENU_GESTURE_FRAC_Y);
+  const int bottomEdgeTop =
+      renderer.getScreenHeight() - static_cast<int>(renderer.getScreenHeight() * BOTTOM_EDGE_BACK_GESTURE_FRAC_Y);
+  // Start point must be outside both edge bands so this can't collide with wasMenuGesture()'s
+  // top-edge downward swipe or wasHomeGesture()'s bottom-edge upward swipe.
+  const bool hit =
+      sy > topEdgeBottom && sy < bottomEdgeTop && ey < sy && std::abs(ey - sy) > std::abs(ex - sx);
+  if (hit) rememberTouchHeldTime();
+  return hit;
+}
+
+bool MappedInputManager::wasTextSizeGesture() const {
+  int sx = 0;
+  int sy = 0;
+  int ex = 0;
+  int ey = 0;
+  if (!decodeSwipe(sx, sy, ex, ey)) return false;
+  const int topEdgeBottom = static_cast<int>(renderer.getScreenHeight() * TOP_EDGE_MENU_GESTURE_FRAC_Y);
+  const int bottomEdgeTop =
+      renderer.getScreenHeight() - static_cast<int>(renderer.getScreenHeight() * BOTTOM_EDGE_BACK_GESTURE_FRAC_Y);
+  const bool hit =
+      sy > topEdgeBottom && sy < bottomEdgeTop && ey > sy && std::abs(ey - sy) > std::abs(ex - sx);
+  if (hit) rememberTouchHeldTime();
+  return hit;
+}
+
 bool MappedInputManager::wasPressed(const Button button) const {
   if (button == Button::Back && wasBackGesture()) return true;
   return mapButton(button, &HalGPIO::wasPressed);

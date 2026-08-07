@@ -32,8 +32,11 @@ enum MenuItem {
   ITEM_COUNT
 };
 
-constexpr int BASE_MENU_ITEMS = ITEM_CLOCK;  // Items shown on every device
-constexpr int FULL_MENU_ITEMS = ITEM_COUNT;  // Items shown when RTC is available
+constexpr int BASE_MENU_ITEMS = ITEM_CLOCK;  // Items shown on every device (bottom bar)
+constexpr int FULL_MENU_ITEMS = ITEM_COUNT;  // Items shown when RTC is available (bottom bar)
+// Top bar has no XTC/clock equivalents (those are bottom-only concepts), so its
+// menu is just the shared prefix ending at (and including) ITEM_BATTERY.
+constexpr int TOP_MENU_ITEMS = ITEM_XTC_STATUS_BAR;
 
 const StrId menuNames[FULL_MENU_ITEMS] = {
     StrId::STR_CHAPTER_PAGE_COUNT,
@@ -88,35 +91,44 @@ void StatusBarSettingsActivity::onEnter() {
   Activity::onEnter();
 
   selectedIndex = 0;
-  visibleItemCount = halClock.isAvailable() ? FULL_MENU_ITEMS : BASE_MENU_ITEMS;
-
-  // Clamp statusBarProgressBar and statusBarTitle in case of corrupt/migrated data
-  if (SETTINGS.statusBarProgressBar >= PROGRESS_BAR_ITEMS) {
-    SETTINGS.statusBarProgressBar = CrossPointSettings::STATUS_BAR_PROGRESS_BAR::HIDE_PROGRESS;
+  if (isTop()) {
+    visibleItemCount = TOP_MENU_ITEMS;
+  } else {
+    visibleItemCount = halClock.isAvailable() ? FULL_MENU_ITEMS : BASE_MENU_ITEMS;
   }
 
-  if (SETTINGS.statusBarTitle >= PROGRESS_BAR_THICKNESS_ITEMS) {
-    SETTINGS.statusBarTitle = CrossPointSettings::STATUS_BAR_PROGRESS_BAR_THICKNESS::PROGRESS_BAR_NORMAL;
+  // Clamp progressBar/title in case of corrupt/migrated data
+  uint8_t& progressBar = isTop() ? SETTINGS.topBarProgressBar : SETTINGS.statusBarProgressBar;
+  if (progressBar >= PROGRESS_BAR_ITEMS) {
+    progressBar = CrossPointSettings::STATUS_BAR_PROGRESS_BAR::HIDE_PROGRESS;
   }
 
-  if (SETTINGS.statusBarTitle >= TITLE_ITEMS) {
-    SETTINGS.statusBarTitle = CrossPointSettings::STATUS_BAR_TITLE::HIDE_TITLE;
+  uint8_t& progressBarThickness = isTop() ? SETTINGS.topBarProgressBarThickness : SETTINGS.statusBarProgressBarThickness;
+  if (progressBarThickness >= PROGRESS_BAR_THICKNESS_ITEMS) {
+    progressBarThickness = CrossPointSettings::STATUS_BAR_PROGRESS_BAR_THICKNESS::PROGRESS_BAR_NORMAL;
   }
 
-  if (SETTINGS.xtcStatusBarMode >= XTC_STATUS_BAR_ITEMS) {
-    SETTINGS.xtcStatusBarMode = CrossPointSettings::XTC_STATUS_BAR_MODE::XTC_STATUS_BAR_HIDE;
+  uint8_t& title = isTop() ? SETTINGS.topBarTitle : SETTINGS.statusBarTitle;
+  if (title >= TITLE_ITEMS) {
+    title = CrossPointSettings::STATUS_BAR_TITLE::HIDE_TITLE;
   }
 
-  if (SETTINGS.clockUtcOffsetQ > 104) {
-    SETTINGS.clockUtcOffsetQ = 48;  // Default to UTC+0
-  }
+  if (!isTop()) {
+    if (SETTINGS.xtcStatusBarMode >= XTC_STATUS_BAR_ITEMS) {
+      SETTINGS.xtcStatusBarMode = CrossPointSettings::XTC_STATUS_BAR_MODE::XTC_STATUS_BAR_HIDE;
+    }
 
-  if (SETTINGS.clockFormat >= CLOCK_FORMAT_ITEMS) {
-    SETTINGS.clockFormat = 0;
-  }
+    if (SETTINGS.clockUtcOffsetQ > 104) {
+      SETTINGS.clockUtcOffsetQ = 48;  // Default to UTC+0
+    }
 
-  if (SETTINGS.statusBarClock >= STATUS_BAR_CLOCK_ITEMS) {
-    SETTINGS.statusBarClock = CrossPointSettings::STATUS_BAR_CLOCK_MODE::STATUS_BAR_CLOCK_HIDE;
+    if (SETTINGS.clockFormat >= CLOCK_FORMAT_ITEMS) {
+      SETTINGS.clockFormat = 0;
+    }
+
+    if (SETTINGS.statusBarClock >= STATUS_BAR_CLOCK_ITEMS) {
+      SETTINGS.statusBarClock = CrossPointSettings::STATUS_BAR_CLOCK_MODE::STATUS_BAR_CLOCK_HIDE;
+    }
   }
 
   requestUpdate();
@@ -177,35 +189,49 @@ void StatusBarSettingsActivity::loop() {
 
 void StatusBarSettingsActivity::handleSelection() {
   switch (selectedIndex) {
-    case ITEM_CHAPTER_PAGE_COUNT:
-      SETTINGS.statusBarChapterPageCount = (SETTINGS.statusBarChapterPageCount + 1) % 2;
+    case ITEM_CHAPTER_PAGE_COUNT: {
+      uint8_t& v = isTop() ? SETTINGS.topBarChapterPageCount : SETTINGS.statusBarChapterPageCount;
+      v = (v + 1) % 2;
       break;
-    case ITEM_BOOK_PROGRESS_PERCENTAGE:
-      SETTINGS.statusBarBookProgressPercentage = (SETTINGS.statusBarBookProgressPercentage + 1) % 2;
+    }
+    case ITEM_BOOK_PROGRESS_PERCENTAGE: {
+      uint8_t& v = isTop() ? SETTINGS.topBarBookProgressPercentage : SETTINGS.statusBarBookProgressPercentage;
+      v = (v + 1) % 2;
       break;
-    case ITEM_PROGRESS_BAR:
-      optionPopup.show(StrId::STR_PROGRESS_BAR, progressBarNames, PROGRESS_BAR_ITEMS, SETTINGS.statusBarProgressBar,
-                       [this](int idx) {
-                         SETTINGS.statusBarProgressBar = idx;
-                         SETTINGS.saveToFile();
-                       });
-      return;
-    case ITEM_PROGRESS_BAR_THICKNESS:
-      optionPopup.show(StrId::STR_PROGRESS_BAR_THICKNESS, progressBarThicknessNames, PROGRESS_BAR_THICKNESS_ITEMS,
-                       SETTINGS.statusBarProgressBarThickness, [this](int idx) {
-                         SETTINGS.statusBarProgressBarThickness = idx;
-                         SETTINGS.saveToFile();
-                       });
-      return;
-    case ITEM_TITLE:
-      optionPopup.show(StrId::STR_TITLE, titleNames, TITLE_ITEMS, SETTINGS.statusBarTitle, [this](int idx) {
-        SETTINGS.statusBarTitle = idx;
+    }
+    case ITEM_PROGRESS_BAR: {
+      const bool top = isTop();
+      uint8_t& v = top ? SETTINGS.topBarProgressBar : SETTINGS.statusBarProgressBar;
+      optionPopup.show(StrId::STR_PROGRESS_BAR, progressBarNames, PROGRESS_BAR_ITEMS, v, [top](int idx) {
+        (top ? SETTINGS.topBarProgressBar : SETTINGS.statusBarProgressBar) = idx;
         SETTINGS.saveToFile();
       });
       return;
-    case ITEM_BATTERY:
-      SETTINGS.statusBarBattery = (SETTINGS.statusBarBattery + 1) % 2;
+    }
+    case ITEM_PROGRESS_BAR_THICKNESS: {
+      const bool top = isTop();
+      uint8_t& v = top ? SETTINGS.topBarProgressBarThickness : SETTINGS.statusBarProgressBarThickness;
+      optionPopup.show(StrId::STR_PROGRESS_BAR_THICKNESS, progressBarThicknessNames, PROGRESS_BAR_THICKNESS_ITEMS, v,
+                       [top](int idx) {
+                         (top ? SETTINGS.topBarProgressBarThickness : SETTINGS.statusBarProgressBarThickness) = idx;
+                         SETTINGS.saveToFile();
+                       });
+      return;
+    }
+    case ITEM_TITLE: {
+      const bool top = isTop();
+      uint8_t& v = top ? SETTINGS.topBarTitle : SETTINGS.statusBarTitle;
+      optionPopup.show(StrId::STR_TITLE, titleNames, TITLE_ITEMS, v, [top](int idx) {
+        (top ? SETTINGS.topBarTitle : SETTINGS.statusBarTitle) = idx;
+        SETTINGS.saveToFile();
+      });
+      return;
+    }
+    case ITEM_BATTERY: {
+      uint8_t& v = isTop() ? SETTINGS.topBarBattery : SETTINGS.statusBarBattery;
+      v = (v + 1) % 2;
       break;
+    }
     case ITEM_XTC_STATUS_BAR:
       optionPopup.show(StrId::STR_XTC_STATUS_BAR, xtcStatusBarNames, XTC_STATUS_BAR_ITEMS, SETTINGS.xtcStatusBarMode,
                        [this](int idx) {
@@ -241,27 +267,33 @@ void StatusBarSettingsActivity::render(RenderLock&&) {
   const auto pageWidth = renderer.getScreenWidth();
   const auto pageHeight = renderer.getScreenHeight();
 
-  GUI.drawHeader(renderer, Rect{0, metrics.topPadding, pageWidth, metrics.headerHeight}, tr(STR_CUSTOMISE_STATUS_BAR));
+  GUI.drawHeader(renderer, Rect{0, metrics.topPadding, pageWidth, metrics.headerHeight},
+                I18N.get(isTop() ? StrId::STR_CUSTOMISE_TOP_STATUS_BAR : StrId::STR_CUSTOMISE_STATUS_BAR));
 
   const int contentTop = metrics.topPadding + metrics.headerHeight + metrics.verticalSpacing;
   const int contentHeight = pageHeight - contentTop - metrics.buttonHintsHeight - metrics.verticalSpacing * 2;
+  const bool top = isTop();
   GUI.drawList(
       renderer, Rect{0, contentTop, pageWidth, contentHeight}, visibleItemCount, static_cast<int>(selectedIndex),
       [](int index) { return std::string(I18N.get(menuNames[index])); }, nullptr, nullptr,
-      [](int index) -> std::string {
+      [top](int index) -> std::string {
         switch (index) {
           case ITEM_CHAPTER_PAGE_COUNT:
-            return SETTINGS.statusBarChapterPageCount ? tr(STR_SHOW) : tr(STR_HIDE);
+            return (top ? SETTINGS.topBarChapterPageCount : SETTINGS.statusBarChapterPageCount) ? tr(STR_SHOW)
+                                                                                                 : tr(STR_HIDE);
           case ITEM_BOOK_PROGRESS_PERCENTAGE:
-            return SETTINGS.statusBarBookProgressPercentage ? tr(STR_SHOW) : tr(STR_HIDE);
+            return (top ? SETTINGS.topBarBookProgressPercentage : SETTINGS.statusBarBookProgressPercentage)
+                       ? tr(STR_SHOW)
+                       : tr(STR_HIDE);
           case ITEM_PROGRESS_BAR:
-            return I18N.get(progressBarNames[SETTINGS.statusBarProgressBar]);
+            return I18N.get(progressBarNames[top ? SETTINGS.topBarProgressBar : SETTINGS.statusBarProgressBar]);
           case ITEM_PROGRESS_BAR_THICKNESS:
-            return I18N.get(progressBarThicknessNames[SETTINGS.statusBarProgressBarThickness]);
+            return I18N.get(progressBarThicknessNames[top ? SETTINGS.topBarProgressBarThickness
+                                                            : SETTINGS.statusBarProgressBarThickness]);
           case ITEM_TITLE:
-            return I18N.get(titleNames[SETTINGS.statusBarTitle]);
+            return I18N.get(titleNames[top ? SETTINGS.topBarTitle : SETTINGS.statusBarTitle]);
           case ITEM_BATTERY:
-            return SETTINGS.statusBarBattery ? tr(STR_SHOW) : tr(STR_HIDE);
+            return (top ? SETTINGS.topBarBattery : SETTINGS.statusBarBattery) ? tr(STR_SHOW) : tr(STR_HIDE);
           case ITEM_XTC_STATUS_BAR:
             return I18N.get(xtcStatusBarNames[SETTINGS.xtcStatusBarMode]);
           case ITEM_CLOCK:
@@ -284,18 +316,22 @@ void StatusBarSettingsActivity::render(RenderLock&&) {
   const auto labels = mappedInput.mapLabels(tr(STR_BACK), tr(STR_TOGGLE), tr(STR_DIR_UP), tr(STR_DIR_DOWN));
   GUI.drawButtonHints(renderer, labels.btn1, labels.btn2, labels.btn3, labels.btn4);
 
+  const uint8_t previewTitleMode = top ? SETTINGS.topBarTitle : SETTINGS.statusBarTitle;
   std::string title;
-  if (SETTINGS.statusBarTitle == CrossPointSettings::STATUS_BAR_TITLE::BOOK_TITLE) {
+  if (previewTitleMode == CrossPointSettings::STATUS_BAR_TITLE::BOOK_TITLE) {
     title = tr(STR_EXAMPLE_BOOK);
-  } else if (SETTINGS.statusBarTitle == CrossPointSettings::STATUS_BAR_TITLE::CHAPTER_TITLE) {
+  } else if (previewTitleMode == CrossPointSettings::STATUS_BAR_TITLE::CHAPTER_TITLE) {
     title = tr(STR_EXAMPLE_CHAPTER);
   }
 
-  GUI.drawStatusBar(renderer, 75, 8, 32, title, verticalPreviewPadding, 0, false);
+  GUI.drawStatusBar(renderer, 75, 8, 32, title, verticalPreviewPadding, 0, false, false, false,
+                    top ? CrossPointSettings::Edge::TOP : CrossPointSettings::Edge::BOTTOM);
 
   renderer.drawText(UI_10_FONT_ID, metrics.contentSidePadding,
-                    renderer.getScreenHeight() - UITheme::getInstance().getStatusBarHeight() - verticalPreviewPadding -
-                        verticalPreviewTextPadding,
+                    renderer.getScreenHeight() -
+                        UITheme::getInstance().getStatusBarHeight(top ? CrossPointSettings::Edge::TOP
+                                                                       : CrossPointSettings::Edge::BOTTOM) -
+                        verticalPreviewPadding - verticalPreviewTextPadding,
                     tr(STR_PREVIEW));
 
   renderer.displayBuffer();

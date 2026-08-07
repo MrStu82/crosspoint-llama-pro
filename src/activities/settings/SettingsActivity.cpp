@@ -89,6 +89,8 @@ void SettingsActivity::rebuildSettingsLists() {
   readerSettings.insert(readerSettings.begin() + 1,
                         SettingInfo::Action(StrId::STR_MANAGE_FONTS, SettingAction::DownloadFonts));
   readerSettings.push_back(SettingInfo::Action(StrId::STR_CUSTOMISE_STATUS_BAR, SettingAction::CustomiseStatusBar));
+  readerSettings.push_back(
+      SettingInfo::Action(StrId::STR_CUSTOMISE_TOP_STATUS_BAR, SettingAction::CustomiseTopStatusBar));
 
   // Update currentSettings pointer and count for the active category
   switch (selectedCategoryIndex) {
@@ -375,7 +377,14 @@ void SettingsActivity::toggleCurrentSetting() {
         startActivityForResult(std::make_unique<ButtonRemapActivity>(renderer, mappedInput), resultHandler);
         break;
       case SettingAction::CustomiseStatusBar:
-        startActivityForResult(std::make_unique<StatusBarSettingsActivity>(renderer, mappedInput), resultHandler);
+        startActivityForResult(
+            std::make_unique<StatusBarSettingsActivity>(renderer, mappedInput, CrossPointSettings::Edge::BOTTOM),
+            resultHandler);
+        break;
+      case SettingAction::CustomiseTopStatusBar:
+        startActivityForResult(
+            std::make_unique<StatusBarSettingsActivity>(renderer, mappedInput, CrossPointSettings::Edge::TOP),
+            resultHandler);
         break;
       case SettingAction::KOReaderSync:
         startActivityForResult(std::make_unique<KOReaderSettingsActivity>(renderer, mappedInput), resultHandler);

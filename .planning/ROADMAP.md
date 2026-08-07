@@ -11,7 +11,7 @@ real breathing room from the bezel, then flip on USB mass storage.
 
 **Phase Numbering:** integer phases are the four planned milestones from parent's dispatch, in the exact order given. No decimal/inserted phases.
 
-- [ ] **Phase 1: Three defects (§2)** - button-hints reservation, home-menu clamp, screen margin default
+- [x] **Phase 1: Three defects (§2)** - button-hints reservation, home-menu clamp, screen margin default
 - [ ] **Phase 2: Two status bars (§5.2)** - independent top + bottom status bars
 - [ ] **Phase 3: Home bottom buffer (§2.2)** - real clearance for the home menu's last row
 - [ ] **Phase 4: USB mass storage (§3.1)** - device enumerates as USB MSC
@@ -77,7 +77,7 @@ Plans:
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
-| 1. Three defects (§2) | 1/1 | In progress (build/verify pending) | - |
+| 1. Three defects (§2) | 1/1 | Complete | 2026-08-07 |
 | 2. Two status bars (§5.2) | 0/? | Not started | - |
 | 3. Home bottom buffer (§2.2) | 0/? | Not started | - |
 | 4. USB mass storage (§3.1) | 0/? | Not started | - |

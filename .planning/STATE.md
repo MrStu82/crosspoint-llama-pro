@@ -3,10 +3,10 @@ gsd_state_version: '1.0'
 status: in_progress
 progress:
   total_phases: 4
-  completed_phases: 0
+  completed_phases: 1
   total_plans: 1
-  completed_plans: 0
-  percent: 0
+  completed_plans: 1
+  percent: 25
 ---
 
 # Project State
@@ -20,12 +20,12 @@ See: .planning/PROJECT.md (updated 2026-08-07)
 
 ## Current Position
 
-Phase: 1 of 4 (Three defects (§2))
-Plan: 1 of 1 in current phase
-Status: In progress — fixes applied in source, build/verify in app image pending
-Last activity: 2026-08-07 — investigated all three Phase 1 defects against current HEAD; item 1 (button-hints reservation) confirmed already fixed, no code change; item 2 (home menu clamp) confirmed broken in BaseTheme + LyraTheme (RoundedRaffTheme already paginated), fixed both with page-based clamp/scroll + 8x8 chevron; item 3 (screenMargin default) confirmed broken, changed default 5→20
+Phase: 1 of 4 (Three defects (§2)) — COMPLETE, awaiting parent report
+Plan: 1 of 1 in current phase — done
+Status: Phase 1 committed and pushed. Build green (PlatformIO x4pro, app image only). Ready to report to parent, then start Phase 2.
+Last activity: 2026-08-07 — committed 4a7e55cb7bfb5a7a7e543022033001d51cd25f5a on branch phase1-three-defects, pushed to origin. Build SUCCESS (213s, RAM 18.8%, Flash 83.1%, firmware.bin app image only at offset 0x10000, separate from bootloader.bin).
 
-Progress: [░░░░░░░░░░] 0%
+Progress: [██░░░░░░░░] 25%
 
 ## Performance Metrics
 

@@ -262,9 +262,15 @@ void HomeActivity::loop() {
       metrics.homeContinueReadingInMenu ? selectorIndex : selectorIndex - recentBooks.size();
   const int renderedMenuCount =
       menuCount - (metrics.homeContinueReadingInMenu ? 0 : static_cast<int>(recentBooks.size()));
+  // Dead zone below the last row: no touch handling at all in the bottom homeBottomInset
+  // pixels, regardless of how many menu rows would otherwise fit in the space.
+  const int menuRowStep = metrics.menuRowHeight + metrics.menuSpacing;
+  const int menuTouchableHeight = renderer.getScreenHeight() - menuTop - metrics.homeBottomInset;
+  const int maxTouchableRows = menuRowStep > 0 ? std::max(0, menuTouchableHeight / menuRowStep) : 0;
+  const int touchableMenuCount = std::min(renderedMenuCount, maxTouchableRows);
   int menuRow = -1;
-  const auto menuTouch = mappedInput.rowTouch(menuRow, menuTop, metrics.menuRowHeight + metrics.menuSpacing,
-                                              renderedMenuCount, 0, INT32_MAX, metrics.menuRowHeight);
+  const auto menuTouch = mappedInput.rowTouch(menuRow, menuTop, menuRowStep, touchableMenuCount, 0, INT32_MAX,
+                                              metrics.menuRowHeight);
   if (menuTouch != MappedInputManager::RowTouch::None) {
     const int touchedIndex =
         metrics.homeContinueReadingInMenu ? menuRow : menuRow + static_cast<int>(recentBooks.size());
@@ -324,12 +330,13 @@ void HomeActivity::render(RenderLock&&) {
     menuIcons.insert(menuIcons.begin(), Book);
   }
 
+  const int menuTop = metrics.homeTopPadding + metrics.homeCoverTileHeight + metrics.homeMenuTopOffset;
+  const int menuRenderHeight = std::min(
+      pageHeight - (metrics.headerHeight + metrics.homeTopPadding + metrics.verticalSpacing +
+                    metrics.homeMenuTopOffset + metrics.buttonHintsHeight),
+      pageHeight - menuTop - metrics.homeBottomInset);
   GUI.drawButtonMenu(
-      renderer,
-      Rect{0, metrics.homeTopPadding + metrics.homeCoverTileHeight + metrics.homeMenuTopOffset, pageWidth,
-           pageHeight - (metrics.headerHeight + metrics.homeTopPadding + metrics.verticalSpacing +
-                         metrics.homeMenuTopOffset + metrics.buttonHintsHeight)},
-      static_cast<int>(menuItems.size()),
+      renderer, Rect{0, menuTop, pageWidth, menuRenderHeight}, static_cast<int>(menuItems.size()),
       metrics.homeContinueReadingInMenu ? selectorIndex : selectorIndex - recentBooks.size(),
       [&menuItems](int index) { return std::string(menuItems[index]); },
       [&menuIcons](int index) { return menuIcons[index]; });

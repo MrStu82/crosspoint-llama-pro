@@ -55,6 +55,7 @@ struct ThemeMetrics {
   int homeRecentBooksCount;
   bool homeContinueReadingInMenu;
   int homeMenuTopOffset;
+  int homeBottomInset;  // Dead space below the last home menu row: no draw, no touch.
 
   int buttonHintsHeight;
   int sideButtonHintsWidth;
@@ -147,6 +148,7 @@ constexpr ThemeMetrics values = {.batteryWidth = 15,
                                  .homeRecentBooksCount = 1,
                                  .homeContinueReadingInMenu = false,
                                  .homeMenuTopOffset = 10,
+                                 .homeBottomInset = 0,
                                  .buttonHintsHeight = 40,
                                  .sideButtonHintsWidth = 30,
                                  .progressBarHeight = 16,

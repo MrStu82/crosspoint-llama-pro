@@ -552,10 +552,16 @@ void LyraTheme::drawEmptyRecents(const GfxRenderer& renderer, const Rect rect) c
 void LyraTheme::drawButtonMenu(GfxRenderer& renderer, Rect rect, int buttonCount, int selectedIndex,
                                const std::function<std::string(int index)>& buttonLabel,
                                const std::function<UIIcon(int index)>& rowIcon) const {
-  for (int i = 0; i < buttonCount; ++i) {
+  const int rowStep = LyraMetrics::values.menuRowHeight + LyraMetrics::values.menuSpacing;
+  const int pageItems = std::max(1, rect.height / rowStep);
+  const int safeSelectedIndex = std::max(0, selectedIndex);
+  const int pageStartIndex = (safeSelectedIndex / pageItems) * pageItems;
+  const int pageEndIndex = std::min(buttonCount, pageStartIndex + pageItems);
+
+  for (int i = pageStartIndex; i < pageEndIndex; ++i) {
+    const int row = i - pageStartIndex;
     int tileWidth = rect.width - LyraMetrics::values.contentSidePadding * 2;
-    Rect tileRect = Rect{rect.x + LyraMetrics::values.contentSidePadding,
-                         rect.y + i * (LyraMetrics::values.menuRowHeight + LyraMetrics::values.menuSpacing), tileWidth,
+    Rect tileRect = Rect{rect.x + LyraMetrics::values.contentSidePadding, rect.y + row * rowStep, tileWidth,
                          LyraMetrics::values.menuRowHeight};
 
     const bool selected = selectedIndex == i;
@@ -580,5 +586,14 @@ void LyraTheme::drawButtonMenu(GfxRenderer& renderer, Rect rect, int buttonCount
     }
 
     renderer.drawText(UI_12_FONT_ID, textX, textY, label, true);
+
+    // 8x8 downward chevron on the last visible row when more items are scrolled off below.
+    if (i == pageEndIndex - 1 && pageEndIndex < buttonCount) {
+      const int cx = tileRect.x + tileRect.width - 16;
+      const int cy = tileRect.y + tileRect.height / 2;
+      const int xPoints[3] = {cx - 4, cx + 4, cx};
+      const int yPoints[3] = {cy - 4, cy - 4, cy + 4};
+      renderer.fillPolygon(xPoints, yPoints, 3, !selected);
+    }
   }
 }

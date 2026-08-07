@@ -14,7 +14,7 @@ real breathing room from the bezel, then flip on USB mass storage.
 - [x] **Phase 1: Three defects (§2)** - button-hints reservation, home-menu clamp, screen margin default
 - [ ] **Phase 2: Two status bars (§5.2)** - independent top + bottom status bars
 - [ ] **Phase 3: Home bottom buffer (§2.2)** - real clearance for the home menu's last row
-- [ ] **Phase 4: USB mass storage (§3.1)** - device enumerates as USB MSC
+- [x] **Phase 4: USB mass storage (§3.1)** - device enumerates as USB MSC
 
 ## Phase Details
 
@@ -68,8 +68,14 @@ Plans:
   3. Any serial-logging impact from CDC-on-boot is flagged explicitly in the report, not silently absorbed
 **Plans**: TBD
 
+**RESOLVED (2026-08-07)**: `x4pro` env switched to precompiled framework variant `dio_opi` (`board_build.arduino.memory_type = dio_opi`), which is the only variant with TinyUSB compiled in (`qio_opi`, the prior default, has zero `CONFIG_TINYUSB_*` defines). Build succeeds.
+  - Blocker that stopped the first attempt: CrossPoint's own `lib/Logging/Logging.h` hardcoded `static HWCDC& logSerial = Serial;`, guarded only on `ARDUINO_USB_CDC_ON_BOOT` — safe under every prior env (all pinned `ARDUINO_USB_MODE=1`) but broken under `x4pro`'s new `ARDUINO_USB_MODE=0`, where `Serial` resolves to `USBSerial` (type `USBCDC`, not `HWCDC`). Fixed with a 3-way branch mirroring the Arduino core's own `ARDUINO_USB_MODE` guard. Stale type comment in `HalPowerManager.cpp` fixed alongside it.
+  - **Flash**: baseline (Phases 1-3, `qio_opi`) 5,446,218 / 6,553,600 bytes (83.1%). Phase 4 (`dio_opi` + MSC/CDC): 5,495,130 / 6,553,600 bytes (83.8%). Delta **+48,912 bytes**, 1,058,470 free.
+  - **sdkconfig delta, verified by `nm`-scanning the built `.elf`** (proves linkage, not just config presence): Matter, RainMaker, Insights, camera driver — **0 symbols each**, confirmed dead code under `dio_opi` exactly as under `qio_opi`. Bluetooth controller — only zero-size linker boundary markers, no live driver. WiFi — present but pre-existing (already used for OPDS on every build). TinyUSB MSC callbacks (`tud_msc_*`) — present and linked, the actual feature. The entire flash delta is attributable to the variant switch + new USB stack, none of it to the stock Matter/RainMaker/camera config block.
+  - **PSRAM**: re-verified against this build's actual baked `sdkconfig.h` — `CONFIG_SPIRAM_MODE_OCT/TYPE_AUTO/CLK_IO=30/CS_IO=26/SPEED_80M` byte-identical to `qio_opi`. 4 boot-init macros (`CONFIG_SPIRAM_BOOT_HW_INIT`, `CONFIG_SPIRAM_BOOT_INIT`, `CONFIG_SPIRAM_PRE_CONFIGURE_MEMORY_PROTECTION`, `CONFIG_SPIRAM_IGNORE_NOTFOUND`) present in `dio_opi`/absent in `qio_opi`, functionally unresolvable from source — parent accepted this given Stuart's dual-partition hardware setup makes a bad PSRAM bring-up a five-minute partition swap, not a bricked device.
+
 Plans:
-- [ ] 04-01: TBD
+- [x] 04-01: dio_opi variant switch + Logging.h HWCDC/USBCDC fix, build green, parent go-ahead to commit
 
 ## Progress
 
@@ -80,4 +86,4 @@ Plans:
 | 1. Three defects (§2) | 1/1 | Complete | 2026-08-07 |
 | 2. Two status bars (§5.2) | 0/? | Not started | - |
 | 3. Home bottom buffer (§2.2) | 0/? | Not started | - |
-| 4. USB mass storage (§3.1) | 0/? | Not started | - |
+| 4. USB mass storage (§3.1) | 1/1 | Complete | 2026-08-07 |

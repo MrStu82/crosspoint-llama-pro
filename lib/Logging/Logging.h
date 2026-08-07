@@ -4,6 +4,7 @@
 #include <HardwareSerial.h>
 #if defined(ARDUINO_USB_CDC_ON_BOOT) && ARDUINO_USB_CDC_ON_BOOT
 #include <HWCDC.h>
+#include <USBCDC.h>
 #endif
 
 #include <string>
@@ -31,8 +32,12 @@ won't trigger deprecation warnings.
 #define LOG_LEVEL 0
 #endif
 
-#if defined(ARDUINO_USB_CDC_ON_BOOT) && ARDUINO_USB_CDC_ON_BOOT
+#if defined(ARDUINO_USB_CDC_ON_BOOT) && ARDUINO_USB_CDC_ON_BOOT && defined(ARDUINO_USB_MODE) && ARDUINO_USB_MODE
 static HWCDC& logSerial = Serial;
+#define LOG_SERIAL_HAS_TX_TIMEOUT 1
+#elif defined(ARDUINO_USB_CDC_ON_BOOT) && ARDUINO_USB_CDC_ON_BOOT
+// Native USB mode (ARDUINO_USB_MODE=0): Serial is the TinyUSB CDC device, type USBCDC.
+static USBCDC& logSerial = Serial;
 #define LOG_SERIAL_HAS_TX_TIMEOUT 1
 #else
 static HardwareSerial& logSerial = Serial;

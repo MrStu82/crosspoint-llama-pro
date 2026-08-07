@@ -225,19 +225,25 @@ bool CrossPointSettings::fromJson(JsonVariantConst doc) {
   return true;
 }
 
-CrossPointSettings::StatusBarSpec CrossPointSettings::statusBarSpec() const {
+CrossPointSettings::StatusBarSpec CrossPointSettings::statusBarSpec(Edge edge) const {
   StatusBarSpec spec;
-  spec.showChapterPageCount = statusBarChapterPageCount != 0;
-  spec.showBookProgressPercent = statusBarBookProgressPercentage != 0;
-  spec.titleMode = statusBarTitle;
-  spec.showBattery = statusBarBattery != 0;
+  const bool top = edge == Edge::TOP;
+  spec.showChapterPageCount = (top ? topBarChapterPageCount : statusBarChapterPageCount) != 0;
+  spec.showBookProgressPercent = (top ? topBarBookProgressPercentage : statusBarBookProgressPercentage) != 0;
+  spec.titleMode = top ? topBarTitle : statusBarTitle;
+  spec.showBattery = (top ? topBarBattery : statusBarBattery) != 0;
+  // Clock, xtc mode, and battery-percentage-hiding are not per-edge settings —
+  // they describe device-wide/hardware state, not bar content, so both edges
+  // share the same fields.
   spec.showBatteryPercent = hideBatteryPercentage == HIDE_NEVER;
   spec.clockMode = statusBarClock;
   spec.clock12h = clockFormat == 1;
   spec.clockUtcOffsetQ = clockUtcOffsetQ;
-  spec.progressBarMode = statusBarProgressBar;
+  const uint8_t progressBarMode = top ? topBarProgressBar : statusBarProgressBar;
+  const uint8_t progressBarThickness = top ? topBarProgressBarThickness : statusBarProgressBarThickness;
+  spec.progressBarMode = progressBarMode;
   spec.progressBarHeightPx =
-      statusBarProgressBar != HIDE_PROGRESS ? static_cast<uint8_t>((statusBarProgressBarThickness + 1) * 2) : 0;
+      progressBarMode != HIDE_PROGRESS ? static_cast<uint8_t>((progressBarThickness + 1) * 2) : 0;
   spec.xtcMode = xtcStatusBarMode;
   return spec;
 }

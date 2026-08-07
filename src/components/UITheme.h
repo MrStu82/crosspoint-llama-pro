@@ -35,8 +35,10 @@ class UITheme {
                                      bool hasSubtitle, int extraReservedHeight = 0);
   static std::string getCoverThumbPath(std::string coverBmpPath, int coverHeight);
   static UIIcon getFileIcon(const std::string& filename);
-  static int getStatusBarHeight();
-  static int getProgressBarHeight();
+  // Edge defaults to BOTTOM to keep existing single-bar call sites unchanged;
+  // pass TOP explicitly wherever the top bar's own height is needed.
+  static int getStatusBarHeight(CrossPointSettings::Edge edge = CrossPointSettings::Edge::BOTTOM);
+  static int getProgressBarHeight(CrossPointSettings::Edge edge = CrossPointSettings::Edge::BOTTOM);
 
  private:
   const ThemeMetrics* currentMetrics;

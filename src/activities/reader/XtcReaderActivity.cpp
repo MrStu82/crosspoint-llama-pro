@@ -210,7 +210,9 @@ void XtcReaderActivity::render(RenderLock&&) {
 }
 
 XtcReaderActivity::StatusBarInfo XtcReaderActivity::getStatusBarInfo() const {
-  const auto sb = SETTINGS.statusBarSpec();
+  // XTC's single-bar xtcMode toggle (top-OR-bottom) is a distinct, pre-existing mechanism
+  // from the new dual top+bottom Edge system, so it stays anchored to BOTTOM's spec here.
+  const auto sb = SETTINGS.statusBarSpec(CrossPointSettings::Edge::BOTTOM);
   const int bookPageCount = static_cast<int>(xtc->getPageCount());
   const int bookPage = static_cast<int>(currentPage) + 1;
   std::string title = sb.titleMode == CrossPointSettings::STATUS_BAR_TITLE::BOOK_TITLE ? xtc->getTitle() : "";
@@ -237,7 +239,7 @@ XtcReaderActivity::StatusBarInfo XtcReaderActivity::getStatusBarInfo() const {
 }
 
 void XtcReaderActivity::renderStatusBarOverlay(const StatusBarOverlayPosition position) const {
-  const auto sb = SETTINGS.statusBarSpec();
+  const auto sb = SETTINGS.statusBarSpec(CrossPointSettings::Edge::BOTTOM);
   const bool drawBottom = sb.xtcMode == CrossPointSettings::XTC_STATUS_BAR_MODE::XTC_STATUS_BAR_BOTTOM &&
                           position == StatusBarOverlayPosition::Bottom;
   const bool drawTop = sb.xtcMode == CrossPointSettings::XTC_STATUS_BAR_MODE::XTC_STATUS_BAR_TOP &&
@@ -457,7 +459,8 @@ void XtcReaderActivity::renderPage() {
 
   free(pageBuffer);
 
-  if (SETTINGS.statusBarSpec().xtcMode == CrossPointSettings::XTC_STATUS_BAR_MODE::XTC_STATUS_BAR_TOP) {
+  if (SETTINGS.statusBarSpec(CrossPointSettings::Edge::BOTTOM).xtcMode ==
+      CrossPointSettings::XTC_STATUS_BAR_MODE::XTC_STATUS_BAR_TOP) {
     renderStatusBarOverlay(StatusBarOverlayPosition::Top);
   } else {
     renderStatusBarOverlay(StatusBarOverlayPosition::Bottom);

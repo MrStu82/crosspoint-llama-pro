@@ -1181,6 +1181,10 @@ void EpubReaderActivity::render(RenderLock&& lock) {
     orientedMarginBottom += std::max(SETTINGS.screenMargin, statusBarHeight);
   }
 
+  // Reserve viewport space for the top status bar, mirroring the bottom bar's reservation above.
+  const uint8_t topStatusBarHeight = UITheme::getInstance().getStatusBarHeight(CrossPointSettings::Edge::TOP);
+  orientedMarginTop += topStatusBarHeight;
+
   const uint16_t viewportWidth = renderer.getScreenWidth() - orientedMarginLeft - orientedMarginRight;
   const uint16_t viewportHeight = renderer.getScreenHeight() - orientedMarginTop - orientedMarginBottom;
   // Capture for loop()'s lazy partial-extension start (must match this render's layout params).
@@ -1902,7 +1906,7 @@ void EpubReaderActivity::renderStatusBar() const {
   std::string title;
 
   int textYOffset = 0;
-  const auto sb = SETTINGS.statusBarSpec();
+  const auto sb = SETTINGS.statusBarSpec(CrossPointSettings::Edge::BOTTOM);
 
   if (automaticPageTurnActive) {
     title = tr(STR_AUTO_TURN_ENABLED) + std::to_string(60 * 1000 / pageTurnDuration);
@@ -1928,7 +1932,24 @@ void EpubReaderActivity::renderStatusBar() const {
   }
 
   GUI.drawStatusBar(renderer, bookProgress, currentPage, pageCount, title, 0, textYOffset, true, currentPageBookmarked,
-                    section->isBuilding());
+                    section->isBuilding(), CrossPointSettings::Edge::BOTTOM);
+
+  // Top bar: independent spec/title selection, mirroring the bottom bar's logic above.
+  const auto sbTop = SETTINGS.statusBarSpec(CrossPointSettings::Edge::TOP);
+  std::string topTitle;
+  if (sbTop.titleMode == CrossPointSettings::STATUS_BAR_TITLE::CHAPTER_TITLE) {
+    topTitle = tr(STR_UNNAMED);
+    const int tocIndex = epub->getTocIndexForSpineIndex(currentSpineIndex);
+    if (tocIndex != -1) {
+      const auto tocItem = epub->getTocItem(tocIndex);
+      topTitle = tocItem.title;
+    }
+  } else if (sbTop.titleMode == CrossPointSettings::STATUS_BAR_TITLE::BOOK_TITLE) {
+    topTitle = epub->getTitle();
+  }
+
+  GUI.drawStatusBar(renderer, bookProgress, currentPage, pageCount, topTitle, 0, 0, true, currentPageBookmarked,
+                    section->isBuilding(), CrossPointSettings::Edge::TOP);
 }
 
 void EpubReaderActivity::navigateToHref(const std::string& hrefStr, const bool savePosition) {

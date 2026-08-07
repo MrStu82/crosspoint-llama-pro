@@ -13,6 +13,11 @@ class CrossPointSettings : public PersistableStore<CrossPointSettings> {
   friend class PersistableStore<CrossPointSettings>;
 
  public:
+  // Which panel edge a status bar is pinned to. Passed to statusBarSpec() and
+  // threaded through the render path so the same layout/settings machinery
+  // serves both bars without duplicating it.
+  enum Edge { TOP = 0, BOTTOM = 1 };
+
   enum SLEEP_SCREEN_MODE {
     DARK = 0,
     LIGHT = 1,
@@ -177,13 +182,22 @@ class CrossPointSettings : public PersistableStore<CrossPointSettings> {
   uint8_t sleepScreenCoverMode = FIT;
   // Sleep screen cover filter
   uint8_t sleepScreenCoverFilter = NO_FILTER;
-  // Status bar settings
+  // Status bar settings (bottom edge)
   uint8_t statusBarChapterPageCount = 1;
   uint8_t statusBarBookProgressPercentage = 1;
   uint8_t statusBarProgressBar = BOOK_PROGRESS;
   uint8_t statusBarProgressBarThickness = PROGRESS_BAR_NORMAL;
   uint8_t statusBarTitle = CHAPTER_TITLE;
   uint8_t statusBarBattery = 1;
+  // Top status bar settings, mirroring the block above. Defaults to
+  // chapter-progress only so a fresh install doesn't double up on the
+  // bottom bar's content.
+  uint8_t topBarChapterPageCount = 0;
+  uint8_t topBarBookProgressPercentage = 0;
+  uint8_t topBarProgressBar = CHAPTER_PROGRESS;
+  uint8_t topBarProgressBarThickness = PROGRESS_BAR_NORMAL;
+  uint8_t topBarTitle = HIDE_TITLE;
+  uint8_t topBarBattery = 0;
   uint8_t xtcStatusBarMode = XTC_STATUS_BAR_HIDE;
   // Clock display in status bar (X3 only, requires DS3231 RTC)
   uint8_t statusBarClock = STATUS_BAR_CLOCK_HIDE;
@@ -345,7 +359,7 @@ class CrossPointSettings : public PersistableStore<CrossPointSettings> {
              (showsClock() && clockAvailable);
     }
   };
-  StatusBarSpec statusBarSpec() const;
+  StatusBarSpec statusBarSpec(Edge edge) const;
 
   // Resolved text-rendering configuration for the Epub layout engine. The
   // viewport is renderer/orientation-derived, so the caller supplies it —

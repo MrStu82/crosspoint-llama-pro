@@ -433,10 +433,18 @@ void TxtReaderActivity::renderPage() {
 void TxtReaderActivity::renderStatusBar() const {
   const float progress = totalPages > 0 ? (currentPage + 1) * 100.0f / totalPages : 0;
   std::string title;
-  if (SETTINGS.statusBarSpec().showsTitle()) {
+  if (SETTINGS.statusBarSpec(CrossPointSettings::Edge::BOTTOM).showsTitle()) {
     title = txt->getTitle();
   }
-  GUI.drawStatusBar(renderer, progress, currentPage + 1, totalPages, title);
+  GUI.drawStatusBar(renderer, progress, currentPage + 1, totalPages, title, 0, 0, true, false, false,
+                    CrossPointSettings::Edge::BOTTOM);
+
+  std::string topTitle;
+  if (SETTINGS.statusBarSpec(CrossPointSettings::Edge::TOP).showsTitle()) {
+    topTitle = txt->getTitle();
+  }
+  GUI.drawStatusBar(renderer, progress, currentPage + 1, totalPages, topTitle, 0, 0, true, false, false,
+                    CrossPointSettings::Edge::TOP);
 }
 
 void TxtReaderActivity::saveProgress() const {

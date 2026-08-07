@@ -386,6 +386,28 @@ inline std::vector<SettingInfo> getSettingsList(const SdCardFontRegistry* regist
                           StrId::STR_CUSTOMISE_STATUS_BAR),
         SettingInfo::Toggle(StrId::STR_BATTERY, &CrossPointSettings::statusBarBattery, "statusBarBattery",
                             StrId::STR_CUSTOMISE_STATUS_BAR),
+        // Top status bar (mirrors the bottom-bar block above; see
+        // CrossPointSettings::Edge). Registered here purely so toJson/fromJson
+        // (which iterate getSettingsList()) persist these fields — reusing the
+        // bottom bar's StrId labels means they're indistinguishable in the web
+        // UI for now. On-device editing (a second "Customise Top Status Bar"
+        // menu entry with its own labels) is the deliberate next commit, not
+        // shipped tonight.
+        SettingInfo::Toggle(StrId::STR_CHAPTER_PAGE_COUNT, &CrossPointSettings::topBarChapterPageCount,
+                            "topBarChapterPageCount", StrId::STR_CUSTOMISE_STATUS_BAR),
+        SettingInfo::Toggle(StrId::STR_BOOK_PROGRESS_PERCENTAGE, &CrossPointSettings::topBarBookProgressPercentage,
+                            "topBarBookProgressPercentage", StrId::STR_CUSTOMISE_STATUS_BAR),
+        SettingInfo::Enum(StrId::STR_PROGRESS_BAR, &CrossPointSettings::topBarProgressBar,
+                          {StrId::STR_BOOK, StrId::STR_CHAPTER, StrId::STR_HIDE}, "topBarProgressBar",
+                          StrId::STR_CUSTOMISE_STATUS_BAR),
+        SettingInfo::Enum(StrId::STR_PROGRESS_BAR_THICKNESS, &CrossPointSettings::topBarProgressBarThickness,
+                          {StrId::STR_PROGRESS_BAR_THIN, StrId::STR_PROGRESS_BAR_MEDIUM, StrId::STR_PROGRESS_BAR_THICK},
+                          "topBarProgressBarThickness", StrId::STR_CUSTOMISE_STATUS_BAR),
+        SettingInfo::Enum(StrId::STR_TITLE, &CrossPointSettings::topBarTitle,
+                          {StrId::STR_BOOK, StrId::STR_CHAPTER, StrId::STR_HIDE}, "topBarTitle",
+                          StrId::STR_CUSTOMISE_STATUS_BAR),
+        SettingInfo::Toggle(StrId::STR_BATTERY, &CrossPointSettings::topBarBattery, "topBarBattery",
+                            StrId::STR_CUSTOMISE_STATUS_BAR),
         SettingInfo::Enum(StrId::STR_XTC_STATUS_BAR, &CrossPointSettings::xtcStatusBarMode,
                           {StrId::STR_HIDE, StrId::STR_BOTTOM, StrId::STR_TOP}, "xtcStatusBarMode",
                           StrId::STR_CUSTOMISE_STATUS_BAR),

@@ -2,6 +2,7 @@
 
 #include <HalClock.h>
 #include <HalStorage.h>
+#include <string.h>
 
 #include <ctime>
 
@@ -21,14 +22,17 @@ void StatsManager::load() {
     return;
   }
 
-  int readLen = file.read(reinterpret_cast<uint8_t*>(&stats), sizeof(GlobalStats));
-  if (readLen <= 0) {
-    // Empty or unreadable file.
+  // Buffer sized for the largest thing load() can see: a current-format file (1 version
+  // byte + GlobalStats). A legacy v1 file is smaller and just leaves the tail unused.
+  uint8_t buf[sizeof(uint8_t) + sizeof(GlobalStats)];
+  int readLen = file.read(buf, sizeof(buf));
+
+  bool needsSave = false;
+  if (readLen <= 0 || !migrateStatsBlob(buf, static_cast<size_t>(readLen), stats, needsSave)) {
+    // Empty, unreadable, or unrecognized-size file.
     stats = GlobalStats{};
-  } else if (static_cast<size_t>(readLen) < sizeof(GlobalStats)) {
-    // Graceful migration from an older, smaller struct. Missing trailing fields are
-    // implicitly 0 from the GlobalStats{} default member initializers above.
-    dirty = true;  // Needs saving to expand to the current struct size.
+  } else if (needsSave) {
+    dirty = true;  // Legacy file migrated in memory; persist it in the current format.
   }
 
   checkDateReset();
@@ -38,7 +42,10 @@ void StatsManager::save() {
   if (!dirty) return;
   HalFile file;
   if (Storage.openFileForWrite("STM", STATS_FILE_PATH, file)) {
-    file.write(reinterpret_cast<const uint8_t*>(&stats), sizeof(GlobalStats));
+    uint8_t buf[sizeof(uint8_t) + sizeof(GlobalStats)];
+    buf[0] = STATS_FILE_VERSION;
+    memcpy(buf + 1, &stats, sizeof(GlobalStats));
+    file.write(buf, sizeof(buf));
     dirty = false;
   }
 }

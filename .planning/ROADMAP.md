@@ -12,8 +12,8 @@ real breathing room from the bezel, then flip on USB mass storage.
 **Phase Numbering:** integer phases are the four planned milestones from parent's dispatch, in the exact order given. No decimal/inserted phases.
 
 - [x] **Phase 1: Three defects (§2)** - button-hints reservation, home-menu clamp, screen margin default
-- [ ] **Phase 2: Two status bars (§5.2)** - independent top + bottom status bars
-- [ ] **Phase 3: Home bottom buffer (§2.2)** - real clearance for the home menu's last row
+- [x] **Phase 2: Two status bars (§5.2)** - independent top + bottom status bars
+- [x] **Phase 3: Home bottom buffer (§2.2)** - real clearance for the home menu's last row
 - [x] **Phase 4: USB mass storage (§3.1)** - device enumerates as USB MSC
 
 ## Phase Details
@@ -40,10 +40,10 @@ Plans:
   2. Top bar shows only chapter progress by default; bottom bar's existing default is unchanged
   3. An empty/hidden bar costs exactly 0px of page space; a populated bar pins hard to its panel edge
   4. `StatusBarSettingsActivity` configures either bar via one parameterized screen
-**Plans**: TBD
+**Plans**: 1 plan (single commit, matching Phase 1's pattern)
 
 Plans:
-- [ ] 02-01: TBD
+- [x] 02-01: `Edge` enum + `StatusBarSpec` in CrossPointSettings, `UITheme::getStatusBarHeight(Edge)`/`getProgressBarHeight(Edge)`, EPUB/TXT/XTC reader activities render both bars independently, `StatusBarSettingsActivity` parameterized by edge — confirmed present at HEAD `8634a75d`, verified via a clean `pio run -e x4pro` on trantor (SUCCESS, 19.5s, no code changes needed). All four success criteria checked against source directly, not assumed.
 
 ### Phase 3: Home bottom buffer (§2.2)
 **Goal**: Home menu's last row no longer sits flush against the bezel/physical home button.
@@ -53,10 +53,10 @@ Plans:
   1. `homeBottomInset=24` is reserved below the last menu row, untouchable by touch input
   2. Six default menu rows still fit above it after the row-pitch reduction (`menuRowHeight` 64→60, `menuSpacing` 8→4)
   3. Seven-item overflow (OPDS enabled) is handled by Phase 1's clamp/scroll, not a special case here
-**Plans**: TBD
+**Plans**: 1 plan (single commit, matching Phase 1's pattern)
 
 Plans:
-- [ ] 03-01: TBD
+- [x] 03-01: `homeBottomInset=24` + `menuRowHeight=60`/`menuSpacing=4` confirmed present in `LyraTheme.h`, dead-zone touch exclusion confirmed in `HomeActivity.cpp` (`menuTouchableHeight` subtracts `metrics.homeBottomInset`) — confirmed present at HEAD `8634a75d`, all three success criteria checked directly against source, no code changes needed.
 
 ### Phase 4: USB mass storage (§3.1)
 **Goal**: X4 Pro enumerates as a USB mass storage device when connected to a host.

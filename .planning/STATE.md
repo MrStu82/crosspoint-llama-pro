@@ -3,10 +3,10 @@ gsd_state_version: '1.0'
 status: in_progress
 progress:
   total_phases: 4
-  completed_phases: 1
-  total_plans: 1
-  completed_plans: 1
-  percent: 25
+  completed_phases: 4
+  total_plans: 4
+  completed_plans: 4
+  percent: 100
 ---
 
 # Project State
@@ -16,16 +16,16 @@ progress:
 See: .planning/PROJECT.md (updated 2026-08-07)
 
 **Core value:** Every screen renders correctly and fully on-panel on the X4 Pro, with no clipped/overflowing content and no touch targets crowded against the bezel.
-**Current focus:** Phase 1 — Three defects (§2)
+**Current focus:** All 4 phases of the original UI-layout-fixes dispatch are complete. Remaining work (Item 1 USB-MSC hardware fix, Item 2 swipe-drawer fix, Item 3 Stats redesign, Games category) is tracked outside this roadmap's original 4-phase scope.
 
 ## Current Position
 
-Phase: 1 of 4 (Three defects (§2)) — COMPLETE, awaiting parent report
-Plan: 1 of 1 in current phase — done
-Status: Phase 1 committed and pushed. Build green (PlatformIO x4pro, app image only). Ready to report to parent, then start Phase 2.
-Last activity: 2026-08-07 — committed 4a7e55cb7bfb5a7a7e543022033001d51cd25f5a on branch phase1-three-defects, pushed to origin. Build SUCCESS (213s, RAM 18.8%, Flash 83.1%, firmware.bin app image only at offset 0x10000, separate from bootloader.bin).
+Phase: 4 of 4 — all complete
+Plan: none pending in this roadmap
+Status: Phases 1, 2, 3, and 4 all confirmed complete at HEAD `8634a75d` (this doc had gone stale after Phase 1 — Phase 2/3/4 work landed but was never reflected here). Phase 2 (BAR-01..04) and Phase 3 (home bottom buffer) reconfirmed 2026-08-08 via direct source read + a clean `pio run -e x4pro` on trantor (SUCCESS, 19.5s).
+Last activity: 2026-08-08 — verified Phases 2 and 3 complete, updated ROADMAP.md and this file to match reality. This roadmap's scope is done; active work has moved to defect-fix items (Item 1/2/3) and new feature requests tracked in conversation/task history, not in this file.
 
-Progress: [██░░░░░░░░] 25%
+Progress: [██████████] 100%
 
 ## Performance Metrics
 

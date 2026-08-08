@@ -1,5 +1,6 @@
 #pragma once
 
+#include <BoardConfig.h>  // for FREEINK_SD_SDMMC
 #include <Print.h>
 #include <common/FsApiConstants.h>  // for oflag_t
 #include <freertos/semphr.h>
@@ -10,11 +11,26 @@
 
 class HalFile;
 
+// fwd decl only — avoids pulling SdFat headers into this widely-included file
+class FsBlockDeviceInterface;
+
 class HalStorage {
  public:
   HalStorage();
   bool begin();
   bool ready() const;
+
+  // Raw block-device handle for USB Mass Storage mode (see UsbMassStorage.h).
+  // Only available on boards with native SDMMC (FREEINK_SD_SDMMC) — USB-MSC
+  // is only shipped on those boards (see FREEINK_CAP_USB_MSC in BoardConfig.h).
+  // Caller must have suspended all other app filesystem use first (see
+  // UsbMassStorage.h's documented lifecycle) before touching this.
+  // Returned as the generic FsBlockDeviceInterface (not the concrete
+  // SdmmcBlockDevice type) so callers like UsbMassStorage::begin() never need
+  // the concrete SDMMC type visible.
+#if FREEINK_SD_SDMMC
+  FsBlockDeviceInterface* rawBlockDeviceForUsbMsc();
+#endif
   std::vector<String> listFiles(const char* path = "/", int maxFiles = 200);
   // Read the entire file at `path` into a String. Returns empty string on failure.
   String readFile(const char* path);

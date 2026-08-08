@@ -116,7 +116,7 @@ bool MappedInputManager::mapButton(const Button button, bool (HalGPIO::*fn)(uint
 }
 
 namespace {
-constexpr float LEFT_EDGE_BACK_GESTURE_FRAC_X = 0.25f;
+constexpr float LEFT_EDGE_BRIGHTNESS_GESTURE_FRAC_X = 0.25f;
 constexpr float BOTTOM_EDGE_BACK_GESTURE_FRAC_Y = 0.14f;
 constexpr float TOP_EDGE_MENU_GESTURE_FRAC_Y = 0.14f;
 constexpr unsigned long TOUCH_DOWN_SELECT_DELAY_MS = 90;
@@ -265,21 +265,6 @@ MappedInputManager::SwipeDir MappedInputManager::wasSwipe() const {
   return dy < 0 ? SwipeDir::Up : SwipeDir::Down;
 }
 
-bool MappedInputManager::wasBackGesture() const {
-  // Back = left-to-right swipe starting near the left edge. Edge-anchored so that
-  // mid-screen horizontal swipes stay available to activities that consume
-  // SwipeDir::Left/Right (e.g. percent selection, image viewer).
-  int sx = 0;
-  int sy = 0;
-  int ex = 0;
-  int ey = 0;
-  if (!decodeSwipe(sx, sy, ex, ey)) return false;
-  const bool hit = sx <= renderer.getScreenWidth() * LEFT_EDGE_BACK_GESTURE_FRAC_X && ex > sx &&
-                   std::abs(ex - sx) > std::abs(ey - sy);
-  if (hit) rememberTouchHeldTime();
-  return hit;
-}
-
 bool MappedInputManager::wasMenuGesture() const {
   // Downward swipe starting at the top edge (mirror of the bottom-edge home gesture).
   int sx = 0;
@@ -330,55 +315,27 @@ bool MappedInputManager::wasHomeGesture() const {
 }
 
 bool MappedInputManager::wasBrightnessGesture() const {
+  // Left-edge upward swipe -> backlight quick-picker. Edge-anchored to the same
+  // zone previously used by the now-retired wasBackGesture() (Back is covered by
+  // the physical home key alone; see wasHomeKeyBackGesture()).
   int sx = 0;
   int sy = 0;
   int ex = 0;
   int ey = 0;
   if (!decodeSwipe(sx, sy, ex, ey)) return false;
-  const int topEdgeBottom = static_cast<int>(renderer.getScreenHeight() * TOP_EDGE_MENU_GESTURE_FRAC_Y);
-  const int bottomEdgeTop =
-      renderer.getScreenHeight() - static_cast<int>(renderer.getScreenHeight() * BOTTOM_EDGE_BACK_GESTURE_FRAC_Y);
-  // Start point must be outside both edge bands so this can't collide with wasMenuGesture()'s
-  // top-edge downward swipe or wasHomeGesture()'s bottom-edge upward swipe.
-  const bool hit =
-      sy > topEdgeBottom && sy < bottomEdgeTop && ey < sy && std::abs(ey - sy) > std::abs(ex - sx);
-  if (hit) rememberTouchHeldTime();
-  return hit;
-}
-
-bool MappedInputManager::wasTextSizeGesture() const {
-  int sx = 0;
-  int sy = 0;
-  int ex = 0;
-  int ey = 0;
-  if (!decodeSwipe(sx, sy, ex, ey)) return false;
-  const int topEdgeBottom = static_cast<int>(renderer.getScreenHeight() * TOP_EDGE_MENU_GESTURE_FRAC_Y);
-  const int bottomEdgeTop =
-      renderer.getScreenHeight() - static_cast<int>(renderer.getScreenHeight() * BOTTOM_EDGE_BACK_GESTURE_FRAC_Y);
-  const bool hit =
-      sy > topEdgeBottom && sy < bottomEdgeTop && ey > sy && std::abs(ey - sy) > std::abs(ex - sx);
+  const bool hit = sx <= renderer.getScreenWidth() * LEFT_EDGE_BRIGHTNESS_GESTURE_FRAC_X && ey < sy &&
+                   std::abs(ey - sy) > std::abs(ex - sx);
   if (hit) rememberTouchHeldTime();
   return hit;
 }
 
 bool MappedInputManager::wasPressed(const Button button) const {
-  if (button == Button::Back) {
-    // Evaluate both unconditionally (not `||` short-circuited) so a home-key
-    // tap is never left un-consumed just because a touch back-swipe was also
-    // live this frame.
-    const bool backSwipe = wasBackGesture();
-    const bool homeKeyBack = wasHomeKeyBackGesture();
-    if (backSwipe || homeKeyBack) return true;
-  }
+  if (button == Button::Back && wasHomeKeyBackGesture()) return true;
   return mapButton(button, &HalGPIO::wasPressed);
 }
 
 bool MappedInputManager::wasReleased(const Button button) const {
-  if (button == Button::Back) {
-    const bool backSwipe = wasBackGesture();
-    const bool homeKeyBack = wasHomeKeyBackGesture();
-    if (backSwipe || homeKeyBack) return true;
-  }
+  if (button == Button::Back && wasHomeKeyBackGesture()) return true;
   return mapButton(button, &HalGPIO::wasReleased);
 }
 

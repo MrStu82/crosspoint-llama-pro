@@ -63,11 +63,11 @@ class MappedInputManager {
   SwipeDir wasSwipe() const;
   bool wasHomeGesture() const;
   bool wasMenuGesture() const;
-  // Mid-screen vertical swipe quick-settings gestures (reader-only). Both require the swipe to
-  // *start* outside the top/bottom edge bands already claimed by wasMenuGesture()/wasHomeGesture(),
-  // so they can't steal or be stolen by those gestures within the same frame.
-  bool wasBrightnessGesture() const;  // mid-screen upward swipe -> backlight quick-picker
-  bool wasTextSizeGesture() const;    // mid-screen downward swipe -> text-settings quick-picker
+  // Left-edge upward swipe (reader-only) -> backlight quick-picker. Edge-anchored so it can't
+  // collide with wasMenuGesture()'s top-edge downward swipe or wasHomeGesture()'s bottom-edge
+  // upward swipe. This zone previously belonged to the now-retired wasBackGesture() (Back is
+  // covered by the physical home key alone; see wasHomeKeyBackGesture()).
+  bool wasBrightnessGesture() const;
   bool wasAnyPressed() const;
   bool wasAnyReleased() const;
   unsigned long getHeldTime() const;
@@ -98,11 +98,11 @@ class MappedInputManager {
   Button mapScreenDirection(Button button) const;
   Labels mapFrontLabels(const char* back, const char* confirm, const char* left, const char* right) const;
   bool mapButton(Button button, bool (HalGPIO::*fn)(uint8_t) const) const;
-  bool wasBackGesture() const;
   // Synthesizes a Button::Back edge from a home-key tap. Overrides getHeldTime()
-  // to 0 (via the same touchHeldOverride mechanism as wasBackGesture()) so any
-  // duration-gated Back logic (e.g. ReaderUtils::handleBackNavigation's
-  // GO_BACK_OR_HOME_MS split) always classifies it as a short press.
+  // to 0 (via the touchHeldOverride mechanism) so any duration-gated Back logic
+  // (e.g. ReaderUtils::handleBackNavigation's GO_BACK_OR_HOME_MS split) always
+  // classifies it as a short press. Sole source of Button::Back — the left-edge
+  // swipe gesture that previously also fed Back has been retired.
   bool wasHomeKeyBackGesture() const;
   // Fetch the pending swipe (if any) and map both endpoints to logical screen coords
   bool decodeSwipe(int& sx, int& sy, int& ex, int& ey) const;

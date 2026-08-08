@@ -27,6 +27,7 @@ enum class SettingAction {
   DownloadFonts,
   TextSettings,
   Frontlight,
+  UsbTransfer,
 };
 
 struct SettingInfo {

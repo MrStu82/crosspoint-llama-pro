@@ -115,8 +115,7 @@ void XtcReaderActivity::loop() {
     openChapterSelection();
   }
 
-  // Mid-screen swipe-up quick-settings drawer: backlight. No text-size equivalent here —
-  // XTC pages are pre-rendered images, font size doesn't apply.
+  // Left-edge swipe-up quick-settings drawer: backlight.
   if (mappedInput.wasBrightnessGesture()) {
     startActivityForResult(std::make_unique<FrontlightActivity>(renderer, mappedInput),
                            [this](const ActivityResult&) { requestUpdate(); });

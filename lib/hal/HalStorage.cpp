@@ -27,6 +27,12 @@ bool HalStorage::begin() { return SDCard.begin(); }
 
 bool HalStorage::ready() const { return SDCard.ready(); }
 
+#if FREEINK_SD_SDMMC
+// No StorageLock here: USB-MSC mode requires the caller to have already
+// suspended all other app filesystem use (see UsbMassStorage.h).
+FsBlockDeviceInterface* HalStorage::rawBlockDeviceForUsbMsc() { return SDCard.rawBlockDevice(); }
+#endif
+
 // For the rest of the methods, we acquire the mutex to ensure thread safety
 
 class HalStorage::StorageLock {

@@ -314,18 +314,10 @@ void EpubReaderActivity::openBrightnessQuickPicker() {
                          [this](const ActivityResult&) { requestUpdate(); });
 }
 
-void EpubReaderActivity::openTextSizeQuickPicker() {
-  startActivityForResult(std::make_unique<TextSettingsActivity>(renderer, mappedInput, &sdFontSystem.registry(),
-                                                                TextSettingsActivity::Tab::Size),
-                         [this](const ActivityResult&) { onTextSettingsClosed(); });
-}
-
 void EpubReaderActivity::onTextSettingsClosed() {
   // TextSettingsActivity saves on each change; no save needed here. Font/size/spacing/margin
   // changes invalidate the current layout: preserve position and force a re-layout, mirroring
-  // applyOrientation()'s reflow. Shared by the reader-menu TEXT_SETTINGS entry and the
-  // swipe-down quick-access picker (openTextSizeQuickPicker), which differ only in which tab
-  // TextSettingsActivity opens on.
+  // applyOrientation()'s reflow. Used by the reader-menu TEXT_SETTINGS entry.
   RenderLock lock(*this);
   if (section) {
     rememberCurrentContentOffset();
@@ -564,13 +556,9 @@ void EpubReaderActivity::loop() {
     }
   }
 
-  // Mid-screen swipe quick-settings drawers: swipe up for backlight, swipe down for text size.
+  // Left-edge upward swipe -> backlight quick-settings drawer.
   if (mappedInput.wasBrightnessGesture()) {
     openBrightnessQuickPicker();
-    return;
-  }
-  if (mappedInput.wasTextSizeGesture()) {
-    openTextSizeQuickPicker();
     return;
   }
 

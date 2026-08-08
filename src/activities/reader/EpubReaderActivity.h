@@ -185,12 +185,10 @@ class EpubReaderActivity final : public Activity {
   // Opens the reader menu for the current position (short-press Confirm)
   void openReaderMenu();
   void openDictionaryWordSelect();
-  // Quick-access swipe drawers (mid-screen swipe up/down): open the existing brightness/text
-  // settings screens directly, without going through the reader menu.
+  // Quick-access swipe drawer (left-edge swipe up): opens the existing brightness settings
+  // screen directly, without going through the reader menu.
   void openBrightnessQuickPicker();
-  void openTextSizeQuickPicker();
-  // Shared post-close re-layout for TextSettingsActivity, used by both the reader-menu
-  // TEXT_SETTINGS entry and the swipe-down quick-access picker.
+  // Post-close re-layout for TextSettingsActivity, used by the reader-menu TEXT_SETTINGS entry.
   void onTextSettingsClosed();
   // Returns true if sync acted (launched, or surfaced a save error); false if it was a no-op
   // because no KOReader credentials are stored.

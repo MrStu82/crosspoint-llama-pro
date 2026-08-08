@@ -193,25 +193,34 @@ void StatsActivity::render(RenderLock&&) {
 
   int colWidth = (screenWidth - (sidePad * 2)) / 3;
 
-  // The three stat blocks below (Today / All Time / All Items) plus the 7-day heat
-  // strip were laid out at fixed pixel spacing that was never checked against the
-  // real panel height, and ran off the bottom of the screen. Measure how much height
-  // they actually need against what's really left above the button-hints row, and if
-  // it doesn't fit, compress the spacing (not the content) by a single scale factor
-  // derived from that measurement — rather than hand-picking new fixed offsets that
-  // would only happen to work for today's strings/fonts/screen.
+  // The three stat blocks below (Today / All Time / All Items) plus the activity
+  // history grid were laid out at fixed pixel spacing that was never checked against
+  // the real panel height, and ran off the bottom of the screen. Measure how much
+  // height they actually need against what's really left above the button-hints row,
+  // and if it doesn't fit, compress the spacing (not the content) by a single scale
+  // factor derived from that measurement — rather than hand-picking new fixed offsets
+  // that would only happen to work for today's strings/fonts/screen.
   constexpr int kBlockValueOffset = 34;   // value baseline -> first label line
   constexpr int kBlockLabel2Offset = 52;  // value baseline -> second label line
   constexpr int kBlockDividerHeight = 65;
   constexpr int kSectionHeaderGap = 45;  // header strip -> block start
   constexpr int kBlockGap = 85;          // block start -> next section header
   constexpr int kSectionGap = 15;        // extra breathing room after each block
-  constexpr int kBaseStripH = 60;
-  constexpr int kStripLabelGap = 18;     // strip bottom -> day-number label
-  constexpr int kStripLabelHeight = 16;  // label text height allowance
 
-  const int naturalHeight = 3 * (kSectionHeaderGap + kBlockGap + kSectionGap) + kSectionHeaderGap + kBaseStripH +
-                            kStripLabelGap + kStripLabelHeight;
+  // Activity history grid: DAILY_HISTORY_SLOTS days as a 12-week contribution grid
+  // (7 rows = days of the week, 12 columns = weeks), column-major so index 0 (oldest)
+  // is the top of the leftmost column and index DAILY_HISTORY_SLOTS-1 (today) is the
+  // bottom of the rightmost column. Per-cell day-number labels from the old single-row
+  // strip are dropped — unreadable at this density; the shading alone (same 4 e-ink
+  // levels as before) carries the information.
+  static_assert(DAILY_HISTORY_SLOTS % 7 == 0, "activity grid assumes a whole number of 7-day columns");
+  constexpr int kGridRows = 7;
+  constexpr int kGridCols = DAILY_HISTORY_SLOTS / kGridRows;
+  constexpr int kBaseCellSize = 16;
+  constexpr int kCellGap = 4;
+  constexpr int kBaseGridHeight = kGridRows * kBaseCellSize + (kGridRows - 1) * kCellGap;
+
+  const int naturalHeight = 3 * (kSectionHeaderGap + kBlockGap + kSectionGap) + kSectionHeaderGap + kBaseGridHeight;
 
   const int screenHeight = renderer.getScreenHeight();
   const int bottomReserved = metrics.buttonHintsHeight + 10;  // hints row + a small safety margin
@@ -226,8 +235,8 @@ void StatsActivity::render(RenderLock&&) {
   const int sectionHeaderGap = static_cast<int>(kSectionHeaderGap * scale);
   const int blockGap = static_cast<int>(kBlockGap * scale);
   const int sectionGap = static_cast<int>(kSectionGap * scale);
-  const int stripH = static_cast<int>(kBaseStripH * scale);
-  const int stripLabelGap = static_cast<int>(kStripLabelGap * scale);
+  const int cellSize = static_cast<int>(kBaseCellSize * scale);
+  const int cellGap = static_cast<int>(kCellGap * scale);
   const int blockValueOffset = static_cast<int>(kBlockValueOffset * scale);
   const int blockLabel2Offset = static_cast<int>(kBlockLabel2Offset * scale);
   const int blockDividerHeight = static_cast<int>(kBlockDividerHeight * scale);
@@ -331,50 +340,47 @@ void StatsActivity::render(RenderLock&&) {
 
   yPos += sectionGap;
 
-  // --- LAST 7 DAYS SECTION ---
-  // Heat strip: one cell per day (oldest to newest, left to right), shaded to one of the
-  // four e-ink levels the display can actually produce (solid white / 25% dither LightGray /
-  // 50% checkerboard DarkGray / solid black) — see fillRectDither()'s Color cases. A day with
-  // an unknown date (RTC was unset that far back) or zero minutes both render as plain white;
-  // the numeral label distinguishes "no data" (a dash) from "read nothing that day" (a date).
+  // --- ACTIVITY HISTORY SECTION ---
+  // 12-week contribution grid: one cell per day, column-major (oldest at top-left,
+  // today at bottom-right), shaded to one of the four e-ink levels the display can
+  // actually produce (solid white / 25% dither LightGray / 50% checkerboard DarkGray /
+  // solid black) — see fillRectDither()'s Color cases. A day with an unknown date (RTC
+  // was unset that far back) and a day with zero minutes read are visually
+  // indistinguishable (both plain white) — acceptable at this density, unlike the old
+  // single-row strip which could afford a per-cell "-" label for the unknown case.
   renderer.fillRectDither(sidePad, yPos, screenWidth - sidePad * 2, 24, Color::LightGray);
-  renderer.drawText(UI_10_FONT_ID, sidePad + 10, yPos + 3, tr(STR_STATS_LAST_7_DAYS));
+  renderer.drawText(UI_10_FONT_ID, sidePad + 10, yPos + 3, tr(STR_STATS_ACTIVITY_HISTORY));
   yPos += sectionHeaderGap;
 
-  uint16_t last7Minutes[DAILY_HISTORY_SLOTS];
-  int last7Dates[DAILY_HISTORY_SLOTS];
-  READING_STATS.getLast7DaysMinutes(last7Minutes, last7Dates);
+  uint16_t history[DAILY_HISTORY_SLOTS];
+  int historyDates[DAILY_HISTORY_SLOTS];
+  READING_STATS.getLast7DaysMinutes(history, historyDates);
 
-  const int stripW = screenWidth - sidePad * 2;
-  const int cellW = stripW / DAILY_HISTORY_SLOTS;
+  const int gridW = kGridCols * cellSize + (kGridCols - 1) * cellGap;
+  const int gridX = sidePad + (screenWidth - sidePad * 2 - gridW) / 2;
 
   for (int i = 0; i < DAILY_HISTORY_SLOTS; i++) {
-    const int cellX = sidePad + i * cellW;
+    const int col = i / kGridRows;
+    const int row = i % kGridRows;
+    const int cellX = gridX + col * (cellSize + cellGap);
+    const int cellY = yPos + row * (cellSize + cellGap);
 
     Color level;
-    if (last7Dates[i] == 0 || last7Minutes[i] == 0) {
+    if (historyDates[i] == 0 || history[i] == 0) {
       level = Color::White;
-    } else if (last7Minutes[i] < 15) {
+    } else if (history[i] < 15) {
       level = Color::LightGray;
-    } else if (last7Minutes[i] < 45) {
+    } else if (history[i] < 45) {
       level = Color::DarkGray;
     } else {
       level = Color::Black;
     }
 
-    renderer.fillRectDither(cellX + 2, yPos, cellW - 4, stripH, level);
-    renderer.drawRect(cellX + 2, yPos, cellW - 4, stripH);
-
-    char dayLabel[4];
-    if (last7Dates[i] != 0) {
-      snprintf(dayLabel, sizeof(dayLabel), "%d", last7Dates[i] % 100);
-    } else {
-      snprintf(dayLabel, sizeof(dayLabel), "-");
-    }
-    drawCentered(UI_10_FONT_ID, dayLabel, cellX + cellW / 2, yPos + stripH + stripLabelGap);
+    renderer.fillRectDither(cellX, cellY, cellSize, cellSize, level);
+    renderer.drawRect(cellX, cellY, cellSize, cellSize);
   }
 
-  yPos += stripH + stripLabelGap + kStripLabelHeight;
+  yPos += kGridRows * cellSize + (kGridRows - 1) * cellGap;
 
   const auto labels = mappedInput.mapLabels(tr(STR_BACK), tr(STR_SELECT), "", "");
   GUI.drawButtonHints(renderer, labels.btn1, labels.btn2, labels.btn3, labels.btn4);

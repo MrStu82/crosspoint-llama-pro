@@ -151,6 +151,34 @@ void SolitaireActivity::flipTopIfNeeded(int col) {
 void SolitaireActivity::clearSelection() {
   selSource = SelSource::None;
   selCol = -1;
+  selRunIndex = -1;
+}
+
+int SolitaireActivity::hitTestColumnCard(int col, int tx, int ty) const {
+  const auto& pile = tableau[col];
+  const int n = static_cast<int>(pile.size());
+  if (n == 0) {
+    return -1;
+  }
+  if (tx < columnRect[col].x || tx >= columnRect[col].x + cardW) {
+    return -1;
+  }
+  static constexpr int kMaxPile = 32;
+  int ys[kMaxPile];
+  int count = std::min(n, kMaxPile);
+  int y = columnRect[col].y;
+  for (int i = 0; i < count; i++) {
+    ys[i] = y;
+    y += pile[i].faceUp ? cardUpOffset : cardDownOffset;
+  }
+  for (int i = count - 1; i >= 0; i--) {
+    int top = ys[i];
+    int bottom = (i + 1 < count) ? ys[i + 1] : ys[i] + cardH;
+    if (ty >= top && ty < bottom) {
+      return i;
+    }
+  }
+  return -1;
 }
 
 bool SolitaireActivity::isDoubleTap(int x, int y) {
@@ -248,7 +276,9 @@ void SolitaireActivity::loop() {
           waste.pop_back();
           checkWin();
         }
-      } else if (selSource == SelSource::Tableau && selCol >= 0 && !tableau[selCol].empty()) {
+      } else if (selSource == SelSource::Tableau && selCol >= 0 && !tableau[selCol].empty() &&
+                 selRunIndex == static_cast<int>(tableau[selCol].size()) - 1) {
+        // Only a single-card selection (the run start is the top card) can go to a foundation.
         Card c = tableau[selCol].back();
         if (canPlaceOnFoundation(f, c)) {
           foundationTop[f] = c.rank;
@@ -269,16 +299,19 @@ void SolitaireActivity::loop() {
     }
 
     if (selSource == SelSource::None) {
-      if (!tableau[col].empty() && tableau[col].back().faceUp) {
-        const Card& top = tableau[col].back();
-        if (dbl && canPlaceOnFoundation(top.suit, top)) {
-          foundationTop[top.suit] = top.rank;
+      int hitIndex = hitTestColumnCard(col, tx, ty);
+      if (hitIndex >= 0 && tableau[col][hitIndex].faceUp) {
+        bool isTopCard = (hitIndex == static_cast<int>(tableau[col].size()) - 1);
+        const Card& tapped = tableau[col][hitIndex];
+        if (dbl && isTopCard && canPlaceOnFoundation(tapped.suit, tapped)) {
+          foundationTop[tapped.suit] = tapped.rank;
           tableau[col].pop_back();
           flipTopIfNeeded(col);
           checkWin();
         } else {
           selSource = SelSource::Tableau;
           selCol = col;
+          selRunIndex = hitIndex;
         }
       }
     } else if (selSource == SelSource::Waste) {
@@ -289,13 +322,15 @@ void SolitaireActivity::loop() {
         checkWin();
       }
       clearSelection();
-    } else {  // SelSource::Tableau
+    } else {  // SelSource::Tableau -- move the whole run from selRunIndex down
       if (selCol == col) {
         clearSelection();
-      } else if (selCol >= 0 && !tableau[selCol].empty() && canPlaceOnTableau(col, tableau[selCol].back())) {
-        Card c = tableau[selCol].back();
-        tableau[selCol].pop_back();
-        tableau[col].push_back(c);
+      } else if (selCol >= 0 && selRunIndex >= 0 && selRunIndex < static_cast<int>(tableau[selCol].size()) &&
+                 canPlaceOnTableau(col, tableau[selCol][selRunIndex])) {
+        auto& src = tableau[selCol];
+        auto& dst = tableau[col];
+        dst.insert(dst.end(), src.begin() + selRunIndex, src.end());
+        src.erase(src.begin() + selRunIndex, src.end());
         flipTopIfNeeded(selCol);
         checkWin();
         clearSelection();
@@ -345,8 +380,8 @@ void SolitaireActivity::render(RenderLock&&) {
 
   const int marginX = 6;
   const int gap = 4;
-  const int cardW = (pageWidth - 2 * marginX - 6 * gap) / kColumns;
-  const int cardH = cardW * 7 / 5;
+  cardW = (pageWidth - 2 * marginX - 6 * gap) / kColumns;
+  cardH = cardW * 7 / 5;
 
   const int topRowY = contentTop;
 
@@ -408,21 +443,21 @@ void SolitaireActivity::render(RenderLock&&) {
   }
 
   // Tableau
-  const int downOffset = std::max(6, cardH / 9);
-  const int upOffset = std::max(18, cardH / 3);
+  cardDownOffset = std::max(6, cardH / 9);
+  cardUpOffset = std::max(18, cardH / 3);
   for (int col = 0; col < kColumns; col++) {
     int y = columnRect[col].y;
     const auto& pile = tableau[col];
     for (size_t i = 0; i < pile.size(); i++) {
-      bool isTop = (i + 1 == pile.size());
+      bool inSelectedRun = selSource == SelSource::Tableau && selCol == col &&
+                            static_cast<int>(i) >= selRunIndex;
       const Card& c = pile[i];
       if (c.faceUp) {
-        drawCardFace(columnRect[col].x, y, cardW, cardH, c,
-                     isTop && selSource == SelSource::Tableau && selCol == col);
-        y += upOffset;
+        drawCardFace(columnRect[col].x, y, cardW, cardH, c, inSelectedRun);
+        y += cardUpOffset;
       } else {
         drawCardBack(columnRect[col].x, y, cardW, cardH);
-        y += downOffset;
+        y += cardDownOffset;
       }
     }
     if (pile.empty()) {

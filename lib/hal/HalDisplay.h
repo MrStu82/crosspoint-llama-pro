@@ -86,6 +86,12 @@ class HalDisplay {
 
   void displayGrayBuffer(bool turnOffScreen = false);
 
+  // Windowed refresh of a rectangular region in physical panel coordinates
+  // (x/w already 8-pixel aligned by the caller — see GfxRenderer::displayWindow).
+  // Debug-only: no production call site drives this today, see
+  // SettingsActivity's header-long-press panel-proof trigger.
+  void displayWindow(uint16_t x, uint16_t y, uint16_t w, uint16_t h, bool turnOffScreen = false);
+
   // Tiled grayscale: stream one band of a plane (lsbPlane selects LSB/MSB RAM)
   // straight to the controller; supportsStripGrayscale() gates the path. See
   // EInkDisplay::writeGrayscalePlaneStrip.

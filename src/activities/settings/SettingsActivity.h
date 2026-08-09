@@ -181,6 +181,15 @@ class SettingsActivity final : public Activity {
   void rebuildSettingsLists();
   void syncQuickResumeTimeoutForSleepScreen(bool sleepScreenChanged, bool quickResumeTimeoutChanged);
 
+  // Debug-only panel-proof trigger (long-press the header/version area): draws
+  // a test pattern into a 480x160 bottom strip and windowed-refreshes just that
+  // region, to prove/disprove the SSD1677 partial-refresh assumption behind the
+  // deferred quick-settings sheet. No discoverable UI, not documented anywhere
+  // user-facing — see .planning/REQUIREMENTS.md DEF-01.
+  unsigned long panelProofHoldStartMs = 0;
+  bool panelProofFired = false;
+  void runPanelProofDebugTrigger();
+
  public:
   explicit SettingsActivity(GfxRenderer& renderer, MappedInputManager& mappedInput)
       : Activity("Settings", renderer, mappedInput) {}

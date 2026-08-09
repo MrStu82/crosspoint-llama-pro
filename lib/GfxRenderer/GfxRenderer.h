@@ -177,8 +177,12 @@ class GfxRenderer {
   // fadingFix isn't forcing the blocking path. Callers can skip overlap
   // scaffolding (e.g. whole-plane grayscale buffers) when false.
   bool supportsAsyncRefresh() const;
-  // EXPERIMENTAL: Windowed update - display only a rectangular region
-  // void displayWindow(int x, int y, int width, int height) const;
+  // Windowed refresh of a rectangular region in logical screen coordinates.
+  // Aligns/converts to physical panel coordinates via screenRectToAlignedMemRect
+  // (same helper readFramebufferRegion/writeFramebufferRegion use); no-op if the
+  // rect doesn't produce a valid aligned region. Debug-only today — see
+  // SettingsActivity's header-long-press panel-proof trigger.
+  void displayWindow(int x, int y, int width, int height, bool turnOffScreen = false) const;
   void invertScreen() const;
   void clearScreen(uint8_t color = 0xFF) const;
   void getOrientedViewableTRBL(int* outTop, int* outRight, int* outBottom, int* outLeft) const;

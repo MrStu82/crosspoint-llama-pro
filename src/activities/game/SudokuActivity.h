@@ -15,11 +15,12 @@ class MappedInputManager;
 // stack-budget rule) -- never a canned puzzle bank. Three difficulty levels
 // select the target clue count. Progress is saved after every single move
 // and auto-restored on re-entry (stricter than the debounced-save idiom
-// used elsewhere, per Stuart's explicit spec). Illegal placements (digit
-// already used in the cell's row/column/box) are rejected outright rather
-// than stored+marked -- the tapped cell gets a one-render outline flash for
-// feedback, and the board is therefore always kept in a valid state, which
-// simplifies win detection to "no empty cells left". Entry is tap-cell then
+// used elsewhere, per Stuart's explicit spec). Placements are never
+// rejected -- a digit that duplicates another in the same row, column or
+// box is stored anyway, and every cell sharing that conflict (not just the
+// one just tapped) is highlighted with a heavier border on every render, so
+// the board can transiently be invalid. Win detection therefore requires
+// both "no empty cells" and "no conflicted cells". Entry is tap-cell then
 // tap-digit (1-9 + erase); no pencil marks (explicitly deferred, v2). The
 // in-activity Menu button offers New Game (with a difficulty picker) and
 // Abandon (discards the saved game and returns to the games list) via the
@@ -58,7 +59,13 @@ class SudokuActivity final : public Activity {
   bool completed = false;
 
   int selectedIdx = -1;
-  int rejectFlashIdx = -1;
+
+  // Set on every state-changing interaction (new game, digit entry/erase)
+  // and consumed once by render(), which then asks for a HALF_REFRESH
+  // instead of the default FAST_REFRESH -- mirrors MinesweeperActivity's
+  // and SolitaireActivity's existing fix for the same e-ink ghosting
+  // complaint (this activity previously had no such pattern at all).
+  bool forceFullRefresh = false;
 
   OptionPopup menuPopup;
   OptionPopup difficultyPopup;
@@ -67,7 +74,7 @@ class SudokuActivity final : public Activity {
   // Hit-rects/geometry, recomputed each render() and read back by loop()'s touch handling.
   Rect gridRect;
   Rect menuButtonRect;
-  Rect digitRects[kSize + 1];  // 1-9 then erase
+  Rect digitRects[kSize + 1];  // 1-9 then erase, laid out two rows deep
   int cellPx = 0;
 
   void loadOrGenerate();
@@ -77,7 +84,7 @@ class SudokuActivity final : public Activity {
   void syncBoardFromState();
 
   bool isGiven(int idx) const;
-  bool isLegalPlacement(int idx, int digit);
+  bool cellConflicts(int idx) const;
   void applyDigit(int digit);
   void checkCompletion();
 

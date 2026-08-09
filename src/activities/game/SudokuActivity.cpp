@@ -210,7 +210,6 @@ void SudokuActivity::syncBoardFromState() {
     board[i] = state.board[i];
   }
   selectedIdx = -1;
-  rejectFlashIdx = -1;
 }
 
 void SudokuActivity::startNewGame(Difficulty newDifficulty) {
@@ -279,7 +278,7 @@ void SudokuActivity::startNewGame(Difficulty newDifficulty) {
 
   completed = false;
   selectedIdx = -1;
-  rejectFlashIdx = -1;
+  forceFullRefresh = true;
   save();
   requestUpdate();
 }
@@ -288,22 +287,27 @@ bool SudokuActivity::isGiven(int idx) const {
   return idx >= 0 && idx < kCells && given[idx] != 0;
 }
 
-bool SudokuActivity::isLegalPlacement(int idx, int digit) {
+// True when board[idx]'s value duplicates another cell's value in the same
+// row, column or box. Used purely for highlighting -- placements are never
+// blocked, so this can legitimately be true for several cells at once.
+bool SudokuActivity::cellConflicts(int idx) const {
+  uint8_t digit = board[idx];
+  if (digit == 0) return false;
   int r = idx / kSize;
   int c = idx % kSize;
   int boxR = (r / 3) * 3;
   int boxC = (c / 3) * 3;
   for (int i = 0; i < kSize; i++) {
-    if (i != c && board[r * kSize + i] == digit) return false;
-    if (i != r && board[i * kSize + c] == digit) return false;
+    if (i != c && board[r * kSize + i] == digit) return true;
+    if (i != r && board[i * kSize + c] == digit) return true;
   }
   for (int dr = 0; dr < 3; dr++) {
     for (int dc = 0; dc < 3; dc++) {
       int idx2 = (boxR + dr) * kSize + (boxC + dc);
-      if (idx2 != idx && board[idx2] == digit) return false;
+      if (idx2 != idx && board[idx2] == digit) return true;
     }
   }
-  return true;
+  return false;
 }
 
 void SudokuActivity::applyDigit(int digit) {
@@ -314,18 +318,16 @@ void SudokuActivity::applyDigit(int digit) {
       board[selectedIdx] = 0;
       save();
     }
+    forceFullRefresh = true;
     requestUpdate();
     return;
   }
 
-  if (!isLegalPlacement(selectedIdx, digit)) {
-    rejectFlashIdx = selectedIdx;
-    requestUpdate();
-    return;
-  }
-
+  // Placed freely, even if it duplicates another cell -- render()/drawCell()
+  // highlight every conflicting cell instead of blocking the entry.
   board[selectedIdx] = static_cast<uint8_t>(digit);
   checkCompletion();
+  forceFullRefresh = true;
   save();
   requestUpdate();
 }
@@ -333,6 +335,9 @@ void SudokuActivity::applyDigit(int digit) {
 void SudokuActivity::checkCompletion() {
   for (int i = 0; i < kCells; i++) {
     if (board[i] == 0) return;
+  }
+  for (int i = 0; i < kCells; i++) {
+    if (cellConflicts(i)) return;
   }
   completed = true;
 }
@@ -402,7 +407,6 @@ void SudokuActivity::loop() {
   if (cell >= 0) {
     if (!isGiven(cell)) {
       selectedIdx = cell;
-      rejectFlashIdx = -1;
     }
     requestUpdate();
     return;
@@ -425,12 +429,12 @@ void SudokuActivity::drawCell(int r, int c) const {
   int h = cellPx - pad;
 
   const bool isSelected = idx == selectedIdx;
-  const bool isFlash = idx == rejectFlashIdx;
+  const bool isConflict = cellConflicts(idx);
 
   Color fill = Color::White;
   if (isGiven(idx)) fill = Color::LightGray;
   renderer.fillRoundedRect(x, y, w, h, 2, fill);
-  renderer.drawRoundedRect(x, y, w, h, isFlash ? 3 : (isSelected ? 2 : 1), 2, true);
+  renderer.drawRoundedRect(x, y, w, h, isConflict ? 3 : (isSelected ? 2 : 1), 2, true);
 
   uint8_t v = board[idx];
   if (v != 0) {
@@ -458,7 +462,13 @@ void SudokuActivity::render(RenderLock&&) {
   const int statusH = 30;
   const int gap = 6;
   const int marginX = 6;
-  const int digitStripH = 40;
+  // Two-row digit pad (5 cols x 2 rows for 9 digits + erase) per Stuart's
+  // explicit ask for bigger, easier tap targets -- previously a single row
+  // of 10 cramped cells.
+  constexpr int kPadCols = 5;
+  const int digitPadRowH = 44;
+  const int digitPadRowGap = 4;
+  const int digitStripH = digitPadRowH * 2 + digitPadRowGap;
 
   const int btnW = 90;
   const int btnH = statusH - 4;
@@ -494,18 +504,19 @@ void SudokuActivity::render(RenderLock&&) {
     renderer.fillRect(gridRect.x, gridRect.y + i * cellPx - kBoxLineW / 2, gridRect.width, kBoxLineW, true);
   }
 
-  rejectFlashIdx = -1;  // one-render flash, cleared right after drawing it
-
   const int stripTop = gridRect.y + gridRect.height + gap;
-  const int stripCellW = std::max(1, gridAvailW / (kSize + 1));
-  const int stripX = (pageWidth - stripCellW * (kSize + 1)) / 2;
+  const int stripCellW = std::max(1, gridAvailW / kPadCols);
+  const int stripX = (pageWidth - stripCellW * kPadCols) / 2;
   for (int i = 0; i < kSize + 1; i++) {
-    Rect r{stripX + i * stripCellW, stripTop, stripCellW - 2, digitStripH};
+    const int row = i / kPadCols;
+    const int col = i % kPadCols;
+    Rect r = Rect(stripX + col * stripCellW, stripTop + row * (digitPadRowH + digitPadRowGap), stripCellW - 4,
+                  digitPadRowH);
     digitRects[i] = r;
-    renderer.drawRoundedRect(r.x, r.y, r.width, r.height, 1, 3, true);
+    renderer.drawRoundedRect(r.x, r.y, r.width, r.height, 1, 4, true);
     char buf[2] = {i == kSize ? 'X' : static_cast<char>('1' + i), '\0'};
-    int tw = renderer.getTextWidth(UI_10_FONT_ID, buf);
-    renderer.drawText(UI_10_FONT_ID, r.x + (r.width - tw) / 2, r.y + r.height / 2 - 6, buf, true);
+    int tw = renderer.getTextWidth(UI_12_FONT_ID, buf);
+    renderer.drawText(UI_12_FONT_ID, r.x + (r.width - tw) / 2, r.y + r.height / 2 - 8, buf, true);
   }
 
   if (completed) {
@@ -522,5 +533,10 @@ void SudokuActivity::render(RenderLock&&) {
   const auto labels = mappedInput.mapLabels(tr(STR_BACK), tr(STR_SUDOKU_MENU), "", "");
   GUI.drawButtonHints(renderer, labels.btn1, labels.btn2, labels.btn3, labels.btn4);
 
-  renderer.displayBuffer();
+  if (forceFullRefresh) {
+    renderer.displayBuffer(HalDisplay::HALF_REFRESH);
+    forceFullRefresh = false;
+  } else {
+    renderer.displayBuffer();
+  }
 }

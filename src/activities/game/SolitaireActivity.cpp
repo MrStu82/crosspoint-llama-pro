@@ -508,7 +508,7 @@ void SolitaireActivity::drawCardFace(int x, int y, int w, int h, const Card& car
   renderer.drawText(UI_10_FONT_ID, x + 4, y + 4, rl, true);
   int labelPipSize = 10;
   int labelPipX = x + 4 + renderer.getTextWidth(UI_10_FONT_ID, rl) + 3;
-  drawSuitPip(renderer, labelPipX, y + 5, labelPipSize, card.suit);
+  drawSuitPip(renderer, labelPipX, y + 4, labelPipSize, card.suit);
 
   int pipSize = std::min(w, h) / 3;
   drawSuitPip(renderer, x + w - pipSize - 4, y + h - pipSize - 4, pipSize, card.suit);
@@ -643,7 +643,10 @@ void SolitaireActivity::render(RenderLock&&) {
 
   if (menuOpen) {
     const int boxW = pageWidth - 100;
-    const int rowH = 44;
+    // rowH sized so the actual tappable rect (rowH - 8, after the inter-row
+    // gap below) clears the 45px house minimum tap target -- was 44/36,
+    // short of the minimum.
+    const int rowH = 53;
     const int boxH = rowH * 3 + 20;
     const int boxX = (pageWidth - boxW) / 2;
     const int boxY = contentTop + (contentHeight - boxH) / 2;

@@ -64,9 +64,9 @@ class MappedInputManager {
   bool wasHomeGesture() const;
   bool wasMenuGesture() const;
   // Left-edge upward swipe (reader-only) -> backlight quick-picker. Edge-anchored so it can't
-  // collide with wasMenuGesture()'s top-edge downward swipe or wasHomeGesture()'s bottom-edge
-  // upward swipe. This zone previously belonged to the now-retired wasBackGesture() (Back is
-  // covered by the physical home key alone; see wasHomeKeyBackGesture()).
+  // collide with wasMenuGesture()'s top-edge downward swipe. This zone previously belonged to
+  // the now-retired wasBackGesture() (Back is covered by the physical home key alone; see
+  // wasHomeKeyBackGesture()).
   bool wasBrightnessGesture() const;
   bool wasAnyPressed() const;
   bool wasAnyReleased() const;

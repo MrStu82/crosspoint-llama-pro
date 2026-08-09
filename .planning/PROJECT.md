@@ -30,7 +30,7 @@ clipped/overflowing content and no touch targets crowded against the bezel.
 
 ### Out of Scope
 
-- Quick-settings swipe sheet (§5.3) — separate future work, not part of this dispatch
+- ~~Quick-settings swipe sheet (§5.3)~~ — pulled back into scope by Stuart (2026-08-09); gated on proving §5.3's own [device]-marked windowed-partial-refresh assumption before the sheet itself is built
 - Stats screen redesign (§4.5) — separate future work, not part of this dispatch
 - Any [device]-marked item from the source spec — needs Stuart's hardware, not buildable/verifiable here
 

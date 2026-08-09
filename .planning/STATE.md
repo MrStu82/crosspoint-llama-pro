@@ -69,7 +69,7 @@ Items acknowledged and carried forward from previous milestone close:
 
 | Category | Item | Status | Deferred At |
 |----------|------|--------|-------------|
-| UI | Quick-settings swipe sheet (§5.3) | Deferred | Dispatch (2026-08-07) |
+| UI | Quick-settings swipe sheet (§5.3) | Back in scope (Stuart, 2026-08-09) — gated on [device] windowed-partial-refresh proof, not yet built | Dispatch (2026-08-07) |
 | UI | Stats screen redesign (§4.5) | Deferred | Dispatch (2026-08-07) |
 
 ## Session Continuity

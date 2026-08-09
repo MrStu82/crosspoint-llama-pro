@@ -32,15 +32,18 @@ Deferred, not in this dispatch.
 
 ### Deferred UI
 
-- **DEF-01**: Quick-settings swipe sheet (§5.3)
+- ~~**DEF-01**: Quick-settings swipe sheet (§5.3)~~ — back in scope, Stuart 2026-08-09 (see below)
 - **DEF-02**: Stats screen redesign (§4.5)
+
+## Back in Scope
+
+- **DEF-01 / Quick-settings swipe sheet (§5.3)**: pulled back into scope by Stuart (2026-08-09) — top-edge swipe must land on text/typography settings. Build order: (1) confirm what `EpubReaderMenuActivity` already exposes for text settings, (2) prove §5.3's own `[device]`-marked assumption — SSD1677 windowed partial refresh of a 480×160 region without a full-panel flash — on Stuart's hardware, (3) only build the sheet itself if that proof passes.
 
 ## Out of Scope
 
 | Feature | Reason |
 |---------|--------|
 | Any [device]-marked spec item | Needs Stuart's hardware to build/verify, not actionable here |
-| Quick-settings swipe sheet | Explicitly deferred by parent's dispatch |
 | Stats redesign | Explicitly deferred by parent's dispatch |
 
 ## Traceability

@@ -117,7 +117,6 @@ bool MappedInputManager::mapButton(const Button button, bool (HalGPIO::*fn)(uint
 
 namespace {
 constexpr float LEFT_EDGE_BRIGHTNESS_GESTURE_FRAC_X = 0.25f;
-constexpr float BOTTOM_EDGE_BACK_GESTURE_FRAC_Y = 0.14f;
 constexpr float TOP_EDGE_MENU_GESTURE_FRAC_Y = 0.14f;
 constexpr unsigned long TOUCH_DOWN_SELECT_DELAY_MS = 90;
 constexpr unsigned long TOUCH_HELD_OVERRIDE_WINDOW_MS = 250;
@@ -293,25 +292,11 @@ bool MappedInputManager::wasHomeKeyBackGesture() const {
 }
 
 bool MappedInputManager::wasHomeGesture() const {
-  // Physical capacitive Home key (X4 Pro's GT911) LONG-HOLD: short taps are
-  // synthesized into Back (see wasHomeKeyBackGesture()); only a hold past the
-  // SDK's long-press threshold triggers the app-wide "go home" gesture, same
-  // as the swipe gesture below.
-  if (gpio.wasHomeKeyLongPressed()) return true;
-
-  int sx = 0;
-  int sy = 0;
-  int ex = 0;
-  int ey = 0;
-  if (decodeSwipe(sx, sy, ex, ey)) {
-    const int bottomEdgeTop =
-        renderer.getScreenHeight() - static_cast<int>(renderer.getScreenHeight() * BOTTOM_EDGE_BACK_GESTURE_FRAC_Y);
-    if (sy >= bottomEdgeTop && ey < sy && std::abs(ey - sy) > std::abs(ex - sx)) {
-      rememberTouchHeldTime();
-      return true;
-    }
-  }
-  return false;
+  // Physical capacitive Home key (X4 Pro's GT911) LONG-HOLD is the only way to
+  // trigger the app-wide "go home" action. Bottom-edge swipe-to-home was
+  // removed per Stuart's explicit call: he has a home button and doesn't want
+  // a swipe alias for it on any screen.
+  return gpio.wasHomeKeyLongPressed();
 }
 
 bool MappedInputManager::wasBrightnessGesture() const {

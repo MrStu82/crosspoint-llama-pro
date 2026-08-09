@@ -16,6 +16,54 @@ namespace {
 bool rectContains(const Rect& r, int x, int y) {
   return x >= r.x && x < r.x + r.width && y >= r.y && y < r.y + r.height;
 }
+
+// Filled disc via fillRoundedRect: a square with cornerRadius == half its side
+// rounds away every straight edge, leaving a circle. Reused below instead of
+// reaching for a dedicated circle primitive that doesn't exist publicly.
+void fillDisc(GfxRenderer& renderer, int cx, int cy, int r, Color color) {
+  renderer.fillRoundedRect(cx - r, cy - r, 2 * r, 2 * r, r, color);
+}
+
+// Basic monochrome suit pip, "even if basic" per the ask -- built from the
+// existing primitive set (fillDisc, fillPolygon, fillRect), no new assets.
+// Drawn inside a size x size box with top-left corner at (x, y).
+void drawSuitPip(GfxRenderer& renderer, int x, int y, int size, uint8_t suit) {
+  const int cx = x + size / 2;
+  const int lobeR = size / 4;
+  switch (suit) {
+    case 1: {  // Hearts: two top lobes + downward-pointing triangle base.
+      fillDisc(renderer, x + lobeR, y + lobeR, lobeR, Color::Black);
+      fillDisc(renderer, x + size - lobeR, y + lobeR, lobeR, Color::Black);
+      int xs[3] = {x, x + size, cx};
+      int ys[3] = {y + lobeR, y + lobeR, y + size};
+      renderer.fillPolygon(xs, ys, 3, true);
+      break;
+    }
+    case 0: {  // Spades: upward-pointing triangle + two bottom lobes + stem.
+      int xs[3] = {cx, x, x + size};
+      int ys[3] = {y, y + size - lobeR, y + size - lobeR};
+      renderer.fillPolygon(xs, ys, 3, true);
+      fillDisc(renderer, x + lobeR, y + size - lobeR, lobeR, Color::Black);
+      fillDisc(renderer, x + size - lobeR, y + size - lobeR, lobeR, Color::Black);
+      renderer.fillRect(cx - 1, y + size - lobeR, 2, lobeR, true);
+      break;
+    }
+    case 2: {  // Diamonds: rotated square (rhombus).
+      int xs[4] = {cx, x + size, cx, x};
+      int ys[4] = {y, y + size / 2, y + size, y + size / 2};
+      renderer.fillPolygon(xs, ys, 4, true);
+      break;
+    }
+    case 3:
+    default: {  // Clubs: trefoil (three discs) + stem.
+      fillDisc(renderer, cx, y + lobeR, lobeR, Color::Black);
+      fillDisc(renderer, x + lobeR, y + size - lobeR, lobeR, Color::Black);
+      fillDisc(renderer, x + size - lobeR, y + size - lobeR, lobeR, Color::Black);
+      renderer.fillRect(cx - 1, y + size / 2, 2, size / 2, true);
+      break;
+    }
+  }
+}
 }  // namespace
 
 const char* SolitaireActivity::suitLetter(uint8_t suit) {
@@ -356,6 +404,8 @@ void SolitaireActivity::drawCardFace(int x, int y, int w, int h, const Card& car
   char label[8];
   snprintf(label, sizeof(label), "%s%s", rl, suitLetter(card.suit));
   renderer.drawText(UI_10_FONT_ID, x + 4, y + 4, label, true);
+  int pipSize = std::min(w, h) / 3;
+  drawSuitPip(renderer, x + w - pipSize - 4, y + h - pipSize - 4, pipSize, card.suit);
 }
 
 void SolitaireActivity::drawEmptySlot(int x, int y, int w, int h, const char* hint) const {

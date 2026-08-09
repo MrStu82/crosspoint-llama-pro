@@ -3,15 +3,21 @@
 #include <cstdint>
 
 #include "activities/Activity.h"
+#include "util/ButtonNavigator.h"
 
 class MappedInputManager;
 
 // Bandai-style virtual pet: hatches from an egg, grows through life stages gated on
 // elapsed real time + care quality, and dies from sustained neglect. Time is real RTC
 // time (not millis()), so an 8-hour power-off produces a hungry/possibly-dead creature
-// on wake -- see loadOrTick(). State persists to flash via HalStorage, same versioned
-// blob idiom as StatsManager. Touch-only (tap icon buttons), no swipe surface. No
-// engine/shared abstraction with the other games -- deliberately kept flat (YAGNI).
+// on wake -- see tick(). State persists to flash via HalStorage, same versioned blob
+// idiom as StatsManager. No engine/shared abstraction with the other games --
+// deliberately kept flat (YAGNI).
+//
+// Controls are the real Bandai A/B/C idiom, not a phone-style action grid: A walks a
+// cursor along an icon strip (Icon::Food..Icon::Discipline), B executes the highlighted
+// icon, C backs out. Touch is an additive input path -- the same three roles are also
+// exposed as three large on-screen tap targets below the strip -- never the only path.
 class TamagotchiActivity final : public Activity {
  public:
   explicit TamagotchiActivity(GfxRenderer& renderer, MappedInputManager& mappedInput)
@@ -25,28 +31,61 @@ class TamagotchiActivity final : public Activity {
  private:
   enum class Stage : uint8_t { Egg = 0, Baby = 1, Child = 2, Adult = 3, Dead = 4 };
 
+  // Top-level icon strip, in on-screen (and cursor-cycle) order.
+  enum class Icon : uint8_t { Food = 0, Light, Play, Medicine, Clean, Status, Discipline, Count };
+  static constexpr int kIconCount = static_cast<int>(Icon::Count);
+
+  // What an unanswered attention call is asking for -- determines which icon (or
+  // Discipline as a catch-all) resolves it without counting as a care mistake.
+  enum class CallKind : uint8_t { None = 0, Hunger, Happiness, Energy, Poop, Sick };
+
+  // Which sub-screen is on-screen; A/B/C mean different things depending on this.
+  enum class Screen : uint8_t { Main = 0, FoodSubmenu, Status };
+
   // Byte-exact on-disk layout, version-prefixed (see save()/load()), same idiom as
-  // StatsManager::GlobalStats.
+  // StatsManager::GlobalStats. UI-only fields (cursor, screen) are deliberately NOT in
+  // here -- only pet-facts persist.
   struct State {
     uint8_t stage = static_cast<uint8_t>(Stage::Egg);
     uint8_t hunger = 100;
     uint8_t happiness = 100;
     uint8_t energy = 100;
-    uint32_t careGoodSeconds = 0;   // cumulative seconds all meters were healthy (>50); gates evolution
-    int32_t stageStartEpoch = 0;    // epoch the current stage began (egg creation for Stage::Egg)
-    int32_t lastUpdateEpoch = 0;    // epoch decay/evolution/death was last computed against
-    int32_t neglectStartEpoch = 0;  // epoch a meter first hit 0, continuously; 0 = currently fine
+    uint8_t poopCount = 0;               // 0..kMaxPoop; Clean resets to 0
+    uint8_t sick = 0;                    // 0/1; Medicine cures
+    uint8_t careMistakes = 0;            // unanswered attention calls this stage; gates evolution
+    int32_t stageStartEpoch = 0;         // epoch the current stage began (egg creation for Stage::Egg)
+    int32_t lastUpdateEpoch = 0;         // epoch decay/evolution/death was last computed against
+    int32_t neglectStartEpoch = 0;       // epoch a meter first hit 0, continuously; 0 = currently fine
+    int32_t sicknessGraceStartEpoch = 0; // epoch poop first pinned at max, continuously; 0 = currently fine
+    uint8_t callActive = 0;              // 0/1
+    uint8_t callKind = 0;                // CallKind
+    int32_t callStartEpoch = 0;          // epoch the active call began
+    int32_t lastCallEndEpoch = 0;        // epoch the last call ended (resolved or timed out); throttles new calls
   };
 
   State state;
   bool dirty = false;
 
-  // Icon button hit-rects, recomputed each render() and read back by loop()'s touch
-  // handling -- same pattern as TetrisActivity's bankRect.
-  static constexpr int kActionCount = 3;  // Feed, Play, Sleep
-  int actionRectX[kActionCount] = {};
-  int actionRectY[kActionCount] = {};
-  int actionRectSize = 0;
+  // UI-only, not persisted.
+  Screen screen = Screen::Main;
+  int cursorIndex = 0;      // selected Icon on Screen::Main
+  int foodCursorIndex = 0;  // 0 = Meal, 1 = Snack, within Screen::FoodSubmenu
+  ButtonNavigator navigator;
+
+  // On-screen A/B/C tap-target hit-rects, recomputed each render() and read back by
+  // loop()'s touch handling -- same pattern as BrightnessSheet/TetrisActivity.
+  static constexpr int kAbcCount = 3;  // A(select), B(confirm), C(cancel)
+  int abcRectX[kAbcCount] = {};
+  int abcRectY[kAbcCount] = {};
+  int abcRectW[kAbcCount] = {};
+  int abcRectH[kAbcCount] = {};
+
+  // Icon strip hit-rects (touch can also tap an icon directly, which both moves the
+  // cursor onto it and is equivalent to pressing A that many times -- it does not
+  // execute the icon; B/tap-B still confirms).
+  int iconRectX[kIconCount] = {};
+  int iconRectY[kIconCount] = {};
+  int iconRectSize = 0;
 
   void load();
   void save();
@@ -55,18 +94,42 @@ class TamagotchiActivity final : public Activity {
   // "unknown" convention as StatsManager::getCurrentDate()).
   static int32_t nowEpoch();
 
-  // Applies real-elapsed-time decay/evolution/death since state.lastUpdateEpoch, then
-  // updates it to `now`. No-ops if the clock is unavailable.
+  // Applies real-elapsed-time decay/poop/evolution/death/attention-calls since
+  // state.lastUpdateEpoch, then updates it to `now`. No-ops if the clock is unavailable.
   void tick(int32_t now);
 
-  void feed();
+  // Resolves the active attention call (if its kind matches) without a care mistake.
+  void resolveCall(CallKind kind);
+  // Unconditionally resolves any active call -- Discipline's catch-all.
+  void resolveAnyCall();
+  void maybeStartCall(int32_t now);
+  void maybeExpireCall(int32_t now);
+  void maybeGetSick(int32_t now);
+
+  void feedMeal();
+  void feedSnack();
+  void toggleLight();
   void play();
-  void sleep();
+  void giveMedicine();
+  void clean();
+  void discipline();
+
   void hatchIfReady(int32_t now);
   void evolveIfReady(int32_t now);
   void checkDeath(int32_t now);
   void restartFromEgg(int32_t now);
 
+  // A/B/C handling, split by current Screen.
+  void handleMainInput();
+  void handleFoodSubmenuInput();
+  void handleStatusInput();
+  // Touch equivalents of the physical A/B/C roles + direct icon taps. Returns true if a
+  // tap was consumed this frame.
+  bool handleTouch();
+
   void drawCreature(int cx, int cy, int size) const;
-  void drawMeterBar(int x, int y, int width, int height, uint8_t value) const;
+  void drawHeartPips(int x, int y, uint8_t value) const;
+  void drawIconStrip(int top, int width);
+  void drawAbcTargets(int top, int width, int height);
+  const char* iconLabel(Icon icon) const;
 };

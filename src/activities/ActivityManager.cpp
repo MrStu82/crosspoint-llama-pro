@@ -13,6 +13,7 @@
 #include "game/GamesListActivity.h"
 #include "game/MinesweeperActivity.h"
 #include "game/SolitaireActivity.h"
+#include "game/SudokuActivity.h"
 #include "game/TamagotchiActivity.h"
 #include "game/TetrisActivity.h"
 #include "home/CrashActivity.h"
@@ -273,6 +274,10 @@ void ActivityManager::goToSolitaire() {
 
 void ActivityManager::goToMinesweeper() {
   replaceActivity(std::make_unique<MinesweeperActivity>(renderer, mappedInput));
+}
+
+void ActivityManager::goToSudoku() {
+  replaceActivity(std::make_unique<SudokuActivity>(renderer, mappedInput));
 }
 
 void ActivityManager::pushActivity(std::unique_ptr<Activity>&& activity) {

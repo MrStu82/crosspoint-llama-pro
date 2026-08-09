@@ -70,6 +70,9 @@ void GamesListActivity::handleSelection() {
     case 4:
       activityManager.goToMinesweeper();
       return;
+    case 5:
+      activityManager.goToSudoku();
+      return;
     default:
       return;
   }
@@ -99,6 +102,8 @@ void GamesListActivity::render(RenderLock&&) {
             return std::string(tr(STR_SOLITAIRE_TITLE));
           case 4:
             return std::string(tr(STR_MINESWEEPER_TITLE));
+          case 5:
+            return std::string(tr(STR_SUDOKU_TITLE));
           default:
             return std::string();
         }

@@ -26,5 +26,5 @@ class GamesListActivity final : public Activity {
 
   ButtonNavigator buttonNavigator;
   int selectedIndex = 0;
-  static constexpr int kItemCount = 5;  // Deep Mines, Tetris, Tamagotchi, Solitaire, Minesweeper; Sudoku lands in a follow-up item
+  static constexpr int kItemCount = 6;  // Deep Mines, Tetris, Tamagotchi, Solitaire, Minesweeper, Sudoku
 };

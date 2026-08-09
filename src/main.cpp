@@ -110,6 +110,14 @@ EpdFont ui12RegularFont(&ubuntu_12_regular);
 EpdFont ui12BoldFont(&ubuntu_12_bold);
 EpdFontFamily ui12FontFamily(&ui12RegularFont, &ui12BoldFont);
 
+// Digit-only subset fonts (charset 0123456789.m%) for the Reading Stats big-number
+// display — see StatsActivity.cpp. Not general-purpose text fonts.
+EpdFont notosans40BoldDigitsFont(&notosans_40_bold_digits);
+EpdFontFamily notosans40BoldDigitsFontFamily(&notosans40BoldDigitsFont);
+
+EpdFont notosans20BoldDigitsFont(&notosans_20_bold_digits);
+EpdFontFamily notosans20BoldDigitsFontFamily(&notosans20BoldDigitsFont);
+
 // measurement of power button press duration calibration value
 unsigned long t1 = 0;
 unsigned long t2 = 0;
@@ -255,6 +263,8 @@ void setupDisplayAndFonts(bool seamless = false) {
   renderer.insertFont(UI_10_FONT_ID, ui10FontFamily);
   renderer.insertFont(UI_12_FONT_ID, ui12FontFamily);
   renderer.insertFont(SMALL_FONT_ID, smallFontFamily);
+  renderer.insertFont(NOTOSANS_40_BOLD_DIGITS_FONT_ID, notosans40BoldDigitsFontFamily);
+  renderer.insertFont(NOTOSANS_20_BOLD_DIGITS_FONT_ID, notosans20BoldDigitsFontFamily);
 
   // Discover and load SD card fonts
   sdFontSystem.begin(renderer);

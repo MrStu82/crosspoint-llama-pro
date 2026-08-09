@@ -6,6 +6,7 @@
 #include <Logging.h>
 
 #include "MappedInputManager.h"
+#include "activities/home/StatsActivity.h"
 #include "components/UITheme.h"
 #include "fontIds.h"
 
@@ -31,6 +32,13 @@ void UsbTransferActivity::onExit() {
   if (usbMsc.active()) {
     usbMsc.end();
     Storage.begin();
+  }
+  // A completed MSC session is the only real event that can change what's on
+  // the SD card, so this is the single point where StatsActivity's cached
+  // book count needs invalidating. No-op if the session never actually
+  // started (state == ERROR).
+  if (state != State::ERROR) {
+    StatsActivity::invalidateBookCountCache();
   }
   Activity::onExit();
 }

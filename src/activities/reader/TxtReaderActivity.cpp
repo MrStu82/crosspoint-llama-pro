@@ -99,7 +99,7 @@ void TxtReaderActivity::loop() {
       StatsManager::getInstance().addReadingTimeSeconds(secs);
       sessionStartTime += secs * 1000;
     }
-    StatsManager::getInstance().incrementPagesRead();
+    // Backward turns (rereading) don't count as pages read.
     requestUpdate();
   } else if (nextTriggered) {
     if (currentPage < totalPages - 1) {

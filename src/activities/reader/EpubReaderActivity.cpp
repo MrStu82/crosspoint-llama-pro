@@ -1111,7 +1111,10 @@ void EpubReaderActivity::pageTurn(bool isForwardTurn) {
     StatsManager::getInstance().addReadingTimeSeconds(secs);
     sessionStartTime += secs * 1000;
   }
-  StatsManager::getInstance().incrementPagesRead();
+  // Only forward turns count as pages read -- paging back to reread shouldn't inflate the count.
+  if (isForwardTurn) {
+    StatsManager::getInstance().incrementPagesRead();
+  }
   requestUpdate();
 }
 

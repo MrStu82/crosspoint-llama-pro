@@ -17,6 +17,13 @@
 #include "components/UITheme.h"
 #include "fontIds.h"
 
+namespace {
+// -1 means "not yet computed this boot session".
+int s_cachedBookCount = -1;
+}  // namespace
+
+void StatsActivity::invalidateBookCountCache() { s_cachedBookCount = -1; }
+
 int StatsActivity::countEpubsRecursively(const char* path) {
   int count = 0;
   auto root = Storage.open(path);
@@ -54,7 +61,10 @@ int StatsActivity::countEpubsRecursively(const char* path) {
 
 void StatsActivity::onEnter() {
   Activity::onEnter();
-  totalBooksOnDevice = countEpubsRecursively("/");
+  if (s_cachedBookCount < 0) {
+    s_cachedBookCount = countEpubsRecursively("/");
+  }
+  totalBooksOnDevice = s_cachedBookCount;
   requestUpdate();
 }
 
@@ -79,7 +89,7 @@ void StatsActivity::render(RenderLock&&) {
   // Title
   GUI.drawHeader(renderer, Rect{0, metrics.topPadding, screenWidth, metrics.headerHeight}, tr(STR_READING_STATS));
 
-  int yPos = metrics.topPadding + metrics.headerHeight + 20;
+  int yPos = metrics.topPadding + metrics.headerHeight + 14;
   const int sidePad = metrics.contentSidePadding;
 
   // --- TOP SECTION ---
@@ -100,7 +110,7 @@ void StatsActivity::render(RenderLock&&) {
   }
 
   int coverW = 120;
-  int coverH = 160;
+  int coverH = 135;
   bool hasCover = false;
 
   if (!coverBmpPath.empty()) {
@@ -133,13 +143,17 @@ void StatsActivity::render(RenderLock&&) {
 
   int currentChapterProgress = -1;
 
-  if (currentProgress < 0 && FsHelpers::hasEpubExtension(currentBookPath)) {
+  // Note: currentProgress (whole-book %) comes only from BookProgressBadge via
+  // RecentBooksStore above — progress.bin has no book-level percent field to fall back to.
+  // data[6] here is byte 0 of the optional visibleTextOffset, not a percent; reading it as
+  // one produced the "181%" bug. Only chapter progress (page/pageCount, data[2-5]) is
+  // legitimately derivable from this file.
+  if (FsHelpers::hasEpubExtension(currentBookPath)) {
     std::string cachePath = "/.crosspoint/epub_" + std::to_string(std::hash<std::string>{}(currentBookPath));
     HalFile f;
     if (Storage.openFileForRead("STATS", cachePath + "/progress.bin", f)) {
-      uint8_t data[7];
-      if (f.read(data, 7) >= 7) {
-        currentProgress = data[6];
+      uint8_t data[6];
+      if (f.read(data, 6) >= 6) {
         int currentPage = data[2] | (data[3] << 8);
         int pageCount = data[4] | (data[5] << 8);
         if (pageCount > 0) {
@@ -181,9 +195,9 @@ void StatsActivity::render(RenderLock&&) {
     renderer.drawText(UI_10_FONT_ID, rightTextX + rightTextW - 50, barY - 20, tr(STR_STATS_UNKNOWN));
   }
 
-  yPos += coverH + 20;
+  yPos += coverH + 12;
   renderer.drawLine(sidePad, yPos, screenWidth - sidePad, yPos, 2, true);
-  yPos += 30;
+  yPos += 12;
 
   auto drawCentered = [&](int fontId, const char* text, int cx, int y,
                           EpdFontFamily::Style style = EpdFontFamily::REGULAR) {
@@ -202,9 +216,9 @@ void StatsActivity::render(RenderLock&&) {
   constexpr int kBlockValueOffset = 34;   // value baseline -> first label line
   constexpr int kBlockLabel2Offset = 52;  // value baseline -> second label line
   constexpr int kBlockDividerHeight = 65;
-  const int sectionHeaderGap = 40;  // header strip -> block start
-  const int blockGap = 85;          // block start -> next section header (unchanged blocks only)
-  const int sectionGap = 15;        // extra breathing room after each block
+  const int sectionHeaderGap = 28;  // header strip -> block start
+  const int blockGap = 60;          // block start -> next section header (unchanged blocks only)
+  const int sectionGap = 8;         // extra breathing room after each block
 
   // Activity history grid: DAILY_HISTORY_SLOTS days as a 12-week contribution grid
   // (7 rows = days of the week, 12 columns = weeks), column-major so index 0 (oldest)
@@ -216,8 +230,8 @@ void StatsActivity::render(RenderLock&&) {
   static_assert(DAILY_HISTORY_SLOTS % 7 == 0, "activity grid assumes a whole number of 7-day columns");
   constexpr int kGridRows = 7;
   constexpr int kGridCols = DAILY_HISTORY_SLOTS / kGridRows;
-  const int cellSize = 16;
-  const int cellGap = 4;
+  const int cellSize = 13;
+  const int cellGap = 3;
   const int blockValueOffset = kBlockValueOffset;
   const int blockLabel2Offset = kBlockLabel2Offset;
   const int blockDividerHeight = kBlockDividerHeight;
@@ -282,7 +296,7 @@ void StatsActivity::render(RenderLock&&) {
   // no new dither logic). A zero-minute day draws a thin baseline rule for that
   // column instead of leaving a blank gap, so "no data drawn" is never mistaken for
   // "no data collected". A dashed rule marks the week's own mean across all 7 days.
-  constexpr int kWeekChartHeight = 60;
+  constexpr int kWeekChartHeight = 40;
   constexpr int kWeekBarGapPx = 10;
   const int weekChartTop = yPos;
   const int weekBaselineY = weekChartTop + kWeekChartHeight;
@@ -323,7 +337,7 @@ void StatsActivity::render(RenderLock&&) {
     }
   }
 
-  yPos = weekBaselineY + 20;
+  yPos = weekBaselineY + 8;
 
   // One number, large: minutes read today, against a fixed daily goal bar. There is
   // no existing reading-goal setting in CrossPointSettings to read from, so this
@@ -351,10 +365,10 @@ void StatsActivity::render(RenderLock&&) {
   char bigNumStr[16];
   snprintf(bigNumStr, sizeof(bigNumStr), "%d", minutesToday);
   drawCentered(NOTOSANS_18_FONT_ID, bigNumStr, leftColCx, bigNumY, EpdFontFamily::BOLD);
-  const int bigNumBottom = bigNumY + 30;
+  const int bigNumBottom = bigNumY + 26;
   drawCentered(UI_10_FONT_ID, tr(STR_STATS_MINUTES), leftColCx, bigNumBottom);
 
-  const int goalBarY = bigNumBottom + 22;
+  const int goalBarY = bigNumBottom + 14;
   const int goalBarX = sidePad + 10;
   const int goalBarW = leftColW - 20;
   int goalPercent = kGoalMinutesPerDay > 0 ? (minutesToday * 100) / kGoalMinutesPerDay : 0;
@@ -364,9 +378,9 @@ void StatsActivity::render(RenderLock&&) {
   char goalStr[48];
   snprintf(goalStr, sizeof(goalStr), "%s: %d/%d %s", tr(STR_STATS_GOAL), minutesToday, kGoalMinutesPerDay,
            tr(STR_STATS_MIN));
-  drawCentered(UI_10_FONT_ID, goalStr, leftColCx, goalBarY + 24);
+  drawCentered(UI_10_FONT_ID, goalStr, leftColCx, goalBarY + 18);
 
-  const int todayBlockBottom = goalBarY + 24 + 6;
+  const int todayBlockBottom = goalBarY + 18 + 4;
   renderer.drawLine(rightColX, bigNumY - 20, rightColX, todayBlockBottom, 1, true);
 
   char streakStr[16];
@@ -396,7 +410,7 @@ void StatsActivity::render(RenderLock&&) {
   snprintf(allTimeLine, sizeof(allTimeLine), "%s %s    %s %s    %s %s", a_val1, tr(STR_STATS_HOURS), a_val2,
            tr(STR_STATS_PAGES), a_val3, tr(STR_STATS_PAGES_PER_MIN));
   drawCentered(UI_12_FONT_ID, allTimeLine, screenWidth / 2, yPos, EpdFontFamily::BOLD);
-  yPos += 30;
+  yPos += 24;
 
   yPos += sectionGap;
 
@@ -459,7 +473,7 @@ void StatsActivity::render(RenderLock&&) {
   // Legend for the grid's four shading levels — the doc's only required addition to
   // this section, since the grid itself already draws the same 4 e-ink levels used
   // above (no new dither logic).
-  yPos += 12;
+  yPos += 8;
   struct LegendItem {
     Color color;
     StrId label;
@@ -470,7 +484,7 @@ void StatsActivity::render(RenderLock&&) {
       {Color::DarkGray, StrId::STR_STATS_LEGEND_MED},
       {Color::Black, StrId::STR_STATS_LEGEND_HIGH},
   };
-  constexpr int kLegendSwatch = 12;
+  constexpr int kLegendSwatch = 10;
   int legendX = gridX;
   for (const auto& item : legendItems) {
     renderer.fillRectDither(legendX, yPos, kLegendSwatch, kLegendSwatch, item.color);
@@ -480,7 +494,7 @@ void StatsActivity::render(RenderLock&&) {
     renderer.drawText(UI_10_FONT_ID, legendX, yPos - 2, label);
     legendX += renderer.getTextWidth(UI_10_FONT_ID, label) + 18;
   }
-  yPos += kLegendSwatch + 10;
+  yPos += kLegendSwatch + 6;
 
   const auto labels = mappedInput.mapLabels(tr(STR_BACK), tr(STR_SELECT), "", "");
   GUI.drawButtonHints(renderer, labels.btn1, labels.btn2, labels.btn3, labels.btn4);

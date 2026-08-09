@@ -5,6 +5,7 @@
 #include <HalStorage.h>
 #include <I18n.h>
 
+#include <algorithm>
 #include <cstdio>
 #include <cstring>
 #include <string>
@@ -193,53 +194,33 @@ void StatsActivity::render(RenderLock&&) {
 
   int colWidth = (screenWidth - (sidePad * 2)) / 3;
 
-  // The three stat blocks below (Today / All Time / All Items) plus the activity
-  // history grid were laid out at fixed pixel spacing that was never checked against
-  // the real panel height, and ran off the bottom of the screen. Measure how much
-  // height they actually need against what's really left above the button-hints row,
-  // and if it doesn't fit, compress the spacing (not the content) by a single scale
-  // factor derived from that measurement — rather than hand-picking new fixed offsets
-  // that would only happen to work for today's strings/fonts/screen.
+  // Redesigned per X4Pro-Firmware-Design-Proposal.md §4.5: the Today and All Time
+  // blocks no longer need the old 3-column trio height, and the activity grid gains
+  // a legend but no new rows — the page fits in fixed spacing without the old
+  // scale-factor compression hack (see git history for that mechanism if a future
+  // screen size ever needs it back).
   constexpr int kBlockValueOffset = 34;   // value baseline -> first label line
   constexpr int kBlockLabel2Offset = 52;  // value baseline -> second label line
   constexpr int kBlockDividerHeight = 65;
-  constexpr int kSectionHeaderGap = 45;  // header strip -> block start
-  constexpr int kBlockGap = 85;          // block start -> next section header
-  constexpr int kSectionGap = 15;        // extra breathing room after each block
+  const int sectionHeaderGap = 40;  // header strip -> block start
+  const int blockGap = 85;          // block start -> next section header (unchanged blocks only)
+  const int sectionGap = 15;        // extra breathing room after each block
 
   // Activity history grid: DAILY_HISTORY_SLOTS days as a 12-week contribution grid
   // (7 rows = days of the week, 12 columns = weeks), column-major so index 0 (oldest)
   // is the top of the leftmost column and index DAILY_HISTORY_SLOTS-1 (today) is the
   // bottom of the rightmost column. Per-cell day-number labels from the old single-row
   // strip are dropped — unreadable at this density; the shading alone (same 4 e-ink
-  // levels as before) carries the information.
+  // levels as before) carries the information. §4.5 calls this grid already correct
+  // and asks only for a legend explaining the 4 shading levels, added below it.
   static_assert(DAILY_HISTORY_SLOTS % 7 == 0, "activity grid assumes a whole number of 7-day columns");
   constexpr int kGridRows = 7;
   constexpr int kGridCols = DAILY_HISTORY_SLOTS / kGridRows;
-  constexpr int kBaseCellSize = 16;
-  constexpr int kCellGap = 4;
-  constexpr int kBaseGridHeight = kGridRows * kBaseCellSize + (kGridRows - 1) * kCellGap;
-
-  const int naturalHeight = 3 * (kSectionHeaderGap + kBlockGap + kSectionGap) + kSectionHeaderGap + kBaseGridHeight;
-
-  const int screenHeight = renderer.getScreenHeight();
-  const int bottomReserved = metrics.buttonHintsHeight + 10;  // hints row + a small safety margin
-  const int availableHeight = screenHeight - bottomReserved - yPos;
-
-  float scale = 1.0f;
-  if (naturalHeight > 0 && naturalHeight > availableHeight) {
-    scale = static_cast<float>(availableHeight) / static_cast<float>(naturalHeight);
-    if (scale < 0.6f) scale = 0.6f;  // floor so labels never fully overlap their values
-  }
-
-  const int sectionHeaderGap = static_cast<int>(kSectionHeaderGap * scale);
-  const int blockGap = static_cast<int>(kBlockGap * scale);
-  const int sectionGap = static_cast<int>(kSectionGap * scale);
-  const int cellSize = static_cast<int>(kBaseCellSize * scale);
-  const int cellGap = static_cast<int>(kCellGap * scale);
-  const int blockValueOffset = static_cast<int>(kBlockValueOffset * scale);
-  const int blockLabel2Offset = static_cast<int>(kBlockLabel2Offset * scale);
-  const int blockDividerHeight = static_cast<int>(kBlockDividerHeight * scale);
+  const int cellSize = 16;
+  const int cellGap = 4;
+  const int blockValueOffset = kBlockValueOffset;
+  const int blockLabel2Offset = kBlockLabel2Offset;
+  const int blockDividerHeight = kBlockDividerHeight;
 
   auto drawTrio = [&](int startY, const char* val1, const char* label1a, const char* label1b, const char* val2,
                       const char* label2a, const char* label2b, const char* val3, const char* label3a,
@@ -282,28 +263,121 @@ void StatsActivity::render(RenderLock&&) {
     drawCentered(UI_10_FONT_ID, label2b, cx2, startY + blockLabel2Offset);
   };
 
-  // --- TODAY SECTION ---
+  // Fetched once here so the week-column chart, the streak count, and the 12-week
+  // grid (further down) all read from the same snapshot. getLast7DaysMinutes()
+  // fills all DAILY_HISTORY_SLOTS entries oldest-first; today is always the last
+  // slot, and its value is live (stats.readingTimeTodaySeconds/60), not archived.
+  uint16_t history[DAILY_HISTORY_SLOTS];
+  int historyDates[DAILY_HISTORY_SLOTS];
+  READING_STATS.getLast7DaysMinutes(history, historyDates);
+
+  // --- TODAY SECTION (redesigned per §4.5) ---
   renderer.fillRectDither(sidePad, yPos, screenWidth - sidePad * 2, 24, Color::LightGray);
   renderer.drawText(UI_10_FONT_ID, sidePad + 10, yPos + 3, tr(STR_STATS_TODAY));
   yPos += sectionHeaderGap;
 
-  char t_val1[16];
-  snprintf(t_val1, sizeof(t_val1), "%lu", static_cast<unsigned long>(stats.readingTimeTodaySeconds / 60));
-  char t_val2[16];
-  snprintf(t_val2, sizeof(t_val2), "%lu", static_cast<unsigned long>(stats.pagesReadToday));
-  float ppmToday = 0;
-  if (stats.readingTimeTodaySeconds > 60)
-    ppmToday = static_cast<float>(stats.pagesReadToday) / (stats.readingTimeTodaySeconds / 60.0f);
-  char t_val3[16];
-  snprintf(t_val3, sizeof(t_val3), "%.1f", ppmToday);
+  // Week columns: a 7-bar chart of the last 7 days (today last). Bar length encodes
+  // minutes; today's bar is solid black, the other 6 are 50% dither (the same
+  // Color::DarkGray level the 12-week grid already uses for a 15-44 minute day —
+  // no new dither logic). A zero-minute day draws a thin baseline rule for that
+  // column instead of leaving a blank gap, so "no data drawn" is never mistaken for
+  // "no data collected". A dashed rule marks the week's own mean across all 7 days.
+  constexpr int kWeekChartHeight = 60;
+  constexpr int kWeekBarGapPx = 10;
+  const int weekChartTop = yPos;
+  const int weekBaselineY = weekChartTop + kWeekChartHeight;
+  const int weekChartW = screenWidth - sidePad * 2;
+  const int weekBarSlot = weekChartW / 7;
+  const int weekBarWidth = weekBarSlot - kWeekBarGapPx;
 
-  drawTrio(yPos, t_val1, tr(STR_STATS_MINUTES), "", t_val2, tr(STR_STATS_PAGES), "", t_val3,
-           tr(STR_STATS_PAGES_PER_MIN), "");
-  yPos += blockGap;
+  uint16_t week[7];
+  for (int i = 0; i < 7; i++) week[i] = history[DAILY_HISTORY_SLOTS - 7 + i];
 
-  yPos += sectionGap;
+  int weekMax = 30;  // floor so a quiet week doesn't make every bar look maxed out
+  int weekSum = 0;
+  for (int i = 0; i < 7; i++) {
+    if (week[i] > weekMax) weekMax = week[i];
+    weekSum += week[i];
+  }
+  const int weekMean = weekSum / 7;
 
-  // --- ALL TIME SECTION ---
+  for (int i = 0; i < 7; i++) {
+    const int barX = sidePad + i * weekBarSlot + kWeekBarGapPx / 2;
+    const bool isToday = (i == 6);
+    if (week[i] == 0) {
+      renderer.drawLine(barX, weekBaselineY, barX + weekBarWidth, weekBaselineY, 2, true);
+    } else {
+      int barH = (week[i] * kWeekChartHeight) / weekMax;
+      if (barH < 2) barH = 2;
+      renderer.fillRectDither(barX, weekBaselineY - barH, weekBarWidth, barH, isToday ? Color::Black : Color::DarkGray);
+    }
+  }
+
+  if (weekMean > 0) {
+    const int meanY = weekBaselineY - (weekMean * kWeekChartHeight) / weekMax;
+    constexpr int kDashLen = 6;
+    constexpr int kDashGap = 4;
+    for (int dx = sidePad; dx < sidePad + weekChartW; dx += kDashLen + kDashGap) {
+      const int segEnd = std::min(dx + kDashLen, sidePad + weekChartW);
+      renderer.drawLine(dx, meanY, segEnd, meanY, 1, true);
+    }
+  }
+
+  yPos = weekBaselineY + 20;
+
+  // One number, large: minutes read today, against a fixed daily goal bar. There is
+  // no existing reading-goal setting in CrossPointSettings to read from, so this
+  // uses a fixed constant — flagged as a judgment call the doc doesn't specify.
+  // Pages-per-minute is dropped (least glanceable per §4.5) in favor of a streak
+  // count, computed by walking history[] backward from today with no new
+  // persistence. The codebase has no 52px/scalable-text primitive (drawText has no
+  // scale param, no large font asset exists) — NOTOSANS_18_FONT_ID bold is the
+  // largest available font and stands in for the doc's "52px" figure.
+  constexpr int kGoalMinutesPerDay = 30;
+  const int minutesToday = static_cast<int>(stats.readingTimeTodaySeconds / 60);
+
+  int streak = 0;
+  for (int i = DAILY_HISTORY_SLOTS - 1; i >= 0; i--) {
+    if (historyDates[i] == 0 || history[i] == 0) break;
+    streak++;
+  }
+
+  const int leftColW = (screenWidth - sidePad * 2) * 3 / 5;
+  const int leftColCx = sidePad + leftColW / 2;
+  const int rightColX = sidePad + leftColW;
+  const int rightColCx = rightColX + (screenWidth - sidePad * 2 - leftColW) / 2;
+
+  const int bigNumY = yPos + 5;
+  char bigNumStr[16];
+  snprintf(bigNumStr, sizeof(bigNumStr), "%d", minutesToday);
+  drawCentered(NOTOSANS_18_FONT_ID, bigNumStr, leftColCx, bigNumY, EpdFontFamily::BOLD);
+  const int bigNumBottom = bigNumY + 30;
+  drawCentered(UI_10_FONT_ID, tr(STR_STATS_MINUTES), leftColCx, bigNumBottom);
+
+  const int goalBarY = bigNumBottom + 22;
+  const int goalBarX = sidePad + 10;
+  const int goalBarW = leftColW - 20;
+  int goalPercent = kGoalMinutesPerDay > 0 ? (minutesToday * 100) / kGoalMinutesPerDay : 0;
+  if (goalPercent > 100) goalPercent = 100;
+  renderer.drawRect(goalBarX, goalBarY, goalBarW, 12);
+  if (goalPercent > 0) renderer.fillRect(goalBarX, goalBarY, (goalBarW * goalPercent) / 100, 12);
+  char goalStr[48];
+  snprintf(goalStr, sizeof(goalStr), "%s: %d/%d %s", tr(STR_STATS_GOAL), minutesToday, kGoalMinutesPerDay,
+           tr(STR_STATS_MIN));
+  drawCentered(UI_10_FONT_ID, goalStr, leftColCx, goalBarY + 24);
+
+  const int todayBlockBottom = goalBarY + 24 + 6;
+  renderer.drawLine(rightColX, bigNumY - 20, rightColX, todayBlockBottom, 1, true);
+
+  char streakStr[16];
+  snprintf(streakStr, sizeof(streakStr), "%d", streak);
+  drawCentered(UI_12_FONT_ID, streakStr, rightColCx, bigNumY, EpdFontFamily::BOLD);
+  drawCentered(UI_10_FONT_ID, tr(STR_STATS_STREAK), rightColCx, bigNumY + blockValueOffset);
+
+  yPos = todayBlockBottom + sectionGap;
+
+  // --- ALL TIME SECTION (compressed to one strip per §4.5 — "reference data, nobody
+  // opens this page for it") ---
   renderer.fillRectDither(sidePad, yPos, screenWidth - sidePad * 2, 24, Color::LightGray);
   renderer.drawText(UI_10_FONT_ID, sidePad + 10, yPos + 3, tr(STR_STATS_ALL_TIME));
   yPos += sectionHeaderGap;
@@ -318,9 +392,11 @@ void StatsActivity::render(RenderLock&&) {
   char a_val3[16];
   snprintf(a_val3, sizeof(a_val3), "%.1f", ppmAll);
 
-  drawTrio(yPos, a_val1, tr(STR_STATS_HOURS), "", a_val2, tr(STR_STATS_PAGES), "", a_val3, tr(STR_STATS_PAGES_PER_MIN),
-           "");
-  yPos += blockGap;
+  char allTimeLine[128];
+  snprintf(allTimeLine, sizeof(allTimeLine), "%s %s    %s %s    %s %s", a_val1, tr(STR_STATS_HOURS), a_val2,
+           tr(STR_STATS_PAGES), a_val3, tr(STR_STATS_PAGES_PER_MIN));
+  drawCentered(UI_12_FONT_ID, allTimeLine, screenWidth / 2, yPos, EpdFontFamily::BOLD);
+  yPos += 30;
 
   yPos += sectionGap;
 
@@ -352,10 +428,8 @@ void StatsActivity::render(RenderLock&&) {
   renderer.drawText(UI_10_FONT_ID, sidePad + 10, yPos + 3, tr(STR_STATS_ACTIVITY_HISTORY));
   yPos += sectionHeaderGap;
 
-  uint16_t history[DAILY_HISTORY_SLOTS];
-  int historyDates[DAILY_HISTORY_SLOTS];
-  READING_STATS.getLast7DaysMinutes(history, historyDates);
-
+  // history/historyDates already fetched once above, shared with the week chart
+  // and streak count.
   const int gridW = kGridCols * cellSize + (kGridCols - 1) * cellGap;
   const int gridX = sidePad + (screenWidth - sidePad * 2 - gridW) / 2;
 
@@ -381,6 +455,32 @@ void StatsActivity::render(RenderLock&&) {
   }
 
   yPos += kGridRows * cellSize + (kGridRows - 1) * cellGap;
+
+  // Legend for the grid's four shading levels — the doc's only required addition to
+  // this section, since the grid itself already draws the same 4 e-ink levels used
+  // above (no new dither logic).
+  yPos += 12;
+  struct LegendItem {
+    Color color;
+    StrId label;
+  };
+  const LegendItem legendItems[4] = {
+      {Color::White, StrId::STR_STATS_LEGEND_NONE},
+      {Color::LightGray, StrId::STR_STATS_LEGEND_LOW},
+      {Color::DarkGray, StrId::STR_STATS_LEGEND_MED},
+      {Color::Black, StrId::STR_STATS_LEGEND_HIGH},
+  };
+  constexpr int kLegendSwatch = 12;
+  int legendX = gridX;
+  for (const auto& item : legendItems) {
+    renderer.fillRectDither(legendX, yPos, kLegendSwatch, kLegendSwatch, item.color);
+    renderer.drawRect(legendX, yPos, kLegendSwatch, kLegendSwatch);
+    legendX += kLegendSwatch + 5;
+    const char* label = I18n::getInstance().get(item.label);
+    renderer.drawText(UI_10_FONT_ID, legendX, yPos - 2, label);
+    legendX += renderer.getTextWidth(UI_10_FONT_ID, label) + 18;
+  }
+  yPos += kLegendSwatch + 10;
 
   const auto labels = mappedInput.mapLabels(tr(STR_BACK), tr(STR_SELECT), "", "");
   GUI.drawButtonHints(renderer, labels.btn1, labels.btn2, labels.btn3, labels.btn4);

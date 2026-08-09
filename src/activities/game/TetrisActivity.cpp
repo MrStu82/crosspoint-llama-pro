@@ -14,8 +14,8 @@
 
 namespace {
 // 7 tetrominoes, spawn orientation only -- other rotations are derived at
-// runtime via TetrisActivity::rotateCW(), so there is exactly one shape
-// literal per piece to get wrong instead of 28.
+// runtime via TetrisActivity::rotateCW()/rotateCCW(), so there is exactly one
+// shape literal per piece to get wrong instead of 28.
 constexpr uint16_t kBaseShapes[7] = {
     0x0F00,  // I
     0x0660,  // O
@@ -45,6 +45,20 @@ TetrisActivity::Shape TetrisActivity::rotateCW(Shape shape) {
   return out;
 }
 
+TetrisActivity::Shape TetrisActivity::rotateCCW(Shape shape) {
+  Shape out = 0;
+  for (int row = 0; row < kBoxSize; ++row) {
+    for (int col = 0; col < kBoxSize; ++col) {
+      if (cellSet(shape, row, col)) {
+        const int newRow = kBoxSize - 1 - col;
+        const int newCol = row;
+        out |= static_cast<Shape>(1u << (15 - (newRow * 4 + newCol)));
+      }
+    }
+  }
+  return out;
+}
+
 bool TetrisActivity::collides(Shape shape, int x, int y) const {
   for (int row = 0; row < kBoxSize; ++row) {
     for (int col = 0; col < kBoxSize; ++col) {
@@ -65,14 +79,14 @@ bool TetrisActivity::tryMove(int dx, int dy) {
   return true;
 }
 
-bool TetrisActivity::tryRotate() {
-  const Shape rotated = rotateCW(currentShape);
+bool TetrisActivity::tryRotate(bool clockwise) {
+  const Shape rotated = clockwise ? rotateCW(currentShape) : rotateCCW(currentShape);
   static constexpr int kKickOffsets[] = {0, -1, 1, -2, 2};
   for (int offset : kKickOffsets) {
     if (!collides(rotated, pieceX + offset, pieceY)) {
       currentShape = rotated;
       pieceX += offset;
-      currentRotation = (currentRotation + 1) % 4;
+      currentRotation = clockwise ? (currentRotation + 1) % 4 : (currentRotation + 3) % 4;
       return true;
     }
   }
@@ -83,6 +97,25 @@ void TetrisActivity::hardDrop() {
   while (tryMove(0, 1)) {
   }
   lockPieceAndAdvance();
+}
+
+void TetrisActivity::holdSwap() {
+  if (gameOver || holdUsed) return;
+
+  if (holdType == kNoHold) {
+    holdType = currentType;
+    spawnPiece();
+  } else {
+    const int swapped = holdType;
+    holdType = currentType;
+    currentType = swapped;
+    currentRotation = 0;
+    currentShape = kBaseShapes[currentType];
+    pieceX = (kCols - kBoxSize) / 2;
+    pieceY = 0;
+    if (collides(currentShape, pieceX, pieceY)) gameOver = true;
+  }
+  holdUsed = true;
 }
 
 int TetrisActivity::clearFullLines() {
@@ -113,6 +146,7 @@ void TetrisActivity::spawnPiece() {
   currentShape = kBaseShapes[currentType];
   pieceX = (kCols - kBoxSize) / 2;
   pieceY = 0;
+  holdUsed = false;
   if (collides(currentShape, pieceX, pieceY)) gameOver = true;
 }
 
@@ -150,6 +184,8 @@ void TetrisActivity::onEnter() {
   level = 0;
   dropIntervalMs = 800;
   gameOver = false;
+  holdType = kNoHold;
+  holdUsed = false;
   nextType = static_cast<int>(random(7));
   spawnPiece();
   lastDropMs = millis();
@@ -169,23 +205,70 @@ void TetrisActivity::loop() {
     return;
   }
 
+  bool acted = false;
+
+  // Secondary input: physical D-pad, same idiom as GameActivity::loop() /
+  // Deep Mines. Kept alongside touch so d-pad play isn't a regression.
   if (mappedInput.wasReleased(Button::Left)) {
     tryMove(-1, 0);
-    requestUpdate();
+    acted = true;
   } else if (mappedInput.wasReleased(Button::Right)) {
     tryMove(1, 0);
-    requestUpdate();
+    acted = true;
   } else if (mappedInput.wasReleased(Button::Down)) {
     if (!tryMove(0, 1)) lockPieceAndAdvance();
     lastDropMs = millis();
-    requestUpdate();
+    acted = true;
   } else if (mappedInput.wasReleased(Button::Up)) {
-    if (tryRotate()) requestUpdate();
+    tryRotate(true);
+    acted = true;
   } else if (mappedInput.wasReleased(Button::Confirm)) {
     hardDrop();
     lastDropMs = millis();
-    requestUpdate();
+    acted = true;
   }
+
+  // Primary input: touch, per Stuart's spec -- swipe to move/drop, tap
+  // left/right half to rotate, tap the bank slot to hold/swap.
+  if (!acted) {
+    switch (mappedInput.wasSwipe()) {
+      case MappedInputManager::SwipeDir::Left:
+        tryMove(-1, 0);
+        acted = true;
+        break;
+      case MappedInputManager::SwipeDir::Right:
+        tryMove(1, 0);
+        acted = true;
+        break;
+      case MappedInputManager::SwipeDir::Down:
+        if (!tryMove(0, 1)) lockPieceAndAdvance();
+        lastDropMs = millis();
+        acted = true;
+        break;
+      case MappedInputManager::SwipeDir::Up:
+        hardDrop();
+        lastDropMs = millis();
+        acted = true;
+        break;
+      case MappedInputManager::SwipeDir::None:
+        break;
+    }
+  }
+
+  if (!acted) {
+    if (mappedInput.wasTapInRect(bankRectX, bankRectY, bankRectWidth, bankRectHeight)) {
+      holdSwap();
+      acted = true;
+    } else {
+      int tx = 0, ty = 0;
+      if (mappedInput.wasScreenTapped(tx, ty)) {
+        tryRotate(tx >= renderer.getScreenWidth() / 2);  // right half = CW, left half = CCW
+        acted = true;
+      }
+    }
+  }
+
+  if (acted) requestUpdate();
 
   if (gameOver) {
     requestUpdate();
@@ -252,11 +335,30 @@ void TetrisActivity::render(RenderLock&&) {
 
   const int panelLeft = boardLeft + boardWidth + padding * 2;
   int panelY = boardTop;
+  const int previewCell = 16;
+
+  // Bank (hold) slot -- also the touch hit-rect read back in loop().
+  renderer.drawText(UI_12_FONT_ID, panelLeft, panelY, tr(STR_TETRIS_HOLD), true);
+  panelY += 20;
+  bankRectX = panelLeft;
+  bankRectY = panelY;
+  bankRectWidth = previewCell * kBoxSize;
+  bankRectHeight = previewCell * kBoxSize;
+  renderer.drawRect(bankRectX, bankRectY, bankRectWidth, bankRectHeight, true);
+  if (holdType != kNoHold) {
+    for (int row = 0; row < kBoxSize; ++row) {
+      for (int col = 0; col < kBoxSize; ++col) {
+        if (cellSet(kBaseShapes[holdType], row, col)) {
+          drawCell(bankRectX + col * previewCell, bankRectY + row * previewCell, previewCell, true);
+        }
+      }
+    }
+  }
+  panelY = bankRectY + previewCell * kBoxSize + 16;
 
   renderer.drawText(UI_12_FONT_ID, panelLeft, panelY, tr(STR_TETRIS_NEXT), true);
   panelY += 20;
 
-  const int previewCell = 16;
   const int previewBoxTop = panelY;
   for (int row = 0; row < kBoxSize; ++row) {
     for (int col = 0; col < kBoxSize; ++col) {

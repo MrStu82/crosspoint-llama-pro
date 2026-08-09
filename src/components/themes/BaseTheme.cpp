@@ -719,7 +719,7 @@ void BaseTheme::drawButtonMenu(GfxRenderer& renderer, Rect rect, int buttonCount
 
   for (int i = pageStartIndex; i < pageEndIndex; ++i) {
     const int row = i - pageStartIndex;
-    const int tileY = BaseMetrics::values.verticalSpacing + rect.y + row * rowStep;
+    const int tileY = rect.y + row * rowStep;
 
     const bool selected = selectedIndex == i;
 

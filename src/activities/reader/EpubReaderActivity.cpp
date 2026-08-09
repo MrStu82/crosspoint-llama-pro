@@ -545,15 +545,24 @@ void EpubReaderActivity::loop() {
     }
   }
 
-  // Enter reader menu activity on short-press Confirm or a downward swipe from the top edge. A long-press
-  // that fired a bound function (bookmark or KOReader sync) sets ignoreNextConfirmRelease so the release
+  // Enter reader menu activity on short-press Confirm. A long-press that fired a bound
+  // function (bookmark or KOReader sync) sets ignoreNextConfirmRelease so the release
   // following the hold does not also open the menu.
-  if (mappedInput.wasReleased(MappedInputManager::Button::Confirm) || ReaderUtils::isTouchMenuGesture(mappedInput)) {
+  if (mappedInput.wasReleased(MappedInputManager::Button::Confirm)) {
     if (ignoreNextConfirmRelease) {
       ignoreNextConfirmRelease = false;
     } else {
       openReaderMenu();
     }
+  }
+
+  // Downward swipe from the top edge -> text settings directly (Stuart: "the top menu should
+  // have text options" — TEXT_SETTINGS was buried at item 3 of 14 in the full menu; this gesture
+  // is the shortcut straight to it, distinct from Confirm's full-menu-open above).
+  if (ReaderUtils::isTouchMenuGesture(mappedInput)) {
+    startActivityForResult(std::make_unique<TextSettingsActivity>(renderer, mappedInput, &sdFontSystem.registry(),
+                                                                   TextSettingsActivity::Tab::Family),
+                           [this](const ActivityResult&) { onTextSettingsClosed(); });
   }
 
   // Left-edge upward swipe -> backlight quick-settings drawer.

@@ -8,15 +8,18 @@
 #include "CrossPointSettings.h"
 #include "Frontlight.h"
 #include "MappedInputManager.h"
+#include "activities/settings/FrontlightPinDiagnosticActivity.h"
 #include "activities/util/IntervalSelectionActivity.h"
 #include "components/UITheme.h"
 #include "fontIds.h"
 
 namespace {
-// TURN_OFF sits before the optional WARM_COOL row so it's always visible; WARM_COOL
-// is the trailing item hidden via visibleItemCount on single-channel boards, mirroring
-// StatusBarSettingsActivity's trailing-optional-items pattern.
-enum MenuItem { ITEM_BRIGHTNESS = 0, ITEM_TURN_OFF, ITEM_WARM_COOL, ITEM_COUNT };
+// TURN_OFF sits before the optional WARM_COOL/PIN_DIAGNOSTIC rows so it's always
+// visible; WARM_COOL and PIN_DIAGNOSTIC are the trailing items hidden via
+// visibleItemCount on single-channel boards, mirroring StatusBarSettingsActivity's
+// trailing-optional-items pattern. PIN_DIAGNOSTIC is gated the same as WARM_COOL
+// (hasColorTemperature()) since it only makes sense on a two-channel board.
+enum MenuItem { ITEM_BRIGHTNESS = 0, ITEM_TURN_OFF, ITEM_WARM_COOL, ITEM_PIN_DIAGNOSTIC, ITEM_COUNT };
 
 constexpr int BASE_MENU_ITEMS = ITEM_WARM_COOL;  // Items shown when there's no warm/cool channel
 constexpr int FULL_MENU_ITEMS = ITEM_COUNT;      // Items shown when hasColorTemperature()
@@ -25,6 +28,7 @@ const StrId menuNames[FULL_MENU_ITEMS] = {
     StrId::STR_BRIGHTNESS,
     StrId::STR_TURN_OFF,
     StrId::STR_WARM_COOL_BALANCE,
+    StrId::STR_FRONTLIGHT_PIN_DIAGNOSTIC,
 };
 
 std::string formatPercent(uint8_t percent) {
@@ -119,6 +123,9 @@ void FrontlightActivity::handleSelection() {
     case ITEM_WARM_COOL:
       openWarmCoolPicker();
       return;
+    case ITEM_PIN_DIAGNOSTIC:
+      openPinDiagnostic();
+      return;
     case ITEM_TURN_OFF:
       // The explicit way back to zero: writes through the same SDK abstraction as
       // every other control here, and persists so a reboot doesn't resurrect the light.
@@ -165,6 +172,10 @@ void FrontlightActivity::openWarmCoolPicker() {
       });
 }
 
+void FrontlightActivity::openPinDiagnostic() {
+  startActivityForResult(std::make_unique<FrontlightPinDiagnosticActivity>(renderer, mappedInput), nullptr);
+}
+
 void FrontlightActivity::render(RenderLock&&) {
   if (optionPopup.processRender(renderer, mappedInput)) return;
 
@@ -189,6 +200,8 @@ void FrontlightActivity::render(RenderLock&&) {
             return "";
           case ITEM_WARM_COOL:
             return formatWarmCool(SETTINGS.frontlightWarmPercent);
+          case ITEM_PIN_DIAGNOSTIC:
+            return "";
           default:
             return "";
         }

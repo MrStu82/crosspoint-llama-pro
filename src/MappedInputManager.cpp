@@ -118,6 +118,7 @@ bool MappedInputManager::mapButton(const Button button, bool (HalGPIO::*fn)(uint
 namespace {
 constexpr float LEFT_EDGE_BRIGHTNESS_GESTURE_FRAC_X = 0.25f;
 constexpr float TOP_EDGE_MENU_GESTURE_FRAC_Y = 0.14f;
+constexpr float BOTTOM_EDGE_BRIGHTNESS_SHEET_GESTURE_FRAC_Y = 0.14f;
 constexpr unsigned long TOUCH_DOWN_SELECT_DELAY_MS = 90;
 constexpr unsigned long TOUCH_HELD_OVERRIDE_WINDOW_MS = 250;
 }  // namespace
@@ -310,6 +311,22 @@ bool MappedInputManager::wasBrightnessGesture() const {
   if (!decodeSwipe(sx, sy, ex, ey)) return false;
   const bool hit = sx <= renderer.getScreenWidth() * LEFT_EDGE_BRIGHTNESS_GESTURE_FRAC_X && ey < sy &&
                    std::abs(ey - sy) > std::abs(ex - sx);
+  if (hit) rememberTouchHeldTime();
+  return hit;
+}
+
+bool MappedInputManager::wasBrightnessSheetGesture() const {
+  // Bottom-edge upward swipe -> quick brightness sheet. Mirrors wasMenuGesture()'s
+  // top-edge zone, decoded via the same decodeSwipe() mechanism as every other edge
+  // gesture here (no new gesture-decoding path).
+  int sx = 0;
+  int sy = 0;
+  int ex = 0;
+  int ey = 0;
+  if (!decodeSwipe(sx, sy, ex, ey)) return false;
+  const int bottomEdgeTop =
+      static_cast<int>(renderer.getScreenHeight() * (1.0f - BOTTOM_EDGE_BRIGHTNESS_SHEET_GESTURE_FRAC_Y));
+  const bool hit = sy >= bottomEdgeTop && ey < sy && std::abs(ey - sy) > std::abs(ex - sx);
   if (hit) rememberTouchHeldTime();
   return hit;
 }

@@ -304,7 +304,10 @@ void setup() {
   powerManager.begin();
   halTiltSensor.begin();
   halClock.begin();
-  frontlightManager.begin();
+  if (!frontlightManager.begin()) {
+    LOG_ERR("MAIN", "frontlight channel attach failed: cool=%d warm=%d",
+            frontlightManager.coolChannelAttachOk(), frontlightManager.warmChannelAttachOk());
+  }
 
   LOG_INF("MAIN", "Hardware detect: %s", gpio.deviceIsX3() ? "X3" : "X4");
 

@@ -12,6 +12,7 @@
 
 #include "GfxRenderer.h"
 #include "MappedInputManager.h"
+#include "components/BrightnessSheet.h"
 #include "util/ScreenshotInfo.h"
 
 class Activity;    // forward declaration
@@ -41,6 +42,9 @@ class ActivityManager {
   MappedInputManager& mappedInput;
   std::vector<std::unique_ptr<Activity>> stackActivities;
   std::unique_ptr<Activity> currentActivity;
+  // Global bottom-edge brightness quick-sheet, owned here (not per-Activity like
+  // OptionPopup) since it must be reachable over any activity, including the reader.
+  BrightnessSheet brightnessSheet;
 
   void exitActivity(const RenderLock& lock);
 
@@ -68,7 +72,10 @@ class ActivityManager {
 
  public:
   explicit ActivityManager(GfxRenderer& renderer, MappedInputManager& mappedInput)
-      : renderer(renderer), mappedInput(mappedInput), renderingMutex(xSemaphoreCreateMutex()) {
+      : renderer(renderer),
+        mappedInput(mappedInput),
+        brightnessSheet(renderer, mappedInput),
+        renderingMutex(xSemaphoreCreateMutex()) {
     assert(renderingMutex != nullptr && "Failed to create rendering mutex");
     stackActivities.reserve(10);
   }

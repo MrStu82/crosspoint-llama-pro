@@ -29,4 +29,5 @@ class FrontlightActivity final : public Activity {
   void handleSelection();
   void openBrightnessPicker();
   void openWarmCoolPicker();
+  void openPinDiagnostic();
 };

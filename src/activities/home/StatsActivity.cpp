@@ -216,10 +216,6 @@ void StatsActivity::render(RenderLock&&) {
     drawBaseline(UI_12_FONT_ID, kPctX, 237, tr(STR_STATS_UNKNOWN));
   }
 
-  const int leftEdge = 16;
-  const int rightEdge = screenWidth - 16;
-  renderer.drawLine(leftEdge, 300, rightEdge, 300, 2, true);
-
   // --- MIDDLE BAND (new work — everything else on this screen reproduces the
   // frozen spec exactly; this section is the only part actually being designed) ---
   // pagesReadToday is already tracked live by StatsManager (GlobalStats::pagesReadToday),
@@ -249,8 +245,6 @@ void StatsActivity::render(RenderLock&&) {
     snprintf(ppmLine, sizeof(ppmLine), "%.1f %s", ppmToday, tr(STR_STATS_PAGES_PER_MINUTE_LONG));
   }
   drawCentered(NOTOSANS_14_FONT_ID, ppmLine, 240, 402);
-
-  renderer.drawLine(leftEdge, 414, leftEdge + 448, 414, 2, true);
 
   // Fetched once here so both the 30-day grid slice and the streak walk read from
   // the same snapshot. getLast7DaysMinutes() (name predates this screen) fills all
@@ -298,7 +292,6 @@ void StatsActivity::render(RenderLock&&) {
     renderer.drawLine(dividerX, 424, dividerX, 424 + 54, 1, true);
   }
 
-  renderer.drawLine(leftEdge, 480, rightEdge, 480, 2, true);
   drawBaseline(UI_12_FONT_ID, 24, 506, tr(STR_STATS_ACTIVITY_HISTORY), true, EpdFontFamily::BOLD);
 
   // --- 30-DAY ACTIVITY GRID ---

@@ -74,6 +74,14 @@ void ActivityManager::renderTaskLoop() {
 }
 
 void ActivityManager::loop() {
+  // The brightness sheet is a global overlay, not an Activity — while it's open it
+  // must get first refusal on every input frame (mirroring how an Activity's own
+  // OptionPopup is checked before its normal loop() body), and no other gesture or
+  // per-activity handling below may run in the same frame.
+  if (brightnessSheet.isOpen()) {
+    if (brightnessSheet.loop()) return;
+  }
+
   if (currentActivity) {
     if (!currentActivity->isHomeActivity() && mappedInput.wasHomeGesture()) {
       if (currentActivity->handleHomeGesture()) {
@@ -90,6 +98,15 @@ void ActivityManager::loop() {
     if (!currentActivity->isFrontlightActivity() && mappedInput.wasBrightnessGesture()) {
       currentActivity->startActivityForResult(std::make_unique<FrontlightActivity>(renderer, mappedInput),
                                               [this](const ActivityResult&) { requestUpdate(); });
+      return;
+    }
+
+    // Global bottom-edge upward swipe -> quick brightness sheet. Same reuse of the
+    // existing per-loop edge-gesture dispatch as the block above; suppressed while
+    // FrontlightActivity is on top (its own full settings page already covers this)
+    // so the two brightness entry points can't stack.
+    if (!currentActivity->isFrontlightActivity() && mappedInput.wasBrightnessSheetGesture()) {
+      brightnessSheet.open();
       return;
     }
 

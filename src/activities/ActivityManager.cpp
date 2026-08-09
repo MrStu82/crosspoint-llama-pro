@@ -23,6 +23,7 @@
 #include "home/StatsActivity.h"
 #include "network/CrossPointWebServerActivity.h"
 #include "reader/ReaderActivity.h"
+#include "settings/FrontlightActivity.h"
 #include "settings/OpdsServerListActivity.h"
 #include "settings/SettingsActivity.h"
 #include "util/FullScreenMessageActivity.h"
@@ -79,6 +80,16 @@ void ActivityManager::loop() {
         return;
       }
       goHome();
+      return;
+    }
+
+    // Global left-edge upward swipe -> backlight quick-settings drawer. Checked here, once, for
+    // every activity, rather than duplicated per-activity. Fires before dispatch so it wins over
+    // any local touch handling; suppressed while FrontlightActivity is itself on top so a swipe
+    // inside the brightness panel can't reopen it.
+    if (!currentActivity->isFrontlightActivity() && mappedInput.wasBrightnessGesture()) {
+      currentActivity->startActivityForResult(std::make_unique<FrontlightActivity>(renderer, mappedInput),
+                                              [this](const ActivityResult&) { requestUpdate(); });
       return;
     }
 

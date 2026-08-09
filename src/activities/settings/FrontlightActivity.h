@@ -15,6 +15,7 @@ class FrontlightActivity final : public Activity {
   void onExit() override;
   void loop() override;
   void render(RenderLock&&) override;
+  bool isFrontlightActivity() const override { return true; }
 
  private:
   ButtonNavigator buttonNavigator;

@@ -48,6 +48,9 @@ class Activity {
   virtual bool handleForcedRefresh() { return false; }
   virtual bool isHomeActivity() const { return false; }
   virtual bool handleHomeGesture() { return false; }
+  // True for FrontlightActivity itself, so the global brightness gesture (dispatched by
+  // ActivityManager) doesn't reopen it while it's already the panel on top.
+  virtual bool isFrontlightActivity() const { return false; }
   virtual ScreenshotInfo getScreenshotInfo() const { return {}; }
 
   // Start a new activity without destroying the current one

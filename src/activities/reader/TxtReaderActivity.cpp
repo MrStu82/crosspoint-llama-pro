@@ -15,7 +15,6 @@
 #include "ReaderUtils.h"
 #include "RecentBooksStore.h"
 #include "activities/home/StatsManager.h"
-#include "activities/settings/FrontlightActivity.h"
 #include "components/UITheme.h"
 #include "fontIds.h"
 #include "util/BookProgressBadge.h"
@@ -72,13 +71,6 @@ void TxtReaderActivity::onExit() {
 }
 
 void TxtReaderActivity::loop() {
-  // Left-edge swipe-up quick-settings drawer: backlight.
-  if (mappedInput.wasBrightnessGesture()) {
-    startActivityForResult(std::make_unique<FrontlightActivity>(renderer, mappedInput),
-                           [this](const ActivityResult&) { requestUpdate(); });
-    return;
-  }
-
   if (ReaderUtils::handleBackNavigation(mappedInput, activityManager, txt ? txt->getPath().c_str() : "",
                                         {this, [](void* ctx) { static_cast<TxtReaderActivity*>(ctx)->onGoHome(); }})) {
     return;

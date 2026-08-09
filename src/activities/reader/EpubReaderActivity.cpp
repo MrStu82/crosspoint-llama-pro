@@ -35,7 +35,6 @@
 #include "RecentBooksStore.h"
 #include "SdCardFontSystem.h"
 #include "activities/home/StatsManager.h"
-#include "activities/settings/FrontlightActivity.h"
 #include "activities/settings/TextSettingsActivity.h"
 #include "components/UITheme.h"
 #include "fontIds.h"
@@ -309,11 +308,6 @@ void EpubReaderActivity::showBuildPopup() {
   buildPopupPending = false;
 }
 
-void EpubReaderActivity::openBrightnessQuickPicker() {
-  startActivityForResult(std::make_unique<FrontlightActivity>(renderer, mappedInput),
-                         [this](const ActivityResult&) { requestUpdate(); });
-}
-
 void EpubReaderActivity::onTextSettingsClosed() {
   // TextSettingsActivity saves on each change; no save needed here. Font/size/spacing/margin
   // changes invalidate the current layout: preserve position and force a re-layout, mirroring
@@ -563,12 +557,6 @@ void EpubReaderActivity::loop() {
     startActivityForResult(std::make_unique<TextSettingsActivity>(renderer, mappedInput, &sdFontSystem.registry(),
                                                                    TextSettingsActivity::Tab::Family),
                            [this](const ActivityResult&) { onTextSettingsClosed(); });
-  }
-
-  // Left-edge upward swipe -> backlight quick-settings drawer.
-  if (mappedInput.wasBrightnessGesture()) {
-    openBrightnessQuickPicker();
-    return;
   }
 
   // Long-press Confirm runs the user-selected function (SETTINGS.longPressMenuFunction).

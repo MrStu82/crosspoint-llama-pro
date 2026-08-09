@@ -65,6 +65,12 @@ class MinesweeperActivity final : public Activity {
   Rect newGameRect;
   int cellPx = 0;
 
+  // Set on game start and after every play-area interaction; consumed (and
+  // cleared) by the next render() to do a deghosting refresh instead of the
+  // default fast partial one. Reported ghosting was worst after reveal/flag
+  // taps, which is exactly the case a fast partial refresh alone can't clear.
+  bool forceFullRefresh = true;
+
   void newGame();
   void placeMines(int avoidIdx);
   void floodReveal(int startIdx);

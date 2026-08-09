@@ -45,6 +45,7 @@ void MinesweeperActivity::newGame() {
   state = GameState::Playing;
   touchActive = false;
   longPressFired = false;
+  forceFullRefresh = true;
 }
 
 void MinesweeperActivity::placeMines(int avoidIdx) {
@@ -191,6 +192,7 @@ void MinesweeperActivity::loop() {
       if (dx * dx + dy * dy <= kTouchMaxDist * kTouchMaxDist && millis() - touchStartMs >= kLongPressMs) {
         longPressFired = true;
         handleLongPress(touchStartX, touchStartY);
+        forceFullRefresh = true;
         requestUpdate();
         return;
       }
@@ -215,6 +217,7 @@ void MinesweeperActivity::loop() {
   if (wasLongPress || state != GameState::Playing) return;
 
   handleTap(tx, ty);
+  forceFullRefresh = true;
   requestUpdate();
 }
 
@@ -313,5 +316,10 @@ void MinesweeperActivity::render(RenderLock&&) {
   const auto labels = mappedInput.mapLabels(tr(STR_BACK), tr(STR_MINESWEEPER_NEW_GAME), "", "");
   GUI.drawButtonHints(renderer, labels.btn1, labels.btn2, labels.btn3, labels.btn4);
 
-  renderer.displayBuffer();
+  if (forceFullRefresh) {
+    renderer.displayBuffer(HalDisplay::HALF_REFRESH);
+    forceFullRefresh = false;
+  } else {
+    renderer.displayBuffer();
+  }
 }

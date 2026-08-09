@@ -64,7 +64,6 @@ void StatsActivity::onEnter() {
   if (s_cachedBookCount < 0) {
     s_cachedBookCount = countEpubsRecursively("/");
   }
-  totalBooksOnDevice = s_cachedBookCount;
   requestUpdate();
 }
 

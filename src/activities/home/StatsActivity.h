@@ -3,8 +3,6 @@
 #include "activities/Activity.h"
 
 class StatsActivity final : public Activity {
-  int totalBooksOnDevice = 0;
-
   int countEpubsRecursively(const char* path);
 
  public:

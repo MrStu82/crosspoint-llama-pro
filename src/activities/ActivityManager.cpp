@@ -11,6 +11,7 @@
 #include "browser/OpdsBookBrowserActivity.h"
 #include "game/GameTitleActivity.h"
 #include "game/GamesListActivity.h"
+#include "game/MinesweeperActivity.h"
 #include "game/SolitaireActivity.h"
 #include "game/TamagotchiActivity.h"
 #include "game/TetrisActivity.h"
@@ -268,6 +269,10 @@ void ActivityManager::goToTamagotchi() {
 
 void ActivityManager::goToSolitaire() {
   replaceActivity(std::make_unique<SolitaireActivity>(renderer, mappedInput));
+}
+
+void ActivityManager::goToMinesweeper() {
+  replaceActivity(std::make_unique<MinesweeperActivity>(renderer, mappedInput));
 }
 
 void ActivityManager::pushActivity(std::unique_ptr<Activity>&& activity) {

@@ -67,6 +67,9 @@ void GamesListActivity::handleSelection() {
     case 3:
       activityManager.goToSolitaire();
       return;
+    case 4:
+      activityManager.goToMinesweeper();
+      return;
     default:
       return;
   }
@@ -94,6 +97,8 @@ void GamesListActivity::render(RenderLock&&) {
             return std::string(tr(STR_TAMA_TITLE));
           case 3:
             return std::string(tr(STR_SOLITAIRE_TITLE));
+          case 4:
+            return std::string(tr(STR_MINESWEEPER_TITLE));
           default:
             return std::string();
         }

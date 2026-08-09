@@ -9,6 +9,7 @@
 
 #include "I18nKeys.h"
 #include "MappedInputManager.h"
+#include "SolitaireStore.h"
 #include "components/UITheme.h"
 #include "fontIds.h"
 
@@ -24,62 +25,65 @@ void fillDisc(GfxRenderer& renderer, int cx, int cy, int r, Color color) {
   renderer.fillRoundedRect(cx - r, cy - r, 2 * r, 2 * r, r, color);
 }
 
-// Basic monochrome suit pip, "even if basic" per the ask -- built from the
-// existing primitive set (fillDisc, fillPolygon, fillRect), no new assets.
-// Drawn inside a size x size box with top-left corner at (x, y).
-void drawSuitPip(GfxRenderer& renderer, int x, int y, int size, uint8_t suit) {
+// Draws one suit's pip shape, solid black if `black` else solid white,
+// inside a size x size box with top-left corner at (x, y). Factored out of
+// drawSuitPip so the same shape can be stamped twice -- once black, once
+// shrunk in white on top -- to produce a hollow outline for the red suits.
+void drawSuitPipShape(GfxRenderer& renderer, int x, int y, int size, uint8_t suit, bool black) {
+  const Color discColor = black ? Color::Black : Color::White;
   const int cx = x + size / 2;
   const int lobeR = size / 4;
   switch (suit) {
     case 1: {  // Hearts: two top lobes + downward-pointing triangle base.
-      fillDisc(renderer, x + lobeR, y + lobeR, lobeR, Color::Black);
-      fillDisc(renderer, x + size - lobeR, y + lobeR, lobeR, Color::Black);
+      fillDisc(renderer, x + lobeR, y + lobeR, lobeR, discColor);
+      fillDisc(renderer, x + size - lobeR, y + lobeR, lobeR, discColor);
       int xs[3] = {x, x + size, cx};
       int ys[3] = {y + lobeR, y + lobeR, y + size};
-      renderer.fillPolygon(xs, ys, 3, true);
+      renderer.fillPolygon(xs, ys, 3, black);
       break;
     }
     case 0: {  // Spades: upward-pointing triangle + two bottom lobes + stem.
       int xs[3] = {cx, x, x + size};
       int ys[3] = {y, y + size - lobeR, y + size - lobeR};
-      renderer.fillPolygon(xs, ys, 3, true);
-      fillDisc(renderer, x + lobeR, y + size - lobeR, lobeR, Color::Black);
-      fillDisc(renderer, x + size - lobeR, y + size - lobeR, lobeR, Color::Black);
-      renderer.fillRect(cx - 1, y + size - lobeR, 2, lobeR, true);
+      renderer.fillPolygon(xs, ys, 3, black);
+      fillDisc(renderer, x + lobeR, y + size - lobeR, lobeR, discColor);
+      fillDisc(renderer, x + size - lobeR, y + size - lobeR, lobeR, discColor);
+      renderer.fillRect(cx - 1, y + size - lobeR, 2, lobeR, black);
       break;
     }
     case 2: {  // Diamonds: rotated square (rhombus).
       int xs[4] = {cx, x + size, cx, x};
       int ys[4] = {y, y + size / 2, y + size, y + size / 2};
-      renderer.fillPolygon(xs, ys, 4, true);
+      renderer.fillPolygon(xs, ys, 4, black);
       break;
     }
     case 3:
     default: {  // Clubs: trefoil (three discs) + stem.
-      fillDisc(renderer, cx, y + lobeR, lobeR, Color::Black);
-      fillDisc(renderer, x + lobeR, y + size - lobeR, lobeR, Color::Black);
-      fillDisc(renderer, x + size - lobeR, y + size - lobeR, lobeR, Color::Black);
-      renderer.fillRect(cx - 1, y + size / 2, 2, size / 2, true);
+      fillDisc(renderer, cx, y + lobeR, lobeR, discColor);
+      fillDisc(renderer, x + lobeR, y + size - lobeR, lobeR, discColor);
+      fillDisc(renderer, x + size - lobeR, y + size - lobeR, lobeR, discColor);
+      renderer.fillRect(cx - 1, y + size / 2, 2, size / 2, black);
       break;
     }
   }
 }
-}  // namespace
 
-const char* SolitaireActivity::suitLetter(uint8_t suit) {
-  switch (suit) {
-    case 0:
-      return "S";
-    case 1:
-      return "H";
-    case 2:
-      return "D";
-    case 3:
-      return "C";
-    default:
-      return "?";
+// Basic monochrome suit pip, "even if basic" per the ask -- built from the
+// existing primitive set (fillDisc, fillPolygon, fillRect), no new assets.
+// Drawn inside a size x size box with top-left corner at (x, y). Hearts and
+// Diamonds (the red suits) render hollow -- a solid black stamp of the shape
+// with a shrunk white copy stamped on top, leaving a black outline ring --
+// since there's no dedicated outline-polygon primitive to draw one directly.
+// Spades and Clubs (black suits) render solid, matching a real deck.
+void drawSuitPip(GfxRenderer& renderer, int x, int y, int size, uint8_t suit) {
+  bool hollow = (suit == 1 || suit == 2);
+  drawSuitPipShape(renderer, x, y, size, suit, true);
+  if (hollow) {
+    int inset = std::max(1, size / 6);
+    drawSuitPipShape(renderer, x + inset, y + inset, size - 2 * inset, suit, false);
   }
 }
+}  // namespace
 
 const char* SolitaireActivity::rankLabel(uint8_t rank, char* buf, size_t bufSize) {
   switch (rank) {
@@ -99,7 +103,9 @@ const char* SolitaireActivity::rankLabel(uint8_t rank, char* buf, size_t bufSize
 
 void SolitaireActivity::onEnter() {
   Activity::onEnter();
-  newGame();
+  if (!loadGame()) {
+    newGame();
+  }
   requestUpdate();
 }
 
@@ -142,6 +148,55 @@ void SolitaireActivity::newGame() {
     c.faceUp = false;
     stock.push_back(c);
   }
+  saveGame();
+}
+
+namespace {
+template <typename Dst, typename Src>
+Dst convertCard(const Src& c) {
+  return Dst{c.rank, c.suit, c.faceUp};
+}
+
+template <typename DstPile, typename SrcPile>
+void convertPile(DstPile& dst, const SrcPile& src) {
+  dst.clear();
+  dst.reserve(src.size());
+  for (const auto& c : src) {
+    dst.push_back(convertCard<typename DstPile::value_type>(c));
+  }
+}
+}  // namespace
+
+void SolitaireActivity::saveGame() const {
+  SolitaireStore& store = SOLITAIRE_STORE;
+  convertPile(store.stock, stock);
+  convertPile(store.waste, waste);
+  for (int col = 0; col < kColumns; col++) {
+    convertPile(store.tableau[col], tableau[col]);
+  }
+  for (int f = 0; f < kFoundations; f++) {
+    store.foundationTop[f] = foundationTop[f];
+  }
+  store.saveToFile();
+}
+
+bool SolitaireActivity::loadGame() {
+  SolitaireStore& store = SOLITAIRE_STORE;
+  if (!store.loadFromFile()) {
+    return false;
+  }
+  convertPile(stock, store.stock);
+  convertPile(waste, store.waste);
+  for (int col = 0; col < kColumns; col++) {
+    convertPile(tableau[col], store.tableau[col]);
+  }
+  for (int f = 0; f < kFoundations; f++) {
+    foundationTop[f] = store.foundationTop[f];
+  }
+  clearSelection();
+  won = false;
+  checkWin();
+  return true;
 }
 
 void SolitaireActivity::drawFromStock() {
@@ -161,6 +216,7 @@ void SolitaireActivity::drawFromStock() {
     waste.clear();
   }
   clearSelection();
+  saveGame();
 }
 
 bool SolitaireActivity::canPlaceOnTableau(int col, const Card& card) const {
@@ -262,17 +318,43 @@ bool SolitaireActivity::checkWin() {
 void SolitaireActivity::loop() {
   using Button = MappedInputManager::Button;
 
+  int tx = 0;
+  int ty = 0;
+  bool tapped = mappedInput.wasScreenTapped(tx, ty);
+
+  // Menu overlay: while open, it owns Back (resumes instead of exiting the
+  // activity) and every tap; nothing below this block runs.
+  if (menuOpen) {
+    if (mappedInput.wasReleased(Button::Back)) {
+      menuOpen = false;
+      forceFullRefresh = true;
+      requestUpdate();
+      return;
+    }
+    if (tapped) {
+      if (rectContains(menuResumeRect, tx, ty)) {
+        menuOpen = false;
+      } else if (rectContains(menuNewGameRect, tx, ty)) {
+        newGame();
+        menuOpen = false;
+      } else if (rectContains(menuExitRect, tx, ty)) {
+        finish();
+        return;
+      }
+      forceFullRefresh = true;
+      requestUpdate();
+    }
+    return;
+  }
+
   if (mappedInput.wasReleased(Button::Back)) {
     finish();
     return;
   }
 
-  int tx = 0;
-  int ty = 0;
-  bool tapped = mappedInput.wasScreenTapped(tx, ty);
-
-  if ((tapped && rectContains(newGameRect, tx, ty)) || mappedInput.wasPressed(Button::Confirm)) {
-    newGame();
+  if ((tapped && rectContains(menuRect, tx, ty)) || mappedInput.wasPressed(Button::Confirm)) {
+    menuOpen = true;
+    forceFullRefresh = true;
     requestUpdate();
     return;
   }
@@ -285,6 +367,7 @@ void SolitaireActivity::loop() {
 
   if (rectContains(stockRect, tx, ty)) {
     drawFromStock();
+    forceFullRefresh = true;
     requestUpdate();
     return;
   }
@@ -305,24 +388,29 @@ void SolitaireActivity::loop() {
           waste.pop_back();
           clearSelection();
           checkWin();
+          saveGame();
+          forceFullRefresh = true;
           requestUpdate();
           return;
         }
       }
       selSource = SelSource::Waste;
     }
+    forceFullRefresh = true;
     requestUpdate();
     return;
   }
 
   for (int f = 0; f < kFoundations; f++) {
     if (rectContains(foundationRect[f], tx, ty)) {
+      bool moved = false;
       if (selSource == SelSource::Waste && !waste.empty()) {
         Card c = waste.back();
         if (canPlaceOnFoundation(f, c)) {
           foundationTop[f] = c.rank;
           waste.pop_back();
           checkWin();
+          moved = true;
         }
       } else if (selSource == SelSource::Tableau && selCol >= 0 && !tableau[selCol].empty() &&
                  selRunIndex == static_cast<int>(tableau[selCol].size()) - 1) {
@@ -333,9 +421,14 @@ void SolitaireActivity::loop() {
           tableau[selCol].pop_back();
           flipTopIfNeeded(selCol);
           checkWin();
+          moved = true;
         }
       }
       clearSelection();
+      if (moved) {
+        saveGame();
+      }
+      forceFullRefresh = true;
       requestUpdate();
       return;
     }
@@ -346,6 +439,7 @@ void SolitaireActivity::loop() {
       continue;
     }
 
+    bool moved = false;
     if (selSource == SelSource::None) {
       int hitIndex = hitTestColumnCard(col, tx, ty);
       if (hitIndex >= 0 && tableau[col][hitIndex].faceUp) {
@@ -356,6 +450,7 @@ void SolitaireActivity::loop() {
           tableau[col].pop_back();
           flipTopIfNeeded(col);
           checkWin();
+          moved = true;
         } else {
           selSource = SelSource::Tableau;
           selCol = col;
@@ -368,6 +463,7 @@ void SolitaireActivity::loop() {
         waste.pop_back();
         tableau[col].push_back(c);
         checkWin();
+        moved = true;
       }
       clearSelection();
     } else {  // SelSource::Tableau -- move the whole run from selRunIndex down
@@ -382,10 +478,15 @@ void SolitaireActivity::loop() {
         flipTopIfNeeded(selCol);
         checkWin();
         clearSelection();
+        moved = true;
       } else {
         clearSelection();
       }
     }
+    if (moved) {
+      saveGame();
+    }
+    forceFullRefresh = true;
     requestUpdate();
     return;
   }
@@ -399,11 +500,16 @@ void SolitaireActivity::drawCardBack(int x, int y, int w, int h) const {
 void SolitaireActivity::drawCardFace(int x, int y, int w, int h, const Card& card, bool highlighted) const {
   renderer.fillRoundedRect(x, y, w, h, 4, Color::White);
   renderer.drawRoundedRect(x, y, w, h, highlighted ? 2 : 1, 4, true);
+  // Corner label is rank text + a small inline suit pip glyph (replaces the
+  // old rank+letter text, e.g. "3H") so the suit reads as a real pip at a
+  // glance instead of a letter abbreviation.
   char rbuf[4];
   const char* rl = rankLabel(card.rank, rbuf, sizeof(rbuf));
-  char label[8];
-  snprintf(label, sizeof(label), "%s%s", rl, suitLetter(card.suit));
-  renderer.drawText(UI_10_FONT_ID, x + 4, y + 4, label, true);
+  renderer.drawText(UI_10_FONT_ID, x + 4, y + 4, rl, true);
+  int labelPipSize = 10;
+  int labelPipX = x + 4 + renderer.getTextWidth(UI_10_FONT_ID, rl) + 3;
+  drawSuitPip(renderer, labelPipX, y + 5, labelPipSize, card.suit);
+
   int pipSize = std::min(w, h) / 3;
   drawSuitPip(renderer, x + w - pipSize - 4, y + h - pipSize - 4, pipSize, card.suit);
 }
@@ -437,7 +543,7 @@ void SolitaireActivity::render(RenderLock&&) {
 
   stockRect = Rect{marginX, topRowY, cardW, cardH};
   wasteRect = Rect{marginX + cardW + gap, topRowY, cardW, cardH};
-  newGameRect = Rect{marginX + 2 * (cardW + gap), topRowY, cardW, cardH};
+  menuRect = Rect{marginX + 2 * (cardW + gap), topRowY, cardW, cardH};
 
   int rightEdge = pageWidth - marginX;
   for (int f = kFoundations - 1; f >= 0; f--) {
@@ -471,20 +577,29 @@ void SolitaireActivity::render(RenderLock&&) {
                  selSource == SelSource::Waste);
   }
 
-  // New game button
-  renderer.drawRoundedRect(newGameRect.x, newGameRect.y, newGameRect.width, newGameRect.height, 1, 4, true);
+  // Menu button (was a direct "New Game" button) -- opens the Resume/New
+  // Game/Exit overlay instead of acting immediately. Drawn as a simple
+  // hamburger icon (three bars) since it's a corner-sized card slot, too
+  // narrow for the old label text to sit comfortably.
+  renderer.drawRoundedRect(menuRect.x, menuRect.y, menuRect.width, menuRect.height, 1, 4, true);
   {
-    const char* label = tr(STR_SOLITAIRE_NEW_GAME);
-    int tw = renderer.getTextWidth(UI_10_FONT_ID, label);
-    renderer.drawText(UI_10_FONT_ID, newGameRect.x + (newGameRect.width - tw) / 2, newGameRect.y + newGameRect.height / 2 - 6,
-                      label, true);
+    int barW = menuRect.width / 2;
+    int barX = menuRect.x + (menuRect.width - barW) / 2;
+    int barSpacing = std::max(6, menuRect.height / 6);
+    int barY = menuRect.y + menuRect.height / 2 - barSpacing;
+    for (int i = 0; i < 3; i++) {
+      renderer.fillRect(barX, barY + i * barSpacing, barW, 2, true);
+    }
   }
 
   // Foundations
   for (int f = 0; f < kFoundations; f++) {
     if (foundationTop[f] == 0) {
-      drawEmptySlot(foundationRect[f].x, foundationRect[f].y, foundationRect[f].width, foundationRect[f].height,
-                    suitLetter(static_cast<uint8_t>(f)));
+      drawEmptySlot(foundationRect[f].x, foundationRect[f].y, foundationRect[f].width, foundationRect[f].height, "");
+      int pipSize = std::min(foundationRect[f].width, foundationRect[f].height) / 3;
+      drawSuitPip(renderer, foundationRect[f].x + (foundationRect[f].width - pipSize) / 2,
+                  foundationRect[f].y + (foundationRect[f].height - pipSize) / 2, pipSize,
+                  static_cast<uint8_t>(f));
     } else {
       Card synthetic{foundationTop[f], static_cast<uint8_t>(f), true};
       drawCardFace(foundationRect[f].x, foundationRect[f].y, foundationRect[f].width, foundationRect[f].height,
@@ -526,8 +641,38 @@ void SolitaireActivity::render(RenderLock&&) {
     renderer.drawCenteredText(UI_10_FONT_ID, boxY + 56, tr(STR_SOLITAIRE_TAP_NEW_GAME), true);
   }
 
-  const auto labels = mappedInput.mapLabels(tr(STR_BACK), tr(STR_SOLITAIRE_NEW_GAME), "", "");
+  if (menuOpen) {
+    const int boxW = pageWidth - 100;
+    const int rowH = 44;
+    const int boxH = rowH * 3 + 20;
+    const int boxX = (pageWidth - boxW) / 2;
+    const int boxY = contentTop + (contentHeight - boxH) / 2;
+    renderer.fillRoundedRect(boxX, boxY, boxW, boxH, 8, Color::White);
+    renderer.drawRoundedRect(boxX, boxY, boxW, boxH, 2, 8, true);
+
+    menuResumeRect = Rect(boxX + 10, boxY + 10, boxW - 20, rowH - 8);
+    menuNewGameRect = Rect(boxX + 10, boxY + 10 + rowH, boxW - 20, rowH - 8);
+    menuExitRect = Rect(boxX + 10, boxY + 10 + rowH * 2, boxW - 20, rowH - 8);
+
+    renderer.drawCenteredText(UI_12_FONT_ID, menuResumeRect.y + (menuResumeRect.height / 2) - 8,
+                               tr(STR_RESUME), true);
+    renderer.drawCenteredText(UI_12_FONT_ID, menuNewGameRect.y + (menuNewGameRect.height / 2) - 8,
+                               tr(STR_SOLITAIRE_NEW_GAME), true);
+    renderer.drawCenteredText(UI_12_FONT_ID, menuExitRect.y + (menuExitRect.height / 2) - 8,
+                               tr(STR_EXIT), true);
+    renderer.drawRect(menuResumeRect.x, menuResumeRect.y, menuResumeRect.width, menuResumeRect.height, true);
+    renderer.drawRect(menuNewGameRect.x, menuNewGameRect.y, menuNewGameRect.width, menuNewGameRect.height, true);
+    renderer.drawRect(menuExitRect.x, menuExitRect.y, menuExitRect.width, menuExitRect.height, true);
+  }
+
+  const auto labels =
+      mappedInput.mapLabels(tr(STR_BACK), tr(STR_DM_HINT_MENU), "", "");
   GUI.drawButtonHints(renderer, labels.btn1, labels.btn2, labels.btn3, labels.btn4);
 
-  renderer.displayBuffer();
+  if (forceFullRefresh) {
+    renderer.displayBuffer(HalDisplay::HALF_REFRESH);
+    forceFullRefresh = false;
+  } else {
+    renderer.displayBuffer();
+  }
 }

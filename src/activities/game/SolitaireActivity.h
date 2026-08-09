@@ -56,6 +56,16 @@ class SolitaireActivity final : public Activity {
   int selRunIndex = -1;  // index into tableau[selCol] where the selected run starts
   bool won = false;
 
+  // Set on every interaction and consumed once by render(), which then asks
+  // for a HALF_REFRESH instead of the default FAST_REFRESH -- mirrors
+  // MinesweeperActivity's existing fix for the same e-ink ghosting complaint.
+  bool forceFullRefresh = false;
+
+  // Menu overlay (Resume/New Game/Exit) replacing the old direct "New Game"
+  // button. Rendered in place, not a separate Activity -- avoids the
+  // heap-alloc/lifecycle cost of pushing a new screen for three buttons.
+  bool menuOpen = false;
+
   uint32_t lastTapMs = 0;
   int lastTapX = -1000;
   int lastTapY = -1000;
@@ -63,7 +73,10 @@ class SolitaireActivity final : public Activity {
   // Hit-rects and card geometry, recomputed each render() and read back by loop()'s touch handling.
   Rect stockRect;
   Rect wasteRect;
-  Rect newGameRect;
+  Rect menuRect;
+  Rect menuResumeRect;
+  Rect menuNewGameRect;
+  Rect menuExitRect;
   Rect foundationRect[kFoundations];
   Rect columnRect[kColumns];
   int cardW = 0;
@@ -72,10 +85,11 @@ class SolitaireActivity final : public Activity {
   int cardUpOffset = 0;    // vertical step for a face-up card in a cascade
 
   static bool isRed(uint8_t suit) { return suit == 1 || suit == 2; }
-  static const char* suitLetter(uint8_t suit);
   static const char* rankLabel(uint8_t rank, char* buf, size_t bufSize);
 
   void newGame();
+  void saveGame() const;
+  bool loadGame();
   void drawFromStock();
   bool canPlaceOnTableau(int col, const Card& card) const;
   bool canPlaceOnFoundation(int foundationIdx, const Card& card) const;

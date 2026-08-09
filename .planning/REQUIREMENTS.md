@@ -38,6 +38,8 @@ Deferred, not in this dispatch.
 ## Back in Scope
 
 - **DEF-01 / Quick-settings swipe sheet (§5.3)**: pulled back into scope by Stuart (2026-08-09) — top-edge swipe must land on text/typography settings. Build order: (1) confirm what `EpubReaderMenuActivity` already exposes for text settings, (2) prove §5.3's own `[device]`-marked assumption — SSD1677 windowed partial refresh of a 480×160 region without a full-panel flash — on Stuart's hardware, (3) only build the sheet itself if that proof passes.
+  - **Step 2 PROVEN, on hardware, 2026-08-09**: a one-shot debug trigger (long-press the Settings header) drew a striped test pattern into a 480×160 bottom strip and windowed-refreshed just that region on Stuart's actual SSD1677 panel. Stuart's verbatim result: *"I didn't see the screen flash. I don't think it would matter if it did."* The windowed-refresh assumption behind §5.3 holds — confirmed, not assumed. `HalDisplay::displayWindow`/`GfxRenderer::displayWindow` are proven-working plumbing and remain in the codebase; the one-shot debug trigger itself has been stripped out of `SettingsActivity` (its only purpose was this proof) since a long-press easter egg drawing stripes over the Settings screen is a liability if rediscovered later with no context.
+  - **Step 3 NOT authorised**: despite the proof passing, Stuart did not ask for the sheet — he already has text options on the top swipe. Do not build it. This entry stays closed unless he asks by name.
 
 ## Out of Scope
 

@@ -77,6 +77,12 @@ class StatsManager {
   StatsManager();  // Singleton
   void load();
 
+  // One-shot: zeroes totalPagesRead per Stuart's explicit 2026-08-09 request ("wipe the
+  // all time page count, it's useless now unless there's a backup" -- there is no backup).
+  // Scoped to totalPagesRead ONLY; totalReadingTimeSeconds/booksOpened/booksFinished are
+  // untouched. Guarded by an on-disk marker so it can never re-fire on a later boot.
+  void applyTotalPagesWipeOnce();
+
   // YYYYMMDD for `daysAgo` calendar days before today (0 = today), per the RTC and the
   // user's configured UTC offset. Returns 0 if the date is unknown (RTC unset).
   int getDateDaysAgo(int daysAgo) const;

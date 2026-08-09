@@ -10,9 +10,33 @@
 
 namespace {
 constexpr const char* STATS_FILE_PATH = "/.crosspoint/stats.bin";
+constexpr const char* TOTAL_PAGES_WIPE_MARKER_PATH = "/.crosspoint/totalpages_wipe_20260809.done";
 }  // namespace
 
-StatsManager::StatsManager() { load(); }
+StatsManager::StatsManager() {
+  load();
+  applyTotalPagesWipeOnce();
+}
+
+void StatsManager::applyTotalPagesWipeOnce() {
+  if (Storage.exists(TOTAL_PAGES_WIPE_MARKER_PATH)) return;
+
+  stats.totalPagesRead = 0;
+  dirty = true;
+  save();
+  if (dirty) {
+    // save() failed (SD write error): leave the marker unwritten so this retries next
+    // boot instead of silently never wiping. Re-running the wipe on an already-zero
+    // value is harmless.
+    return;
+  }
+
+  HalFile marker;
+  if (Storage.openFileForWrite("STM", TOTAL_PAGES_WIPE_MARKER_PATH, marker)) {
+    const uint8_t b = 1;
+    marker.write(&b, 1);
+  }
+}
 
 void StatsManager::load() {
   HalFile file;

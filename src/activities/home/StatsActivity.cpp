@@ -165,11 +165,21 @@ void StatsActivity::render(RenderLock&&) {
     }
   }
 
+  // Badge cache miss: a book already in progress when BookProgressBadge shipped (or one
+  // whose reader hasn't re-saved since) has no book_progress.bin yet. Approximate the
+  // whole-book % from chapter progress rather than showing STR_STATS_UNKNOWN -- bounded
+  // and tilde-marked as an estimate, since it ignores relative chapter sizes.
+  bool bookProgressIsApprox = false;
+  if (currentProgress < 0 && currentChapterProgress >= 0) {
+    currentProgress = currentChapterProgress;
+    bookProgressIsApprox = true;
+  }
+
   int barY = yPos + 80;
   renderer.drawText(UI_10_FONT_ID, rightTextX, barY - 22, tr(STR_STATS_BOOK_PROGRESS));
   if (currentProgress >= 0) {
     char progStr[16];
-    snprintf(progStr, sizeof(progStr), "%d%%", currentProgress);
+    snprintf(progStr, sizeof(progStr), bookProgressIsApprox ? "~%d%%" : "%d%%", currentProgress);
     int progW = renderer.getTextWidth(UI_10_FONT_ID, progStr);
     renderer.drawText(UI_10_FONT_ID, rightTextX + rightTextW - progW, barY - 22, progStr);
     renderer.drawRect(rightTextX, barY, rightTextW, 12);

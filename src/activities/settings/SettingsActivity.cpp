@@ -215,30 +215,6 @@ void SettingsActivity::loop() {
     return true;
   };
 
-  // Debug-only panel-proof trigger: long-press the header (version string area,
-  // which has no other touch handler) to fire a windowed refresh of a test
-  // pattern. See runPanelProofDebugTrigger() / .planning/REQUIREMENTS.md DEF-01.
-  {
-    int htx = 0;
-    int hty = 0;
-    const Rect headerRect{0, metrics.topPadding, renderer.getScreenWidth(), metrics.headerHeight};
-    const bool heldInHeader = mappedInput.isScreenTouchHeld(htx, hty) && htx >= headerRect.x &&
-                              htx < headerRect.x + headerRect.width && hty >= headerRect.y &&
-                              hty < headerRect.y + headerRect.height;
-    static constexpr unsigned long kPanelProofHoldMs = 1500;
-    if (heldInHeader) {
-      if (panelProofHoldStartMs == 0) {
-        panelProofHoldStartMs = millis();
-      } else if (!panelProofFired && millis() - panelProofHoldStartMs >= kPanelProofHoldMs) {
-        panelProofFired = true;
-        runPanelProofDebugTrigger();
-      }
-    } else {
-      panelProofHoldStartMs = 0;
-      panelProofFired = false;
-    }
-  }
-
   if (mappedInput.wasScreenTouchDown(tx, ty)) {
     int touchedCategory = -1;
     const auto tabs = buildTabs();
@@ -507,25 +483,6 @@ void SettingsActivity::openSleepTimeoutPicker() {
         }
         requestUpdate();
       });
-}
-
-void SettingsActivity::runPanelProofDebugTrigger() {
-  LOG_INF("SETTINGS", "panel-proof debug trigger fired");
-
-  // Logical (portrait) screen coordinates: bottom 480x160 strip.
-  constexpr int px = 0;
-  constexpr int py = 640;
-  constexpr int pw = 480;
-  constexpr int ph = 160;
-
-  renderer.fillRect(px, py, pw, ph, false);
-  constexpr int stripeWidth = 40;
-  for (int sx = px; sx < px + pw; sx += stripeWidth * 2) {
-    renderer.fillRect(sx, py, stripeWidth, ph, true);
-  }
-  renderer.drawRect(px, py, pw, ph, true);
-
-  renderer.displayWindow(px, py, pw, ph, false);
 }
 
 void SettingsActivity::render(RenderLock&&) {

@@ -64,6 +64,9 @@ void GamesListActivity::handleSelection() {
     case 2:
       activityManager.goToTamagotchi();
       return;
+    case 3:
+      activityManager.goToSolitaire();
+      return;
     default:
       return;
   }
@@ -89,6 +92,8 @@ void GamesListActivity::render(RenderLock&&) {
             return std::string(tr(STR_TETRIS_TITLE));
           case 2:
             return std::string(tr(STR_TAMA_TITLE));
+          case 3:
+            return std::string(tr(STR_SOLITAIRE_TITLE));
           default:
             return std::string();
         }

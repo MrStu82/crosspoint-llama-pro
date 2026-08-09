@@ -98,7 +98,10 @@ void TamagotchiActivity::restartFromEgg(int32_t now) {
 
 void TamagotchiActivity::hatchIfReady(int32_t now) {
   if (static_cast<Stage>(state.stage) != Stage::Egg) return;
-  if (now - state.stageStartEpoch < kIncubationSeconds) return;
+  // now==0 means the RTC is unset (fresh device, never synced/set) -- with no elapsed
+  // time to measure, don't hold the egg hostage on a timer that can never expire; let
+  // the tap through immediately rather than leaving the game permanently unhatchable.
+  if (now != 0 && now - state.stageStartEpoch < kIncubationSeconds) return;
   int tx = 0, ty = 0;
   if (mappedInput.wasScreenTapped(tx, ty)) {
     state.stage = static_cast<uint8_t>(Stage::Baby);

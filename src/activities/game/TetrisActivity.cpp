@@ -296,9 +296,13 @@ void TetrisActivity::loop() {
 }
 
 void TetrisActivity::drawCell(int screenX, int screenY, int cellSize, bool filled) const {
-  if (filled) {
-    renderer.fillRect(screenX + 1, screenY + 1, cellSize - 2, cellSize - 2, true);
-  }
+  if (!filled) return;
+  // Beveled block, approximating the highlight/shadow bevel on the original
+  // sprites -- the closest match achievable in 1-bit monochrome (no color
+  // planes to distinguish piece type, so this is shape/shading only).
+  renderer.fillRect(screenX + 1, screenY + 1, cellSize - 2, cellSize - 2, true);
+  renderer.drawLine(screenX + 2, screenY + 2, screenX + cellSize - 3, screenY + 2, false);
+  renderer.drawLine(screenX + 2, screenY + 2, screenX + 2, screenY + cellSize - 3, false);
 }
 
 void TetrisActivity::render(RenderLock&&) {

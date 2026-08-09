@@ -42,6 +42,13 @@ class TetrisActivity final : public Activity {
   int holdType = kNoHold;
   bool holdUsed = false;  // one hold/swap per piece, standard Tetris convention
 
+  // 7-bag randomizer: each of the 7 piece types appears exactly once per bag,
+  // order shuffled -- guarantees no piece (e.g. I) is ever absent for long
+  // stretches, unlike pure random(7) which can. Standard modern-Tetris idiom.
+  int bag[7] = {0, 1, 2, 3, 4, 5, 6};
+  int bagPos = 7;  // >= 7 forces a reshuffle on next draw
+  int drawFromBag();
+
   unsigned long lastDropMs = 0;
   unsigned long dropIntervalMs = 800;
 

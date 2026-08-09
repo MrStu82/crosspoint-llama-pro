@@ -139,9 +139,20 @@ int TetrisActivity::clearFullLines() {
   return cleared;
 }
 
+int TetrisActivity::drawFromBag() {
+  if (bagPos >= 7) {
+    for (int i = 6; i > 0; --i) {
+      const int j = static_cast<int>(random(i + 1));
+      std::swap(bag[i], bag[j]);
+    }
+    bagPos = 0;
+  }
+  return bag[bagPos++];
+}
+
 void TetrisActivity::spawnPiece() {
   currentType = nextType;
-  nextType = static_cast<int>(random(7));
+  nextType = drawFromBag();
   currentRotation = 0;
   currentShape = kBaseShapes[currentType];
   pieceX = (kCols - kBoxSize) / 2;
@@ -186,7 +197,8 @@ void TetrisActivity::onEnter() {
   gameOver = false;
   holdType = kNoHold;
   holdUsed = false;
-  nextType = static_cast<int>(random(7));
+  bagPos = 7;  // force a fresh shuffle each new game
+  nextType = drawFromBag();
   spawnPiece();
   lastDropMs = millis();
   requestUpdate();

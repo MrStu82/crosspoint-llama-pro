@@ -61,6 +61,9 @@ void GamesListActivity::handleSelection() {
     case 1:
       activityManager.goToTetris();
       return;
+    case 2:
+      activityManager.goToTamagotchi();
+      return;
     default:
       return;
   }
@@ -84,6 +87,8 @@ void GamesListActivity::render(RenderLock&&) {
             return std::string(tr(STR_DM_TITLE));
           case 1:
             return std::string(tr(STR_TETRIS_TITLE));
+          case 2:
+            return std::string(tr(STR_TAMA_TITLE));
           default:
             return std::string();
         }

@@ -17,7 +17,7 @@
 class Activity;    // forward declaration
 class RenderLock;  // forward declaration
 
-enum class HomeMenuItem { NONE, FILE_BROWSER, RECENTS, OPDS_BROWSER, FILE_TRANSFER, SETTINGS_MENU, STATS, DEEP_MINES };
+enum class HomeMenuItem { NONE, FILE_BROWSER, RECENTS, OPDS_BROWSER, FILE_TRANSFER, SETTINGS_MENU, STATS, GAMES };
 
 /**
  * ActivityManager
@@ -92,6 +92,7 @@ class ActivityManager {
   void goToBoot();
   void goToFullScreenMessage(std::string message, EpdFontFamily::Style style = EpdFontFamily::REGULAR);
   void goToCrashReport();
+  void goToGames();
   void goToDeepMines();
   void goHome(HomeMenuItem initialMenuItem = HomeMenuItem::NONE);
 

@@ -118,7 +118,8 @@ enum UIIcon {
   Wifi,
   Hotspot,
   Bookmark,
-  Stats
+  Stats,
+  Games
 };
 
 // Default theme implementation (Classic Theme)

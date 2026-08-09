@@ -22,7 +22,7 @@
 #include "util/BookProgressBadge.h"
 
 int HomeActivity::getMenuItemCount() const {
-  int count = 6;  // File Browser, Recents, File transfer, Settings, Stats, Deep Mines
+  int count = 6;  // File Browser, Recents, File transfer, Settings, Stats, Games
   if (!recentBooks.empty()) {
     count += recentBooks.size();
   }
@@ -198,8 +198,8 @@ void HomeActivity::loop() {
       case HomeMenuItem::STATS:
         onStatsOpen();
         break;
-      case HomeMenuItem::DEEP_MINES:
-        onDeepMinesOpen();
+      case HomeMenuItem::GAMES:
+        onGamesOpen();
         break;
       default:
         break;
@@ -316,8 +316,8 @@ void HomeActivity::render(RenderLock&&) {
 
   // Build menu items dynamically
   std::vector<const char*> menuItems = {tr(STR_BROWSE_FILES), tr(STR_MENU_RECENT_BOOKS), tr(STR_FILE_TRANSFER),
-                                        tr(STR_SETTINGS_TITLE), tr(STR_READING_STATS), tr(STR_DM_TITLE)};
-  std::vector<UIIcon> menuIcons = {Folder, Recent, Transfer, Settings, Stats, Bookmark};
+                                        tr(STR_SETTINGS_TITLE), tr(STR_READING_STATS), tr(STR_GAMES_TITLE)};
+  std::vector<UIIcon> menuIcons = {Folder, Recent, Transfer, Settings, Stats, Games};
 
   if (hasOpdsServers) {
     menuItems.insert(menuItems.begin() + 2, tr(STR_OPDS_BROWSER));
@@ -370,4 +370,4 @@ void HomeActivity::onOpdsBrowserOpen() { activityManager.goToBrowser(); }
 
 void HomeActivity::onStatsOpen() { activityManager.goToStats(); }
 
-void HomeActivity::onDeepMinesOpen() { activityManager.goToDeepMines(); }
+void HomeActivity::onGamesOpen() { activityManager.goToGames(); }

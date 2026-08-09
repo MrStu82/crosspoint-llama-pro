@@ -250,7 +250,7 @@ void StatsActivity::render(RenderLock&&) {
   }
   drawCentered(NOTOSANS_14_FONT_ID, ppmLine, 240, 402);
 
-  renderer.drawLine(leftEdge, 414, leftEdge + 448, 414, 1, true);
+  renderer.drawLine(leftEdge, 414, leftEdge + 448, 414, 2, true);
 
   // Fetched once here so both the 30-day grid slice and the streak walk read from
   // the same snapshot. getLast7DaysMinutes() (name predates this screen) fills all

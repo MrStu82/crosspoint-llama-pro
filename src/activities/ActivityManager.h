@@ -94,6 +94,7 @@ class ActivityManager {
   void goToCrashReport();
   void goToGames();
   void goToDeepMines();
+  void goToTetris();
   void goHome(HomeMenuItem initialMenuItem = HomeMenuItem::NONE);
 
   // This will move current activity to stack instead of deleting it

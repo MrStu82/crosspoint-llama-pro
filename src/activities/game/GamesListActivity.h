@@ -26,5 +26,5 @@ class GamesListActivity final : public Activity {
 
   ButtonNavigator buttonNavigator;
   int selectedIndex = 0;
-  static constexpr int kItemCount = 1;  // Deep Mines only for now; Tetris/Tamagotchi/Solitaire land in follow-up items
+  static constexpr int kItemCount = 2;  // Deep Mines, Tetris; Tamagotchi/Solitaire land in follow-up items
 };

@@ -58,6 +58,9 @@ void GamesListActivity::handleSelection() {
     case 0:
       activityManager.goToDeepMines();
       return;
+    case 1:
+      activityManager.goToTetris();
+      return;
     default:
       return;
   }
@@ -75,8 +78,16 @@ void GamesListActivity::render(RenderLock&&) {
   const int contentTop = metrics.topPadding + metrics.headerHeight + metrics.verticalSpacing;
   const int contentHeight = pageHeight - contentTop - metrics.buttonHintsHeight - metrics.verticalSpacing;
   GUI.drawList(
-      renderer, Rect{0, contentTop, pageWidth, contentHeight}, kItemCount, selectedIndex,
-      [](int index) { return std::string(tr(STR_DM_TITLE)); });
+      renderer, Rect{0, contentTop, pageWidth, contentHeight}, kItemCount, selectedIndex, [](int index) {
+        switch (index) {
+          case 0:
+            return std::string(tr(STR_DM_TITLE));
+          case 1:
+            return std::string(tr(STR_TETRIS_TITLE));
+          default:
+            return std::string();
+        }
+      });
 
   const auto labels = mappedInput.mapLabels(tr(STR_BACK), tr(STR_SELECT), tr(STR_DIR_UP), tr(STR_DIR_DOWN));
   GUI.drawButtonHints(renderer, labels.btn1, labels.btn2, labels.btn3, labels.btn4);

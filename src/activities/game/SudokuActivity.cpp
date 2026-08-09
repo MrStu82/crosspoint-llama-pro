@@ -484,6 +484,16 @@ void SudokuActivity::render(RenderLock&&) {
       drawCell(r, c);
     }
   }
+
+  // Thicker bars over the 3x3 box boundaries -- drawCell()'s per-cell borders
+  // are all the same 1px weight, so the box structure wasn't visually
+  // distinguishable from the regular cell gridlines.
+  constexpr int kBoxLineW = 3;
+  for (int i = 0; i <= kSize; i += 3) {
+    renderer.fillRect(gridRect.x + i * cellPx - kBoxLineW / 2, gridRect.y, kBoxLineW, gridRect.height, true);
+    renderer.fillRect(gridRect.x, gridRect.y + i * cellPx - kBoxLineW / 2, gridRect.width, kBoxLineW, true);
+  }
+
   rejectFlashIdx = -1;  // one-render flash, cleared right after drawing it
 
   const int stripTop = gridRect.y + gridRect.height + gap;

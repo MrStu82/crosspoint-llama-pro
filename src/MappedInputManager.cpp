@@ -304,13 +304,21 @@ bool MappedInputManager::wasBrightnessGesture() const {
   // Left-edge upward swipe -> backlight quick-picker. Edge-anchored to the same
   // zone previously used by the now-retired wasBackGesture() (Back is covered by
   // the physical home key alone; see wasHomeKeyBackGesture()).
+  //
+  // The left zone (full screen height) and wasBrightnessSheetGesture()'s bottom
+  // zone (full screen width) geometrically overlap in the bottom-left corner —
+  // edge-anchoring alone does not make them mutually exclusive, since both span
+  // the *full* opposite axis. A swipe starting in that corner is excluded here
+  // so ambiguous corner swipes always resolve to the bottom drawer instead.
   int sx = 0;
   int sy = 0;
   int ex = 0;
   int ey = 0;
   if (!decodeSwipe(sx, sy, ex, ey)) return false;
-  const bool hit = sx <= renderer.getScreenWidth() * LEFT_EDGE_BRIGHTNESS_GESTURE_FRAC_X && ey < sy &&
-                   std::abs(ey - sy) > std::abs(ex - sx);
+  const int bottomEdgeTop =
+      static_cast<int>(renderer.getScreenHeight() * (1.0f - BOTTOM_EDGE_BRIGHTNESS_SHEET_GESTURE_FRAC_Y));
+  const bool hit = sx <= renderer.getScreenWidth() * LEFT_EDGE_BRIGHTNESS_GESTURE_FRAC_X && sy < bottomEdgeTop &&
+                   ey < sy && std::abs(ey - sy) > std::abs(ex - sx);
   if (hit) rememberTouchHeldTime();
   return hit;
 }
@@ -318,7 +326,9 @@ bool MappedInputManager::wasBrightnessGesture() const {
 bool MappedInputManager::wasBrightnessSheetGesture() const {
   // Bottom-edge upward swipe -> quick brightness sheet. Mirrors wasMenuGesture()'s
   // top-edge zone, decoded via the same decodeSwipe() mechanism as every other edge
-  // gesture here (no new gesture-decoding path).
+  // gesture here (no new gesture-decoding path). Bottom-left corner ambiguity with
+  // wasBrightnessGesture()'s left zone is resolved there (see its comment) in favor
+  // of this gesture, so no exclusion is needed on this side.
   int sx = 0;
   int sy = 0;
   int ex = 0;

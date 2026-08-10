@@ -69,8 +69,9 @@ class MappedInputManager {
   // wasHomeKeyBackGesture()).
   bool wasBrightnessGesture() const;
   // Bottom-edge upward swipe -> quick brightness sheet (9-tick, windowed partial refresh).
-  // Edge-anchored to the bottom, mirroring wasMenuGesture()'s top-edge zone, so it can't
-  // collide with the left-edge wasBrightnessGesture() full-settings gesture.
+  // Edge-anchored to the bottom, mirroring wasMenuGesture()'s top-edge zone. The bottom-left
+  // corner is shared with wasBrightnessGesture()'s left zone; wasBrightnessGesture() excludes
+  // it so this gesture always wins there.
   bool wasBrightnessSheetGesture() const;
   bool wasAnyPressed() const;
   bool wasAnyReleased() const;

@@ -129,19 +129,25 @@ void TamagotchiActivity::hatchIfReady(int32_t now) {
 void TamagotchiActivity::evolveIfReady(int32_t now) {
   const Stage stage = static_cast<Stage>(state.stage);
   const int32_t ageInStage = now - state.stageStartEpoch;
-  Stage next = stage;
-  if (stage == Stage::Baby && ageInStage >= kBabyToChildSeconds && state.careMistakes <= kMaxMistakesToEvolve) {
-    next = Stage::Child;
-  } else if (stage == Stage::Child && ageInStage >= kChildToAdultSeconds &&
-             state.careMistakes <= kMaxMistakesToEvolve) {
-    next = Stage::Adult;
-  }
-  if (next != stage) {
-    state.stage = static_cast<uint8_t>(next);
-    state.stageStartEpoch = now;
+  const bool ageReady = (stage == Stage::Baby && ageInStage >= kBabyToChildSeconds) ||
+                        (stage == Stage::Child && ageInStage >= kChildToAdultSeconds);
+  if (!ageReady) return;
+
+  if (state.careMistakes > kMaxMistakesToEvolve) {
+    // Age condition is met but care quality isn't -- this used to leave the pet frozen
+    // in this stage forever, since careMistakes only ever reset inside the branch it
+    // also gated. Grant a fresh count instead: the pet gets one more window at this
+    // stage's age threshold (already satisfied) rather than being stuck permanently.
     state.careMistakes = 0;
     dirty = true;
+    return;
   }
+
+  const Stage next = (stage == Stage::Baby) ? Stage::Child : Stage::Adult;
+  state.stage = static_cast<uint8_t>(next);
+  state.stageStartEpoch = now;
+  state.careMistakes = 0;
+  dirty = true;
 }
 
 void TamagotchiActivity::checkDeath(int32_t now) {
@@ -197,6 +203,10 @@ void TamagotchiActivity::resolveAnyCall() {
   if (!state.callActive) return;
   state.callActive = 0;
   state.lastCallEndEpoch = nowEpoch();
+  // Catch-all resolution is a real care mistake, same as letting a call time out
+  // (see maybeExpireCall) -- otherwise spamming Discipline is a zero-cost way to
+  // silence every attention call and defeats the evolution care-mistake gate entirely.
+  if (state.careMistakes < 255) state.careMistakes++;
   dirty = true;
 }
 
@@ -326,8 +336,9 @@ void TamagotchiActivity::clean() {
 void TamagotchiActivity::discipline() {
   if (static_cast<Stage>(state.stage) == Stage::Egg || static_cast<Stage>(state.stage) == Stage::Dead) return;
   // Catch-all: scolding the pet settles it regardless of what it was calling about,
-  // without granting the meter gain the "correct" icon would have -- so it's a real
-  // fallback, not a free way to dodge every attention call cheaply.
+  // without granting the meter gain the "correct" icon would have, and it costs a
+  // care mistake just like an ignored/expired call (see resolveAnyCall) -- so it's
+  // a real fallback, not a free way to dodge every attention call cheaply.
   resolveAnyCall();
 }
 

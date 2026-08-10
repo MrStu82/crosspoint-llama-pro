@@ -582,6 +582,21 @@ void loop() {
     }
   }
 
+  // Toggle the backlight when power button is short-pressed with BACKLIGHT_TOGGLE setting.
+  // System-wide: this check sits above activityManager.loop() so it fires regardless of
+  // which activity (or the BrightnessSheet) currently owns input.
+  if (SETTINGS.shortPwrBtn == CrossPointSettings::SHORT_PWRBTN::BACKLIGHT_TOGGLE &&
+      mappedInputManager.wasReleased(MappedInputManager::Button::Power)) {
+    LOG_DBG("MAIN", "Backlight toggle triggered");
+    if (frontlightManager.brightness() > 0) {
+      frontlightManager.off();
+    } else {
+      frontlightManager.on();
+    }
+    SETTINGS.frontlightBrightness = frontlightManager.brightness();
+    SETTINGS.saveToFile();
+  }
+
   // Refresh the battery icon when USB is plugged or unplugged.
   // Placed after sleep guards so we never queue a render that won't be processed.
   if (gpio.wasUsbStateChanged()) {

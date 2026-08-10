@@ -136,8 +136,10 @@ void TamagotchiActivity::evolveIfReady(int32_t now) {
   if (state.careMistakes > kMaxMistakesToEvolve) {
     // Age condition is met but care quality isn't -- this used to leave the pet frozen
     // in this stage forever, since careMistakes only ever reset inside the branch it
-    // also gated. Grant a fresh count instead: the pet gets one more window at this
-    // stage's age threshold (already satisfied) rather than being stuck permanently.
+    // also gated. Restart the stage clock as well as the count: a failed evolve check
+    // costs a full stage window served with good care, not just a one-tick pardon that
+    // would let ageReady stay true next tick and evolve anyway despite the neglect.
+    state.stageStartEpoch = now;
     state.careMistakes = 0;
     dirty = true;
     return;

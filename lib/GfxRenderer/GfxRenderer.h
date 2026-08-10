@@ -303,6 +303,10 @@ class GfxRenderer {
   void restoreBwBuffer();  // Restore and free the stored buffer
   void cleanupGrayscaleWithFrameBuffer() const;
 
+  // Game-mode custom LUT passthrough. A no-op on controllers without a custom-LUT
+  // driver implementation (degrades safely to today's dither).
+  void setCustomLut(bool enabled, const unsigned char* lutData = nullptr) const;
+
   // Font helpers
   const uint8_t* getGlyphBitmap(const EpdFontData* fontData, const EpdGlyph* glyph) const;
 

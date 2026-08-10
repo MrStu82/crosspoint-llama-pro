@@ -98,6 +98,10 @@ class HalDisplay {
   void writeGrayscalePlaneStrip(bool lsbPlane, const uint8_t* rows, uint16_t yStart, uint16_t numRows);
   bool supportsStripGrayscale() const;
 
+  // Game-mode custom LUT passthrough. No-op on drivers without a custom-LUT
+  // implementation (degrades safely to today's dither).
+  void setCustomLut(bool enabled, const unsigned char* lutData = nullptr);
+
   // Runtime geometry passthrough
   uint16_t getDisplayWidth() const;
   uint16_t getDisplayHeight() const;

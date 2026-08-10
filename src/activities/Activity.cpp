@@ -4,7 +4,21 @@
 
 void Activity::onEnter() { LOG_DBG("ACT", "Entering activity: %s", name.c_str()); }
 
-void Activity::onExit() { LOG_DBG("ACT", "Exiting activity: %s", name.c_str()); }
+void Activity::onExit() {
+  LOG_DBG("ACT", "Exiting activity: %s", name.c_str());
+  exitGameLutMode();
+}
+
+void Activity::enterGameLutMode(const unsigned char* lutData) {
+  renderer.setCustomLut(true, lutData);
+  gameLutActive = true;
+}
+
+void Activity::exitGameLutMode() {
+  if (!gameLutActive) return;
+  renderer.setCustomLut(false, nullptr);
+  gameLutActive = false;
+}
 
 void Activity::requestUpdate(bool immediate) { activityManager.requestUpdate(immediate); }
 

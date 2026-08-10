@@ -2097,6 +2097,10 @@ void GfxRenderer::writeGrayscalePlaneStrip(bool lsbPlane, const uint8_t* scratch
 
 bool GfxRenderer::supportsStripGrayscale() const { return display.supportsStripGrayscale(); }
 
+void GfxRenderer::setCustomLut(bool enabled, const unsigned char* lutData) const {
+  display.setCustomLut(enabled, lutData);
+}
+
 void GfxRenderer::freeBwBufferChunks() {
   for (auto& bwBufferChunk : bwBufferChunks) {
     if (bwBufferChunk) {

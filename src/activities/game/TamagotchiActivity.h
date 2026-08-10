@@ -14,10 +14,11 @@ class MappedInputManager;
 // idiom as StatsManager. No engine/shared abstraction with the other games --
 // deliberately kept flat (YAGNI).
 //
-// Controls are the real Bandai A/B/C idiom, not a phone-style action grid: A walks a
-// cursor along an icon strip (Icon::Food..Icon::Discipline), B executes the highlighted
-// icon, C backs out. Touch is an additive input path -- the same three roles are also
-// exposed as three large on-screen tap targets below the strip -- never the only path.
+// Controls follow the Bandai Uni idiom: Main shows only the pet -- A (or a tap on the
+// pet) summons the Care Menu overlay with a cursor over pictogram tiles, B confirms the
+// highlighted one, C backs out to Main. Main's own C exits the activity. Touch is an
+// additive input path -- the same three roles are also exposed as three large on-screen
+// tap targets at the bottom of every screen -- never the only path.
 class TamagotchiActivity final : public Activity {
  public:
   explicit TamagotchiActivity(GfxRenderer& renderer, MappedInputManager& mappedInput)
@@ -40,7 +41,7 @@ class TamagotchiActivity final : public Activity {
   enum class CallKind : uint8_t { None = 0, Hunger, Happiness, Energy, Poop, Sick };
 
   // Which sub-screen is on-screen; A/B/C mean different things depending on this.
-  enum class Screen : uint8_t { Main = 0, FoodSubmenu, Status };
+  enum class Screen : uint8_t { Main = 0, CareMenu, FoodSubmenu, Status };
 
   // Byte-exact on-disk layout, version-prefixed (see save()/load()), same idiom as
   // StatsManager::GlobalStats. UI-only fields (cursor, screen) are deliberately NOT in
@@ -68,7 +69,7 @@ class TamagotchiActivity final : public Activity {
 
   // UI-only, not persisted.
   Screen screen = Screen::Main;
-  int cursorIndex = 0;      // selected Icon on Screen::Main
+  int cursorIndex = 0;      // selected Icon on Screen::CareMenu
   int foodCursorIndex = 0;  // 0 = Meal, 1 = Snack, within Screen::FoodSubmenu
   ButtonNavigator navigator;
 
@@ -80,12 +81,18 @@ class TamagotchiActivity final : public Activity {
   int abcRectW[kAbcCount] = {};
   int abcRectH[kAbcCount] = {};
 
-  // Icon strip hit-rects (touch can also tap an icon directly, which both moves the
+  // Care Menu tile hit-rects (touch can also tap a tile directly, which both moves the
   // cursor onto it and is equivalent to pressing A that many times -- it does not
   // execute the icon; B/tap-B still confirms).
   int iconRectX[kIconCount] = {};
   int iconRectY[kIconCount] = {};
   int iconRectSize = 0;
+
+  // Pet hit-rect on Screen::Main, recomputed each render() -- tapping the pet is
+  // equivalent to pressing A.
+  int petRectX = 0;
+  int petRectY = 0;
+  int petRectSize = 0;
 
   void load();
   void save();
@@ -121,15 +128,26 @@ class TamagotchiActivity final : public Activity {
 
   // A/B/C handling, split by current Screen.
   void handleMainInput();
+  void handleCareMenuInput();
   void handleFoodSubmenuInput();
   void handleStatusInput();
   // Touch equivalents of the physical A/B/C roles + direct icon taps. Returns true if a
   // tap was consumed this frame.
   bool handleTouch();
 
+  // Runs the effect of confirming `icon` from the Care Menu (feed/toggle/play/etc.),
+  // including any screen transition it causes. Shared by physical B and touch-B so the
+  // dispatch table exists exactly once.
+  void dispatchIconAction(Icon icon);
+
+  // `size` is accepted for call-site symmetry but ignored -- pet sprites are fixed-size
+  // placeholder art (see TamagotchiSpriteData.h); a real converter-generated header can
+  // swap the art in later without touching this signature.
   void drawCreature(int cx, int cy, int size) const;
   void drawHeartPips(int x, int y, uint8_t value) const;
-  void drawIconStrip(int top, int width);
+  // Lays out the 7 care icon tiles (sprite pictograms, not vector glyphs) in a grid
+  // between `top` and `bottom`, `width` wide, centered on screen.
+  void drawCareMenu(int top, int bottom, int width);
   void drawAbcTargets(int top, int width, int height);
   const char* iconLabel(Icon icon) const;
 };

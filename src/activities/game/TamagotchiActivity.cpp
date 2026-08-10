@@ -14,8 +14,10 @@
 #include "CrossPointSettings.h"
 #include "I18nKeys.h"
 #include "MappedInputManager.h"
+#include "TamagotchiSpriteData.h"
 #include "components/UITheme.h"
 #include "fontIds.h"
+#include "game/GameSprites.h"
 
 namespace {
 constexpr const char* kStateFilePath = "/.crosspoint/tamagotchi.bin";
@@ -49,6 +51,11 @@ constexpr uint8_t kMealGain = 40;
 constexpr uint8_t kSnackGain = 15;
 constexpr uint8_t kPlayGain = 25;
 constexpr uint8_t kLightGain = 40;  // energy, via the Light icon (put pet to sleep/wake)
+
+// All pet stage sprites are authored at a uniform 64x64 (see TamagotchiSpriteData.h) --
+// half-height used to lay out text below the sprite without reading a Sprite2bpp field
+// from render()'s free-standing layout code.
+constexpr int kPetSpriteHalfH = 32;
 
 uint8_t clampToByte(int32_t value) {
   if (value < 0) return 0;
@@ -361,26 +368,46 @@ void TamagotchiActivity::onEnter() {
 }
 
 void TamagotchiActivity::handleMainInput() {
+  // Main holds no persistent selection -- Confirm has nothing to act on. Either nav
+  // direction summons the Care Menu (Uni's press-to-reveal idiom); C still exits the
+  // activity, handled centrally in loop() via Button::Back.
+  navigator.onNextRelease([this] {
+    screen = Screen::CareMenu;
+    cursorIndex = 0;
+    requestUpdate();
+  });
+  navigator.onPreviousRelease([this] {
+    screen = Screen::CareMenu;
+    cursorIndex = 0;
+    requestUpdate();
+  });
+}
+
+void TamagotchiActivity::handleCareMenuInput() {
   using Button = MappedInputManager::Button;
 
   navigator.onNextRelease([this] { cursorIndex = ButtonNavigator::nextIndex(cursorIndex, kIconCount); });
   navigator.onPreviousRelease([this] { cursorIndex = ButtonNavigator::previousIndex(cursorIndex, kIconCount); });
 
   if (mappedInput.wasReleased(Button::Confirm)) {
-    switch (static_cast<Icon>(cursorIndex)) {
-      case Icon::Food:
-        screen = Screen::FoodSubmenu;
-        foodCursorIndex = 0;
-        break;
-      case Icon::Light: toggleLight(); break;
-      case Icon::Play: play(); break;
-      case Icon::Medicine: giveMedicine(); break;
-      case Icon::Clean: clean(); break;
-      case Icon::Status: screen = Screen::Status; break;
-      case Icon::Discipline: discipline(); break;
-      default: break;
-    }
+    dispatchIconAction(static_cast<Icon>(cursorIndex));
     requestUpdate();
+  }
+}
+
+void TamagotchiActivity::dispatchIconAction(Icon icon) {
+  switch (icon) {
+    case Icon::Food:
+      screen = Screen::FoodSubmenu;
+      foodCursorIndex = 0;
+      break;
+    case Icon::Light: toggleLight(); screen = Screen::Main; break;
+    case Icon::Play: play(); screen = Screen::Main; break;
+    case Icon::Medicine: giveMedicine(); screen = Screen::Main; break;
+    case Icon::Clean: clean(); screen = Screen::Main; break;
+    case Icon::Status: screen = Screen::Status; break;
+    case Icon::Discipline: discipline(); screen = Screen::Main; break;
+    default: break;
   }
 }
 
@@ -409,8 +436,17 @@ bool TamagotchiActivity::handleTouch() {
   int tx = 0, ty = 0;
   if (!mappedInput.wasScreenTapped(tx, ty)) return false;
 
-  // Direct icon tap on Screen::Main moves the cursor onto it (does not execute).
-  if (screen == Screen::Main) {
+  // Tapping the pet itself on Screen::Main is equivalent to pressing A: it summons the
+  // Care Menu, same as the reference article's press-to-reveal idiom.
+  if (screen == Screen::Main && mappedInput.wasTapInRect(petRectX, petRectY, petRectSize, petRectSize)) {
+    screen = Screen::CareMenu;
+    cursorIndex = 0;
+    requestUpdate();
+    return true;
+  }
+
+  // Direct tile tap on Screen::CareMenu moves the cursor onto it (does not execute).
+  if (screen == Screen::CareMenu) {
     for (int i = 0; i < kIconCount; ++i) {
       if (mappedInput.wasTapInRect(iconRectX[i], iconRectY[i], iconRectSize, iconRectSize)) {
         cursorIndex = i;
@@ -424,28 +460,19 @@ bool TamagotchiActivity::handleTouch() {
   for (int i = 0; i < kAbcCount; ++i) {
     if (mappedInput.wasTapInRect(abcRectX[i], abcRectY[i], abcRectW[i], abcRectH[i])) {
       if (i == 0) {
-        // A: cycle forward.
+        // A: summon the Care Menu from Main, else cycle within it.
         if (screen == Screen::Main) {
+          screen = Screen::CareMenu;
+          cursorIndex = 0;
+        } else if (screen == Screen::CareMenu) {
           cursorIndex = ButtonNavigator::nextIndex(cursorIndex, kIconCount);
         } else if (screen == Screen::FoodSubmenu) {
           foodCursorIndex = ButtonNavigator::nextIndex(foodCursorIndex, 2);
         }
       } else if (i == 1) {
         // B: confirm -- reuse the same dispatch as a physical Confirm release.
-        if (screen == Screen::Main) {
-          switch (static_cast<Icon>(cursorIndex)) {
-            case Icon::Food:
-              screen = Screen::FoodSubmenu;
-              foodCursorIndex = 0;
-              break;
-            case Icon::Light: toggleLight(); break;
-            case Icon::Play: play(); break;
-            case Icon::Medicine: giveMedicine(); break;
-            case Icon::Clean: clean(); break;
-            case Icon::Status: screen = Screen::Status; break;
-            case Icon::Discipline: discipline(); break;
-            default: break;
-          }
+        if (screen == Screen::CareMenu) {
+          dispatchIconAction(static_cast<Icon>(cursorIndex));
         } else if (screen == Screen::FoodSubmenu) {
           if (foodCursorIndex == 0) {
             feedMeal();
@@ -525,6 +552,7 @@ void TamagotchiActivity::loop() {
 
   switch (screen) {
     case Screen::Main: handleMainInput(); break;
+    case Screen::CareMenu: handleCareMenuInput(); break;
     case Screen::FoodSubmenu: handleFoodSubmenuInput(); break;
     case Screen::Status: handleStatusInput(); break;
   }
@@ -533,50 +561,41 @@ void TamagotchiActivity::loop() {
 }
 
 void TamagotchiActivity::drawCreature(int cx, int cy, int size) const {
+  (void)size;  // ignored -- pet sprites are fixed-size placeholder art, see header note.
   const Stage stage = static_cast<Stage>(state.stage);
+  const Sprite2bpp* sprite = &kPetBaby;
   switch (stage) {
-    case Stage::Egg: {
-      // Egg: tall rounded rect.
-      renderer.fillRoundedRect(cx - size / 3, cy - size / 2, size * 2 / 3, size, size / 3, Color::Black);
-      break;
-    }
-    case Stage::Dead: {
-      // Small headstone-ish rounded rect with a crossbar.
-      renderer.drawRoundedRect(cx - size / 3, cy - size / 2, size * 2 / 3, size, 1, size / 6, true);
-      renderer.drawLine(cx - size / 4, cy, cx + size / 4, cy, true);
-      break;
-    }
-    default: {
-      // Baby/Child/Adult: body scales up with stage, simple round-ish head via
-      // fillRoundedRect (no circle primitive available in GfxRenderer).
-      const int scale = 1 + static_cast<int>(stage);  // Baby=2, Child=3, Adult=4 (Stage enum values)
-      const int bodySize = size * scale / 4;
-      renderer.fillRoundedRect(cx - bodySize / 2, cy - bodySize / 2, bodySize, bodySize, bodySize / 3, Color::Black);
-      // Eyes.
-      const int eyeOffset = bodySize / 4;
-      renderer.fillRect(cx - eyeOffset - 2, cy - bodySize / 6, 3, 3, true);
-      renderer.fillRect(cx + eyeOffset - 1, cy - bodySize / 6, 3, 3, true);
-      break;
-    }
+    case Stage::Egg: sprite = &kPetEgg; break;
+    case Stage::Baby: sprite = &kPetBaby; break;
+    case Stage::Child: sprite = &kPetChild; break;
+    case Stage::Adult: sprite = &kPetAdult; break;
+    case Stage::Dead: sprite = &kPetDead; break;
   }
+  const int spriteLeft = cx - sprite->w / 2;
+  const int spriteTop = cy - sprite->h / 2;
+  drawSprite(renderer, spriteLeft, spriteTop, *sprite);
+
+  const int halfW = sprite->w / 2;
+  const int halfH = sprite->h / 2;
+
   // Mess sitting next to the pet -- what Clean acts on.
   if (state.poopCount > 0) {
-    const int poopSize = std::max(4, size / 10);
+    constexpr int poopSize = 8;
     for (uint8_t i = 0; i < state.poopCount; ++i) {
-      renderer.fillRoundedRect(cx + size / 2 + 4, cy + size / 2 - i * (poopSize + 3) - poopSize, poopSize, poopSize,
+      renderer.fillRoundedRect(cx + halfW + 4, cy + halfH - i * (poopSize + 3) - poopSize, poopSize, poopSize,
                                 poopSize / 3, Color::Black);
     }
   }
   // Sickness indicator: a small cross over the sprite.
   if (state.sick) {
-    const int m = size / 6;
-    renderer.drawLine(cx - m, cy - size / 2 - 6, cx + m, cy - size / 2 - 6, true);
-    renderer.drawLine(cx, cy - size / 2 - 6 - m, cx, cy - size / 2 - 6 + m, true);
+    constexpr int m = 6;
+    renderer.drawLine(cx - m, cy - halfH - 6, cx + m, cy - halfH - 6, true);
+    renderer.drawLine(cx, cy - halfH - 6 - m, cx, cy - halfH - 6 + m, true);
   }
   // Active attention call -- a blinking "!" would need frame timing this codebase's
   // e-ink refresh cadence doesn't cheaply support, so it's drawn steady instead.
   if (state.callActive) {
-    renderer.drawText(UI_12_FONT_ID, cx - size / 2 - 14, cy - size / 2 - 10, "!", true, EpdFontFamily::BOLD);
+    renderer.drawText(UI_12_FONT_ID, cx - halfW - 14, cy - halfH - 10, "!", true, EpdFontFamily::BOLD);
   }
 }
 
@@ -608,34 +627,43 @@ const char* TamagotchiActivity::iconLabel(Icon icon) const {
   }
 }
 
-void TamagotchiActivity::drawIconStrip(int top, int width) {
+void TamagotchiActivity::drawCareMenu(int top, int bottom, int width) {
+  static const Sprite2bpp* const kIcons[kIconCount] = {
+      &kIconFood, &kIconLight, &kIconPlay, &kIconMedicine, &kIconClean, &kIconStatus, &kIconDiscipline,
+  };
+
   const int left = (renderer.getScreenWidth() - width) / 2;
-  iconRectSize = std::min(36, width / kIconCount - 4);
-  const int gap = kIconCount > 1 ? (width - iconRectSize * kIconCount) / (kIconCount - 1) : 0;
+  constexpr int kCols = 4;
+  const int rows = (kIconCount + kCols - 1) / kCols;
+  const int cellW = width / kCols;
+  const int cellH = std::max(1, (bottom - top) / rows);
+  iconRectSize = std::min(cellW, cellH) - 16;
 
   for (int i = 0; i < kIconCount; ++i) {
-    iconRectX[i] = left + i * (iconRectSize + gap);
-    iconRectY[i] = top;
+    const int col = i % kCols;
+    const int row = i / kCols;
+    const int cellLeft = left + col * cellW;
+    const int cellTop = top + row * cellH;
+    iconRectX[i] = cellLeft + (cellW - iconRectSize) / 2;
+    iconRectY[i] = cellTop + (cellH - iconRectSize) / 2;
+
     const bool selected = i == cursorIndex;
-    // First letter of each icon's label as a compact in-box glyph -- Food/Light/Play/
-    // Medicine/Clean/Status/Discipline start with distinct letters in English, so a single
-    // character is unambiguous without needing a dedicated icon sprite set. If a future
-    // translation collides two icons on the same first letter this stops holding and needs
-    // real per-icon glyphs instead.
-    const char glyph[2] = {iconLabel(static_cast<Icon>(i))[0], '\0'};
-    const int glyphX =
-        iconRectX[i] + (iconRectSize - renderer.getTextWidth(UI_12_FONT_ID, glyph, EpdFontFamily::BOLD)) / 2;
-    const int glyphY = iconRectY[i] + iconRectSize / 2 - 8;
+    const Sprite2bpp& icon = *kIcons[i];
+    const int spriteX = iconRectX[i] + (iconRectSize - icon.w) / 2;
+    const int spriteY = iconRectY[i] + (iconRectSize - icon.h) / 2;
+
     if (selected) {
-      renderer.fillRoundedRect(iconRectX[i] - 2, iconRectY[i] - 2, iconRectSize + 4, iconRectSize + 4, 6,
+      renderer.fillRoundedRect(iconRectX[i] - 4, iconRectY[i] - 4, iconRectSize + 8, iconRectSize + 8, 6,
                                 Color::Black);
-      renderer.drawText(UI_12_FONT_ID, glyphX, glyphY, glyph, false, EpdFontFamily::BOLD);
-      renderer.drawCenteredText(UI_12_FONT_ID, iconRectY[i] + iconRectSize + 4, iconLabel(static_cast<Icon>(i)),
-                                 true, EpdFontFamily::BOLD);
+      drawSprite(renderer, spriteX, spriteY, icon, /*invert=*/true);
     } else {
-      renderer.drawRoundedRect(iconRectX[i], iconRectY[i], iconRectSize, iconRectSize, 1, 6, true);
-      renderer.drawText(UI_12_FONT_ID, glyphX, glyphY, glyph, true, EpdFontFamily::BOLD);
+      renderer.drawRoundedRect(iconRectX[i] - 4, iconRectY[i] - 4, iconRectSize + 8, iconRectSize + 8, 1, 6, true);
+      drawSprite(renderer, spriteX, spriteY, icon);
     }
+
+    const char* label = iconLabel(static_cast<Icon>(i));
+    const int labelX = cellLeft + (cellW - renderer.getTextWidth(UI_12_FONT_ID, label)) / 2;
+    renderer.drawText(UI_12_FONT_ID, labelX, iconRectY[i] + iconRectSize + 12, label, true);
   }
 }
 
@@ -670,24 +698,20 @@ void TamagotchiActivity::render(RenderLock&&) {
   const Stage stage = static_cast<Stage>(state.stage);
 
   if (stage == Stage::Egg) {
-    const int frameSize = std::min(contentHeight * 3 / 5, pageWidth * 3 / 5);
-    const int frameLeft = (pageWidth - frameSize) / 2;
-    const int frameTop = contentTop + (contentHeight - frameSize) / 2;
-    renderer.drawRoundedRect(frameLeft, frameTop, frameSize, frameSize, 1, 12, true);
-    drawCreature(frameLeft + frameSize / 2, frameTop + frameSize / 2, frameSize * 2 / 3);
-    renderer.drawCenteredText(UI_12_FONT_ID, frameTop + frameSize + 12, tr(STR_TAMA_TAP_TO_HATCH), true);
+    const int cx = pageWidth / 2;
+    const int cy = contentTop + contentHeight / 2 - 16;
+    drawCreature(cx, cy, 0);
+    renderer.drawCenteredText(UI_12_FONT_ID, cy + kPetSpriteHalfH + 24, tr(STR_TAMA_TAP_TO_HATCH), true);
     renderer.displayBuffer(HalDisplay::FAST_REFRESH);
     return;
   }
 
   if (stage == Stage::Dead) {
-    const int frameSize = std::min(contentHeight * 3 / 5, pageWidth * 3 / 5);
-    const int frameLeft = (pageWidth - frameSize) / 2;
-    const int frameTop = contentTop + (contentHeight - frameSize) / 2;
-    renderer.drawRoundedRect(frameLeft, frameTop, frameSize, frameSize, 1, 12, true);
-    drawCreature(frameLeft + frameSize / 2, frameTop + frameSize / 2, frameSize * 2 / 3);
-    renderer.drawCenteredText(UI_12_FONT_ID, frameTop + frameSize + 12, tr(STR_TAMA_DIED), true);
-    renderer.drawCenteredText(UI_12_FONT_ID, frameTop + frameSize + 32, tr(STR_TAMA_NEW_EGG), true);
+    const int cx = pageWidth / 2;
+    const int cy = contentTop + contentHeight / 2 - 16;
+    drawCreature(cx, cy, 0);
+    renderer.drawCenteredText(UI_12_FONT_ID, cy + kPetSpriteHalfH + 24, tr(STR_TAMA_DIED), true);
+    renderer.drawCenteredText(UI_12_FONT_ID, cy + kPetSpriteHalfH + 44, tr(STR_TAMA_NEW_EGG), true);
     renderer.displayBuffer(HalDisplay::FAST_REFRESH);
     return;
   }
@@ -754,21 +778,17 @@ void TamagotchiActivity::render(RenderLock&&) {
         renderer.drawText(UI_12_FONT_ID, boxLeft + 16, rowY + 3, labels[i], true);
       }
     }
+  } else if (screen == Screen::CareMenu) {
+    drawCareMenu(contentTop, abcTop - metrics.verticalSpacing, pageWidth - 40);
   } else {
-    // kIconStripHeight approximates drawIconStrip()'s footprint (icon box + label gap + one
-    // line of label text) so the frame/strip block can be centered before iconRectSize is
-    // known -- drawIconStrip derives the exact box size itself from width alone.
-    constexpr int kIconStripHeight = 54;
-    const int frameSize = std::min(contentHeight * 3 / 5, pageWidth * 3 / 5);
-    const int blockHeight = frameSize + metrics.verticalSpacing + kIconStripHeight;
-    const int frameLeft = (pageWidth - frameSize) / 2;
-    const int frameTop = contentTop + std::max(0, (playAreaHeight - blockHeight) / 2);
-    renderer.drawRoundedRect(frameLeft, frameTop, frameSize, frameSize, 1, 12, true);
-    drawCreature(frameLeft + frameSize / 2, frameTop + frameSize / 2, frameSize * 2 / 3);
-
-    const int stripTop = frameTop + frameSize + metrics.verticalSpacing;
-    const int stripWidth = std::min(pageWidth - 32, 260);
-    drawIconStrip(stripTop, stripWidth);
+    // Screen::Main -- pet only, no permanent icon strip or frame. Tapping the pet is
+    // equivalent to pressing A (see handleTouch()), so its hit-rect is recorded here.
+    const int cx = pageWidth / 2;
+    const int cy = contentTop + playAreaHeight / 2;
+    drawCreature(cx, cy, 0);
+    petRectX = cx - kPetSpriteHalfH;
+    petRectY = cy - kPetSpriteHalfH;
+    petRectSize = kPetSpriteHalfH * 2;
   }
 
   renderer.displayBuffer(HalDisplay::FAST_REFRESH);

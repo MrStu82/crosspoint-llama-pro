@@ -30,14 +30,14 @@
 
 ### Phase 5 — Small fixes (ship first, independent of Phase 6)
 
-- [ ] **STAT-01**: Reading stats page — font choices, sizing, and text clipping all fixed; whole page tidied
-- [ ] **DRW-01**: Landscape bottom drawer opens from exactly one edge (the physical "bottom" edge in landscape), not two
-- [ ] **DRW-02**: Top drawer (font settings) delivers the drawer *feel* — pulled from the top edge, slides in, sits over the page, dismisses the same way as the bottom drawer. `TextSettingsActivity` keeps its own tab ring/list/live-preview state (legitimately more state than the bottom drawer's single scalar) — no forced convergence. DRY applies narrowly: lift edge-drag detection and slide/dismiss animation out of `BrightnessSheet` into something shared if it comes out cleanly; if not, leave it in place and say so explicitly. Scope corrected 2026-08-10 — parent's original "reuse the implementation" wording was written before either component had been read.
+- [x] **STAT-01**: Reading stats page — font choices, sizing, and text clipping all fixed; whole page tidied. Shipped `cdb2daf2`, follow-on clipping fix folded into `b7329077`.
+- [x] **DRW-01**: Landscape bottom drawer opens from exactly one edge (the physical "bottom" edge in landscape), not two. Shipped `83e4f1f3`.
+- [x] **DRW-02**: Top drawer (font settings) delivers the drawer *feel* — pulled from the top edge, slides in, sits over the page, dismisses the same way as the bottom drawer. `TextSettingsActivity` keeps its own tab ring/list/live-preview state (legitimately more state than the bottom drawer's single scalar) — no forced convergence. DRY applies narrowly: lift edge-drag detection and slide/dismiss animation out of `BrightnessSheet` into something shared if it comes out cleanly; if not, leave it in place and say so explicitly. Scope corrected 2026-08-10 — parent's original "reuse the implementation" wording was written before either component had been read. Shipped `f94262b4` + `b7329077`.
 
 ### Phase 6 — Tamagotchi overhaul
 
-- [ ] **TAMA-01**: Real Tamagotchi care-loop mechanics researched and implemented — hunger/happiness/discipline meters, life stages (egg→baby→child→teen→adult), evolution branching on care quality, sickness, poop, death/neglect
-- [ ] **TAMA-02**: UI restyled to match Tamagotchi Uni specifically (screen layout, icon row, sprite proportions, palette), whole game UI reorganised to that shape
+- [x] **TAMA-01**: Real Tamagotchi care-loop mechanics researched and implemented — hunger/happiness/energy meters (RTC-time-driven decay), egg→baby→child→adult life stages, care-mistake-gated evolution, sickness, poop, death/neglect, attention-call system. Shipped `79122d7`, `a8f0793`, `5737a5b`. **Gap remaining** (see Phase 6 gap analysis): discipline is an action only, not a tracked stat; evolution is strictly linear, no branching on care-quality history; no real sleep-state machine (Light icon is an instant energy top-up, not a day/night cycle).
+- [ ] **TAMA-02**: UI restyled to match Tamagotchi Uni specifically (screen layout, icon row, sprite proportions, palette), whole game UI reorganised to that shape. Partial progress only: sprite-based pet + icon rendering shipped (`9852b3f`) and layout defects fixed (`c8babe9`), but the Care Menu is still a generic 4-column icon grid with heart-pip meters, not yet restyled to Tamagotchi Uni's specific screen shape.
 
 ## v2 Requirements
 
@@ -74,17 +74,17 @@ Deferred, not in this dispatch.
 | BAR-04 | Phase 2 | Pending |
 | BUF-01 | Phase 3 | Complete |
 | USB-01 | Phase 4 | Complete |
-| STAT-01 | Phase 5 | Pending |
-| DRW-01 | Phase 5 | Pending |
-| DRW-02 | Phase 5 | Pending |
-| TAMA-01 | Phase 6 | Pending |
-| TAMA-02 | Phase 6 | Pending |
+| STAT-01 | Phase 5 | Complete |
+| DRW-01 | Phase 5 | Complete |
+| DRW-02 | Phase 5 | Complete |
+| TAMA-01 | Phase 6 | Complete (gap analysis identifies remaining authenticity work) |
+| TAMA-02 | Phase 6 | In Progress (sprites/layout shipped, Uni-specific restyle not started) |
 
 **Coverage:**
 - v1 requirements (Milestone 1): 9 total, all complete
-- Milestone 2 requirements: 5 total, mapped to phases 5-6
+- Milestone 2 requirements: 5 total, mapped to phases 5-6 — Phase 5 (3/3) complete, Phase 6 (1/2 complete, 1/2 in progress)
 - Unmapped: 0 ✓
 
 ---
 *Requirements defined: 2026-08-07*
-*Last updated: 2026-08-10 — Milestone 2 (dispatch #322096) requirements added*
+*Last updated: 2026-08-11 — Phase 5 confirmed complete on origin; Phase 6 TAMA-01/TAMA-02 status reconciled against `git log` after STATE.md was found stale*

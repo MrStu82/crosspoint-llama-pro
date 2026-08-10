@@ -3,10 +3,10 @@ gsd_state_version: '1.0'
 status: in_progress
 progress:
   total_phases: 6
-  completed_phases: 4
+  completed_phases: 5
   total_plans: 4
   completed_plans: 4
-  percent: 67
+  percent: 83
 ---
 
 # Project State
@@ -16,24 +16,35 @@ progress:
 See: .planning/PROJECT.md (updated 2026-08-10)
 
 **Core value:** Every screen renders correctly and fully on-panel on the X4 Pro, with no clipped/overflowing content and no touch targets crowded against the bezel.
-**Current focus:** Milestone 1 (Phases 1-4) complete and shipped. Milestone 2 (Phases 5-6, dispatch #322096, 2026-08-10) just planned — Phase 5 (small fixes: stats page, landscape drawer edge, top-drawer DRY reuse) not yet started; Phase 6 (Tamagotchi overhaul) not yet started, must not block Phase 5's delivery.
+**Current focus:** Milestone 1 (Phases 1-4) complete and shipped. Milestone 2 (Phases 5-6, dispatch #322096, 2026-08-10): Phase 5 (small fixes: stats page, landscape drawer edge, top-drawer feel) shipped and confirmed on origin. Phase 6 (Tamagotchi overhaul) is in progress — care-loop mechanics rebuilt with real Bandai-style controls, poop/sickness, and care-mistake evolution gating, plus a sprite-based Care Menu UI, all landed on origin.
 
 ## Current Position
 
-Phase: 5 of 6 — complete (3 of 3 items shipped)
-Plan: none written formally — working item-by-item off REQUIREMENTS.md directly given the small independent scope of each Phase 5 item
-Status: Milestone 1 (Phases 1-4) confirmed complete at HEAD `8634a75d`. Milestone 2 scaffolded 2026-08-10.
-- STAT-01 (stats page font/sizing/clipping): fixed in `StatsActivity.cpp` (baseline/top-edge conversion fix + numeric-overflow guard). Built green, committed `cdb2daf2`, pushed.
-- DRW-01 (landscape bottom drawer opens from two edges): root cause found by source analysis + math, not on-device repro (no hardware access here) — `wasBrightnessGesture()` (left edge, opens full `FrontlightActivity`) and `wasBrightnessSheetGesture()` (bottom edge, opens the drawer) both fire on upward swipes; their zones geometrically overlap in the bottom-left corner (code comments on both wrongly claimed edge-anchoring made them collision-proof). `ActivityManager::loop()` checks the left gesture first, so a corner swipe opened the full settings page instead of the drawer. Fixed by excluding the shared corner from `wasBrightnessGesture()` so ambiguous swipes always resolve to the drawer. Built green, committed+pushed `83e4f1f3`. Flag for parent: this defect is orientation-*invariant* by the math (same absolute overlap in portrait and landscape), so it's the best evidence-based candidate for Stuart's report but not confirmed as the *complete* explanation for why he specifically called it out as landscape-only — worth an on-device recheck.
-- DRW-02 (top drawer feel): parent ruled option 1 (msg 3208) — carve a real visible gap, not a full-height flush. Implemented in `TextSettingsActivity.cpp`: dropped the `clearScreen()` white-flash; added a named `DRAWER_MIN_PEEK_PX=24` constant plus a non-fatal `LOG_ERR` fit-check in `onEnter()` guarding that `bottomReserved` (already 50-56px across all three themes) clears that threshold; swapped the trailing `displayBuffer()` for a windowed `displayWindow()` push that excludes the `bottomReserved` band on touch hardware only (`mappedInput.hasTouch()`) — that band is already dead space there since `BaseTheme::drawButtonHints()` no-ops when `gpio.hasTouch()` is true, so excluding it from the panel push lets the reader page peek through with zero change to the existing content layout budget (no clipping/overflow risk in either portrait or landscape, since `afterHeader`/`usableHeight`/`previewHeight`/`listHeight` are all untouched). Non-touch hardware still gets the full band pushed (hints DO draw there). Built green, committed — see commit sha below once pushed.
-Last activity: 2026-08-10 — DRW-02 built green, about to commit + push. All 3 Phase 5 items now code-complete; next is the wrap-up report to parent + handoff to Gauge/Pixel gates.
+Phase: 6 of 6 — in progress
+Plan: none written formally — working item-by-item off REQUIREMENTS.md directly given the scope of each item
+Status: Milestone 1 (Phases 1-4) confirmed complete at HEAD `8634a75d`. Milestone 2 scaffolded 2026-08-10. Phase 5 complete and confirmed on origin `phase4-usb-msc`. Phase 6 in progress, four commits landed on origin.
+
+**Phase 5 — complete, confirmed on origin:**
+- STAT-01 (stats page font/sizing/clipping): fixed in `StatsActivity.cpp` (baseline/top-edge conversion fix + numeric-overflow guard). Committed+pushed `cdb2daf2`.
+- DRW-01 (landscape bottom drawer opens from two edges): root cause — `wasBrightnessGesture()` (left edge) and `wasBrightnessSheetGesture()` (bottom edge) zones overlapped in the bottom-left corner; `ActivityManager::loop()` checked the left gesture first, so a corner swipe opened the full settings page instead of the drawer. Fixed by excluding the shared corner from `wasBrightnessGesture()`. Committed+pushed `83e4f1f3`.
+- DRW-02 (top drawer feel): dropped the `clearScreen()` white-flash, added a `DRAWER_MIN_PEEK_PX=24` fit-check, swapped to a windowed `displayWindow()` push that excludes the dead `bottomReserved` band on touch hardware so the reader page peeks through underneath — matches the bottom drawer's feel without touching the content layout budget. Landed as two commits: `f94262b4` (fix full-screen-flush regression) and `b7329077` (fix bleed-through + outside-tap dismiss, plus a follow-on STAT-01 clipping fix from Stuart's hardware report).
+- Confirmed via `git log origin/phase4-usb-msc` (not just local branch state) — all four shas present on origin.
+
+**Phase 6 — in progress, four commits on origin (18:29–19:40, 2026-08-10):**
+- `79122d7` — rebuilt Tamagotchi from scratch with real Bandai A/B/C controls, poop/sickness cycle, and care-mistake-gated evolution (foundational commit — `TamagotchiActivity.h`/`.cpp`, RTC-time-driven meters, versioned flash-persisted state).
+- `a8f0793` — fix TAMA-02 `careMistakes` evolve dead-end and a Discipline exploit: an age-ready pet with too many care mistakes was previously frozen in its stage forever with no way to recover; Discipline could also be spammed to resolve any attention call for free, defeating the evolution care-mistake gate.
+- `5737a5b` — fix: evolve-fail must reset the stage clock, not just `careMistakes` — a failed evolve check now costs a full stage window served with good care, rather than only clearing the mistake counter.
+- `c8babe9` — fix Tamagotchi layout defects: icon glyphs, dead space, popup collision (visual/layout pass on the Care Menu grid and food submenu popup).
+- `9852b3f` — Tamagotchi Care Menu on A (physical/tap A button now opens the Care Menu from Main), sprite-based rendering for pet + icons (Stuart supplied the sprite art).
+- All four confirmed present on `origin/phase4-usb-msc` via `git log`; local branch clean and matches origin at HEAD `2b78b00` (one further non-Tamagotchi commit, `203ca61`/`2b78b00`, sits on top — docs fix + a dormant game-mode LUT hook, unrelated to Phase 6).
+Last activity: 2026-08-11 — STATE.md reconciled against `git log` after it was found to be stale (still showing Phase 6 unstarted with four real commits already on origin). Next: write the Phase 6 authentic-care-loop gap analysis, then build+deliver a flashable bin.
 
 ### DRW-02 implementation notes (2026-08-10, superseded the earlier open question)
 
 - The earlier "carve a gap from the content budget" open question was resolved without touching the content budget at all: `BaseTheme::drawButtonHints()` is a complete no-op on touch hardware (`if (gpio.hasTouch()) { return; }`), so `bottomReserved` was already blank/unused pixels there. The fix simply stops flushing that already-dead band to the panel — the reader page underneath shows through it for free, satisfying parent's "sliver of page peeking through IS the requirement" ruling without shrinking any existing region or risking a new overflow.
 - Fit-check uses `LOG_ERR` (not `assert()`), per repo CLAUDE.md's error-handling hierarchy — this is a configuration-sanity check (theme metrics could change bottomReserved in the future), not a fatal "impossible state".
 
-Progress: [██████░░░░] 67% (4/6 phases complete)
+Progress: [████████░░] 83% (5/6 phases complete)
 
 ## Performance Metrics
 
@@ -60,18 +71,18 @@ Decisions are logged in PROJECT.md Key Decisions table.
 Recent decisions affecting current work:
 
 - Milestone 2 Phase 5 top drawer delivers the bottom drawer's *feel* (edge-pull, slide, dismiss), not a shared base class; `TextSettingsActivity` keeps its own tab/list/preview state; DRY applies narrowly to edge-drag detection + slide/dismiss animation if it lifts out cleanly (parent corrected the original "reuse the implementation" wording 2026-08-10, see PROJECT.md)
-- Milestone 2 Phase 6 is research-then-build: care-loop mechanics and Tamagotchi Uni visual reference must be researched and documented before implementation, per parent's "needs to BE a Tamagotchi, not merely look like one"
-- Phase 6 sequencing is "don't block Phase 5", not a hard dependency — Phase 5 ships to Stuart on its own, Phase 6 proceeds independently after
+- Milestone 2 Phase 6 is research-then-build: care-loop mechanics and Tamagotchi Uni visual reference must be researched and documented before implementation, per parent's "needs to BE a Tamagotchi, not merely look like one" — mechanics-first pass shipped (real RTC-driven meters, poop/sickness, care-mistake evolution gating); the UNI visual-style pass (TAMA-02's screen-layout/icon-ring/palette match) has not started, current Care Menu is a generic 4-column icon grid with heart-pip meters, not yet restyled to Tamagotchi Uni's specific shape
+- Phase 6 sequencing was "don't block Phase 5" — satisfied; Phase 5 shipped independently before Phase 6 work began
 
 ### Pending Todos
 
-- Scope Phase 5 plan 05-01: locate the bottom-drawer implementation (component reused for item 3), the current landscape drawer-edge logic (item 2), and the reading stats page layout code (item 1) before writing fix plans
-- Scope Phase 6 research: read up on authentic Tamagotchi care-loop mechanics and Tamagotchi Uni screenshots/UI reference before any implementation plan is written
+- Write the Phase 6 gap analysis: with real meters/sickness/death/evolution and the sprite Care Menu now in, identify what of the authentic care loop is still missing against a Tamagotchi/Tamagotchi Uni reference (sleep cycle, discipline-as-a-tracked-stat, evolution branching) — see gap-analysis doc once written
+- TAMA-02 (Tamagotchi Uni visual restyle) not started — current UI is functional but generic, not yet matched to Tamagotchi Uni's specific screen layout/icon shape/palette
 
 ### Blockers/Concerns
 
-- None yet for Milestone 2 — planning layer only, no build/verification attempted this session
-- Phase 6's ESP32-C3 RAM/flash ceiling (~380KB RAM, no PSRAM) will constrain how much of the "real" Tamagotchi care-loop state can be held — flag as a design constraint once implementation planning starts, not before
+- Phase 6's ESP32-based RAM/flash ceiling constrains how much additional persisted state (e.g. a discipline stat, sleep-schedule state) a further mechanics pass can add — flag as a design constraint if the gap-analysis plan proposes new persisted fields
+- STATE.md drifted stale this session (showed Phase 6 "not started" while four real commits already existed on origin) — caught by parent checking `git log` directly rather than trusting this file's prose. Going forward: cross-check this file against `git log origin/<branch>` before reporting status, don't just read the prose.
 
 ## Deferred Items
 
@@ -84,6 +95,6 @@ Items acknowledged and carried forward from previous milestone close:
 
 ## Session Continuity
 
-Last session: 2026-08-10
-Stopped at: Milestone 2 planning scaffold complete (PROJECT.md/ROADMAP.md/REQUIREMENTS.md/STATE.md updated with Phases 5-6). Restated shared facts to parent. No code/build work started — next session should scope Phase 5's 05-01 plan by locating the relevant source files (drawer implementation, stats page, landscape orientation logic).
+Last session: 2026-08-11
+Stopped at: STATE.md reconciled against `git log` (Phase 5 complete, Phase 6 in progress with 4 real commits). Next: write the Phase 6 authentic-care-loop gap analysis (sleep cycle / discipline-as-stat / evolution branching are the leading candidates from source review), then build + deliver a flashable bin to Stuart via parent.
 Resume file: None

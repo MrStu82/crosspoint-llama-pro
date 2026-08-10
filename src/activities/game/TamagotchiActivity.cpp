@@ -617,13 +617,24 @@ void TamagotchiActivity::drawIconStrip(int top, int width) {
     iconRectX[i] = left + i * (iconRectSize + gap);
     iconRectY[i] = top;
     const bool selected = i == cursorIndex;
+    // First letter of each icon's label as a compact in-box glyph -- Food/Light/Play/
+    // Medicine/Clean/Status/Discipline start with distinct letters in English, so a single
+    // character is unambiguous without needing a dedicated icon sprite set. If a future
+    // translation collides two icons on the same first letter this stops holding and needs
+    // real per-icon glyphs instead.
+    const char glyph[2] = {iconLabel(static_cast<Icon>(i))[0], '\0'};
+    const int glyphX =
+        iconRectX[i] + (iconRectSize - renderer.getTextWidth(UI_12_FONT_ID, glyph, EpdFontFamily::BOLD)) / 2;
+    const int glyphY = iconRectY[i] + iconRectSize / 2 - 8;
     if (selected) {
       renderer.fillRoundedRect(iconRectX[i] - 2, iconRectY[i] - 2, iconRectSize + 4, iconRectSize + 4, 6,
                                 Color::Black);
+      renderer.drawText(UI_12_FONT_ID, glyphX, glyphY, glyph, false, EpdFontFamily::BOLD);
       renderer.drawCenteredText(UI_12_FONT_ID, iconRectY[i] + iconRectSize + 4, iconLabel(static_cast<Icon>(i)),
                                  true, EpdFontFamily::BOLD);
     } else {
       renderer.drawRoundedRect(iconRectX[i], iconRectY[i], iconRectSize, iconRectSize, 1, 6, true);
+      renderer.drawText(UI_12_FONT_ID, glyphX, glyphY, glyph, true, EpdFontFamily::BOLD);
     }
   }
 }
@@ -682,55 +693,54 @@ void TamagotchiActivity::render(RenderLock&&) {
   }
 
   if (screen == Screen::Status) {
-    int y = contentTop + 8;
+    const int abcTop = pageHeight - metrics.buttonHintsHeight - metrics.verticalSpacing - 48;
+    // Five rows (stage, 3 stats, health) spread evenly across the whole content area instead
+    // of stacking near the top with fixed +=30/+=40 steps -- that left roughly 180px of empty
+    // white below the health line with nothing else on the screen to fill it.
+    constexpr int kStatusRowCount = 5;
+    const int rowSpacing = (abcTop - contentTop) / (kStatusRowCount + 1);
+    int y = contentTop + rowSpacing;
+
     const char* stageLabel = tr(STR_TAMA_STAGE_BABY);
     if (stage == Stage::Child) stageLabel = tr(STR_TAMA_STAGE_CHILD);
     else if (stage == Stage::Adult) stageLabel = tr(STR_TAMA_STAGE_ADULT);
     renderer.drawCenteredText(UI_12_FONT_ID, y, stageLabel, true, EpdFontFamily::BOLD);
-    y += 30;
+    y += rowSpacing;
 
     const int labelX = (pageWidth - std::min(220, pageWidth - 40)) / 2;
     const int pipsX = labelX + 90;
 
     renderer.drawText(UI_12_FONT_ID, labelX, y + 2, tr(STR_TAMA_HUNGER), true);
     drawHeartPips(pipsX, y, state.hunger);
-    y += 30;
+    y += rowSpacing;
 
     renderer.drawText(UI_12_FONT_ID, labelX, y + 2, tr(STR_TAMA_HAPPINESS), true);
     drawHeartPips(pipsX, y, state.happiness);
-    y += 30;
+    y += rowSpacing;
 
     renderer.drawText(UI_12_FONT_ID, labelX, y + 2, tr(STR_TAMA_ENERGY), true);
     drawHeartPips(pipsX, y, state.energy);
-    y += 40;
+    y += rowSpacing;
 
     renderer.drawCenteredText(UI_12_FONT_ID, y, state.sick ? tr(STR_TAMA_SICK) : tr(STR_TAMA_HEALTHY), true);
 
-    drawAbcTargets(pageHeight - metrics.buttonHintsHeight - metrics.verticalSpacing - 48, pageWidth - 40, 40);
+    drawAbcTargets(abcTop, pageWidth - 40, 40);
     renderer.displayBuffer(HalDisplay::FAST_REFRESH);
     return;
   }
 
-  // Screen::Main / Screen::FoodSubmenu share the same pet-frame + icon-strip layout.
-  const int frameSize = std::min(contentHeight * 2 / 5, pageWidth * 2 / 5);
-  const int frameLeft = (pageWidth - frameSize) / 2;
-  const int frameTop = contentTop;
-  renderer.drawRoundedRect(frameLeft, frameTop, frameSize, frameSize, 1, 12, true);
-  drawCreature(frameLeft + frameSize / 2, frameTop + frameSize / 2, frameSize * 2 / 3);
-
-  const int stripTop = frameTop + frameSize + 26;
-  const int stripWidth = std::min(pageWidth - 32, 260);
-  drawIconStrip(stripTop, stripWidth);
-
+  // Screen::Main / Screen::FoodSubmenu share the ABC row, but FoodSubmenu replaces the pet
+  // frame + icon strip with a single full popup rather than trying to fit a small popup
+  // alongside them -- the two layouts can then never collide with each other.
   const int abcTop = pageHeight - metrics.buttonHintsHeight - metrics.verticalSpacing - 48;
   drawAbcTargets(abcTop, pageWidth - 40, 40);
+  const int playAreaHeight = abcTop - contentTop;
 
   if (screen == Screen::FoodSubmenu) {
-    // Small popup over the lower half of the play area: Meal / Snack.
     const int boxWidth = std::min(pageWidth - 40, 220);
     const int boxHeight = 90;
     const int boxLeft = (pageWidth - boxWidth) / 2;
-    const int boxTop = abcTop - boxHeight - 12;
+    const int boxTop = contentTop + std::max(0, (playAreaHeight - boxHeight) / 2);
     renderer.fillRect(boxLeft, boxTop, boxWidth, boxHeight, false);
     renderer.drawRoundedRect(boxLeft, boxTop, boxWidth, boxHeight, 1, 8, true);
 
@@ -744,6 +754,21 @@ void TamagotchiActivity::render(RenderLock&&) {
         renderer.drawText(UI_12_FONT_ID, boxLeft + 16, rowY + 3, labels[i], true);
       }
     }
+  } else {
+    // kIconStripHeight approximates drawIconStrip()'s footprint (icon box + label gap + one
+    // line of label text) so the frame/strip block can be centered before iconRectSize is
+    // known -- drawIconStrip derives the exact box size itself from width alone.
+    constexpr int kIconStripHeight = 54;
+    const int frameSize = std::min(contentHeight * 3 / 5, pageWidth * 3 / 5);
+    const int blockHeight = frameSize + metrics.verticalSpacing + kIconStripHeight;
+    const int frameLeft = (pageWidth - frameSize) / 2;
+    const int frameTop = contentTop + std::max(0, (playAreaHeight - blockHeight) / 2);
+    renderer.drawRoundedRect(frameLeft, frameTop, frameSize, frameSize, 1, 12, true);
+    drawCreature(frameLeft + frameSize / 2, frameTop + frameSize / 2, frameSize * 2 / 3);
+
+    const int stripTop = frameTop + frameSize + metrics.verticalSpacing;
+    const int stripWidth = std::min(pageWidth - 32, 260);
+    drawIconStrip(stripTop, stripWidth);
   }
 
   renderer.displayBuffer(HalDisplay::FAST_REFRESH);

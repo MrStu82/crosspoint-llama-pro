@@ -21,10 +21,10 @@
 
 namespace {
 constexpr const char* kStateFilePath = "/.crosspoint/tamagotchi.bin";
-// Bumped for this rebuild's new State layout (poop/sickness/care-mistakes/attention-call
-// fields replace careGoodSeconds) -- load() already resets to a fresh State{} on any
-// version mismatch, so old saves are simply discarded rather than migrated.
-constexpr uint8_t kStateFileVersion = 2;
+// Bumped for this rebuild's new State layout (isAsleep/sleepStartEpoch added for the
+// sleep cycle) -- load() already resets to a fresh State{} on any version mismatch, so
+// old saves are simply discarded rather than migrated.
+constexpr uint8_t kStateFileVersion = 3;
 
 // Real-time decay/growth tuning. Approved as-is from the original build -- deliberately
 // generous vs. the original 90s hardware (which ran meters down over ~hours) so the
@@ -47,10 +47,20 @@ constexpr int32_t kMinCallGapSeconds = 3 * 60;          // throttle between call
 constexpr int32_t kCallTimeoutSeconds = 5 * 60;         // unanswered call -> a care mistake
 constexpr uint8_t kMaxMistakesToEvolve = 3;             // care mistakes this stage must stay at/below to evolve
 
+// Sleep cycle. Real RTC day/night schedule -- the pet is asleep from kNightStartHour
+// through kNightEndHour every day, decays slower while asleep, and recovers energy
+// instead of losing it. Light toggles isAsleep directly rather than being a stat top-up;
+// waking it early (still inside the night window) is a care mistake, same as an ignored
+// attention call, plus an energy cost for the disturbed rest.
+constexpr uint8_t kNightStartHour = 21;  // 9pm
+constexpr uint8_t kNightEndHour = 7;     // 7am
+constexpr int32_t kSleepEnergyRecoverSeconds = 4 * 60;  // +1 energy per 4 min asleep
+constexpr int32_t kAwakeSleepDecayDivisor = 3;          // hunger/happiness decay this many times slower asleep
+constexpr uint8_t kWakeEarlyEnergyPenalty = 15;         // energy lost for being woken before the window ends
+
 constexpr uint8_t kMealGain = 40;
 constexpr uint8_t kSnackGain = 15;
 constexpr uint8_t kPlayGain = 25;
-constexpr uint8_t kLightGain = 40;  // energy, via the Light icon (put pet to sleep/wake)
 
 // All pet stage sprites are authored at a uniform 64x64 (see TamagotchiSpriteData.h) --
 // half-height used to lay out text below the sprite without reading a Sprite2bpp field
@@ -61,6 +71,19 @@ uint8_t clampToByte(int32_t value) {
   if (value < 0) return 0;
   if (value > 100) return 100;
   return static_cast<uint8_t>(value);
+}
+
+// Night-window test against an arbitrary epoch (not just "now") -- lets tick() detect the
+// wasNight->nightNow edge across a single elapsed interval, rather than only ever seeing
+// the current instant. gmtime_r is safe here even though nowEpoch()/mktime() built the
+// epoch from a local-clock tm with no real timezone applied -- it's used purely as
+// calendar arithmetic, so the field pack/unpack round-trips exactly.
+bool isNightAtEpoch(int32_t epoch) {
+  if (epoch == 0) return false;
+  const time_t t = static_cast<time_t>(epoch);
+  struct tm result {};
+  gmtime_r(&t, &result);
+  return result.tm_hour >= kNightStartHour || result.tm_hour < kNightEndHour;
 }
 }  // namespace
 
@@ -80,6 +103,8 @@ int32_t TamagotchiActivity::nowEpoch() {
   const time_t epoch = mktime(&t);
   return static_cast<int32_t>(epoch);
 }
+
+bool TamagotchiActivity::isNightNow() { return isNightAtEpoch(nowEpoch()); }
 
 void TamagotchiActivity::load() {
   HalFile file;
@@ -266,18 +291,41 @@ void TamagotchiActivity::tick(int32_t now) {
     return;
   }
 
+  // Auto sleep/wake at the schedule boundary (an edge, not a level) -- this is what lets
+  // a manual early wake via toggleLight() hold for the rest of the night instead of being
+  // immediately re-forced back to sleep on the very next tick.
+  const bool wasNight = isNightAtEpoch(state.lastUpdateEpoch);
+  const bool nightNow = isNightAtEpoch(now);
+  if (!wasNight && nightNow && !state.isAsleep) {
+    state.isAsleep = 1;
+    state.sleepStartEpoch = now;
+  } else if (wasNight && !nightNow && state.isAsleep) {
+    state.isAsleep = 0;
+    state.sleepStartEpoch = 0;
+  }
+
   const int32_t elapsed = now - state.lastUpdateEpoch;
   if (elapsed <= 0) {
     state.lastUpdateEpoch = now;
     return;
   }
 
-  const int32_t hungerLoss = elapsed / kHungerDecaySeconds;
-  const int32_t happinessLoss = elapsed / kHappinessDecaySeconds;
-  const int32_t energyLoss = elapsed / kEnergyDecaySeconds;
+  // Hunger/happiness decay slower while asleep; energy recovers instead of draining.
+  const int32_t hungerDecaySeconds = state.isAsleep ? kHungerDecaySeconds * kAwakeSleepDecayDivisor : kHungerDecaySeconds;
+  const int32_t happinessDecaySeconds =
+      state.isAsleep ? kHappinessDecaySeconds * kAwakeSleepDecayDivisor : kHappinessDecaySeconds;
+  const int32_t hungerLoss = elapsed / hungerDecaySeconds;
+  const int32_t happinessLoss = elapsed / happinessDecaySeconds;
   if (hungerLoss > 0) state.hunger = clampToByte(static_cast<int32_t>(state.hunger) - hungerLoss);
   if (happinessLoss > 0) state.happiness = clampToByte(static_cast<int32_t>(state.happiness) - happinessLoss);
-  if (energyLoss > 0) state.energy = clampToByte(static_cast<int32_t>(state.energy) - energyLoss);
+
+  if (state.isAsleep) {
+    const int32_t energyGain = elapsed / kSleepEnergyRecoverSeconds;
+    if (energyGain > 0) state.energy = clampToByte(static_cast<int32_t>(state.energy) + energyGain);
+  } else {
+    const int32_t energyLoss = elapsed / kEnergyDecaySeconds;
+    if (energyLoss > 0) state.energy = clampToByte(static_cast<int32_t>(state.energy) - energyLoss);
+  }
 
   const int32_t poopGain = elapsed / kPoopIntervalSeconds;
   if (poopGain > 0) {
@@ -291,7 +339,9 @@ void TamagotchiActivity::tick(int32_t now) {
   maybeGetSick(now);
   checkDeath(now);
   if (static_cast<Stage>(state.stage) != Stage::Dead) {
-    maybeStartCall(now);
+    // Real Tamagotchis don't call for attention while asleep -- an already-active call
+    // (started before sleep began) still runs its normal expiry clock, unchanged.
+    if (!state.isAsleep) maybeStartCall(now);
     maybeExpireCall(now);
     evolveIfReady(now);
   }
@@ -313,8 +363,22 @@ void TamagotchiActivity::feedSnack() {
 
 void TamagotchiActivity::toggleLight() {
   if (static_cast<Stage>(state.stage) == Stage::Egg || static_cast<Stage>(state.stage) == Stage::Dead) return;
-  state.energy = clampToByte(static_cast<int32_t>(state.energy) + kLightGain);
-  resolveCall(CallKind::Energy);
+  if (state.isAsleep) {
+    // Waking it up. Only a care mistake (plus an energy hit) if the night window hasn't
+    // naturally ended yet -- matches the real Tamagotchi "don't disturb its rest"
+    // mechanic. Waking it after the window has already ended (tick() would have
+    // auto-woken it anyway) is free.
+    if (isNightNow()) {
+      if (state.careMistakes < 255) state.careMistakes++;
+      state.energy = clampToByte(static_cast<int32_t>(state.energy) - kWakeEarlyEnergyPenalty);
+    }
+    state.isAsleep = 0;
+    state.sleepStartEpoch = 0;
+  } else {
+    state.isAsleep = 1;
+    state.sleepStartEpoch = nowEpoch();
+    resolveCall(CallKind::Energy);
+  }
   dirty = true;
 }
 
@@ -596,6 +660,10 @@ void TamagotchiActivity::drawCreature(int cx, int cy, int size) const {
   // e-ink refresh cadence doesn't cheaply support, so it's drawn steady instead.
   if (state.callActive) {
     renderer.drawText(UI_12_FONT_ID, cx - halfW - 14, cy - halfH - 10, "!", true, EpdFontFamily::BOLD);
+  }
+  // Asleep indicator -- same no-new-sprite overlay approach as the other icons above.
+  if (state.isAsleep) {
+    renderer.drawText(UI_12_FONT_ID, cx + halfW - 10, cy - halfH - 10, "Z", true, EpdFontFamily::BOLD);
   }
 }
 

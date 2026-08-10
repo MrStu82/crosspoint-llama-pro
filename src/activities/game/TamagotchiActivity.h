@@ -62,6 +62,8 @@ class TamagotchiActivity final : public Activity {
     uint8_t callKind = 0;                // CallKind
     int32_t callStartEpoch = 0;          // epoch the active call began
     int32_t lastCallEndEpoch = 0;        // epoch the last call ended (resolved or timed out); throttles new calls
+    uint8_t isAsleep = 0;                // 0/1; auto-set by the night schedule, toggled early by Light
+    int32_t sleepStartEpoch = 0;         // epoch sleep began (auto or manual); 0 while awake
   };
 
   State state;
@@ -100,6 +102,10 @@ class TamagotchiActivity final : public Activity {
   // Current RTC-backed epoch seconds, or 0 if the clock is unset/unavailable (same
   // "unknown" convention as StatsManager::getCurrentDate()).
   static int32_t nowEpoch();
+  // True if the current RTC time-of-day falls inside the night sleep window
+  // [kNightStartHour, kNightEndHour). Returns false if the clock is unavailable (no
+  // schedule to apply without a real clock).
+  static bool isNightNow();
 
   // Applies real-elapsed-time decay/poop/evolution/death/attention-calls since
   // state.lastUpdateEpoch, then updates it to `now`. No-ops if the clock is unavailable.

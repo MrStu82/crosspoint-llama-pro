@@ -2,35 +2,35 @@
 gsd_state_version: '1.0'
 status: in_progress
 progress:
-  total_phases: 4
+  total_phases: 6
   completed_phases: 4
   total_plans: 4
   completed_plans: 4
-  percent: 100
+  percent: 67
 ---
 
 # Project State
 
 ## Project Reference
 
-See: .planning/PROJECT.md (updated 2026-08-07)
+See: .planning/PROJECT.md (updated 2026-08-10)
 
 **Core value:** Every screen renders correctly and fully on-panel on the X4 Pro, with no clipped/overflowing content and no touch targets crowded against the bezel.
-**Current focus:** All 4 phases of the original UI-layout-fixes dispatch are complete. Remaining work (Item 1 USB-MSC hardware fix, Item 2 swipe-drawer fix, Item 3 Stats redesign, Games category) is tracked outside this roadmap's original 4-phase scope.
+**Current focus:** Milestone 1 (Phases 1-4) complete and shipped. Milestone 2 (Phases 5-6, dispatch #322096, 2026-08-10) just planned — Phase 5 (small fixes: stats page, landscape drawer edge, top-drawer DRY reuse) not yet started; Phase 6 (Tamagotchi overhaul) not yet started, must not block Phase 5's delivery.
 
 ## Current Position
 
-Phase: 4 of 4 — all complete
-Plan: none pending in this roadmap
-Status: Phases 1, 2, 3, and 4 all confirmed complete at HEAD `8634a75d` (this doc had gone stale after Phase 1 — Phase 2/3/4 work landed but was never reflected here). Phase 2 (BAR-01..04) and Phase 3 (home bottom buffer) reconfirmed 2026-08-08 via direct source read + a clean `pio run -e x4pro` on trantor (SUCCESS, 19.5s).
-Last activity: 2026-08-08 — verified Phases 2 and 3 complete, updated ROADMAP.md and this file to match reality. This roadmap's scope is done; active work has moved to defect-fix items (Item 1/2/3) and new feature requests tracked in conversation/task history, not in this file.
+Phase: 5 of 6 — in progress (item 1 of 3, STAT-01)
+Plan: none written formally — working item-by-item off REQUIREMENTS.md directly given the small independent scope of each Phase 5 item
+Status: Milestone 1 (Phases 1-4) confirmed complete at HEAD `8634a75d`. Milestone 2 scaffolded 2026-08-10. STAT-01 (stats page font/sizing/clipping): two concrete defects found and fixed in `StatsActivity.cpp` — a baseline/top-edge conversion inconsistency on the no-cover placeholder text, and an unguarded numeric-overflow risk in the middle-band and 4-column stat-row digit draws (now protected by a fallback-font overflow guard added to the `drawCentered` lambda). Not yet built (PlatformIO) or committed. Stuart's original "font choices wrong" complaint has no concrete source-level cause found yet — may need flagging as a visual-taste item pending his eyes on the built image.
+Last activity: 2026-08-10 — implemented STAT-01 fix in `StatsActivity.cpp`; next is PlatformIO build to confirm it compiles, then commit as its own Phase 5 item.
 
-Progress: [██████████] 100%
+Progress: [██████░░░░] 67% (4/6 phases complete)
 
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 0
+- Total plans completed: 4 (Milestone 1)
 - Average duration: N/A
 - Total execution time: N/A
 
@@ -51,17 +51,19 @@ Progress: [██████████] 100%
 Decisions are logged in PROJECT.md Key Decisions table.
 Recent decisions affecting current work:
 
-- Phase 1: item 1 needs no code change — numeric trace against current HEAD shows it's already fixed (naturalHeight=574 fits availableHeight=681 with the touch fix in place)
-- Phase 1: home-menu clamp implemented as page-based scroll (matches RoundedRaffTheme's existing pattern), chevron drawn via `fillPolygon`, no new bitmap asset
+- Milestone 2 Phase 5 top drawer delivers the bottom drawer's *feel* (edge-pull, slide, dismiss), not a shared base class; `TextSettingsActivity` keeps its own tab/list/preview state; DRY applies narrowly to edge-drag detection + slide/dismiss animation if it lifts out cleanly (parent corrected the original "reuse the implementation" wording 2026-08-10, see PROJECT.md)
+- Milestone 2 Phase 6 is research-then-build: care-loop mechanics and Tamagotchi Uni visual reference must be researched and documented before implementation, per parent's "needs to BE a Tamagotchi, not merely look like one"
+- Phase 6 sequencing is "don't block Phase 5", not a hard dependency — Phase 5 ships to Stuart on its own, Phase 6 proceeds independently after
 
 ### Pending Todos
 
-None yet.
+- Scope Phase 5 plan 05-01: locate the bottom-drawer implementation (component reused for item 3), the current landscape drawer-edge logic (item 2), and the reading stats page layout code (item 1) before writing fix plans
+- Scope Phase 6 research: read up on authentic Tamagotchi care-loop mechanics and Tamagotchi Uni screenshots/UI reference before any implementation plan is written
 
 ### Blockers/Concerns
 
-- Phase 1 not yet build-verified in an app image — must run PlatformIO build (app-image only, per standing policy) before committing/reporting
-- Phase 1 item 3's settings-file trap must be stated plainly to parent: existing units with a saved settings file will NOT pick up the new default — only fresh/factory-reset units will
+- None yet for Milestone 2 — planning layer only, no build/verification attempted this session
+- Phase 6's ESP32-C3 RAM/flash ceiling (~380KB RAM, no PSRAM) will constrain how much of the "real" Tamagotchi care-loop state can be held — flag as a design constraint once implementation planning starts, not before
 
 ## Deferred Items
 
@@ -69,11 +71,11 @@ Items acknowledged and carried forward from previous milestone close:
 
 | Category | Item | Status | Deferred At |
 |----------|------|--------|-------------|
-| UI | Quick-settings swipe sheet (§5.3) | Back in scope (Stuart, 2026-08-09) — gated on [device] windowed-partial-refresh proof, not yet built | Dispatch (2026-08-07) |
-| UI | Stats screen redesign (§4.5) | Deferred | Dispatch (2026-08-07) |
+| UI | Quick-settings swipe sheet (§5.3) | Resolved — proven on hardware 2026-08-09, sheet not authorised by Stuart, closed unless he asks by name | Dispatch (2026-08-07) |
+| UI | Stats screen redesign (§4.5) | Now in scope as STAT-01, Milestone 2 Phase 5 | Dispatch (2026-08-07) → reactivated 2026-08-10 |
 
 ## Session Continuity
 
-Last session: 2026-08-07
-Stopped at: Phase 1 source fixes applied (LyraTheme.cpp, BaseTheme.cpp, CrossPointSettings.h); about to build via PlatformIO and verify before commit
+Last session: 2026-08-10
+Stopped at: Milestone 2 planning scaffold complete (PROJECT.md/ROADMAP.md/REQUIREMENTS.md/STATE.md updated with Phases 5-6). Restated shared facts to parent. No code/build work started — next session should scope Phase 5's 05-01 plan by locating the relevant source files (drawer implementation, stats page, landscape orientation logic).
 Resume file: None

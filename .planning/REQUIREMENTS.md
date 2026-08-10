@@ -26,14 +26,27 @@
 
 - [ ] **USB-01**: Device exposes itself as a USB mass storage device to a host PC
 
+## Milestone 2 Requirements (dispatch #322096, 2026-08-10)
+
+### Phase 5 — Small fixes (ship first, independent of Phase 6)
+
+- [ ] **STAT-01**: Reading stats page — font choices, sizing, and text clipping all fixed; whole page tidied
+- [ ] **DRW-01**: Landscape bottom drawer opens from exactly one edge (the physical "bottom" edge in landscape), not two
+- [ ] **DRW-02**: Top drawer (font settings) delivers the drawer *feel* — pulled from the top edge, slides in, sits over the page, dismisses the same way as the bottom drawer. `TextSettingsActivity` keeps its own tab ring/list/live-preview state (legitimately more state than the bottom drawer's single scalar) — no forced convergence. DRY applies narrowly: lift edge-drag detection and slide/dismiss animation out of `BrightnessSheet` into something shared if it comes out cleanly; if not, leave it in place and say so explicitly. Scope corrected 2026-08-10 — parent's original "reuse the implementation" wording was written before either component had been read.
+
+### Phase 6 — Tamagotchi overhaul
+
+- [ ] **TAMA-01**: Real Tamagotchi care-loop mechanics researched and implemented — hunger/happiness/discipline meters, life stages (egg→baby→child→teen→adult), evolution branching on care quality, sickness, poop, death/neglect
+- [ ] **TAMA-02**: UI restyled to match Tamagotchi Uni specifically (screen layout, icon row, sprite proportions, palette), whole game UI reorganised to that shape
+
 ## v2 Requirements
 
 Deferred, not in this dispatch.
 
 ### Deferred UI
 
-- ~~**DEF-01**: Quick-settings swipe sheet (§5.3)~~ — back in scope, Stuart 2026-08-09 (see below)
-- **DEF-02**: Stats screen redesign (§4.5)
+- ~~**DEF-01**: Quick-settings swipe sheet (§5.3)~~ — resolved, Milestone 1 (proven on hardware 2026-08-09, sheet not authorised by Stuart — see "Back in Scope" below)
+- ~~**DEF-02**: Stats screen redesign (§4.5)~~ — now in scope as STAT-01, Milestone 2 Phase 5
 
 ## Back in Scope
 
@@ -59,14 +72,19 @@ Deferred, not in this dispatch.
 | BAR-02 | Phase 2 | Pending |
 | BAR-03 | Phase 2 | Pending |
 | BAR-04 | Phase 2 | Pending |
-| BUF-01 | Phase 3 | Pending |
-| USB-01 | Phase 4 | Pending |
+| BUF-01 | Phase 3 | Complete |
+| USB-01 | Phase 4 | Complete |
+| STAT-01 | Phase 5 | Pending |
+| DRW-01 | Phase 5 | Pending |
+| DRW-02 | Phase 5 | Pending |
+| TAMA-01 | Phase 6 | Pending |
+| TAMA-02 | Phase 6 | Pending |
 
 **Coverage:**
-- v1 requirements: 9 total
-- Mapped to phases: 9
+- v1 requirements (Milestone 1): 9 total, all complete
+- Milestone 2 requirements: 5 total, mapped to phases 5-6
 - Unmapped: 0 ✓
 
 ---
 *Requirements defined: 2026-08-07*
-*Last updated: 2026-08-07 after Phase 1 investigation*
+*Last updated: 2026-08-10 — Milestone 2 (dispatch #322096) requirements added*

@@ -17,21 +17,27 @@ clipped/overflowing content and no touch targets crowded against the bezel.
 
 ### Validated
 
-(None yet — ship to validate)
+- [x] Button-hints row no longer reserves space it doesn't draw on touch devices
+- [x] Home menu clamps to available height, scrolls, shows a chevron when more rows exist
+- [x] Reader screen margin defaults to a sane value for new units
+- [x] Reader screens support independent top + bottom status bars
+- [x] Home menu's last row clears the bezel/physical-button area by a real buffer
+- [x] Device exposes itself as USB mass storage
 
-### Active
+### Active (Milestone 2: #322096, dispatched 2026-08-10)
 
-- [ ] Button-hints row no longer reserves space it doesn't draw on touch devices
-- [ ] Home menu clamps to available height, scrolls, shows a chevron when more rows exist
-- [ ] Reader screen margin defaults to a sane value for new units
-- [ ] Reader screens support independent top + bottom status bars
-- [ ] Home menu's last row clears the bezel/physical-button area by a real buffer
-- [ ] Device exposes itself as USB mass storage
+Phase 5 — small fixes, ship independently, don't hold behind Phase 6:
+- [ ] Reading stats page: font choices, sizing, text clipping tidied up
+- [ ] Landscape: bottom drawer opens ONLY from the physical bottom edge (was two edges)
+- [ ] Top drawer (font settings): converted from full-screen view to a proper pulled-down drawer, reusing the bottom drawer's own implementation (DRY, no second drawer impl)
+
+Phase 6 — Tamagotchi overhaul (Stuart: "a complete mess", "a big graphical overhaul"):
+- [ ] Care-loop mechanics researched and implemented for real: hunger/happiness/discipline meters, life stages (egg→baby→child→teen→adult), evolution branching on care quality, sickness, poop, death/neglect
+- [ ] UI restyled to match Tamagotchi Uni specifically: screen layout, icon row, sprite proportions, palette — whole game UI reorganised to that shape
 
 ### Out of Scope
 
-- ~~Quick-settings swipe sheet (§5.3)~~ — pulled back into scope by Stuart (2026-08-09); gated on proving §5.3's own [device]-marked windowed-partial-refresh assumption before the sheet itself is built
-- Stats screen redesign (§4.5) — separate future work, not part of this dispatch
+- ~~Quick-settings swipe sheet (§5.3)~~ — resolved in Milestone 1 (proven on hardware 2026-08-09, sheet itself not authorised — see REQUIREMENTS.md)
 - Any [device]-marked item from the source spec — needs Stuart's hardware, not buildable/verifiable here
 
 ## Context
@@ -70,8 +76,15 @@ clipped/overflowing content and no touch targets crowded against the bezel.
 | Decision | Rationale | Outcome |
 |----------|-----------|---------|
 | Phase 1 item 1 needs no code change | Numeric trace shows it's already fixed at HEAD (see Context) | ✓ Good — verified, reported honestly rather than patched-for-appearance |
-| Home-menu clamp implemented as page-based scroll (jump by page, not smooth) | Matches the pattern `RoundedRaffTheme` already uses for the same widget — consistent UX across themes, minimal new code | — Pending Stuart's on-device feel check |
-| Chevron drawn via `renderer.fillPolygon` (8x8 triangle), not a new bitmap asset | No existing chevron primitive/icon; a 3-point polygon is the smallest correct fix — avoids new asset/build-bloat | — Pending |
+| Home-menu clamp implemented as page-based scroll (jump by page, not smooth) | Matches the pattern `RoundedRaffTheme` already uses for the same widget — consistent UX across themes, minimal new code | ✓ Shipped, Milestone 1 |
+| Chevron drawn via `renderer.fillPolygon` (8x8 triangle), not a new bitmap asset | No existing chevron primitive/icon; a 3-point polygon is the smallest correct fix — avoids new asset/build-bloat | ✓ Shipped, Milestone 1 |
+| Phase 5 top drawer delivers the bottom drawer's *feel* (edge-pull, slide, dismiss), not a shared base class; `TextSettingsActivity` keeps its own state; DRY applies narrowly to edge-drag + animation if it lifts out cleanly | Parent corrected the original "reuse the implementation" wording after flagging it would force ~200 lines of convergence between two structurally different components (2026-08-10) | — Pending |
+| Phase 6 gated on real research before implementation (items 4/5 are research-then-build, not just item 5's styling) | Parent: "needs to BE a Tamagotchi, not merely look like one" — mechanics correctness first, Tamagotchi Uni visual style second | — Pending |
+
+## Milestones
+
+- **Milestone 1 (Phases 1-4, X4 Pro UI Layout Fixes)**: Complete 2026-08-07. All 6 requirements shipped and reported.
+- **Milestone 2 (Phases 5-6, dispatch #322096, 2026-08-10)**: In progress. Bottom drawer + brightness control (prior deliverable, separate from this milestone) confirmed working by Stuart — do not touch their behavior except where Phase 5's landscape-edge fix requires it.
 
 ---
-*Last updated: 2026-08-07 after Phase 1 investigation and fix*
+*Last updated: 2026-08-10 — Milestone 2 (dispatch #322096) added as Phases 5-6*

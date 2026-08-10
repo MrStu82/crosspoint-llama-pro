@@ -96,11 +96,20 @@ void StatsActivity::render(RenderLock&&) {
                           EpdFontFamily::Style style = EpdFontFamily::REGULAR) {
     renderer.drawText(fontId, x, topOf(fontId, baselineY), text, black, style);
   };
+  // maxWidth/fallbackFontId let a call site guard against a value that's grown wider than
+  // its column (e.g. a stat that crossed into 4+ digits): if the primary font overflows,
+  // retry once with a narrower fallback font rather than drawing past the column edge.
   auto drawCentered = [&](int fontId, const char* text, int cx, int baselineY,
-                          EpdFontFamily::Style style = EpdFontFamily::REGULAR) {
+                          EpdFontFamily::Style style = EpdFontFamily::REGULAR, int maxWidth = 0,
+                          int fallbackFontId = 0) {
     if (text[0] == '\0') return;
     int w = renderer.getTextWidth(fontId, text, style);
-    renderer.drawText(fontId, cx - w / 2, topOf(fontId, baselineY), text, true, style);
+    int drawFontId = fontId;
+    if (maxWidth > 0 && w > maxWidth && fallbackFontId != 0) {
+      drawFontId = fallbackFontId;
+      w = renderer.getTextWidth(drawFontId, text, style);
+    }
+    renderer.drawText(drawFontId, cx - w / 2, topOf(drawFontId, baselineY), text, true, style);
   };
 
   // --- BOOK HERO ---
@@ -142,7 +151,7 @@ void StatsActivity::render(RenderLock&&) {
 
   if (!hasCover) {
     renderer.drawRect(kCoverX, kCoverY, coverW, coverH);
-    renderer.drawText(UI_10_FONT_ID, kCoverX + 10, kCoverY + coverH / 2, tr(STR_STATS_NO_COVER));
+    renderer.drawText(UI_10_FONT_ID, kCoverX + 10, topOf(UI_10_FONT_ID, kCoverY + coverH / 2), tr(STR_STATS_NO_COVER));
   }
 
   constexpr int kTextX = 180;
@@ -223,14 +232,21 @@ void StatsActivity::render(RenderLock&&) {
   const int minutesToday = static_cast<int>(stats.readingTimeTodaySeconds / 60);
   const uint32_t pagesToday = stats.pagesReadToday;
 
+  // Middle-band columns are 224px wide (16..240, 240..464); cap primary-font text to what
+  // fits with a margin either side of center, falling back to the smaller digit font for
+  // days with an unusually large minute/page count rather than clipping into the divider.
+  constexpr int kMiddleBandMaxTextW = 200;
+
   char minTodayStr[16];
   snprintf(minTodayStr, sizeof(minTodayStr), "%d", minutesToday);
-  drawCentered(NOTOSANS_40_BOLD_DIGITS_FONT_ID, minTodayStr, 128, 356);
+  drawCentered(NOTOSANS_40_BOLD_DIGITS_FONT_ID, minTodayStr, 128, 356, EpdFontFamily::REGULAR,
+               kMiddleBandMaxTextW, NOTOSANS_20_BOLD_DIGITS_FONT_ID);
   drawCentered(UI_10_FONT_ID, tr(STR_STATS_MIN_TODAY), 128, 378);
 
   char pagesTodayStr[16];
   snprintf(pagesTodayStr, sizeof(pagesTodayStr), "%lu", static_cast<unsigned long>(pagesToday));
-  drawCentered(NOTOSANS_40_BOLD_DIGITS_FONT_ID, pagesTodayStr, 352, 356);
+  drawCentered(NOTOSANS_40_BOLD_DIGITS_FONT_ID, pagesTodayStr, 352, 356, EpdFontFamily::REGULAR,
+               kMiddleBandMaxTextW, NOTOSANS_20_BOLD_DIGITS_FONT_ID);
   drawCentered(UI_10_FONT_ID, tr(STR_STATS_PAGES_TODAY), 352, 378);
 
   renderer.drawLine(240, 318, 240, 318 + 66, 1, true);
@@ -283,8 +299,13 @@ void StatsActivity::render(RenderLock&&) {
   const char* colVal[4] = {streakStr, hrsStr, pagesStr, bestDayStr};
   const StrId colLabel[4] = {StrId::STR_STATS_STREAK, StrId::STR_STATS_HRS, StrId::STR_STATS_PAGES,
                              StrId::STR_STATS_BEST_DAY};
+  // Columns are 112px wide; cap the primary bold-digit font's text and fall back to the
+  // smaller non-bold digit font (NotoSans, still has digit glyphs) if all-time hours/pages
+  // grow past what the bold face fits without touching the neighboring divider.
+  constexpr int kStatColMaxTextW = 100;
   for (int i = 0; i < 4; i++) {
-    drawCentered(NOTOSANS_20_BOLD_DIGITS_FONT_ID, colVal[i], colCx[i], 448, EpdFontFamily::BOLD);
+    drawCentered(NOTOSANS_20_BOLD_DIGITS_FONT_ID, colVal[i], colCx[i], 448, EpdFontFamily::BOLD, kStatColMaxTextW,
+                 NOTOSANS_14_FONT_ID);
     drawCentered(UI_10_FONT_ID, I18n::getInstance().get(colLabel[i]), colCx[i], 468);
   }
   for (int i = 1; i <= 3; i++) {

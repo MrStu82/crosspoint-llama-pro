@@ -2,19 +2,25 @@
 
 ## Overview
 
-Four phases, each a separate branch/commit, each verified in a built PlatformIO app image
-and reported to parent before the next begins: fix the three cheapest/lowest-risk layout
+Milestone 1 (Phases 1-4, complete): fix the three cheapest/lowest-risk layout
 defects first, then add dual top/bottom status bars, then give the home menu's last row
 real breathing room from the bezel, then flip on USB mass storage.
 
+Milestone 2 (Phases 5-6, dispatch #322096, 2026-08-10): small fixes ship first and
+independently (stats page tidy, landscape single-edge drawer, top drawer reuses the
+bottom drawer's implementation), then the Tamagotchi overhaul (real care-loop mechanics,
+then Tamagotchi Uni visual restyle) — Phase 6 must not hold up Phase 5's delivery.
+
 ## Phases
 
-**Phase Numbering:** integer phases are the four planned milestones from parent's dispatch, in the exact order given. No decimal/inserted phases.
+**Phase Numbering:** integer phases are the planned milestones from parent's dispatches, in the exact order given. No decimal/inserted phases. Phases 1-4 = Milestone 1 (dispatch msg 2876). Phases 5-6 = Milestone 2 (dispatch #322096, 2026-08-10).
 
 - [x] **Phase 1: Three defects (§2)** - button-hints reservation, home-menu clamp, screen margin default
 - [x] **Phase 2: Two status bars (§5.2)** - independent top + bottom status bars
 - [x] **Phase 3: Home bottom buffer (§2.2)** - real clearance for the home menu's last row
 - [x] **Phase 4: USB mass storage (§3.1)** - device enumerates as USB MSC
+- [ ] **Phase 5: Small fixes (#322096 Phase 1)** - stats page tidy, landscape single-edge drawer, top drawer reuses bottom-drawer impl
+- [ ] **Phase 6: Tamagotchi overhaul (#322096 Phase 2)** - real care-loop mechanics + Tamagotchi Uni visual restyle
 
 ## Phase Details
 
@@ -77,13 +83,49 @@ Plans:
 Plans:
 - [x] 04-01: dio_opi variant switch + Logging.h HWCDC/USBCDC fix, build green, parent go-ahead to commit
 
+### Phase 5: Small fixes (#322096 Phase 1)
+**Goal**: Three device-reported defects fixed, shipped as one deliverable, independent of Phase 6.
+**Depends on**: Nothing (Milestone 1 is complete; this is a fresh dispatch)
+**Requirements**: [STAT-01, DRW-01, DRW-02]
+**Success Criteria**:
+  1. Reading stats page: correct fonts, correct sizing, no clipped text — whole page tidied, not spot-patched
+  2. Landscape orientation: the bottom drawer opens from exactly one edge — the physical edge that is "bottom" in landscape, not whichever edge was "bottom" in portrait
+  3. Top drawer (font settings) delivers the drawer *feel* — pulled from the top edge, slides in, sits over the page, dismisses the same way as the bottom drawer. `TextSettingsActivity` keeps its own tab/list/preview state; DRY applies narrowly to edge-drag detection + slide/dismiss animation, shared only if it lifts out of `BrightnessSheet` cleanly (scope corrected 2026-08-10, see Key Decisions)
+  4. Bottom drawer + brightness control behavior is unchanged except for the landscape single-edge fix in criterion 2
+**Plans**: TBD
+
+Scoping notes (2026-08-10, research only, no code changed):
+1. STAT-01: `src/activities/home/StatsActivity.cpp` draws text at hardcoded baseline Y-coordinates and a hardcoded `textRightEdge = screenWidth - 16` with no text-width measurement guard — straightforward fix, add measurement-based clipping/wrap.
+2. DRW-01: `src/MappedInputManager.cpp` lines ~120-121/268-332 — both top-menu and bottom-brightness-sheet edge gestures use a hardcoded height-fraction (14%) with no orientation check. In landscape the physical "bottom" edge is a different logical edge than what the fraction assumes, so both zones can fire. Fix: gate the edge-zone calculation on `renderer.getOrientation()`.
+3. DRW-02: bottom drawer is `src/components/BrightnessSheet.cpp` — a lightweight non-Activity overlay component (open_/dragging state only, windowed `displayWindow()` render, `loop()` returns bool to claim input). Top drawer is currently `TextSettingsActivity` — a full stateful `Activity` (tab ring, list scroll, live preview, full `displayBuffer()` render). These are NOT drop-in compatible: making font settings a "BrightnessSheet-shaped" drawer means extracting its render/state out of the Activity lifecycle entirely — a real refactor, not a wrapper. Flagged to parent before starting (scope call, not a code decision).
+**Plans**: TBD
+
+Plans:
+- [ ] 05-01: TBD
+
+### Phase 6: Tamagotchi overhaul (#322096 Phase 2)
+**Goal**: The Tamagotchi game actually implements real Tamagotchi mechanics, styled to match Tamagotchi Uni.
+**Depends on**: Phase 5 (ships after, but is not gated on Phase 5's completion per parent's explicit "don't hold Phase 1 behind the overhaul" — sequencing here is about not blocking Phase 5, not a hard dependency)
+**Requirements**: [TAMA-01, TAMA-02]
+**Success Criteria**:
+  1. Research produces a documented care-loop spec: hunger/happiness/discipline meters, life stages egg→baby→child→teen→adult, evolution branching on care quality, sickness, poop, death/neglect
+  2. Research produces a documented Tamagotchi Uni visual reference: screen layout, icon row, sprite proportions, palette
+  3. Implementation makes the care loop real (not cosmetic) within the ESP32-C3's RAM/flash constraints
+  4. UI reorganised to match the Tamagotchi Uni shape identified in research
+**Plans**: TBD (research plans precede implementation plans)
+
+Plans:
+- [ ] 06-01: TBD
+
 ## Progress
 
-**Execution Order:** Phases execute in numeric order: 1 → 2 → 3 → 4
+**Execution Order:** Phases execute in numeric order: 1 → 2 → 3 → 4 → 5 → 6. Phase 6 must not block Phase 5's delivery to Stuart.
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
 | 1. Three defects (§2) | 1/1 | Complete | 2026-08-07 |
-| 2. Two status bars (§5.2) | 0/? | Not started | - |
-| 3. Home bottom buffer (§2.2) | 0/? | Not started | - |
+| 2. Two status bars (§5.2) | 1/1 | Complete | 2026-08-08 |
+| 3. Home bottom buffer (§2.2) | 1/1 | Complete | 2026-08-08 |
 | 4. USB mass storage (§3.1) | 1/1 | Complete | 2026-08-07 |
+| 5. Small fixes (#322096 Phase 1) | 0/? | Not started | - |
+| 6. Tamagotchi overhaul (#322096 Phase 2) | 0/? | Not started | - |

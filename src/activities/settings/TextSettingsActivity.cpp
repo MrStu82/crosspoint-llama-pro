@@ -15,6 +15,7 @@
 #include "ReaderFontSizes.h"
 #include "SdCardFontSystem.h"
 #include "TextSettingsPreview.h"
+#include "components/DrawerChrome.h"
 #include "components/UITheme.h"
 #include "fontIds.h"
 
@@ -188,6 +189,20 @@ bool TextSettingsActivity::handleTouch() {
     return true;
   }
 
+  // DRW-02 (Stuart #322096): match BrightnessSheet — a tap that lands outside the drawer's
+  // own drawn region (i.e. in the reader-page peek band below contentBottom) dismisses it,
+  // instead of Back being the only way out.
+  int outsideTx = 0;
+  int outsideTy = 0;
+  if (mappedInput.wasScreenTapped(outsideTx, outsideTy)) {
+    const int contentBottom = afterHeader + usableHeight + (mappedInput.hasTouch() ? 0 : bottomReserved);
+    if (DrawerChrome::isOutsideTap(DrawerChrome::Edge::Top, Rect(0, 0, renderer.getScreenWidth(), contentBottom),
+                                    outsideTx, outsideTy)) {
+      finish();
+      return true;
+    }
+  }
+
   return false;
 }
 
@@ -231,6 +246,14 @@ void TextSettingsActivity::render(RenderLock&&) {
   if (optionPopup_.processRender(renderer, mappedInput)) return;  // picker draws over everything
 
   const auto pageWidth = renderer.getScreenWidth();
+
+  // DRW-02 (Stuart #322096, reopened as a real hardware defect): the windowed push below
+  // only replaces the pixels inside contentBottom, but GUI::drawTabBar()/drawList() only
+  // paint selective content (highlights, text rows), not their full rect backgrounds — so
+  // anything they don't explicitly overdraw was left showing whatever was in the framebuffer
+  // before, i.e. the reader page bleeding through. Fill our own region with background first.
+  const int contentBottom = afterHeader + usableHeight + (mappedInput.hasTouch() ? 0 : bottomReserved);
+  DrawerChrome::clearRegion(renderer, Rect(0, 0, pageWidth, contentBottom));
 
   GUI.drawHeader(renderer, Rect{0, metrics_.topPadding, pageWidth, metrics_.headerHeight}, tr(STR_TEXT_SETTINGS));
 
@@ -318,7 +341,6 @@ void TextSettingsActivity::render(RenderLock&&) {
   // reader page underneath) untouched — a real drawer peek, not a full-screen takeover. On
   // non-touch hardware drawButtonHints() DID draw into bottomReserved, so it's included in
   // the push there to avoid clipping the hints off-panel.
-  const int contentBottom = afterHeader + usableHeight + (mappedInput.hasTouch() ? 0 : bottomReserved);
   renderer.displayWindow(0, 0, pageWidth, contentBottom);
 }
 

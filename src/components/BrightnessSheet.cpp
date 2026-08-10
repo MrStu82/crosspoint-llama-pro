@@ -14,6 +14,7 @@
 #include "activities/Activity.h"
 #include "activities/ActivityManager.h"
 #include "activities/RenderLock.h"
+#include "components/DrawerChrome.h"
 #include "fontIds.h"
 
 namespace {
@@ -216,7 +217,8 @@ bool BrightnessSheet::loop() {
       trimWarmth(-1);
     } else if (hitTest(tx, ty, layout.trimPlusX, layout.warmthTrimY, TRIM_BTN_SIZE, TRIM_BTN_SIZE)) {
       trimWarmth(1);
-    } else if (ty < top) {
+    } else if (DrawerChrome::isOutsideTap(DrawerChrome::Edge::Bottom, Rect(0, top, screenWidth, SHEET_HEIGHT), tx,
+                                           ty)) {
       close();
     }
     // A tap inside the band that hit nothing (e.g. between ticks) is absorbed
@@ -238,7 +240,7 @@ void BrightnessSheet::draw() const {
   const int screenWidth = renderer.getScreenWidth();
   const Layout layout = computeLayout(top, screenWidth);
 
-  renderer.fillRect(0, top, screenWidth, SHEET_HEIGHT, false);
+  DrawerChrome::clearRegion(renderer, Rect(0, top, screenWidth, SHEET_HEIGHT));
   renderer.drawLine(0, top, screenWidth, top, true);
 
   // Presets

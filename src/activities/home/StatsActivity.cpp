@@ -111,6 +111,24 @@ void StatsActivity::render(RenderLock&&) {
     }
     renderer.drawText(drawFontId, cx - w / 2, topOf(drawFontId, baselineY), text, true, style);
   };
+  // STAT-01 (Stuart, real-hardware report): the BOOK/CHAPTER progress % was drawn
+  // left-anchored at a fixed x with no width check, so on a real 4" panel (narrower
+  // than whatever the sim implied) a 3-digit value plus its "%" glyph ran past the
+  // panel edge and got clipped. Measure the FULL string (digits + "%") up front, fall
+  // back to a narrower font if it doesn't fit, and always anchor from the right edge
+  // so nothing can ever land within the reserved margin, let alone past it.
+  auto drawRightAligned = [&](int fontId, const char* text, int rightEdge, int baselineY,
+                              EpdFontFamily::Style style = EpdFontFamily::REGULAR, int maxWidth = 0,
+                              int fallbackFontId = 0) {
+    if (text[0] == '\0') return;
+    int w = renderer.getTextWidth(fontId, text, style);
+    int drawFontId = fontId;
+    if (maxWidth > 0 && w > maxWidth && fallbackFontId != 0) {
+      drawFontId = fallbackFontId;
+      w = renderer.getTextWidth(drawFontId, text, style);
+    }
+    renderer.drawText(drawFontId, rightEdge - w, topOf(drawFontId, baselineY), text, true, style);
+  };
 
   // --- BOOK HERO ---
   std::string currentBookTitle = tr(STR_STATS_NO_BOOK_OPEN);
@@ -201,7 +219,12 @@ void StatsActivity::render(RenderLock&&) {
   constexpr int kBarX = 180;
   constexpr int kBarW = 240;
   constexpr int kBarH = 10;
-  constexpr int kPctX = 430;
+  // STAT-01: percent text now anchors off textRightEdge (the same reserved-margin edge the
+  // book title/author truncate against, screenWidth - 16) instead of a fixed left x — the
+  // column between the bar and that edge is what's actually available, and the fallback
+  // font keeps a 3-digit "~100%" from ever being asked to fit in less space than it needs.
+  constexpr int kPctGap = 10;
+  const int kPctMaxTextW = textRightEdge - (kBarX + kBarW) - kPctGap;
 
   drawBaseline(UI_10_FONT_ID, kTextX, 188, tr(STR_STATS_BOOK_PROGRESS));
   renderer.drawRect(kBarX, 194, kBarW, kBarH);
@@ -209,9 +232,10 @@ void StatsActivity::render(RenderLock&&) {
     if (currentProgress > 0) renderer.fillRect(kBarX, 194, (kBarW * currentProgress) / 100, kBarH);
     char progStr[16];
     snprintf(progStr, sizeof(progStr), bookProgressIsApprox ? "~%d%%" : "%d%%", currentProgress);
-    drawBaseline(UI_12_FONT_ID, kPctX, 203, progStr);
+    drawRightAligned(UI_12_FONT_ID, progStr, textRightEdge, 203, EpdFontFamily::REGULAR, kPctMaxTextW, UI_10_FONT_ID);
   } else {
-    drawBaseline(UI_12_FONT_ID, kPctX, 203, tr(STR_STATS_UNKNOWN));
+    drawRightAligned(UI_12_FONT_ID, tr(STR_STATS_UNKNOWN), textRightEdge, 203, EpdFontFamily::REGULAR, kPctMaxTextW,
+                      UI_10_FONT_ID);
   }
 
   drawBaseline(UI_10_FONT_ID, kTextX, 222, tr(STR_STATS_CHAPTER_PROGRESS));
@@ -220,9 +244,10 @@ void StatsActivity::render(RenderLock&&) {
     if (currentChapterProgress > 0) renderer.fillRect(kBarX, 228, (kBarW * currentChapterProgress) / 100, kBarH);
     char progStr[16];
     snprintf(progStr, sizeof(progStr), "%d%%", currentChapterProgress);
-    drawBaseline(UI_12_FONT_ID, kPctX, 237, progStr);
+    drawRightAligned(UI_12_FONT_ID, progStr, textRightEdge, 237, EpdFontFamily::REGULAR, kPctMaxTextW, UI_10_FONT_ID);
   } else {
-    drawBaseline(UI_12_FONT_ID, kPctX, 237, tr(STR_STATS_UNKNOWN));
+    drawRightAligned(UI_12_FONT_ID, tr(STR_STATS_UNKNOWN), textRightEdge, 237, EpdFontFamily::REGULAR, kPctMaxTextW,
+                      UI_10_FONT_ID);
   }
 
   // --- MIDDLE BAND (new work — everything else on this screen reproduces the
@@ -260,7 +285,11 @@ void StatsActivity::render(RenderLock&&) {
     const float ppmToday = static_cast<float>(pagesToday) / static_cast<float>(minutesToday);
     snprintf(ppmLine, sizeof(ppmLine), "%.1f %s", ppmToday, tr(STR_STATS_PAGES_PER_MINUTE_LONG));
   }
-  drawCentered(NOTOSANS_14_FONT_ID, ppmLine, 240, 402);
+  // STAT-01: was baseline 402, only 24px below the "min today"/"pages today" label row
+  // (baseline 378) — too tight on real hardware, read as crushed between the two numeric
+  // rows. Pushed to 410 (32px gap) for real breathing room; still well clear of the stat
+  // column dividers, which start at y=424.
+  drawCentered(NOTOSANS_14_FONT_ID, ppmLine, 240, 410);
 
   // Fetched once here so both the 30-day grid slice and the streak walk read from
   // the same snapshot. getLast7DaysMinutes() (name predates this screen) fills all

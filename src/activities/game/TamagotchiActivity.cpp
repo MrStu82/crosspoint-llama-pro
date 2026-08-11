@@ -174,6 +174,10 @@ void TamagotchiActivity::evolveIfReady(int32_t now) {
   const int32_t ageInStage = now - state.stageStartEpoch;
   const bool ageReady = (stage == Stage::Baby && ageInStage >= kBabyToChildSeconds) ||
                         (stage == Stage::Child && ageInStage >= kChildToAdultSeconds);
+  // Recomputed unconditionally (even on the ageReady=false early return below) so this
+  // stays live and self-corrects every real tick -- no separate reset path needed on
+  // hatch/restart/evolve, since the next tick after any of those recomputes it fresh.
+  disciplineBlockedEvolve = ageReady && state.disciplineLevel < kMinDisciplineToEvolve;
   if (!ageReady) return;
 
   if (state.careMistakes > kMaxMistakesToEvolve || state.disciplineLevel < kMinDisciplineToEvolve) {
@@ -693,6 +697,12 @@ void TamagotchiActivity::drawCreature(int cx, int cy, int size) const {
   if (state.isAsleep) {
     renderer.drawText(UI_12_FONT_ID, cx + halfW - 10, cy - halfH - 10, "Z", true, EpdFontFamily::BOLD);
   }
+  // Age-ready-but-discipline-too-low indicator -- bottom-left corner, clear of the other
+  // three overlay marks above. Without this the pet just silently stops evolving with no
+  // visible cause; this is the pet "telling" the player discipline specifically is why.
+  if (disciplineBlockedEvolve) {
+    renderer.drawText(UI_12_FONT_ID, cx - halfW - 14, cy + halfH - 4, "D!", true, EpdFontFamily::BOLD);
+  }
 }
 
 void TamagotchiActivity::drawHeartPips(int x, int y, uint8_t value) const {
@@ -814,10 +824,11 @@ void TamagotchiActivity::render(RenderLock&&) {
 
   if (screen == Screen::Status) {
     const int abcTop = pageHeight - metrics.buttonHintsHeight - metrics.verticalSpacing - 48;
-    // Five rows (stage, 3 stats, health) spread evenly across the whole content area instead
-    // of stacking near the top with fixed +=30/+=40 steps -- that left roughly 180px of empty
-    // white below the health line with nothing else on the screen to fill it.
-    constexpr int kStatusRowCount = 5;
+    // Six rows (stage, 4 stats incl. discipline, health) spread evenly across the whole
+    // content area instead of stacking near the top with fixed +=30/+=40 steps -- that left
+    // roughly 180px of empty white below the health line with nothing else on the screen to
+    // fill it.
+    constexpr int kStatusRowCount = 6;
     const int rowSpacing = (abcTop - contentTop) / (kStatusRowCount + 1);
     int y = contentTop + rowSpacing;
 
@@ -840,6 +851,16 @@ void TamagotchiActivity::render(RenderLock&&) {
 
     renderer.drawText(UI_12_FONT_ID, labelX, y + 2, tr(STR_TAMA_ENERGY), true);
     drawHeartPips(pipsX, y, state.energy);
+    y += rowSpacing;
+
+    // Reuses the same drawHeartPips meter as the other stats -- no new sprite, no new
+    // screen. The "!" appears only when discipline is the specific thing currently
+    // blocking evolution (mirrors the "D!" mark on the pet itself in drawCreature()).
+    renderer.drawText(UI_12_FONT_ID, labelX, y + 2, tr(STR_TAMA_ICON_DISCIPLINE), true);
+    drawHeartPips(pipsX, y, state.disciplineLevel);
+    if (disciplineBlockedEvolve) {
+      renderer.drawText(UI_12_FONT_ID, pipsX + 95, y + 2, "!", true, EpdFontFamily::BOLD);
+    }
     y += rowSpacing;
 
     renderer.drawCenteredText(UI_12_FONT_ID, y, state.sick ? tr(STR_TAMA_SICK) : tr(STR_TAMA_HEALTHY), true);

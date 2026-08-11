@@ -75,6 +75,10 @@ class TamagotchiActivity final : public Activity {
   int cursorIndex = 0;      // selected Icon on Screen::CareMenu
   int foodCursorIndex = 0;  // 0 = Meal, 1 = Snack, within Screen::FoodSubmenu
   ButtonNavigator navigator;
+  // True when the pet is age-ready to evolve but disciplineLevel specifically is what's
+  // blocking it (as opposed to careMistakes, or simply not being old enough yet).
+  // Recomputed every real tick in evolveIfReady() -- not persisted, purely a UI signal.
+  bool disciplineBlockedEvolve = false;
 
   // On-screen A/B/C tap-target hit-rects, recomputed each render() and read back by
   // loop()'s touch handling -- same pattern as BrightnessSheet/TetrisActivity.

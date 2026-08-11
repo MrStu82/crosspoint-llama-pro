@@ -57,6 +57,7 @@ constexpr uint8_t kNightEndHour = 7;     // 7am
 constexpr int32_t kSleepEnergyRecoverSeconds = 4 * 60;  // +1 energy per 4 min asleep
 constexpr int32_t kAwakeSleepDecayDivisor = 3;          // hunger/happiness decay this many times slower asleep
 constexpr uint8_t kWakeEarlyEnergyPenalty = 15;         // energy lost for being woken before the window ends
+constexpr int32_t kManualNapDurationSeconds = 30 * 60;  // a daytime nap (started outside the night window) self-wakes after this long
 
 constexpr uint8_t kMealGain = 40;
 constexpr uint8_t kSnackGain = 15;
@@ -300,6 +301,17 @@ void TamagotchiActivity::tick(int32_t now) {
     state.isAsleep = 1;
     state.sleepStartEpoch = now;
   } else if (wasNight && !nightNow && state.isAsleep) {
+    state.isAsleep = 0;
+    state.sleepStartEpoch = 0;
+  }
+
+  // Bound a manual daytime nap. The edge check above only ever wakes the pet at the
+  // night-window's end, so a nap started outside that window (toggleLight() at noon) has
+  // no edge to ever fire and would otherwise sleep indefinitely at slowed decay with free
+  // energy recovery -- the same species of exploit as the earlier Discipline spam-fix. A
+  // nap has a natural length; only applies while genuinely outside the night window, so
+  // real night sleep (woken by the edge above) is untouched.
+  if (state.isAsleep && !nightNow && (now - state.sleepStartEpoch) >= kManualNapDurationSeconds) {
     state.isAsleep = 0;
     state.sleepStartEpoch = 0;
   }

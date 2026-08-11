@@ -30,14 +30,16 @@ Status: Milestone 1 (Phases 1-4) confirmed complete at HEAD `8634a75d`. Mileston
 - DRW-02 (top drawer feel): dropped the `clearScreen()` white-flash, added a `DRAWER_MIN_PEEK_PX=24` fit-check, swapped to a windowed `displayWindow()` push that excludes the dead `bottomReserved` band on touch hardware so the reader page peeks through underneath — matches the bottom drawer's feel without touching the content layout budget. Landed as two commits: `f94262b4` (fix full-screen-flush regression) and `b7329077` (fix bleed-through + outside-tap dismiss, plus a follow-on STAT-01 clipping fix from Stuart's hardware report).
 - Confirmed via `git log origin/phase4-usb-msc` (not just local branch state) — all four shas present on origin.
 
-**Phase 6 — in progress, four commits on origin (18:29–19:40, 2026-08-10):**
+**Phase 6 — in progress, six commits on origin (18:29 2026-08-10 – 2026-08-11):**
 - `79122d7` — rebuilt Tamagotchi from scratch with real Bandai A/B/C controls, poop/sickness cycle, and care-mistake-gated evolution (foundational commit — `TamagotchiActivity.h`/`.cpp`, RTC-time-driven meters, versioned flash-persisted state).
 - `a8f0793` — fix TAMA-02 `careMistakes` evolve dead-end and a Discipline exploit: an age-ready pet with too many care mistakes was previously frozen in its stage forever with no way to recover; Discipline could also be spammed to resolve any attention call for free, defeating the evolution care-mistake gate.
 - `5737a5b` — fix: evolve-fail must reset the stage clock, not just `careMistakes` — a failed evolve check now costs a full stage window served with good care, rather than only clearing the mistake counter.
 - `c8babe9` — fix Tamagotchi layout defects: icon glyphs, dead space, popup collision (visual/layout pass on the Care Menu grid and food submenu popup).
 - `9852b3f` — Tamagotchi Care Menu on A (physical/tap A button now opens the Care Menu from Main), sprite-based rendering for pet + icons (Stuart supplied the sprite art).
-- All four confirmed present on `origin/phase4-usb-msc` via `git log`; local branch clean and matches origin at HEAD `2b78b00` (one further non-Tamagotchi commit, `203ca61`/`2b78b00`, sits on top — docs fix + a dormant game-mode LUT hook, unrelated to Phase 6).
-Last activity: 2026-08-11 — STATE.md reconciled against `git log` after it was found to be stale (still showing Phase 6 unstarted with four real commits already on origin). Next: write the Phase 6 authentic-care-loop gap analysis, then build+deliver a flashable bin.
+- `5ba2040` — non-Tamagotchi (docs fix + dormant game-mode LUT hook), reconciliation baseline for the gap analysis.
+- `532f8a9` (2026-08-11) — real sleep cycle: `isAsleep` state on an RTC day/night schedule (21:00–07:00), hunger/happiness decay 3x slower and energy recovers instead of draining while asleep, new attention calls suppressed while asleep, `toggleLight()` rewritten to actually toggle sleep (early-wake penalty: care mistake + energy cost, matches parent's build-order item 1 verbatim). State bumped to v3. Built green on Trantor, delivered to parent as `crosspoint-sleep-cycle.bin`.
+- All confirmed present on `origin/phase4-usb-msc` via `git log`; local branch matches origin at HEAD `532f8a9`.
+Last activity: 2026-08-11 — sleep cycle (build-order item 1 of 3) shipped, built, delivered. Next: discipline as a persisted stat (build-order item 2), parked until parent confirms sleep cycle on hardware is not required to proceed per standing one-step-at-a-time protocol — confirm before starting item 2.
 
 ### DRW-02 implementation notes (2026-08-10, superseded the earlier open question)
 

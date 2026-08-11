@@ -40,8 +40,10 @@ class TamagotchiActivity final : public Activity {
   // Discipline as a catch-all) resolves it without counting as a care mistake.
   enum class CallKind : uint8_t { None = 0, Hunger, Happiness, Energy, Poop, Sick };
 
-  // Which sub-screen is on-screen; A/B/C mean different things depending on this.
-  enum class Screen : uint8_t { Main = 0, CareMenu, FoodSubmenu, Status };
+  // Which sub-screen is on-screen; A/B/C mean different things depending on this. Main is
+  // the unified Home screen (pet + all stats + stage/health caption, formerly a separate
+  // Status screen -- merged, see render()) -- Care Menu stays a distinct overlay.
+  enum class Screen : uint8_t { Main = 0, CareMenu, FoodSubmenu };
 
   // Byte-exact on-disk layout, version-prefixed (see save()/load()), same idiom as
   // StatsManager::GlobalStats. UI-only fields (cursor, screen) are deliberately NOT in
@@ -101,6 +103,11 @@ class TamagotchiActivity final : public Activity {
   int petRectY = 0;
   int petRectSize = 0;
 
+  // Widest of the Home screen's 4 stat labels (Hunger/Energy/Joy/Discipline), measured
+  // once in onEnter() so pip meters start a fixed gap after whichever label is longest
+  // instead of a hardcoded offset that only fit the shortest one.
+  int statLabelWidth = 0;
+
   void load();
   void save();
 
@@ -141,7 +148,6 @@ class TamagotchiActivity final : public Activity {
   void handleMainInput();
   void handleCareMenuInput();
   void handleFoodSubmenuInput();
-  void handleStatusInput();
   // Touch equivalents of the physical A/B/C roles + direct icon taps. Returns true if a
   // tap was consumed this frame.
   bool handleTouch();
@@ -159,6 +165,8 @@ class TamagotchiActivity final : public Activity {
   // Lays out the 7 care icon tiles (sprite pictograms, not vector glyphs) in a grid
   // between `top` and `bottom`, `width` wide, centered on screen.
   void drawCareMenu(int top, int bottom, int width);
-  void drawAbcTargets(int top, int width, int height);
+  // `labels`, if non-null, overrides the default A/B/C hint text (Home screen shows verb
+  // labels instead -- see render()); all other Tamagotchi screens pass nullptr.
+  void drawAbcTargets(int top, int width, int height, const char* const* labels = nullptr);
   const char* iconLabel(Icon icon) const;
 };

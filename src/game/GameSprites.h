@@ -17,4 +17,8 @@ class GfxRenderer;
 //
 // `invert` flips levels (3-level) for drawing a sprite in "selected tile" contexts
 // without needing a second copy of the art.
-void drawSprite(GfxRenderer& renderer, int x, int y, const Sprite2bpp& sprite, bool invert = false);
+//
+// `scale` plots a scale x scale block of device pixels per source pixel (no new sprite
+// bytes needed to render larger). Defaults to 1 so existing call sites are unaffected.
+void drawSprite(GfxRenderer& renderer, int x, int y, const Sprite2bpp& sprite, bool invert = false,
+                 int scale = 1);

@@ -18,7 +18,7 @@ constexpr uint8_t kLevelThreshold[4] = {16, 12, 4, 0};
 
 }  // namespace
 
-void drawSprite(GfxRenderer& renderer, int x, int y, const Sprite2bpp& sprite, bool invert) {
+void drawSprite(GfxRenderer& renderer, int x, int y, const Sprite2bpp& sprite, bool invert, int scale) {
   const size_t planeBytes = static_cast<size_t>(sprite.stride) * sprite.h;
   const uint8_t* lsbPlane = sprite.data;
   const uint8_t* msbPlane = sprite.data + planeBytes;
@@ -33,8 +33,17 @@ void drawSprite(GfxRenderer& renderer, int x, int y, const Sprite2bpp& sprite, b
       if (invert) level = 3 - level;
 
       const uint8_t threshold = kLevelThreshold[level];
-      const bool ink = kBayer4x4[row & 3][col & 3] < threshold;
-      if (ink) renderer.drawPixel(x + col, y + row, true);
+      for (int dy = 0; dy < scale; ++dy) {
+        for (int dx = 0; dx < scale; ++dx) {
+          const int devX = x + col * scale + dx;
+          const int devY = y + row * scale + dy;
+          // Dither is re-looked-up per DEVICE pixel (not the source pixel) so the pattern
+          // stays native-resolution as the art is scaled up -- indexing by source pixel
+          // would repeat one dither cell across a whole scale x scale block and turn to mud.
+          const bool ink = kBayer4x4[devY & 3][devX & 3] < threshold;
+          if (ink) renderer.drawPixel(devX, devY, true);
+        }
+      }
     }
   }
 }

@@ -78,6 +78,14 @@ constexpr uint8_t kPlayGain = 25;
 // from render()'s free-standing layout code.
 constexpr int kPetSpriteHalfH = 32;
 
+// The pet renders at kPetRenderScale x native resolution (drawSprite()'s scale param --
+// same source art, no new sprite bytes). kPetSpriteHalfH does double duty as both a
+// caption vertical-offset (Egg/Dead screens) and the Main-screen tap hit-rect radius --
+// every call site must multiply by this scale, not use the raw native value, or the
+// caption/hit-rect fall out of sync with what's actually drawn (hit-rect too small for
+// the bigger sprite, or captions overlapping it).
+constexpr int kPetRenderScale = 2;
+
 uint8_t clampToByte(int32_t value) {
   if (value < 0) return 0;
   if (value > 100) return 100;
@@ -308,6 +316,10 @@ void TamagotchiActivity::tick(int32_t now) {
 
   const Stage stage = static_cast<Stage>(state.stage);
   if (stage == Stage::Dead || stage == Stage::Egg) {
+    // Neither stage can be mid-evolution -- clear a stale flag from whatever stage came
+    // before (e.g. a pet that died while discipline-blocked would otherwise show "D!" on
+    // its corpse forever, and a fresh egg after restartFromEgg() would inherit it too).
+    disciplineBlockedEvolve = false;
     state.lastUpdateEpoch = now;
     return;
   }
@@ -459,6 +471,14 @@ void TamagotchiActivity::onEnter() {
   screen = Screen::Main;
   cursorIndex = 0;
   foodCursorIndex = 0;
+
+  statLabelWidth = 0;
+  const char* statLabels[] = {tr(STR_TAMA_HUNGER), tr(STR_TAMA_ENERGY), tr(STR_TAMA_HAPPINESS),
+                               tr(STR_TAMA_ICON_DISCIPLINE)};
+  for (const char* label : statLabels) {
+    statLabelWidth = std::max(statLabelWidth, renderer.getTextWidth(UI_12_FONT_ID, label));
+  }
+
   tick(now);
   requestUpdate();
 }
@@ -501,7 +521,7 @@ void TamagotchiActivity::dispatchIconAction(Icon icon) {
     case Icon::Play: play(); screen = Screen::Main; break;
     case Icon::Medicine: giveMedicine(); screen = Screen::Main; break;
     case Icon::Clean: clean(); screen = Screen::Main; break;
-    case Icon::Status: screen = Screen::Status; break;
+    case Icon::Status: screen = Screen::Main; break;
     case Icon::Discipline: discipline(); screen = Screen::Main; break;
     default: break;
   }
@@ -522,10 +542,6 @@ void TamagotchiActivity::handleFoodSubmenuInput() {
     screen = Screen::Main;
     requestUpdate();
   }
-}
-
-void TamagotchiActivity::handleStatusInput() {
-  // Read-only screen: any C press backs out. Handled centrally in loop() via Button::Back.
 }
 
 bool TamagotchiActivity::handleTouch() {
@@ -650,7 +666,6 @@ void TamagotchiActivity::loop() {
     case Screen::Main: handleMainInput(); break;
     case Screen::CareMenu: handleCareMenuInput(); break;
     case Screen::FoodSubmenu: handleFoodSubmenuInput(); break;
-    case Screen::Status: handleStatusInput(); break;
   }
 
   save();
@@ -667,12 +682,14 @@ void TamagotchiActivity::drawCreature(int cx, int cy, int size) const {
     case Stage::Adult: sprite = &kPetAdult; break;
     case Stage::Dead: sprite = &kPetDead; break;
   }
-  const int spriteLeft = cx - sprite->w / 2;
-  const int spriteTop = cy - sprite->h / 2;
-  drawSprite(renderer, spriteLeft, spriteTop, *sprite);
+  const int scaledW = sprite->w * kPetRenderScale;
+  const int scaledH = sprite->h * kPetRenderScale;
+  const int spriteLeft = cx - scaledW / 2;
+  const int spriteTop = cy - scaledH / 2;
+  drawSprite(renderer, spriteLeft, spriteTop, *sprite, /*invert=*/false, kPetRenderScale);
 
-  const int halfW = sprite->w / 2;
-  const int halfH = sprite->h / 2;
+  const int halfW = scaledW / 2;
+  const int halfH = scaledH / 2;
 
   // Mess sitting next to the pet -- what Clean acts on.
   if (state.poopCount > 0) {
@@ -742,14 +759,19 @@ void TamagotchiActivity::drawCareMenu(int top, int bottom, int width) {
   constexpr int kCols = 4;
   const int rows = (kIconCount + kCols - 1) / kCols;
   const int cellW = width / kCols;
-  const int cellH = std::max(1, (bottom - top) / rows);
-  iconRectSize = std::min(cellW, cellH) - 16;
+  // Fixed cell height (was (bottom-top)/rows, which stretched to fill whatever space was
+  // available and left the 2-row grid wasting whitespace on a tall screen) -- the grid is
+  // now a fixed 280px tall (2 x 140) and centered vertically within [top, bottom].
+  constexpr int kCellH = 140;
+  const int gridHeight = kCellH * rows;
+  const int gridTop = top + std::max(0, ((bottom - top) - gridHeight) / 2);
+  iconRectSize = std::min(cellW, kCellH) - 16;
 
   for (int i = 0; i < kIconCount; ++i) {
     const int col = i % kCols;
     const int row = i / kCols;
     const int cellLeft = left + col * cellW;
-    const int cellTop = top + row * cellH;
+    const int cellTop = gridTop + row * kCellH;
     iconRectX[i] = cellLeft + (cellW - iconRectSize) / 2;
     iconRectY[i] = cellTop + (cellH - iconRectSize) / 2;
 
@@ -773,19 +795,22 @@ void TamagotchiActivity::drawCareMenu(int top, int bottom, int width) {
   }
 }
 
-void TamagotchiActivity::drawAbcTargets(int top, int width, int height) {
+void TamagotchiActivity::drawAbcTargets(int top, int width, int height, const char* const* labels) {
   const int left = (renderer.getScreenWidth() - width) / 2;
   const int gap = 12;
   const int btnWidth = (width - gap * (kAbcCount - 1)) / kAbcCount;
-  const char* labels[kAbcCount] = {tr(STR_TAMA_BTN_A), tr(STR_TAMA_BTN_B), tr(STR_TAMA_BTN_C)};
+  const char* defaultLabels[kAbcCount] = {tr(STR_TAMA_BTN_A), tr(STR_TAMA_BTN_B), tr(STR_TAMA_BTN_C)};
+  const char* const* effectiveLabels = labels ? labels : defaultLabels;
 
   for (int i = 0; i < kAbcCount; ++i) {
     abcRectX[i] = left + i * (btnWidth + gap);
     abcRectY[i] = top;
     abcRectW[i] = btnWidth;
     abcRectH[i] = height;
-    renderer.drawRoundedRect(abcRectX[i], abcRectY[i], btnWidth, height, 1, 8, true);
-    renderer.drawCenteredText(UI_12_FONT_ID, abcRectY[i] + height / 2 - 8, labels[i], true, EpdFontFamily::BOLD);
+    renderer.fillRoundedRect(abcRectX[i], abcRectY[i], btnWidth, height, 8, Color::LightGray);
+    renderer.drawRoundedRect(abcRectX[i], abcRectY[i], btnWidth, height, 2, 8, true);
+    renderer.drawCenteredText(UI_12_FONT_ID, abcRectY[i] + height / 2 - 8, effectiveLabels[i], true,
+                               EpdFontFamily::BOLD);
   }
 }
 
@@ -793,89 +818,105 @@ void TamagotchiActivity::render(RenderLock&&) {
   renderer.clearScreen();
 
   const auto pageWidth = renderer.getScreenWidth();
-  const auto pageHeight = renderer.getScreenHeight();
   const auto& metrics = UITheme::getInstance().getMetrics();
 
   GUI.drawHeader(renderer, Rect{0, metrics.topPadding, pageWidth, metrics.headerHeight}, tr(STR_TAMA_TITLE));
 
   const int contentTop = metrics.topPadding + metrics.headerHeight + metrics.verticalSpacing;
-  const int contentHeight = pageHeight - contentTop - metrics.buttonHintsHeight - metrics.verticalSpacing;
+  const int scaledHalfH = kPetSpriteHalfH * kPetRenderScale;
+
+  // Fixed button-row geometry, shared by every Tamagotchi screen (item 5) -- was 40px tall
+  // inside a 98px-reserved gap, wasting 58px below it; now spends the full space. Scoped to
+  // this Activity only -- every other screen in the app keeps its normal metrics-driven hint
+  // strip untouched.
+  constexpr int kButtonRowTop = 702;
+  constexpr int kButtonRowHeight = 88;
+  constexpr int kButtonRowSideMargin = 16;
 
   const Stage stage = static_cast<Stage>(state.stage);
 
-  if (stage == Stage::Egg) {
+  if (stage == Stage::Egg || stage == Stage::Dead) {
     const int cx = pageWidth / 2;
-    const int cy = contentTop + contentHeight / 2 - 16;
+    const int cy = contentTop + (kButtonRowTop - contentTop) / 2 - 16;
     drawCreature(cx, cy, 0);
-    renderer.drawCenteredText(UI_12_FONT_ID, cy + kPetSpriteHalfH + 24, tr(STR_TAMA_TAP_TO_HATCH), true);
+    if (stage == Stage::Egg) {
+      renderer.drawCenteredText(UI_12_FONT_ID, cy + scaledHalfH + 24, tr(STR_TAMA_TAP_TO_HATCH), true);
+    } else {
+      renderer.drawCenteredText(UI_12_FONT_ID, cy + scaledHalfH + 24, tr(STR_TAMA_DIED), true);
+      renderer.drawCenteredText(UI_12_FONT_ID, cy + scaledHalfH + 44, tr(STR_TAMA_NEW_EGG), true);
+    }
     renderer.displayBuffer(HalDisplay::FAST_REFRESH);
     return;
   }
 
-  if (stage == Stage::Dead) {
-    const int cx = pageWidth / 2;
-    const int cy = contentTop + contentHeight / 2 - 16;
-    drawCreature(cx, cy, 0);
-    renderer.drawCenteredText(UI_12_FONT_ID, cy + kPetSpriteHalfH + 24, tr(STR_TAMA_DIED), true);
-    renderer.drawCenteredText(UI_12_FONT_ID, cy + kPetSpriteHalfH + 44, tr(STR_TAMA_NEW_EGG), true);
-    renderer.displayBuffer(HalDisplay::FAST_REFRESH);
-    return;
-  }
+  if (screen == Screen::Main) {
+    // Unified Home screen -- pet + all four stats + a single stage/health caption on one
+    // screen (formerly a separate Status screen, merged here per the parent-approved
+    // restyle spec). Literal pixel coordinates below are Pixel's exact layout for the
+    // fixed 480x800 panel, not a general-purpose formula.
+    constexpr int kDividerY = 60;
+    constexpr int kDividerHeight = 4;
+    constexpr int kTopStripY = 72;
+    constexpr int kPlayAreaCenterY = 350;
+    constexpr int kBottomStripY = 600;
+    constexpr int kDivider2Y = 644;
+    constexpr int kCaptionY = 660;
+    constexpr int kSideMargin = 24;
 
-  if (screen == Screen::Status) {
-    const int abcTop = pageHeight - metrics.buttonHintsHeight - metrics.verticalSpacing - 48;
-    // Six rows (stage, 4 stats incl. discipline, health) spread evenly across the whole
-    // content area instead of stacking near the top with fixed +=30/+=40 steps -- that left
-    // roughly 180px of empty white below the health line with nothing else on the screen to
-    // fill it.
-    constexpr int kStatusRowCount = 6;
-    const int rowSpacing = (abcTop - contentTop) / (kStatusRowCount + 1);
-    int y = contentTop + rowSpacing;
+    renderer.fillRect(0, kDividerY, pageWidth, kDividerHeight, true);
+
+    const int colWidth = (pageWidth - kSideMargin * 2) / 2;
+    const int leftLabelX = kSideMargin;
+    const int rightLabelX = kSideMargin + colWidth;
+    // Fix for the pipsX overrun bug: offset is the widest of the 4 stat labels (measured
+    // once in onEnter()), not a hardcoded value that only fit the shortest one.
+    const int leftPipsX = leftLabelX + statLabelWidth + 8;
+    const int rightPipsX = rightLabelX + statLabelWidth + 8;
+
+    renderer.drawText(UI_12_FONT_ID, leftLabelX, kTopStripY + 2, tr(STR_TAMA_HUNGER), true);
+    drawHeartPips(leftPipsX, kTopStripY, state.hunger);
+    renderer.drawText(UI_12_FONT_ID, rightLabelX, kTopStripY + 2, tr(STR_TAMA_ENERGY), true);
+    drawHeartPips(rightPipsX, kTopStripY, state.energy);
+
+    // Pet only, no permanent icon strip or frame. Tapping the pet is equivalent to
+    // pressing A (see handleTouch()), so its hit-rect is recorded here, scaled to match
+    // the actual rendered (kPetRenderScale x) sprite size.
+    const int cx = pageWidth / 2;
+    drawCreature(cx, kPlayAreaCenterY, 0);
+    petRectX = cx - scaledHalfH;
+    petRectY = kPlayAreaCenterY - scaledHalfH;
+    petRectSize = scaledHalfH * 2;
+
+    renderer.drawText(UI_12_FONT_ID, leftLabelX, kBottomStripY + 2, tr(STR_TAMA_HAPPINESS), true);
+    drawHeartPips(leftPipsX, kBottomStripY, state.happiness);
+    // Reuses the same drawHeartPips meter as the other stats -- no new sprite, no new
+    // screen. The "!" appears only when discipline is the specific thing currently
+    // blocking evolution (mirrors the "D!" mark on the pet itself in drawCreature()).
+    renderer.drawText(UI_12_FONT_ID, rightLabelX, kBottomStripY + 2, tr(STR_TAMA_ICON_DISCIPLINE), true);
+    drawHeartPips(rightPipsX, kBottomStripY, state.disciplineLevel);
+    if (disciplineBlockedEvolve) {
+      renderer.drawText(UI_12_FONT_ID, rightPipsX + 95, kBottomStripY + 2, "!", true, EpdFontFamily::BOLD);
+    }
+
+    renderer.fillRect(0, kDivider2Y, pageWidth, kDividerHeight, true);
 
     const char* stageLabel = tr(STR_TAMA_STAGE_BABY);
     if (stage == Stage::Child) stageLabel = tr(STR_TAMA_STAGE_CHILD);
     else if (stage == Stage::Adult) stageLabel = tr(STR_TAMA_STAGE_ADULT);
-    renderer.drawCenteredText(UI_12_FONT_ID, y, stageLabel, true, EpdFontFamily::BOLD);
-    y += rowSpacing;
+    char caption[64];
+    snprintf(caption, sizeof(caption), "%s - %s", stageLabel, state.sick ? tr(STR_TAMA_SICK) : tr(STR_TAMA_HEALTHY));
+    renderer.drawCenteredText(UI_12_FONT_ID, kCaptionY, caption, true, EpdFontFamily::BOLD);
 
-    const int labelX = (pageWidth - std::min(220, pageWidth - 40)) / 2;
-    const int pipsX = labelX + 90;
-
-    renderer.drawText(UI_12_FONT_ID, labelX, y + 2, tr(STR_TAMA_HUNGER), true);
-    drawHeartPips(pipsX, y, state.hunger);
-    y += rowSpacing;
-
-    renderer.drawText(UI_12_FONT_ID, labelX, y + 2, tr(STR_TAMA_HAPPINESS), true);
-    drawHeartPips(pipsX, y, state.happiness);
-    y += rowSpacing;
-
-    renderer.drawText(UI_12_FONT_ID, labelX, y + 2, tr(STR_TAMA_ENERGY), true);
-    drawHeartPips(pipsX, y, state.energy);
-    y += rowSpacing;
-
-    // Reuses the same drawHeartPips meter as the other stats -- no new sprite, no new
-    // screen. The "!" appears only when discipline is the specific thing currently
-    // blocking evolution (mirrors the "D!" mark on the pet itself in drawCreature()).
-    renderer.drawText(UI_12_FONT_ID, labelX, y + 2, tr(STR_TAMA_ICON_DISCIPLINE), true);
-    drawHeartPips(pipsX, y, state.disciplineLevel);
-    if (disciplineBlockedEvolve) {
-      renderer.drawText(UI_12_FONT_ID, pipsX + 95, y + 2, "!", true, EpdFontFamily::BOLD);
-    }
-    y += rowSpacing;
-
-    renderer.drawCenteredText(UI_12_FONT_ID, y, state.sick ? tr(STR_TAMA_SICK) : tr(STR_TAMA_HEALTHY), true);
-
-    drawAbcTargets(abcTop, pageWidth - 40, 40);
+    const char* homeLabels[kAbcCount] = {tr(STR_TAMA_BTN_MENU), tr(STR_TAMA_BTN_MENU), tr(STR_TAMA_BTN_EXIT)};
+    drawAbcTargets(kButtonRowTop, pageWidth - kButtonRowSideMargin * 2, kButtonRowHeight, homeLabels);
     renderer.displayBuffer(HalDisplay::FAST_REFRESH);
     return;
   }
 
-  // Screen::Main / Screen::FoodSubmenu share the ABC row, but FoodSubmenu replaces the pet
-  // frame + icon strip with a single full popup rather than trying to fit a small popup
-  // alongside them -- the two layouts can then never collide with each other.
-  const int abcTop = pageHeight - metrics.buttonHintsHeight - metrics.verticalSpacing - 48;
-  drawAbcTargets(abcTop, pageWidth - 40, 40);
-  const int playAreaHeight = abcTop - contentTop;
+  // Screen::CareMenu / Screen::FoodSubmenu share the same fixed ABC row, default A/B/C
+  // labels (CareMenu/FoodSubmenu pass no override).
+  drawAbcTargets(kButtonRowTop, pageWidth - kButtonRowSideMargin * 2, kButtonRowHeight);
+  const int playAreaHeight = kButtonRowTop - contentTop;
 
   if (screen == Screen::FoodSubmenu) {
     const int boxWidth = std::min(pageWidth - 40, 220);
@@ -895,17 +936,9 @@ void TamagotchiActivity::render(RenderLock&&) {
         renderer.drawText(UI_12_FONT_ID, boxLeft + 16, rowY + 3, labels[i], true);
       }
     }
-  } else if (screen == Screen::CareMenu) {
-    drawCareMenu(contentTop, abcTop - metrics.verticalSpacing, pageWidth - 40);
   } else {
-    // Screen::Main -- pet only, no permanent icon strip or frame. Tapping the pet is
-    // equivalent to pressing A (see handleTouch()), so its hit-rect is recorded here.
-    const int cx = pageWidth / 2;
-    const int cy = contentTop + playAreaHeight / 2;
-    drawCreature(cx, cy, 0);
-    petRectX = cx - kPetSpriteHalfH;
-    petRectY = cy - kPetSpriteHalfH;
-    petRectSize = kPetSpriteHalfH * 2;
+    // Screen::CareMenu.
+    drawCareMenu(contentTop, kButtonRowTop - metrics.verticalSpacing, pageWidth - 40);
   }
 
   renderer.displayBuffer(HalDisplay::FAST_REFRESH);

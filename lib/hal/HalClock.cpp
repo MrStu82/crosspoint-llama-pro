@@ -23,13 +23,14 @@ bool HalClock::pollRtc(Rtc::DateTime& out) const {
 
   Rtc::DateTime dt;
   if (!_sdkRtc.now(dt)) {
-    if (!_hasCachedTime) return false;
+    if (!_hasCachedTime || (now - _lastGoodMs) >= MAX_STALE_MS) return false;
     _lastPollMs = now;
     out = _cachedDt;
     return true;
   }
   _cachedDt = dt;
   _lastPollMs = now;
+  _lastGoodMs = now;
   _hasCachedTime = true;
   out = _cachedDt;
   return true;
@@ -125,6 +126,7 @@ bool HalClock::syncFromNTP() {
       dt.weekday = static_cast<uint8_t>(timeinfo.tm_wday);
       if (_sdkRtc.set(dt)) {
         _lastPollMs = 0;
+        _lastGoodMs = millis();
         _cachedDt = dt;
         _hasCachedTime = true;
         LOG_INF("CLK", "RTC set to %04u-%02u-%02u %02u:%02u:%02u UTC", dt.year, dt.month, dt.day, dt.hour, dt.minute,

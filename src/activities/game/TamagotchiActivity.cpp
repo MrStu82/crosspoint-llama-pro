@@ -21,10 +21,10 @@
 
 namespace {
 constexpr const char* kStateFilePath = "/.crosspoint/tamagotchi.bin";
-// Bumped for this rebuild's new State layout (isAsleep/sleepStartEpoch added for the
-// sleep cycle) -- load() already resets to a fresh State{} on any version mismatch, so
-// old saves are simply discarded rather than migrated.
-constexpr uint8_t kStateFileVersion = 3;
+// Bumped for this build's new State layout (disciplineLevel added, see below) -- load()
+// already resets to a fresh State{} on any version mismatch, so old saves are simply
+// discarded rather than migrated.
+constexpr uint8_t kStateFileVersion = 4;
 
 // Real-time decay/growth tuning. Approved as-is from the original build -- deliberately
 // generous vs. the original 90s hardware (which ran meters down over ~hours) so the
@@ -46,6 +46,16 @@ constexpr uint8_t kCallThreshold = 30;                 // meter <= this can trig
 constexpr int32_t kMinCallGapSeconds = 3 * 60;          // throttle between calls
 constexpr int32_t kCallTimeoutSeconds = 5 * 60;         // unanswered call -> a care mistake
 constexpr uint8_t kMaxMistakesToEvolve = 3;             // care mistakes this stage must stay at/below to evolve
+
+// Discipline: a persisted stat tracking care quality over time, distinct from the
+// Discipline icon/button (which scolds the pet to catch-all-resolve a call, see
+// resolveAnyCall). Genuinely-resolved calls (feed/play/light/medicine/clean answering
+// the correct call) build it up; ignored calls that time out erode it -- same signal
+// careMistakes tracks, but persistent across stages rather than reset on every evolve,
+// so it also gates evolution alongside careMistakes.
+constexpr uint8_t kDisciplineGainOnResolve = 5;          // + for a genuinely resolved call
+constexpr uint8_t kDisciplineLossOnExpire = 8;           // - for an ignored/timed-out call
+constexpr uint8_t kMinDisciplineToEvolve = 40;           // discipline must be at/above this to evolve
 
 // Sleep cycle. Real RTC day/night schedule -- the pet is asleep from kNightStartHour
 // through kNightEndHour every day, decays slower while asleep, and recovers energy
@@ -166,12 +176,16 @@ void TamagotchiActivity::evolveIfReady(int32_t now) {
                         (stage == Stage::Child && ageInStage >= kChildToAdultSeconds);
   if (!ageReady) return;
 
-  if (state.careMistakes > kMaxMistakesToEvolve) {
+  if (state.careMistakes > kMaxMistakesToEvolve || state.disciplineLevel < kMinDisciplineToEvolve) {
     // Age condition is met but care quality isn't -- this used to leave the pet frozen
     // in this stage forever, since careMistakes only ever reset inside the branch it
     // also gated. Restart the stage clock as well as the count: a failed evolve check
     // costs a full stage window served with good care, not just a one-tick pardon that
     // would let ageReady stay true next tick and evolve anyway despite the neglect.
+    // disciplineLevel is NOT reset here (unlike careMistakes) -- it's a running care-quality
+    // account across the pet's whole life, not a per-stage counter, so a bad discipline
+    // score has to be genuinely earned back up through resolved calls, not wiped free by
+    // the stage-clock restart.
     state.stageStartEpoch = now;
     state.careMistakes = 0;
     dirty = true;
@@ -231,6 +245,7 @@ void TamagotchiActivity::resolveCall(CallKind kind) {
   if (static_cast<CallKind>(state.callKind) != kind) return;
   state.callActive = 0;
   state.lastCallEndEpoch = nowEpoch();
+  state.disciplineLevel = clampToByte(static_cast<int32_t>(state.disciplineLevel) + kDisciplineGainOnResolve);
   dirty = true;
 }
 
@@ -275,6 +290,7 @@ void TamagotchiActivity::maybeExpireCall(int32_t now) {
   state.callActive = 0;
   state.lastCallEndEpoch = now;
   if (state.careMistakes < 255) state.careMistakes++;
+  state.disciplineLevel = clampToByte(static_cast<int32_t>(state.disciplineLevel) - kDisciplineLossOnExpire);
   dirty = true;
 }
 

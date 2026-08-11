@@ -64,6 +64,7 @@ class TamagotchiActivity final : public Activity {
     int32_t lastCallEndEpoch = 0;        // epoch the last call ended (resolved or timed out); throttles new calls
     uint8_t isAsleep = 0;                // 0/1; auto-set by the night schedule, toggled early by Light
     int32_t sleepStartEpoch = 0;         // epoch sleep began (auto or manual); 0 while awake
+    uint8_t disciplineLevel = 50;        // 0..100 care-quality stat; persists across stages, gates evolution
   };
 
   State state;

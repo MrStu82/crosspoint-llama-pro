@@ -11,6 +11,7 @@
 #include "ButtonRemapActivity.h"
 #include "ClearCacheActivity.h"
 #include "CrossPointSettings.h"
+#include "DebugPanelActivity.h"
 #include "FontDownloadActivity.h"
 #include "FrontlightActivity.h"
 #include "KOReaderSettingsActivity.h"
@@ -88,6 +89,7 @@ void SettingsActivity::rebuildSettingsLists() {
     systemSettings.push_back(SettingInfo::Action(StrId::STR_USB_TRANSFER, SettingAction::UsbTransfer));
   }
   systemSettings.push_back(SettingInfo::Action(StrId::STR_LANGUAGE, SettingAction::Language));
+  systemSettings.push_back(SettingInfo::Action(StrId::STR_DEBUG_PANEL, SettingAction::DebugPanel));
   readerSettings.insert(readerSettings.begin(),
                         SettingInfo::Action(StrId::STR_TEXT_SETTINGS, SettingAction::TextSettings));
   readerSettings.insert(readerSettings.begin() + 1,
@@ -410,6 +412,9 @@ void SettingsActivity::toggleCurrentSetting() {
         break;
       case SettingAction::UsbTransfer:
         startActivityForResult(std::make_unique<UsbTransferActivity>(renderer, mappedInput), resultHandler);
+        break;
+      case SettingAction::DebugPanel:
+        startActivityForResult(std::make_unique<DebugPanelActivity>(renderer, mappedInput), resultHandler);
         break;
       case SettingAction::DownloadFonts:
         startActivityForResult(std::make_unique<FontDownloadActivity>(renderer, mappedInput),

@@ -42,6 +42,11 @@ bool readBQ27220CurrentMA(int16_t* outCurrent) {
 }  // namespace X3GPIO
 
 namespace {
+// Set by applyDisplayControllerWithOverride() each boot, mirrors the "source"
+// half of its own LOG_INF line — kept so the DEBUG panel can display how the
+// controller was resolved without re-probing the display bus at render time.
+const char* g_displayControllerSource = "unknown";
+
 constexpr char HW_NAMESPACE[] = "cphw";
 constexpr char NVS_KEY_DEV_OVERRIDE[] = "dev_ovr";  // 0=auto, 1=x4, 2=x3
 constexpr char NVS_KEY_DEV_CACHED[] = "dev_det";    // 0=unknown, 1=x4, 2=x3
@@ -127,14 +132,16 @@ void applyDisplayControllerWithOverride() {
                                                  ? BoardConfig::DisplayController::SSD1677
                                                  : BoardConfig::DisplayController::UC8179;
     BoardConfig::ACTIVE.displayControllerVariant = 0;
+    g_displayControllerSource = "override";
     LOG_INF("HW", "Display controller: %s (source: override, probe skipped)",
             displayControllerName(BoardConfig::ACTIVE.displayController));
     return;
   }
 
   const bool promoted = freeink::applyXteinkDisplayController();
+  g_displayControllerSource = promoted ? "bus probe" : "fallback default";
   LOG_INF("HW", "Display controller: %s (source: %s)", displayControllerName(BoardConfig::ACTIVE.displayController),
-          promoted ? "bus probe" : "fallback default");
+          g_displayControllerSource);
 }
 
 HalGPIO::DeviceType detectDeviceTypeWithFingerprint() {
@@ -174,6 +181,12 @@ HalGPIO::DeviceType detectDeviceTypeWithFingerprint() {
 }
 
 }  // namespace
+
+const char* HalGPIO::getDisplayControllerName() {
+  return displayControllerName(BoardConfig::ACTIVE.displayController);
+}
+
+const char* HalGPIO::getDisplayControllerSource() { return g_displayControllerSource; }
 
 const char* HalGPIO::setDisplayControllerOverride(uint8_t rawValue) {
   if (rawValue > static_cast<uint8_t>(DisplayControllerOverride::ForceUc8179)) {

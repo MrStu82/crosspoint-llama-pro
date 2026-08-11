@@ -112,6 +112,17 @@ class HalGPIO {
   // Takes effect on next boot, via applyDisplayControllerWithOverride() in HalGPIO.cpp.
   static const char* setDisplayControllerOverride(uint8_t rawValue);
 
+  // Current display controller name ("SSD1677"/"UC8179"/etc), resolved at boot
+  // by applyDisplayControllerWithOverride(). For the DEBUG settings panel.
+  static const char* getDisplayControllerName();
+
+  // How the controller above was resolved this boot: "override" (NVS forced),
+  // "bus probe" (UltraChip signature confirmed live), or "fallback default"
+  // (probe found nothing, compile-time profile default stands). See the
+  // comment above applyDisplayControllerWithOverride() in HalGPIO.cpp for the
+  // full rationale of each source. For the DEBUG settings panel.
+  static const char* getDisplayControllerSource();
+
   // Button indices
   static constexpr uint8_t BTN_BACK = 0;
   static constexpr uint8_t BTN_CONFIRM = 1;

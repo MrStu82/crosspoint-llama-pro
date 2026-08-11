@@ -28,6 +28,7 @@ enum class SettingAction {
   TextSettings,
   Frontlight,
   UsbTransfer,
+  DebugPanel,
 };
 
 struct SettingInfo {

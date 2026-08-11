@@ -773,7 +773,7 @@ void TamagotchiActivity::drawCareMenu(int top, int bottom, int width) {
     const int cellLeft = left + col * cellW;
     const int cellTop = gridTop + row * kCellH;
     iconRectX[i] = cellLeft + (cellW - iconRectSize) / 2;
-    iconRectY[i] = cellTop + (cellH - iconRectSize) / 2;
+    iconRectY[i] = cellTop + (kCellH - iconRectSize) / 2;
 
     const bool selected = i == cursorIndex;
     const Sprite2bpp& icon = *kIcons[i];

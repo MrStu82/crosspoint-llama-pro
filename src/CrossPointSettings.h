@@ -184,6 +184,11 @@ class CrossPointSettings : public PersistableStore<CrossPointSettings> {
     QUICK_RESUME_SLEEP_SCREEN_COUNT
   };
 
+  // Deep Mines sprite theme. Values are persisted -- existing entries must
+  // never be reordered or removed, only appended (see game::GameThemeId,
+  // which mirrors this enum 1:1).
+  enum GAME_THEME { GAME_THEME_DEFAULT = 0, GAME_THEME_DUNGEON_CRAWLER_CARL = 1, GAME_THEME_COUNT };
+
   // Sleep screen settings
   uint8_t sleepScreen = DARK;
   // Sleep screen cover mode settings
@@ -313,6 +318,9 @@ class CrossPointSettings : public PersistableStore<CrossPointSettings> {
   uint8_t language = 0;
   // Quick Resume: keep current content visible with moon icon instead of showing a static sleep screen.
   uint8_t quickResumeSleepScreen = QUICK_RESUME_NEVER;
+  // Deep Mines sprite theme (GAME_THEME). Cycled from the in-game menu
+  // (GameMenuActivity); read by GameRenderer once per draw() call.
+  uint8_t gameTheme = GAME_THEME_DEFAULT;
 
   static constexpr uint8_t MIN_SLEEP_TIMEOUT_MINUTES = 1;
   static constexpr uint8_t SLEEP_TIMEOUT_NEVER_MINUTES = 31;

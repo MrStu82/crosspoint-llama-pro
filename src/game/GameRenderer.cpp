@@ -5,6 +5,8 @@
 #include <algorithm>
 #include <cstdio>
 
+#include "CrossPointSettings.h"
+#include "GameSprites.h"
 #include "GameState.h"
 #include "fontIds.h"
 
@@ -30,6 +32,10 @@ void GameRenderer::init(GfxRenderer& renderer) {
 void GameRenderer::draw(GfxRenderer& renderer, const game::Tile* tiles, const uint8_t* fogOfWar,
                         const game::Monster* monsters, uint8_t monsterCount, const game::Item* items, uint8_t itemCount,
                         const bool* visible) {
+  // Refresh once per render pass (not per-cell) so a menu-driven theme change
+  // takes effect on the next draw without any extra wiring.
+  activeTheme = game::getTheme(static_cast<game::GameThemeId>(SETTINGS.gameTheme));
+
   renderer.clearScreen();
 
   drawStatusBar(renderer);
@@ -109,27 +115,41 @@ void GameRenderer::drawViewport(GfxRenderer& renderer, const game::Tile* tiles, 
         continue;
       }
 
-      // Determine what glyph to show
+      // Determine what glyph to show, and the theme-resolved sprite (if any)
+      // for the same occupant, mirroring the glyph priority order exactly
+      // (player > monster > item > tile).
       char glyph = game::tileGlyph(tiles[mapIdx]);
+      const Sprite2bpp* sprite = activeTheme->tiles[static_cast<size_t>(tiles[mapIdx])];
 
       // If currently visible, check for monsters and items on this tile
       if (isVisible) {
         // Player
         if (mapX == p.x && mapY == p.y) {
           glyph = '@';
+          sprite = activeTheme->player;
         } else {
           // Check monsters
+          bool foundMonster = false;
           for (uint8_t m = 0; m < monsterCount; m++) {
             if (monsters[m].x == mapX && monsters[m].y == mapY && monsters[m].hp > 0) {
               glyph = game::MONSTER_DEFS[monsters[m].type].glyph;
+              sprite = activeTheme->monsters[monsters[m].type];
+              foundMonster = true;
               break;
             }
           }
           // Check items (only if no monster shown)
-          if (glyph == game::tileGlyph(tiles[mapIdx])) {
+          if (!foundMonster) {
             for (uint8_t i = 0; i < itemCount; i++) {
               if (items[i].x == mapX && items[i].y == mapY) {
                 glyph = game::itemGlyph(items[i].type);
+                sprite = nullptr;
+                for (int d = 0; d < game::ITEM_DEF_COUNT; d++) {
+                  if (game::ITEM_DEFS[d].type == items[i].type && game::ITEM_DEFS[d].subtype == items[i].subtype) {
+                    sprite = activeTheme->items[d];
+                    break;
+                  }
+                }
                 break;
               }
             }
@@ -137,27 +157,45 @@ void GameRenderer::drawViewport(GfxRenderer& renderer, const game::Tile* tiles, 
         }
       }
 
-      drawCell(renderer, screenCellX, screenCellY, glyph, isVisible, isExplored);
+      drawCell(renderer, screenCellX, screenCellY, glyph, sprite, isVisible, isExplored);
     }
   }
 }
 
-void GameRenderer::drawCell(GfxRenderer& renderer, int screenX, int screenY, char glyph, bool isVisible,
-                            bool isExplored) const {
+void GameRenderer::drawCell(GfxRenderer& renderer, int screenX, int screenY, char glyph, const Sprite2bpp* sprite,
+                            bool isVisible, bool isExplored) const {
+  // "No art" means either a null pointer, or a Sprite2bpp with a null data
+  // pointer -- both fall through to the original glyph rendering below,
+  // unchanged from the pre-theme implementation.
+  bool haveSprite = sprite != nullptr && sprite->data != nullptr;
+
   if (isVisible) {
-    // Visible: black character on white background
-    char buf[2] = {glyph, '\0'};
-    // Center character horizontally in cell
-    int charW = renderer.getTextWidth(UI_10_FONT_ID, buf);
-    int offsetX = (CELL_W - charW) / 2;
-    renderer.drawText(UI_10_FONT_ID, screenX + offsetX, screenY - 2, buf, true);
+    if (haveSprite) {
+      // Center the sprite horizontally in the cell, matching the glyph's
+      // vertical anchor (screenY - 2) as closely as a differently-sized
+      // sprite allows.
+      int offsetX = (CELL_W - static_cast<int>(sprite->w)) / 2;
+      drawSprite(renderer, screenX + offsetX, screenY - 2, *sprite);
+    } else {
+      // Visible: black character on white background
+      char buf[2] = {glyph, '\0'};
+      // Center character horizontally in cell
+      int charW = renderer.getTextWidth(UI_10_FONT_ID, buf);
+      int offsetX = (CELL_W - charW) / 2;
+      renderer.drawText(UI_10_FONT_ID, screenX + offsetX, screenY - 2, buf, true);
+    }
   } else if (isExplored) {
-    // Remembered: gray dithered character
+    // Remembered: gray dithered background regardless of sprite/glyph mode.
     renderer.fillRectDither(screenX, screenY, CELL_W, CELL_H, LightGray);
-    char buf[2] = {glyph, '\0'};
-    int charW = renderer.getTextWidth(UI_10_FONT_ID, buf);
-    int offsetX = (CELL_W - charW) / 2;
-    renderer.drawText(UI_10_FONT_ID, screenX + offsetX, screenY - 2, buf, true);
+    if (haveSprite) {
+      int offsetX = (CELL_W - static_cast<int>(sprite->w)) / 2;
+      drawSprite(renderer, screenX + offsetX, screenY - 2, *sprite);
+    } else {
+      char buf[2] = {glyph, '\0'};
+      int charW = renderer.getTextWidth(UI_10_FONT_ID, buf);
+      int offsetX = (CELL_W - charW) / 2;
+      renderer.drawText(UI_10_FONT_ID, screenX + offsetX, screenY - 2, buf, true);
+    }
   }
 }
 

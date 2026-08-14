@@ -325,6 +325,12 @@ inline std::vector<SettingInfo> getSettingsList(const SdCardFontRegistry* regist
                           {StrId::STR_FMT_AUTHOR_TITLE, StrId::STR_FMT_TITLE_AUTHOR, StrId::STR_FMT_TITLE},
                           "opdsFilenameFormat"),
 
+        // Deep Mines sprite theme: persisted + web-exposed, category-less so it
+        // is hidden from the generic on-device Settings screen (cycled from the
+        // in-game menu, GameMenuActivity, which owns this setting's UI).
+        SettingInfo::Enum(StrId::STR_DM_THEME, &CrossPointSettings::gameTheme,
+                          {StrId::STR_DM_THEME_DEFAULT, StrId::STR_DM_THEME_DUNGEON_CRAWLER_CARL}, "gameTheme"),
+
         // --- KOReader Sync (web-only, uses KOReaderCredentialStore) ---
         SettingInfo::DynamicString(
             StrId::STR_KOREADER_USERNAME, [] { return KOREADER_STORE.getUsername(); },

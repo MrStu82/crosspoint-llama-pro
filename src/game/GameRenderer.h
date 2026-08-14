@@ -2,6 +2,7 @@
 
 #include <GfxRenderer.h>
 
+#include "GameTheme.h"
 #include "GameTypes.h"
 #include "MappedInputManager.h"
 
@@ -51,6 +52,12 @@ class GameRenderer {
   int screenH = 0;
   int gridOffsetX = 0; // Left padding to center grid
 
+  // Active sprite theme, re-read from CrossPointSettings once per draw() call
+  // (never inside the per-cell loop) and held for the duration of that render
+  // pass. Never null -- defaults to &game::kThemeDefault (all-nullptr, i.e.
+  // pure glyph rendering) until the first draw() runs.
+  const game::TileTheme* activeTheme = &game::kThemeDefault;
+
   void init(GfxRenderer& renderer);
 
   // Draw the full game screen
@@ -66,7 +73,15 @@ class GameRenderer {
   void drawViewport(GfxRenderer& renderer, const game::Tile* tiles, const uint8_t* fogOfWar,
                     const game::Monster* monsters, uint8_t monsterCount, const game::Item* items, uint8_t itemCount,
                     const bool* visible) const;
-  void drawCell(GfxRenderer& renderer, int screenX, int screenY, char glyph, bool isVisible, bool isExplored) const;
+  // Single choke point for tile/player/monster/item drawing. `sprite` is the
+  // theme-resolved sprite for whatever occupies this cell (may be null, or
+  // point at a Sprite2bpp with null `data` -- both mean "no art"). When no
+  // sprite is available this falls back to the existing glyph drawText()
+  // path unchanged; when a real sprite is available it's blitted via
+  // drawSprite() instead. No branching on theme/sprite availability exists
+  // anywhere else in this file.
+  void drawCell(GfxRenderer& renderer, int screenX, int screenY, char glyph, const Sprite2bpp* sprite,
+               bool isVisible, bool isExplored) const;
   void drawMessages(GfxRenderer& renderer) const;
   void drawControls(GfxRenderer& renderer) const;
 };

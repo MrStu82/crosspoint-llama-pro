@@ -40,7 +40,7 @@ void GameState::newGame(uint32_t seed) {
     msg.clear();
   }
 
-  addMessage("You enter the Deep Mines...");
+  addMessage("You enter the World Dungeon...");
 }
 
 void GameState::addMessage(const char* msg) {

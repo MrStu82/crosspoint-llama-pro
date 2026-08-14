@@ -15,11 +15,13 @@ namespace {
 // clang-format off
 constexpr uint8_t GLYPH_D[] = {0b11110, 0b10001, 0b10001, 0b10001, 0b10001, 0b10001, 0b11110};
 constexpr uint8_t GLYPH_E[] = {0b11111, 0b10000, 0b10000, 0b11110, 0b10000, 0b10000, 0b11111};
-constexpr uint8_t GLYPH_P[] = {0b11110, 0b10001, 0b10001, 0b11110, 0b10000, 0b10000, 0b10000};
-constexpr uint8_t GLYPH_M[] = {0b10001, 0b11011, 0b10101, 0b10101, 0b10001, 0b10001, 0b10001};
-constexpr uint8_t GLYPH_I[] = {0b11111, 0b00100, 0b00100, 0b00100, 0b00100, 0b00100, 0b11111};
 constexpr uint8_t GLYPH_N[] = {0b10001, 0b11001, 0b10101, 0b10101, 0b10011, 0b10001, 0b10001};
-constexpr uint8_t GLYPH_S[] = {0b01111, 0b10000, 0b10000, 0b01110, 0b00001, 0b00001, 0b11110};
+constexpr uint8_t GLYPH_LETTER_W[] = {0b10001, 0b10001, 0b10001, 0b10101, 0b10101, 0b11011, 0b10001};
+constexpr uint8_t GLYPH_O[] = {0b01110, 0b10001, 0b10001, 0b10001, 0b10001, 0b10001, 0b01110};
+constexpr uint8_t GLYPH_R[] = {0b11110, 0b10001, 0b10001, 0b11110, 0b10100, 0b10010, 0b10001};
+constexpr uint8_t GLYPH_L[] = {0b10000, 0b10000, 0b10000, 0b10000, 0b10000, 0b10000, 0b11111};
+constexpr uint8_t GLYPH_U[] = {0b10001, 0b10001, 0b10001, 0b10001, 0b10001, 0b10001, 0b01110};
+constexpr uint8_t GLYPH_G[] = {0b01111, 0b10000, 0b10000, 0b10011, 0b10001, 0b10001, 0b01111};
 // clang-format on
 
 constexpr int GLYPH_W = 5;
@@ -91,20 +93,20 @@ void GameTitleActivity::render(RenderLock&&) {
   // Separator line
   renderer.drawLine(40, 70, pageWidth - 40, 70);
 
-  // Block letter title: "DEEP"
+  // Block letter title: "WORLD"
   constexpr int SCALE = 8;
-  const LetterEntry deep[] = {{GLYPH_D}, {GLYPH_E}, {GLYPH_E}, {GLYPH_P}};
-  drawWord(renderer, deep, 4, centerX, 90, SCALE);
+  const LetterEntry world[] = {{GLYPH_LETTER_W}, {GLYPH_O}, {GLYPH_R}, {GLYPH_L}, {GLYPH_D}};
+  drawWord(renderer, world, 5, centerX, 90, SCALE);
 
-  // Block letter title: "MINES"
-  const LetterEntry mines[] = {{GLYPH_M}, {GLYPH_I}, {GLYPH_N}, {GLYPH_E}, {GLYPH_S}};
-  drawWord(renderer, mines, 5, centerX, 160, SCALE);
+  // Block letter title: "DUNGEON"
+  const LetterEntry dungeon[] = {{GLYPH_D}, {GLYPH_U}, {GLYPH_N}, {GLYPH_G}, {GLYPH_E}, {GLYPH_O}, {GLYPH_N}};
+  drawWord(renderer, dungeon, 7, centerX, 160, SCALE);
 
   // Separator line
   renderer.drawLine(40, 230, pageWidth - 40, 230);
 
   // Subtitle
-  renderer.drawCenteredText(UI_10_FONT_ID, 250, "D E E P    M I N E S", true, EpdFontFamily::BOLD);
+  renderer.drawCenteredText(UI_10_FONT_ID, 250, "W O R L D    D U N G E O N", true, EpdFontFamily::BOLD);
 
   // Decorative pickaxe symbol
   renderer.drawCenteredText(UI_10_FONT_ID, 290, "--- * ---");

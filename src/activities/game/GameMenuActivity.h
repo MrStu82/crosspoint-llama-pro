@@ -36,6 +36,12 @@ class GameMenuActivity final : public Activity {
   // Returns true if the tap was consumed (landed on a menu row).
   bool handleMenuTouch();
 
+  // Touch support for the Screen::Inventory row list, additive alongside the existing
+  // physical-button navigation. Uses the shared Activity::handleListTouch() helper against
+  // the same content band renderInventory()'s GUI.drawList() draws into, so hit-test rows
+  // always match what's drawn. Returns true if the touch was consumed (landed on a row).
+  bool handleInventoryTouch();
+
   Screen currentScreen = Screen::Menu;
   int selectedIndex = 0;
   ButtonNavigator buttonNavigator;

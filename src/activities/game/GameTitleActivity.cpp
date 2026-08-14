@@ -64,7 +64,12 @@ void GameTitleActivity::onEnter() {
 void GameTitleActivity::loop() {
   if (!rendered) return;
 
-  if (mappedInput.wasAnyReleased()) {
+  int tx, ty;
+  // Tap-anywhere start: wasScreenTapped() only fires on the frame the physical touch is
+  // released, and the main loop always re-polls gpio (clearing that release edge) before this
+  // activity's replacement gets its own first loop() call — so the tap that starts the game
+  // cannot be re-read as a touch by GameActivity's control surface on the next frame.
+  if (mappedInput.wasAnyReleased() || mappedInput.wasScreenTapped(tx, ty)) {
     // Start (or resume) the run. GameActivity::onEnter() itself checks for a save file and
     // loads it, so a fresh game only needs to be seeded here when no save exists.
     if (!GAME_STATE.hasSaveFile()) {
@@ -125,7 +130,7 @@ void GameTitleActivity::render(RenderLock&&) {
   renderer.drawCenteredText(SMALL_FONT_ID, 525, "Claim the Ring of Power.");
 
   // Press any key prompt
-  renderer.drawCenteredText(UI_10_FONT_ID, 740, "[ press any key to continue ]");
+  renderer.drawCenteredText(UI_10_FONT_ID, 740, "[ tap anywhere to continue ]");
 
   renderer.displayBuffer();
   rendered = true;

@@ -124,6 +124,12 @@ void GameMenuActivity::loop() {
         selectedIndex = 1;
         requestUpdate();
       }
+
+      // Touch: same dual-phase idiom as handleMenuTouch() -- touch-down previews the
+      // highlighted row, a tap selects and immediately activates it (mirrors Confirm).
+      if (handleInventoryTouch()) {
+        return;
+      }
       break;
     }
 
@@ -132,6 +138,16 @@ void GameMenuActivity::loop() {
         currentScreen = Screen::Menu;
         selectedIndex = 2;
         requestUpdate();
+      }
+
+      // Touch: Character has no selectable rows, so any tap on the screen just backs out,
+      // same as physical Back/Confirm above.
+      int tx, ty;
+      if (mappedInput.wasScreenTapped(tx, ty)) {
+        currentScreen = Screen::Menu;
+        selectedIndex = 2;
+        requestUpdate();
+        return;
       }
       break;
     }
@@ -219,6 +235,34 @@ bool GameMenuActivity::handleMenuTouch() {
     return false;
   }
 
+  return false;
+}
+
+// --- Touch (Screen::Inventory) ---
+
+bool GameMenuActivity::handleInventoryTouch() {
+  const int invCount = static_cast<int>(GAME_STATE.inventoryCount);
+  if (invCount == 0) return false;
+
+  // Content band must mirror renderInventory()'s GUI.drawList() rect exactly, so hit-test
+  // rows always match what's actually drawn (same requirement as handleMenuTouch()'s
+  // BaseTheme::drawButtonMenu() mirror above).
+  const auto pageHeight = renderer.getScreenHeight();
+  auto metrics = UITheme::getInstance().getMetrics();
+  const int contentTop = metrics.topPadding + metrics.headerHeight + metrics.verticalSpacing;
+  const int contentHeight = pageHeight - contentTop - metrics.buttonHintsHeight - metrics.verticalSpacing;
+
+  auto result = handleListTouch(selectedIndex, invCount, contentTop, contentHeight, /*hasSubtitle=*/true);
+  switch (result) {
+    case ListTouchResult::Consumed:
+      return true;
+    case ListTouchResult::Activated:
+      useInventoryItem(selectedIndex);
+      requestUpdate();
+      return true;
+    case ListTouchResult::None:
+      return false;
+  }
   return false;
 }
 

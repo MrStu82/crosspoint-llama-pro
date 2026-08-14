@@ -24,10 +24,23 @@ class Activity {
   ActivityResultHandler resultHandler;
   ActivityResult result;
 
+  // Game-mode custom LUT lifecycle. Modeled on GfxRenderer's storeBwBuffer()/restoreBwBuffer()
+  // store/restore discipline. enterGameLutMode() is called by a game activity's onEnter();
+  // exitGameLutMode() is idempotent and is called both from Activity::onExit() (timely restore
+  // on a normal exit) and from ~Activity() (structural backstop so a crash mid-frame or a
+  // subclass onExit() override that forgets to chain up can never strand a custom LUT in the
+  // shared controller for the next activity to inherit).
+  bool gameLutActive = false;
+  void enterGameLutMode(const unsigned char* lutData = nullptr);
+  void exitGameLutMode();
+
  public:
   explicit Activity(std::string name, GfxRenderer& renderer, MappedInputManager& mappedInput)
       : name(std::move(name)), renderer(renderer), mappedInput(mappedInput) {}
-  virtual ~Activity() = default;
+  // The destructor (not onEnter/onExit override chaining) is the backstop that guarantees
+  // exitGameLutMode() runs: ~Activity() always executes after any derived destructor,
+  // regardless of whether a subclass's onExit() override forgets to chain to Activity::onExit().
+  virtual ~Activity() { exitGameLutMode(); }
   virtual void onEnter();
   virtual void onExit();
   virtual void loop() {}
@@ -48,6 +61,9 @@ class Activity {
   virtual bool handleForcedRefresh() { return false; }
   virtual bool isHomeActivity() const { return false; }
   virtual bool handleHomeGesture() { return false; }
+  // True for FrontlightActivity itself, so the global brightness gesture (dispatched by
+  // ActivityManager) doesn't reopen it while it's already the panel on top.
+  virtual bool isFrontlightActivity() const { return false; }
   virtual ScreenshotInfo getScreenshotInfo() const { return {}; }
 
   // Start a new activity without destroying the current one

@@ -6,6 +6,8 @@
 #include <string>
 #include <vector>
 
+#include "CrossPointSettings.h"
+
 class GfxRenderer;
 struct RecentBook;
 
@@ -53,6 +55,7 @@ struct ThemeMetrics {
   int homeRecentBooksCount;
   bool homeContinueReadingInMenu;
   int homeMenuTopOffset;
+  int homeBottomInset;  // Dead space below the last home menu row: no draw, no touch.
 
   int buttonHintsHeight;
   int sideButtonHintsWidth;
@@ -115,7 +118,8 @@ enum UIIcon {
   Wifi,
   Hotspot,
   Bookmark,
-  Stats
+  Stats,
+  Games
 };
 
 // Default theme implementation (Classic Theme)
@@ -145,6 +149,7 @@ constexpr ThemeMetrics values = {.batteryWidth = 15,
                                  .homeRecentBooksCount = 1,
                                  .homeContinueReadingInMenu = false,
                                  .homeMenuTopOffset = 10,
+                                 .homeBottomInset = 0,
                                  .buttonHintsHeight = 40,
                                  .sideButtonHintsWidth = 30,
                                  .progressBarHeight = 16,
@@ -231,7 +236,8 @@ class BaseTheme {
   void drawStatusBar(GfxRenderer& renderer, const float bookProgress, const int currentPage, const int pageCount,
                      std::string title, const int paddingBottom = 0, const int textYOffset = 0,
                      const bool fillMargin = true, const bool isPageBookmarked = false,
-                     const bool pageCountEstimated = false) const;
+                     const bool pageCountEstimated = false,
+                     const CrossPointSettings::Edge edge = CrossPointSettings::Edge::BOTTOM) const;
   void drawHelpText(const GfxRenderer& renderer, Rect rect, const char* label) const;
   virtual void drawTextField(const GfxRenderer& renderer, Rect rect, const int textWidth, bool cursorMode = false,
                              int contentStartX = 0, int contentWidth = 0) const;

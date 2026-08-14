@@ -185,6 +185,8 @@ class EpubReaderActivity final : public Activity {
   // Opens the reader menu for the current position (short-press Confirm)
   void openReaderMenu();
   void openDictionaryWordSelect();
+  // Post-close re-layout for TextSettingsActivity, used by the reader-menu TEXT_SETTINGS entry.
+  void onTextSettingsClosed();
   // Returns true if sync acted (launched, or surfaced a save error); false if it was a no-op
   // because no KOReader credentials are stored.
   bool launchKOReaderSync();

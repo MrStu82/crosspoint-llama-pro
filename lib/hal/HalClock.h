@@ -9,12 +9,21 @@ extern HalClock halClock;  // Singleton
 class HalClock {
   bool _available = false;
   mutable Rtc _sdkRtc;
-  mutable uint8_t _cachedHour = 0;
-  mutable uint8_t _cachedMinute = 0;
+  mutable Rtc::DateTime _cachedDt{};
   mutable bool _hasCachedTime = false;
   mutable unsigned long _lastPollMs = 0;
+  mutable unsigned long _lastGoodMs = 0;  // millis() of the last real (non-cache) successful I2C read
 
   static constexpr unsigned long CLOCK_POLL_MS = 10000;  // 10 seconds
+  // Ceiling on how long a stale cached reading may be served after I2C reads start
+  // failing (e.g. a bus glitch/dropout). Past this, pollRtc() reports failure instead
+  // of handing back an ever-more-stale timestamp forever — callers (e.g. the
+  // Tamagotchi incubation timer) must be able to tell "time unknown" from "time frozen".
+  static constexpr unsigned long MAX_STALE_MS = 5 * CLOCK_POLL_MS;  // 50 seconds
+
+  // Shared cache-checked RTC read used by getTime() and getDate().
+  // Returns false if the RTC is absent, or unset with nothing cached yet.
+  bool pollRtc(Rtc::DateTime& out) const;
 
  public:
   // Call after BoardConfig has selected the active device.
@@ -26,6 +35,13 @@ class HalClock {
   // Get current hour (0-23) and minute (0-59).
   // Returns false if RTC is not available.
   bool getTime(uint8_t& hour, uint8_t& minute) const;
+
+  // Get the current local calendar date as YYYYMMDD (e.g. 20260806), applying the
+  // given UTC offset (same biased quarter-hour encoding as formatTime: 48 = UTC+0).
+  // Returns false if the RTC is absent, or present but reports itself unset (oscillator
+  // stopped / never programmed) with nothing cached yet — callers should treat that as
+  // "date unknown" rather than assuming a date.
+  bool getDate(int& yyyymmdd, uint8_t utcOffsetQuarterHoursBiased = 48) const;
 
   // Format time into a caller-provided buffer.
   // 24h mode produces "HH:MM" (needs >=6 bytes); 12h mode produces "H:MM AM"/"HH:MM PM" (needs >=9 bytes).

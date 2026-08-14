@@ -117,18 +117,60 @@ void GameActivity::render(RenderLock&&) {
 void GameActivity::loop() {
   using Button = MappedInputManager::Button;
 
+  Button pressed = Button::Confirm;
+  bool hasButton = false;
+
   if (mappedInput.wasReleased(Button::Up)) {
-    handleMove(0, -1);
+    pressed = Button::Up;
+    hasButton = true;
   } else if (mappedInput.wasReleased(Button::Down)) {
-    handleMove(0, 1);
+    pressed = Button::Down;
+    hasButton = true;
   } else if (mappedInput.wasReleased(Button::Left)) {
-    handleMove(-1, 0);
+    pressed = Button::Left;
+    hasButton = true;
   } else if (mappedInput.wasReleased(Button::Right)) {
-    handleMove(1, 0);
+    pressed = Button::Right;
+    hasButton = true;
   } else if (mappedInput.wasReleased(Button::Confirm)) {
-    handleAction();
+    pressed = Button::Confirm;
+    hasButton = true;
   } else if (mappedInput.wasReleased(Button::Back)) {
-    openGameMenu();
+    pressed = Button::Back;
+    hasButton = true;
+  } else {
+    // On-screen touch controls: the control area doubles as a d-pad + Action/Menu
+    // tap surface. Routed through the same handleMove/handleAction/openGameMenu
+    // calls as physical buttons, so there's exactly one dispatch path either way.
+    int tx, ty;
+    if (mappedInput.wasScreenTapped(tx, ty) && gameRenderer.hitTestControls(tx, ty, pressed)) {
+      hasButton = true;
+    }
+  }
+
+  if (!hasButton) return;
+
+  switch (pressed) {
+    case Button::Up:
+      handleMove(0, -1);
+      break;
+    case Button::Down:
+      handleMove(0, 1);
+      break;
+    case Button::Left:
+      handleMove(-1, 0);
+      break;
+    case Button::Right:
+      handleMove(1, 0);
+      break;
+    case Button::Confirm:
+      handleAction();
+      break;
+    case Button::Back:
+      openGameMenu();
+      break;
+    default:
+      break;
   }
 }
 
@@ -137,6 +179,11 @@ void GameActivity::loop() {
 void GameActivity::openGameMenu() {
   startActivityForResult(std::make_unique<GameMenuActivity>(renderer, mappedInput),
                          [this](const ActivityResult& result) { onGameMenuResult(result); });
+}
+
+bool GameActivity::handleHomeGesture() {
+  openGameMenu();
+  return true;
 }
 
 void GameActivity::onGameMenuResult(const ActivityResult& result) {

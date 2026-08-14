@@ -145,9 +145,9 @@ UIIcon UITheme::getFileIcon(const std::string& filename) {
   return File;
 }
 
-int UITheme::getStatusBarHeight() {
+int UITheme::getStatusBarHeight(CrossPointSettings::Edge edge) {
   const ThemeMetrics metrics = UITheme::getInstance().getMetrics();
-  const auto sb = SETTINGS.statusBarSpec();
+  const auto sb = SETTINGS.statusBarSpec(edge);
 
   // Layout reservation is hardware-agnostic: pass clockAvailable=true so the
   // reserved height does not depend on whether an RTC is present.
@@ -155,9 +155,9 @@ int UITheme::getStatusBarHeight() {
          (sb.showsProgressBar() ? (sb.progressBarHeightPx + metrics.progressBarMarginTop) : 0);
 }
 
-int UITheme::getProgressBarHeight() {
+int UITheme::getProgressBarHeight(CrossPointSettings::Edge edge) {
   const ThemeMetrics metrics = UITheme::getInstance().getMetrics();
-  const auto sb = SETTINGS.statusBarSpec();
+  const auto sb = SETTINGS.statusBarSpec(edge);
   return sb.showsProgressBar() ? (sb.progressBarHeightPx + metrics.progressBarMarginTop) : 0;
 }
 

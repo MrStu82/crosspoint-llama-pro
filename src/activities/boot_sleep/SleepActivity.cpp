@@ -150,10 +150,22 @@ void SleepActivity::renderCustomSleepScreen() const {
   renderDefaultSleepScreen();
 }
 
-// Sleep screens paint with a single HALF refresh (stock parity): the OEM X4
-// firmware's only clean refresh in normal operation is the single-pass 0xD7
-// sequence, used once for the sleep image. It never runs the multi-flash GC
-// waveform (0xF7) that FULL_REFRESH selects (#2471's blinking complaint).
+// Sleep screens generally paint with a single HALF refresh (stock parity,
+// c5787d1 / upstream#2588): the OEM X4 firmware's only clean refresh in normal
+// operation is the single-pass 0xD7 sequence, and #2588's grayscale LUT
+// calibration depends on that waveform's pixel charge state — using FULL there
+// produced blotchy gray noise. It never runs the multi-flash GC waveform (0xF7)
+// that FULL_REFRESH selects (#2471's blinking complaint).
+//
+// renderDefaultSleepScreen() is a deliberate, scoped exception to #2588: 1-bit
+// screen, no LUT dependency, so the grayscale rationale above does not apply
+// here. It intentionally opts out of the UC8179 differential/partial (KW) path
+// instead, because that path's behavior is reverse-engineered from OEM firmware
+// and is explicitly still "PENDING HARDWARE VALIDATION" on UC8179
+// (Uc8179Driver.h:14) — the exact controller in the unit that reported this
+// ghosting. A real full-flash clear here is preferred over trusting an
+// unvalidated differential-refresh guarantee. Do not revert this call to
+// HALF_REFRESH to "match" #2588 without re-reading both notes.
 void SleepActivity::renderDefaultSleepScreen() const {
   const auto pageWidth = renderer.getScreenWidth();
   const auto pageHeight = renderer.getScreenHeight();
@@ -168,7 +180,7 @@ void SleepActivity::renderDefaultSleepScreen() const {
     renderer.invertScreen();
   }
 
-  renderer.displayBuffer(HalDisplay::HALF_REFRESH);
+  renderer.displayBuffer(HalDisplay::FULL_REFRESH);
 }
 
 void SleepActivity::renderBitmapSleepScreen(const Bitmap& bitmap) const {

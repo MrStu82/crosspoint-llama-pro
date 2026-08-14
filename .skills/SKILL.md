@@ -1,6 +1,6 @@
 # CrossPoint Reader Development Guide
 
-Project: Open-source e-reader firmware for Xteink X4 (ESP32-C3)
+Project: Open-source e-reader firmware for Xteink X4 (ESP32-C3) and X4 Pro (ESP32-S3, see Hardware Specs note below)
 Mission: Provide a lightweight, high-performance reading experience focused on EPUB rendering on constrained hardware.
 
 ## AI Agent Identity and Cognitive Rules
@@ -40,6 +40,7 @@ find src -name "*.cpp" -o -name "*.h" | xargs clang-format -i
 ## Platform and Hardware Constraints
 
 ### Hardware Specs
+**NOTE: the specs below (RISC-V, 380KB, no PSRAM) describe the base X4 (`env:x4`) only. The X4 Pro (`env:x4pro`, `platformio.ini`) is a distinct ESP32-S3/Xtensa board with PSRAM (`board_build.mcu = esp32s3`, `-DBOARD_HAS_PSRAM`) — do not apply the 380KB/no-PSRAM constraint to x4pro code paths.**
 * MCU: ESP32-C3 (Single-core RISC-V @ 160MHz)
 * RAM: ~380KB usable (VERY LIMITED - primary project constraint)
   * **NO PSRAM**: ESP32-C3 has no PSRAM capability (unlike ESP32-S3)

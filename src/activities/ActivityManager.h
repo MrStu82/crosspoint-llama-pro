@@ -12,12 +12,13 @@
 
 #include "GfxRenderer.h"
 #include "MappedInputManager.h"
+#include "components/BrightnessSheet.h"
 #include "util/ScreenshotInfo.h"
 
 class Activity;    // forward declaration
 class RenderLock;  // forward declaration
 
-enum class HomeMenuItem { NONE, FILE_BROWSER, RECENTS, OPDS_BROWSER, FILE_TRANSFER, SETTINGS_MENU, STATS, DEEP_MINES };
+enum class HomeMenuItem { NONE, FILE_BROWSER, RECENTS, OPDS_BROWSER, FILE_TRANSFER, SETTINGS_MENU, STATS, GAMES };
 
 /**
  * ActivityManager
@@ -41,6 +42,9 @@ class ActivityManager {
   MappedInputManager& mappedInput;
   std::vector<std::unique_ptr<Activity>> stackActivities;
   std::unique_ptr<Activity> currentActivity;
+  // Global bottom-edge brightness quick-sheet, owned here (not per-Activity like
+  // OptionPopup) since it must be reachable over any activity, including the reader.
+  BrightnessSheet brightnessSheet;
 
   void exitActivity(const RenderLock& lock);
 
@@ -68,7 +72,10 @@ class ActivityManager {
 
  public:
   explicit ActivityManager(GfxRenderer& renderer, MappedInputManager& mappedInput)
-      : renderer(renderer), mappedInput(mappedInput), renderingMutex(xSemaphoreCreateMutex()) {
+      : renderer(renderer),
+        mappedInput(mappedInput),
+        brightnessSheet(renderer, mappedInput),
+        renderingMutex(xSemaphoreCreateMutex()) {
     assert(renderingMutex != nullptr && "Failed to create rendering mutex");
     stackActivities.reserve(10);
   }
@@ -92,7 +99,13 @@ class ActivityManager {
   void goToBoot();
   void goToFullScreenMessage(std::string message, EpdFontFamily::Style style = EpdFontFamily::REGULAR);
   void goToCrashReport();
+  void goToGames();
   void goToDeepMines();
+  void goToTetris();
+  void goToTamagotchi();
+  void goToSolitaire();
+  void goToMinesweeper();
+  void goToSudoku();
   void goHome(HomeMenuItem initialMenuItem = HomeMenuItem::NONE);
 
   // This will move current activity to stack instead of deleting it

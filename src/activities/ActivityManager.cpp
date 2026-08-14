@@ -10,6 +10,12 @@
 #include "boot_sleep/SleepActivity.h"
 #include "browser/OpdsBookBrowserActivity.h"
 #include "game/GameTitleActivity.h"
+#include "game/GamesListActivity.h"
+#include "game/MinesweeperActivity.h"
+#include "game/SolitaireActivity.h"
+#include "game/SudokuActivity.h"
+#include "game/TamagotchiActivity.h"
+#include "game/TetrisActivity.h"
 #include "home/CrashActivity.h"
 #include "home/FileBrowserActivity.h"
 #include "home/HomeActivity.h"
@@ -17,6 +23,7 @@
 #include "home/StatsActivity.h"
 #include "network/CrossPointWebServerActivity.h"
 #include "reader/ReaderActivity.h"
+#include "settings/FrontlightActivity.h"
 #include "settings/OpdsServerListActivity.h"
 #include "settings/SettingsActivity.h"
 #include "util/FullScreenMessageActivity.h"
@@ -67,12 +74,39 @@ void ActivityManager::renderTaskLoop() {
 }
 
 void ActivityManager::loop() {
+  // The brightness sheet is a global overlay, not an Activity — while it's open it
+  // must get first refusal on every input frame (mirroring how an Activity's own
+  // OptionPopup is checked before its normal loop() body), and no other gesture or
+  // per-activity handling below may run in the same frame.
+  if (brightnessSheet.isOpen()) {
+    if (brightnessSheet.loop()) return;
+  }
+
   if (currentActivity) {
     if (!currentActivity->isHomeActivity() && mappedInput.wasHomeGesture()) {
       if (currentActivity->handleHomeGesture()) {
         return;
       }
       goHome();
+      return;
+    }
+
+    // Global left-edge upward swipe -> backlight quick-settings drawer. Checked here, once, for
+    // every activity, rather than duplicated per-activity. Fires before dispatch so it wins over
+    // any local touch handling; suppressed while FrontlightActivity is itself on top so a swipe
+    // inside the brightness panel can't reopen it.
+    if (!currentActivity->isFrontlightActivity() && mappedInput.wasBrightnessGesture()) {
+      currentActivity->startActivityForResult(std::make_unique<FrontlightActivity>(renderer, mappedInput),
+                                              [this](const ActivityResult&) { requestUpdate(); });
+      return;
+    }
+
+    // Global bottom-edge upward swipe -> quick brightness sheet. Same reuse of the
+    // existing per-loop edge-gesture dispatch as the block above; suppressed while
+    // FrontlightActivity is on top (its own full settings page already covers this)
+    // so the two brightness entry points can't stack.
+    if (!currentActivity->isFrontlightActivity() && mappedInput.wasBrightnessSheetGesture()) {
+      brightnessSheet.open();
       return;
     }
 
@@ -246,8 +280,32 @@ void ActivityManager::goHome(HomeMenuItem initialMenuItem) {
 }
 void ActivityManager::goToCrashReport() { replaceActivity(std::make_unique<CrashActivity>(renderer, mappedInput)); }
 
+void ActivityManager::goToGames() {
+  replaceActivity(std::make_unique<GamesListActivity>(renderer, mappedInput));
+}
+
 void ActivityManager::goToDeepMines() {
   replaceActivity(std::make_unique<GameTitleActivity>(renderer, mappedInput));
+}
+
+void ActivityManager::goToTetris() {
+  replaceActivity(std::make_unique<TetrisActivity>(renderer, mappedInput));
+}
+
+void ActivityManager::goToTamagotchi() {
+  replaceActivity(std::make_unique<TamagotchiActivity>(renderer, mappedInput));
+}
+
+void ActivityManager::goToSolitaire() {
+  replaceActivity(std::make_unique<SolitaireActivity>(renderer, mappedInput));
+}
+
+void ActivityManager::goToMinesweeper() {
+  replaceActivity(std::make_unique<MinesweeperActivity>(renderer, mappedInput));
+}
+
+void ActivityManager::goToSudoku() {
+  replaceActivity(std::make_unique<SudokuActivity>(renderer, mappedInput));
 }
 
 void ActivityManager::pushActivity(std::unique_ptr<Activity>&& activity) {

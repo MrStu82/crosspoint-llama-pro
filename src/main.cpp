@@ -110,6 +110,14 @@ EpdFont ui12RegularFont(&ubuntu_12_regular);
 EpdFont ui12BoldFont(&ubuntu_12_bold);
 EpdFontFamily ui12FontFamily(&ui12RegularFont, &ui12BoldFont);
 
+// Digit-only subset fonts (charset 0123456789.m%) for the Reading Stats big-number
+// display — see StatsActivity.cpp. Not general-purpose text fonts.
+EpdFont notosans40BoldDigitsFont(&notosans_40_bold_digits);
+EpdFontFamily notosans40BoldDigitsFontFamily(&notosans40BoldDigitsFont);
+
+EpdFont notosans20BoldDigitsFont(&notosans_20_bold_digits);
+EpdFontFamily notosans20BoldDigitsFontFamily(&notosans20BoldDigitsFont);
+
 // measurement of power button press duration calibration value
 unsigned long t1 = 0;
 unsigned long t2 = 0;
@@ -255,6 +263,8 @@ void setupDisplayAndFonts(bool seamless = false) {
   renderer.insertFont(UI_10_FONT_ID, ui10FontFamily);
   renderer.insertFont(UI_12_FONT_ID, ui12FontFamily);
   renderer.insertFont(SMALL_FONT_ID, smallFontFamily);
+  renderer.insertFont(NOTOSANS_40_BOLD_DIGITS_FONT_ID, notosans40BoldDigitsFontFamily);
+  renderer.insertFont(NOTOSANS_20_BOLD_DIGITS_FONT_ID, notosans20BoldDigitsFontFamily);
 
   // Discover and load SD card fonts
   sdFontSystem.begin(renderer);
@@ -294,7 +304,10 @@ void setup() {
   powerManager.begin();
   halTiltSensor.begin();
   halClock.begin();
-  frontlightManager.begin();
+  if (!frontlightManager.begin()) {
+    LOG_ERR("MAIN", "frontlight channel attach failed: cool=%d warm=%d",
+            frontlightManager.coolChannelAttachOk(), frontlightManager.warmChannelAttachOk());
+  }
 
   LOG_INF("MAIN", "Hardware detect: %s", gpio.deviceIsX3() ? "X3" : "X4");
 
@@ -494,6 +507,16 @@ void loop() {
         uint8_t* buf = display.getFrameBuffer();
         logSerial.write(buf, bufferSize);
         logSerial.printf("SCREENSHOT_END\n");
+      } else if (cmd.startsWith("DISP_OVR=")) {
+        const long raw = cmd.substring(strlen("DISP_OVR=")).toInt();
+        const char* name = (raw >= 0 && raw <= 255)
+                                ? HalGPIO::setDisplayControllerOverride(static_cast<uint8_t>(raw))
+                                : nullptr;
+        if (name != nullptr) {
+          logSerial.printf("DISP_OVR_SET:%ld (%s) - reboot to apply\n", raw, name);
+        } else {
+          logSerial.printf("DISP_OVR_ERR: invalid value '%s', expected 0-2\n", cmd.substring(strlen("DISP_OVR=")).c_str());
+        }
       }
     }
   }
@@ -557,6 +580,21 @@ void loop() {
       RenderLock lock;
       renderer.displayBuffer(HalDisplay::HALF_REFRESH);
     }
+  }
+
+  // Toggle the backlight when power button is short-pressed with BACKLIGHT_TOGGLE setting.
+  // System-wide: this check sits above activityManager.loop() so it fires regardless of
+  // which activity (or the BrightnessSheet) currently owns input.
+  if (SETTINGS.shortPwrBtn == CrossPointSettings::SHORT_PWRBTN::BACKLIGHT_TOGGLE &&
+      mappedInputManager.wasReleased(MappedInputManager::Button::Power)) {
+    LOG_DBG("MAIN", "Backlight toggle triggered");
+    if (frontlightManager.brightness() > 0) {
+      frontlightManager.off();
+    } else {
+      frontlightManager.on();
+    }
+    SETTINGS.frontlightBrightness = frontlightManager.brightness();
+    SETTINGS.saveToFile();
   }
 
   // Refresh the battery icon when USB is plugged or unplugged.

@@ -5,6 +5,7 @@
 #include <HalStorage.h>
 #include <I18n.h>
 
+#include <algorithm>
 #include <cstdio>
 #include <cstring>
 #include <string>
@@ -15,6 +16,13 @@
 #include "StatsManager.h"
 #include "components/UITheme.h"
 #include "fontIds.h"
+
+namespace {
+// -1 means "not yet computed this boot session".
+int s_cachedBookCount = -1;
+}  // namespace
+
+void StatsActivity::invalidateBookCountCache() { s_cachedBookCount = -1; }
 
 int StatsActivity::countEpubsRecursively(const char* path) {
   int count = 0;
@@ -53,7 +61,9 @@ int StatsActivity::countEpubsRecursively(const char* path) {
 
 void StatsActivity::onEnter() {
   Activity::onEnter();
-  totalBooksOnDevice = countEpubsRecursively("/");
+  if (s_cachedBookCount < 0) {
+    s_cachedBookCount = countEpubsRecursively("/");
+  }
   requestUpdate();
 }
 
@@ -78,10 +88,49 @@ void StatsActivity::render(RenderLock&&) {
   // Title
   GUI.drawHeader(renderer, Rect{0, metrics.topPadding, screenWidth, metrics.headerHeight}, tr(STR_READING_STATS));
 
-  int yPos = metrics.topPadding + metrics.headerHeight + 20;
-  const int sidePad = metrics.contentSidePadding;
+  // Every other coordinate on this screen comes from a pixel spec expressed as text
+  // baselines, but drawText()/getFontAscenderSize() work in top-edge y. Convert once
+  // here rather than hand-computing an offset at each call site.
+  auto topOf = [&](int fontId, int baselineY) { return baselineY - renderer.getFontAscenderSize(fontId); };
+  auto drawBaseline = [&](int fontId, int x, int baselineY, const char* text, bool black = true,
+                          EpdFontFamily::Style style = EpdFontFamily::REGULAR) {
+    renderer.drawText(fontId, x, topOf(fontId, baselineY), text, black, style);
+  };
+  // maxWidth/fallbackFontId let a call site guard against a value that's grown wider than
+  // its column (e.g. a stat that crossed into 4+ digits): if the primary font overflows,
+  // retry once with a narrower fallback font rather than drawing past the column edge.
+  auto drawCentered = [&](int fontId, const char* text, int cx, int baselineY,
+                          EpdFontFamily::Style style = EpdFontFamily::REGULAR, int maxWidth = 0,
+                          int fallbackFontId = 0) {
+    if (text[0] == '\0') return;
+    int w = renderer.getTextWidth(fontId, text, style);
+    int drawFontId = fontId;
+    if (maxWidth > 0 && w > maxWidth && fallbackFontId != 0) {
+      drawFontId = fallbackFontId;
+      w = renderer.getTextWidth(drawFontId, text, style);
+    }
+    renderer.drawText(drawFontId, cx - w / 2, topOf(drawFontId, baselineY), text, true, style);
+  };
+  // STAT-01 (Stuart, real-hardware report): the BOOK/CHAPTER progress % was drawn
+  // left-anchored at a fixed x with no width check, so on a real 4" panel (narrower
+  // than whatever the sim implied) a 3-digit value plus its "%" glyph ran past the
+  // panel edge and got clipped. Measure the FULL string (digits + "%") up front, fall
+  // back to a narrower font if it doesn't fit, and always anchor from the right edge
+  // so nothing can ever land within the reserved margin, let alone past it.
+  auto drawRightAligned = [&](int fontId, const char* text, int rightEdge, int baselineY,
+                              EpdFontFamily::Style style = EpdFontFamily::REGULAR, int maxWidth = 0,
+                              int fallbackFontId = 0) {
+    if (text[0] == '\0') return;
+    int w = renderer.getTextWidth(fontId, text, style);
+    int drawFontId = fontId;
+    if (maxWidth > 0 && w > maxWidth && fallbackFontId != 0) {
+      drawFontId = fallbackFontId;
+      w = renderer.getTextWidth(drawFontId, text, style);
+    }
+    renderer.drawText(drawFontId, rightEdge - w, topOf(drawFontId, baselineY), text, true, style);
+  };
 
-  // --- TOP SECTION ---
+  // --- BOOK HERO ---
   std::string currentBookTitle = tr(STR_STATS_NO_BOOK_OPEN);
   std::string currentBookAuthor = "";
   std::string coverBmpPath = "";
@@ -98,8 +147,10 @@ void StatsActivity::render(RenderLock&&) {
     currentBookPath = book.path;
   }
 
-  int coverW = 120;
-  int coverH = 160;
+  constexpr int kCoverX = 24;
+  constexpr int kCoverY = 90;
+  int coverW = 140;
+  int coverH = 186;
   bool hasCover = false;
 
   if (!coverBmpPath.empty()) {
@@ -110,35 +161,40 @@ void StatsActivity::render(RenderLock&&) {
       if (bitmap.parseHeaders() == BmpReaderError::Ok) {
         hasCover = true;
         coverW = (coverH * bitmap.getWidth()) / bitmap.getHeight();
-        if (coverW > 160) coverW = 160;
-        renderer.drawBitmap(bitmap, sidePad, yPos, coverW, coverH);
+        if (coverW > 140) coverW = 140;
+        renderer.drawBitmap(bitmap, kCoverX, kCoverY, coverW, coverH);
       }
     }
   }
 
   if (!hasCover) {
-    renderer.drawRect(sidePad, yPos, coverW, coverH);
-    renderer.drawText(UI_10_FONT_ID, sidePad + 10, yPos + coverH / 2, tr(STR_STATS_NO_COVER));
+    renderer.drawRect(kCoverX, kCoverY, coverW, coverH);
+    renderer.drawText(UI_10_FONT_ID, kCoverX + 10, topOf(UI_10_FONT_ID, kCoverY + coverH / 2), tr(STR_STATS_NO_COVER));
   }
 
-  int rightTextX = sidePad + coverW + 20;
-  int rightTextW = screenWidth - rightTextX - sidePad;
+  constexpr int kTextX = 180;
+  const int textRightEdge = screenWidth - 16;
+  const int textW = textRightEdge - kTextX;
 
-  renderer.drawText(UI_12_FONT_ID, rightTextX, yPos,
-                    renderer.truncatedText(UI_12_FONT_ID, currentBookTitle.c_str(), rightTextW).c_str(), true,
+  renderer.drawText(UI_12_FONT_ID, kTextX, topOf(UI_12_FONT_ID, 118),
+                    renderer.truncatedText(UI_12_FONT_ID, currentBookTitle.c_str(), textW).c_str(), true,
                     EpdFontFamily::ITALIC);
-  renderer.drawText(UI_10_FONT_ID, rightTextX, yPos + 25,
-                    renderer.truncatedText(UI_10_FONT_ID, currentBookAuthor.c_str(), rightTextW).c_str());
+  renderer.drawText(UI_10_FONT_ID, kTextX, topOf(UI_10_FONT_ID, 158),
+                    renderer.truncatedText(UI_10_FONT_ID, currentBookAuthor.c_str(), textW).c_str());
 
   int currentChapterProgress = -1;
 
-  if (currentProgress < 0 && FsHelpers::hasEpubExtension(currentBookPath)) {
+  // Note: currentProgress (whole-book %) comes only from BookProgressBadge via
+  // RecentBooksStore above — progress.bin has no book-level percent field to fall back to.
+  // data[6] here is byte 0 of the optional visibleTextOffset, not a percent; reading it as
+  // one produced the "181%" bug. Only chapter progress (page/pageCount, data[2-5]) is
+  // legitimately derivable from this file.
+  if (FsHelpers::hasEpubExtension(currentBookPath)) {
     std::string cachePath = "/.crosspoint/epub_" + std::to_string(std::hash<std::string>{}(currentBookPath));
     HalFile f;
     if (Storage.openFileForRead("STATS", cachePath + "/progress.bin", f)) {
-      uint8_t data[7];
-      if (f.read(data, 7) >= 7) {
-        currentProgress = data[6];
+      uint8_t data[6];
+      if (f.read(data, 6) >= 6) {
         int currentPage = data[2] | (data[3] << 8);
         int pageCount = data[4] | (data[5] << 8);
         if (pageCount > 0) {
@@ -150,145 +206,200 @@ void StatsActivity::render(RenderLock&&) {
     }
   }
 
-  int barY = yPos + 80;
-  renderer.drawText(UI_10_FONT_ID, rightTextX, barY - 22, tr(STR_STATS_BOOK_PROGRESS));
-  if (currentProgress >= 0) {
-    char progStr[16];
-    snprintf(progStr, sizeof(progStr), "%d%%", currentProgress);
-    int progW = renderer.getTextWidth(UI_10_FONT_ID, progStr);
-    renderer.drawText(UI_10_FONT_ID, rightTextX + rightTextW - progW, barY - 22, progStr);
-    renderer.drawRect(rightTextX, barY, rightTextW, 12);
-    if (currentProgress > 0) {
-      renderer.fillRect(rightTextX, barY, (rightTextW * currentProgress) / 100, 12);
-    }
-  } else {
-    renderer.drawText(UI_10_FONT_ID, rightTextX + rightTextW - 50, barY - 22, tr(STR_STATS_UNKNOWN));
+  // Badge cache miss: a book already in progress when BookProgressBadge shipped (or one
+  // whose reader hasn't re-saved since) has no book_progress.bin yet. Approximate the
+  // whole-book % from chapter progress rather than showing STR_STATS_UNKNOWN -- bounded
+  // and tilde-marked as an estimate, since it ignores relative chapter sizes.
+  bool bookProgressIsApprox = false;
+  if (currentProgress < 0 && currentChapterProgress >= 0) {
+    currentProgress = currentChapterProgress;
+    bookProgressIsApprox = true;
   }
 
-  barY += 45;
-  renderer.drawText(UI_10_FONT_ID, rightTextX, barY - 22, tr(STR_STATS_CHAPTER_PROGRESS));
+  constexpr int kBarX = 180;
+  constexpr int kBarW = 240;
+  constexpr int kBarH = 10;
+  // STAT-01: percent text now anchors off textRightEdge (the same reserved-margin edge the
+  // book title/author truncate against, screenWidth - 16) instead of a fixed left x — the
+  // column between the bar and that edge is what's actually available, and the fallback
+  // font keeps a 3-digit "~100%" from ever being asked to fit in less space than it needs.
+  constexpr int kPctGap = 10;
+  const int kPctMaxTextW = textRightEdge - (kBarX + kBarW) - kPctGap;
+
+  drawBaseline(UI_10_FONT_ID, kTextX, 188, tr(STR_STATS_BOOK_PROGRESS));
+  renderer.drawRect(kBarX, 194, kBarW, kBarH);
+  if (currentProgress >= 0) {
+    if (currentProgress > 0) renderer.fillRect(kBarX, 194, (kBarW * currentProgress) / 100, kBarH);
+    char progStr[16];
+    snprintf(progStr, sizeof(progStr), bookProgressIsApprox ? "~%d%%" : "%d%%", currentProgress);
+    drawRightAligned(UI_12_FONT_ID, progStr, textRightEdge, 203, EpdFontFamily::REGULAR, kPctMaxTextW, UI_10_FONT_ID);
+  } else {
+    drawRightAligned(UI_12_FONT_ID, tr(STR_STATS_UNKNOWN), textRightEdge, 203, EpdFontFamily::REGULAR, kPctMaxTextW,
+                      UI_10_FONT_ID);
+  }
+
+  drawBaseline(UI_10_FONT_ID, kTextX, 222, tr(STR_STATS_CHAPTER_PROGRESS));
+  renderer.drawRect(kBarX, 228, kBarW, kBarH);
   if (currentChapterProgress >= 0) {
+    if (currentChapterProgress > 0) renderer.fillRect(kBarX, 228, (kBarW * currentChapterProgress) / 100, kBarH);
     char progStr[16];
     snprintf(progStr, sizeof(progStr), "%d%%", currentChapterProgress);
-    int progW = renderer.getTextWidth(UI_10_FONT_ID, progStr);
-    renderer.drawText(UI_10_FONT_ID, rightTextX + rightTextW - progW, barY - 22, progStr);
-    renderer.drawRect(rightTextX, barY, rightTextW, 12);
-    if (currentChapterProgress > 0) {
-      renderer.fillRect(rightTextX, barY, (rightTextW * currentChapterProgress) / 100, 12);
-    }
+    drawRightAligned(UI_12_FONT_ID, progStr, textRightEdge, 237, EpdFontFamily::REGULAR, kPctMaxTextW, UI_10_FONT_ID);
   } else {
-    renderer.drawText(UI_10_FONT_ID, rightTextX + rightTextW - 50, barY - 20, tr(STR_STATS_UNKNOWN));
+    drawRightAligned(UI_12_FONT_ID, tr(STR_STATS_UNKNOWN), textRightEdge, 237, EpdFontFamily::REGULAR, kPctMaxTextW,
+                      UI_10_FONT_ID);
   }
 
-  yPos += coverH + 20;
-  renderer.drawLine(sidePad, yPos, screenWidth - sidePad, yPos, 2, true);
-  yPos += 30;
+  // --- MIDDLE BAND (new work — everything else on this screen reproduces the
+  // frozen spec exactly; this section is the only part actually being designed) ---
+  // pagesReadToday is already tracked live by StatsManager (GlobalStats::pagesReadToday),
+  // so no new forward-only counter was needed to source it.
+  const int minutesToday = static_cast<int>(stats.readingTimeTodaySeconds / 60);
+  const uint32_t pagesToday = stats.pagesReadToday;
 
-  auto drawCentered = [&](int fontId, const char* text, int cx, int y,
-                          EpdFontFamily::Style style = EpdFontFamily::REGULAR) {
-    if (text[0] == '\0') return;
-    int w = renderer.getTextWidth(fontId, text, style);
-    renderer.drawText(fontId, cx - w / 2, y, text, true, style);
+  // Middle-band columns are 224px wide (16..240, 240..464); cap primary-font text to what
+  // fits with a margin either side of center, falling back to the smaller digit font for
+  // days with an unusually large minute/page count rather than clipping into the divider.
+  constexpr int kMiddleBandMaxTextW = 200;
+
+  char minTodayStr[16];
+  snprintf(minTodayStr, sizeof(minTodayStr), "%d", minutesToday);
+  drawCentered(NOTOSANS_40_BOLD_DIGITS_FONT_ID, minTodayStr, 128, 356, EpdFontFamily::REGULAR,
+               kMiddleBandMaxTextW, NOTOSANS_20_BOLD_DIGITS_FONT_ID);
+  drawCentered(UI_10_FONT_ID, tr(STR_STATS_MIN_TODAY), 128, 378);
+
+  char pagesTodayStr[16];
+  snprintf(pagesTodayStr, sizeof(pagesTodayStr), "%lu", static_cast<unsigned long>(pagesToday));
+  drawCentered(NOTOSANS_40_BOLD_DIGITS_FONT_ID, pagesTodayStr, 352, 356, EpdFontFamily::REGULAR,
+               kMiddleBandMaxTextW, NOTOSANS_20_BOLD_DIGITS_FONT_ID);
+  drawCentered(UI_10_FONT_ID, tr(STR_STATS_PAGES_TODAY), 352, 378);
+
+  renderer.drawLine(240, 318, 240, 318 + 66, 1, true);
+
+  // Guarded per spec: never divide by zero, never fabricate a rate from near-zero
+  // minutes. Below 1 full minute today, show an em dash instead of a number.
+  char ppmLine[48];
+  if (minutesToday < 1) {
+    snprintf(ppmLine, sizeof(ppmLine), "\xE2\x80\x94 %s", tr(STR_STATS_PAGES_PER_MINUTE_LONG));
+  } else {
+    const float ppmToday = static_cast<float>(pagesToday) / static_cast<float>(minutesToday);
+    snprintf(ppmLine, sizeof(ppmLine), "%.1f %s", ppmToday, tr(STR_STATS_PAGES_PER_MINUTE_LONG));
+  }
+  // STAT-01: was baseline 402, only 24px below the "min today"/"pages today" label row
+  // (baseline 378) — too tight on real hardware, read as crushed between the two numeric
+  // rows. Pushed to 410 (32px gap) for real breathing room; still well clear of the stat
+  // column dividers, which start at y=424.
+  drawCentered(NOTOSANS_14_FONT_ID, ppmLine, 240, 410);
+
+  // Fetched once here so both the 30-day grid slice and the streak walk read from
+  // the same snapshot. getLast7DaysMinutes() (name predates this screen) fills all
+  // DAILY_HISTORY_SLOTS entries oldest-first; slot 0 is 83 days ago, the last slot
+  // is today, sourced live from stats.readingTimeTodaySeconds rather than the ring.
+  uint16_t history[DAILY_HISTORY_SLOTS];
+  int historyDates[DAILY_HISTORY_SLOTS];
+  READING_STATS.getLast7DaysMinutes(history, historyDates);
+
+  int streak = 0;
+  for (int i = DAILY_HISTORY_SLOTS - 1; i >= 0; i--) {
+    if (historyDates[i] == 0 || history[i] == 0) break;
+    streak++;
+  }
+
+  // BEST DAY is the max over the archived 84-day ring (minutes), per confirmed
+  // spec semantics — this deliberately does not include today's live minutes,
+  // which are never written into dailyHistory[] until the day rolls over.
+  uint16_t bestDayMinutes = 0;
+  for (const DailyMinutesEntry& entry : stats.dailyHistory) {
+    if (entry.minutes > bestDayMinutes) bestDayMinutes = entry.minutes;
+  }
+
+  const float allTimeHours = stats.totalReadingTimeSeconds / 3600.0f;
+
+  char streakStr[16];
+  snprintf(streakStr, sizeof(streakStr), "%d", streak);
+  char hrsStr[16];
+  snprintf(hrsStr, sizeof(hrsStr), "%.1f", allTimeHours);
+  char pagesStr[16];
+  snprintf(pagesStr, sizeof(pagesStr), "%lu", static_cast<unsigned long>(stats.totalPagesRead));
+  char bestDayStr[16];
+  snprintf(bestDayStr, sizeof(bestDayStr), "%dm", static_cast<int>(bestDayMinutes));
+
+  const int colCx[4] = {88, 200, 312, 424};
+  const char* colVal[4] = {streakStr, hrsStr, pagesStr, bestDayStr};
+  const StrId colLabel[4] = {StrId::STR_STATS_STREAK, StrId::STR_STATS_HRS, StrId::STR_STATS_PAGES,
+                             StrId::STR_STATS_BEST_DAY};
+  // Columns are 112px wide; cap the primary bold-digit font's text and fall back to the
+  // smaller non-bold digit font (NotoSans, still has digit glyphs) if all-time hours/pages
+  // grow past what the bold face fits without touching the neighboring divider.
+  constexpr int kStatColMaxTextW = 100;
+  for (int i = 0; i < 4; i++) {
+    drawCentered(NOTOSANS_20_BOLD_DIGITS_FONT_ID, colVal[i], colCx[i], 448, EpdFontFamily::BOLD, kStatColMaxTextW,
+                 NOTOSANS_14_FONT_ID);
+    drawCentered(UI_10_FONT_ID, I18n::getInstance().get(colLabel[i]), colCx[i], 468);
+  }
+  for (int i = 1; i <= 3; i++) {
+    const int dividerX = 16 + i * 112;
+    renderer.drawLine(dividerX, 424, dividerX, 424 + 54, 1, true);
+  }
+
+  drawBaseline(UI_12_FONT_ID, 24, 506, tr(STR_STATS_ACTIVITY_HISTORY), true, EpdFontFamily::BOLD);
+
+  // --- 30-DAY ACTIVITY GRID ---
+  // Re-laid-out to spec geometry (10 cols x 3 rows), sliced from the last 30 of the
+  // 84 archived slots — not a reuse of the old 7x12/84-cell grid. The 45px/58px
+  // pitch against 39x52 cells leaves a real 6px white gutter between cells.
+  constexpr int kGridCols = 10;
+  constexpr int kGridRows = 3;
+  constexpr int kCellW = 39;
+  constexpr int kCellH = 52;
+  constexpr int kCellStepX = 45;
+  constexpr int kCellStepY = 58;
+  constexpr int kGridX = 18;
+  constexpr int kGridY = 520;
+  constexpr int kGridSliceDays = kGridCols * kGridRows;
+  const int gridStart = DAILY_HISTORY_SLOTS - kGridSliceDays;
+
+  for (int i = 0; i < kGridSliceDays; i++) {
+    const int col = i % kGridCols;
+    const int row = i / kGridCols;
+    const int cellX = kGridX + col * kCellStepX;
+    const int cellY = kGridY + row * kCellStepY;
+    const int hi = gridStart + i;
+
+    Color level;
+    if (historyDates[hi] == 0 || history[hi] == 0) {
+      level = Color::White;
+    } else if (history[hi] < 15) {
+      level = Color::LightGray;
+    } else if (history[hi] < 45) {
+      level = Color::DarkGray;
+    } else {
+      level = Color::Black;
+    }
+
+    renderer.fillRectDither(cellX, cellY, kCellW, kCellH, level);
+    renderer.drawRect(cellX, cellY, kCellW, kCellH);
+  }
+
+  // --- LEGEND ---
+  struct LegendItem {
+    Color color;
+    StrId label;
   };
-
-  int colWidth = (screenWidth - (sidePad * 2)) / 3;
-
-  auto drawTrio = [&](int startY, const char* val1, const char* label1a, const char* label1b, const char* val2,
-                      const char* label2a, const char* label2b, const char* val3, const char* label3a,
-                      const char* label3b) {
-    int cx1 = sidePad + colWidth / 2;
-    int cx2 = sidePad + colWidth + colWidth / 2;
-    int cx3 = sidePad + colWidth * 2 + colWidth / 2;
-
-    drawCentered(UI_12_FONT_ID, val1, cx1, startY, EpdFontFamily::BOLD);
-    drawCentered(UI_10_FONT_ID, label1a, cx1, startY + 34);
-    drawCentered(UI_10_FONT_ID, label1b, cx1, startY + 52);
-
-    renderer.drawLine(sidePad + colWidth, startY, sidePad + colWidth, startY + 65, 1, true);
-
-    drawCentered(UI_12_FONT_ID, val2, cx2, startY, EpdFontFamily::BOLD);
-    drawCentered(UI_10_FONT_ID, label2a, cx2, startY + 34);
-    drawCentered(UI_10_FONT_ID, label2b, cx2, startY + 52);
-
-    renderer.drawLine(sidePad + colWidth * 2, startY, sidePad + colWidth * 2, startY + 65, 1, true);
-
-    drawCentered(UI_12_FONT_ID, val3, cx3, startY, EpdFontFamily::BOLD);
-    drawCentered(UI_10_FONT_ID, label3a, cx3, startY + 34);
-    drawCentered(UI_10_FONT_ID, label3b, cx3, startY + 52);
+  const LegendItem legendItems[4] = {
+      {Color::White, StrId::STR_STATS_LEGEND_NONE},
+      {Color::LightGray, StrId::STR_STATS_LEGEND_LOW},
+      {Color::DarkGray, StrId::STR_STATS_LEGEND_MED},
+      {Color::Black, StrId::STR_STATS_LEGEND_HIGH},
   };
-
-  auto drawDuo = [&](int startY, const char* val1, const char* label1a, const char* label1b, const char* val2,
-                     const char* label2a, const char* label2b) {
-    int cx1 = sidePad + (screenWidth - sidePad * 2) / 4;
-    int cx2 = sidePad + 3 * (screenWidth - sidePad * 2) / 4;
-
-    drawCentered(UI_12_FONT_ID, val1, cx1, startY, EpdFontFamily::BOLD);
-    drawCentered(UI_10_FONT_ID, label1a, cx1, startY + 34);
-    drawCentered(UI_10_FONT_ID, label1b, cx1, startY + 52);
-
-    renderer.drawLine(sidePad + (screenWidth - sidePad * 2) / 2, startY, sidePad + (screenWidth - sidePad * 2) / 2,
-                      startY + 65, 1, true);
-
-    drawCentered(UI_12_FONT_ID, val2, cx2, startY, EpdFontFamily::BOLD);
-    drawCentered(UI_10_FONT_ID, label2a, cx2, startY + 34);
-    drawCentered(UI_10_FONT_ID, label2b, cx2, startY + 52);
-  };
-
-  // --- TODAY SECTION ---
-  renderer.fillRectDither(sidePad, yPos, screenWidth - sidePad * 2, 24, Color::LightGray);
-  renderer.drawText(UI_10_FONT_ID, sidePad + 10, yPos + 3, tr(STR_STATS_TODAY));
-  yPos += 45;
-
-  char t_val1[16];
-  snprintf(t_val1, sizeof(t_val1), "%lu", static_cast<unsigned long>(stats.readingTimeTodaySeconds / 60));
-  char t_val2[16];
-  snprintf(t_val2, sizeof(t_val2), "%lu", static_cast<unsigned long>(stats.pagesReadToday));
-  float ppmToday = 0;
-  if (stats.readingTimeTodaySeconds > 60)
-    ppmToday = static_cast<float>(stats.pagesReadToday) / (stats.readingTimeTodaySeconds / 60.0f);
-  char t_val3[16];
-  snprintf(t_val3, sizeof(t_val3), "%.1f", ppmToday);
-
-  drawTrio(yPos, t_val1, tr(STR_STATS_MINUTES), "", t_val2, tr(STR_STATS_PAGES), "", t_val3,
-           tr(STR_STATS_PAGES_PER_MIN), "");
-  yPos += 85;
-
-  yPos += 15;
-
-  // --- ALL TIME SECTION ---
-  renderer.fillRectDither(sidePad, yPos, screenWidth - sidePad * 2, 24, Color::LightGray);
-  renderer.drawText(UI_10_FONT_ID, sidePad + 10, yPos + 3, tr(STR_STATS_ALL_TIME));
-  yPos += 45;
-
-  char a_val1[16];
-  snprintf(a_val1, sizeof(a_val1), "%.1f", stats.totalReadingTimeSeconds / 3600.0f);
-  char a_val2[16];
-  snprintf(a_val2, sizeof(a_val2), "%lu", static_cast<unsigned long>(stats.totalPagesRead));
-  float ppmAll = 0;
-  if (stats.totalReadingTimeSeconds > 60)
-    ppmAll = static_cast<float>(stats.totalPagesRead) / (stats.totalReadingTimeSeconds / 60.0f);
-  char a_val3[16];
-  snprintf(a_val3, sizeof(a_val3), "%.1f", ppmAll);
-
-  drawTrio(yPos, a_val1, tr(STR_STATS_HOURS), "", a_val2, tr(STR_STATS_PAGES), "", a_val3, tr(STR_STATS_PAGES_PER_MIN),
-           "");
-  yPos += 85;
-
-  yPos += 15;
-
-  // --- ALL ITEMS SECTION ---
-  renderer.fillRectDither(sidePad, yPos, screenWidth - sidePad * 2, 24, Color::LightGray);
-  renderer.drawText(UI_10_FONT_ID, sidePad + 10, yPos + 3, tr(STR_STATS_ALL_ITEMS));
-  yPos += 45;
-
-  char i_val1[16];
-  snprintf(i_val1, sizeof(i_val1), "%lu", static_cast<unsigned long>(stats.booksFinished));
-  char i_val2[16];
-  snprintf(i_val2, sizeof(i_val2), "%d", totalBooksOnDevice);
-
-  drawDuo(yPos, i_val1, tr(STR_STATS_BOOKS), tr(STR_STATS_FINISHED), i_val2, tr(STR_STATS_TOTAL), tr(STR_STATS_BOOKS));
-
-  yPos += 85;
+  constexpr int kLegendSwatch = 12;
+  constexpr int kLegendY = 704;
+  for (int i = 0; i < 4; i++) {
+    const int swatchX = 62 + i * 100;
+    renderer.fillRectDither(swatchX, kLegendY, kLegendSwatch, kLegendSwatch, legendItems[i].color);
+    renderer.drawRect(swatchX, kLegendY, kLegendSwatch, kLegendSwatch);
+    drawBaseline(UI_12_FONT_ID, swatchX + 19, 715, I18n::getInstance().get(legendItems[i].label));
+  }
 
   const auto labels = mappedInput.mapLabels(tr(STR_BACK), tr(STR_SELECT), "", "");
   GUI.drawButtonHints(renderer, labels.btn1, labels.btn2, labels.btn3, labels.btn4);

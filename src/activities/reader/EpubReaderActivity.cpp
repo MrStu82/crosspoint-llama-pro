@@ -225,8 +225,8 @@ void EpubReaderActivity::onExit() {
   Activity::onExit();
 
   if (sessionStartTime != 0UL) {
-    const unsigned long sessionDurationMs = millis() - sessionStartTime;
-    StatsManager::getInstance().addReadingTimeSeconds(sessionDurationMs / 1000);
+    const unsigned long secs = (millis() - sessionStartTime) / 1000;
+    StatsManager::getInstance().addReadingTimeSeconds(secs);
     sessionStartTime = 0UL;
   }
   StatsManager::getInstance().save();
@@ -306,6 +306,20 @@ void EpubReaderActivity::showBuildPopup() {
   // HALF-clear the popup when the page replaces it, else "INDEXING" ghosts.
   pagesUntilFullRefresh = 1;
   buildPopupPending = false;
+}
+
+void EpubReaderActivity::onTextSettingsClosed() {
+  // TextSettingsActivity saves on each change; no save needed here. Font/size/spacing/margin
+  // changes invalidate the current layout: preserve position and force a re-layout, mirroring
+  // applyOrientation()'s reflow. Used by the reader-menu TEXT_SETTINGS entry.
+  RenderLock lock(*this);
+  if (section) {
+    rememberCurrentContentOffset();
+    cachedSpineIndex = currentSpineIndex;
+    cachedChapterTotalPageCount = section->pageCount;
+    nextPageNumber = section->currentPage;
+  }
+  section.reset();
 }
 
 void EpubReaderActivity::openDictionaryWordSelect() {
@@ -525,15 +539,24 @@ void EpubReaderActivity::loop() {
     }
   }
 
-  // Enter reader menu activity on short-press Confirm or a downward swipe from the top edge. A long-press
-  // that fired a bound function (bookmark or KOReader sync) sets ignoreNextConfirmRelease so the release
+  // Enter reader menu activity on short-press Confirm. A long-press that fired a bound
+  // function (bookmark or KOReader sync) sets ignoreNextConfirmRelease so the release
   // following the hold does not also open the menu.
-  if (mappedInput.wasReleased(MappedInputManager::Button::Confirm) || ReaderUtils::isTouchMenuGesture(mappedInput)) {
+  if (mappedInput.wasReleased(MappedInputManager::Button::Confirm)) {
     if (ignoreNextConfirmRelease) {
       ignoreNextConfirmRelease = false;
     } else {
       openReaderMenu();
     }
+  }
+
+  // Downward swipe from the top edge -> text settings directly (Stuart: "the top menu should
+  // have text options" — TEXT_SETTINGS was buried at item 3 of 14 in the full menu; this gesture
+  // is the shortcut straight to it, distinct from Confirm's full-menu-open above).
+  if (ReaderUtils::isTouchMenuGesture(mappedInput)) {
+    startActivityForResult(std::make_unique<TextSettingsActivity>(renderer, mappedInput, &sdFontSystem.registry(),
+                                                                   TextSettingsActivity::Tab::Family),
+                           [this](const ActivityResult&) { onTextSettingsClosed(); });
   }
 
   // Long-press Confirm runs the user-selected function (SETTINGS.longPressMenuFunction).
@@ -845,20 +868,7 @@ void EpubReaderActivity::onReaderMenuConfirm(EpubReaderMenuActivity::MenuAction 
     case EpubReaderMenuActivity::MenuAction::TEXT_SETTINGS: {
       startActivityForResult(std::make_unique<TextSettingsActivity>(renderer, mappedInput, &sdFontSystem.registry(),
                                                                     TextSettingsActivity::Tab::Family),
-                             [this](const ActivityResult&) {
-                               // TextSettingsActivity saves on each change; no save needed here.
-                               // Font/size/spacing/margin changes invalidate the current
-                               // layout: preserve position and force a re-layout, mirroring
-                               // applyOrientation()'s reflow.
-                               RenderLock lock(*this);
-                               if (section) {
-                                 rememberCurrentContentOffset();
-                                 cachedSpineIndex = currentSpineIndex;
-                                 cachedChapterTotalPageCount = section->pageCount;
-                                 nextPageNumber = section->currentPage;
-                               }
-                               section.reset();
-                             });
+                             [this](const ActivityResult&) { onTextSettingsClosed(); });
       break;
     }
     case EpubReaderMenuActivity::MenuAction::GO_TO_PERCENT: {
@@ -1084,7 +1094,15 @@ void EpubReaderActivity::pageTurn(bool isForwardTurn) {
     }
   }
   lastPageTurnTime = millis();
-  StatsManager::getInstance().incrementPagesRead();
+  if (sessionStartTime != 0UL) {
+    const unsigned long secs = (millis() - sessionStartTime) / 1000;
+    StatsManager::getInstance().addReadingTimeSeconds(secs);
+    sessionStartTime += secs * 1000;
+  }
+  // Only forward turns count as pages read -- paging back to reread shouldn't inflate the count.
+  if (isForwardTurn) {
+    StatsManager::getInstance().incrementPagesRead();
+  }
   requestUpdate();
 }
 
@@ -1150,6 +1168,10 @@ void EpubReaderActivity::render(RenderLock&& lock) {
   } else {
     orientedMarginBottom += std::max(SETTINGS.screenMargin, statusBarHeight);
   }
+
+  // Reserve viewport space for the top status bar, mirroring the bottom bar's reservation above.
+  const uint8_t topStatusBarHeight = UITheme::getInstance().getStatusBarHeight(CrossPointSettings::Edge::TOP);
+  orientedMarginTop += topStatusBarHeight;
 
   const uint16_t viewportWidth = renderer.getScreenWidth() - orientedMarginLeft - orientedMarginRight;
   const uint16_t viewportHeight = renderer.getScreenHeight() - orientedMarginTop - orientedMarginBottom;
@@ -1872,7 +1894,7 @@ void EpubReaderActivity::renderStatusBar() const {
   std::string title;
 
   int textYOffset = 0;
-  const auto sb = SETTINGS.statusBarSpec();
+  const auto sb = SETTINGS.statusBarSpec(CrossPointSettings::Edge::BOTTOM);
 
   if (automaticPageTurnActive) {
     title = tr(STR_AUTO_TURN_ENABLED) + std::to_string(60 * 1000 / pageTurnDuration);
@@ -1898,7 +1920,24 @@ void EpubReaderActivity::renderStatusBar() const {
   }
 
   GUI.drawStatusBar(renderer, bookProgress, currentPage, pageCount, title, 0, textYOffset, true, currentPageBookmarked,
-                    section->isBuilding());
+                    section->isBuilding(), CrossPointSettings::Edge::BOTTOM);
+
+  // Top bar: independent spec/title selection, mirroring the bottom bar's logic above.
+  const auto sbTop = SETTINGS.statusBarSpec(CrossPointSettings::Edge::TOP);
+  std::string topTitle;
+  if (sbTop.titleMode == CrossPointSettings::STATUS_BAR_TITLE::CHAPTER_TITLE) {
+    topTitle = tr(STR_UNNAMED);
+    const int tocIndex = epub->getTocIndexForSpineIndex(currentSpineIndex);
+    if (tocIndex != -1) {
+      const auto tocItem = epub->getTocItem(tocIndex);
+      topTitle = tocItem.title;
+    }
+  } else if (sbTop.titleMode == CrossPointSettings::STATUS_BAR_TITLE::BOOK_TITLE) {
+    topTitle = epub->getTitle();
+  }
+
+  GUI.drawStatusBar(renderer, bookProgress, currentPage, pageCount, topTitle, 0, 0, true, currentPageBookmarked,
+                    section->isBuilding(), CrossPointSettings::Edge::TOP);
 }
 
 void EpubReaderActivity::navigateToHref(const std::string& hrefStr, const bool savePosition) {

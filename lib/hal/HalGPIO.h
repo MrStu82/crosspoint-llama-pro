@@ -82,6 +82,14 @@ class HalGPIO {
   bool wasTouchActivity() const;
   void setSharedConfirmPowerShortPressEmitsPower(bool enabled);
 
+  // GT911 capacitive Home key (X4 Pro): true once on release of a short press.
+  // See InputManager::wasHomeKeyTapped() for the underlying edge detection.
+  bool wasHomeKeyTapped() const;
+  // True once when the home key has been held past the SDK's long-press
+  // threshold (~700ms, InputManager::HOME_KEY_LONG_PRESS_MS), while still down.
+  // See InputManager::wasHomeKeyLongPressed().
+  bool wasHomeKeyLongPressed() const;
+
   // Verify power button was held long enough after wakeup.
   // Returns true if verification succeeded, false if device should return to sleep.
   // Should only be called when wakeup reason is PowerButton.
@@ -96,6 +104,24 @@ class HalGPIO {
   enum class WakeupReason { PowerButton, AfterFlash, AfterUSBPower, Other };
 
   WakeupReason getWakeupReason() const;
+
+  // Serial recovery hatch (see the "CMD:DISP_OVR=" handler in main.cpp): forces
+  // cphw/disp_ovr to rawValue (0=auto, 1=SSD1677, 2=UC8179) without needing a working
+  // panel. Returns the resolved controller name ("auto"/"SSD1677"/"UC8179") on success
+  // so the caller can echo confirmation over serial, or nullptr if rawValue isn't 0-2.
+  // Takes effect on next boot, via applyDisplayControllerWithOverride() in HalGPIO.cpp.
+  static const char* setDisplayControllerOverride(uint8_t rawValue);
+
+  // Current display controller name ("SSD1677"/"UC8179"/etc), resolved at boot
+  // by applyDisplayControllerWithOverride(). For the DEBUG settings panel.
+  static const char* getDisplayControllerName();
+
+  // How the controller above was resolved this boot: "override" (NVS forced),
+  // "bus probe" (UltraChip signature confirmed live), or "fallback default"
+  // (probe found nothing, compile-time profile default stands). See the
+  // comment above applyDisplayControllerWithOverride() in HalGPIO.cpp for the
+  // full rationale of each source. For the DEBUG settings panel.
+  static const char* getDisplayControllerSource();
 
   // Button indices
   static constexpr uint8_t BTN_BACK = 0;

@@ -7,10 +7,12 @@
 #include <cstdio>
 #include <string>
 
+#include "CrossPointSettings.h"
 #include "MappedInputManager.h"
 #include "components/UITheme.h"
 #include "fontIds.h"
 #include "game/GameState.h"
+#include "game/GameTheme.h"
 #include "game/GameTypes.h"
 #include "activities/ActivityResult.h"
 
@@ -30,7 +32,7 @@ void GameMenuActivity::loop() {
 
   switch (currentScreen) {
     case Screen::Menu: {
-      constexpr int menuSize = 5;  // Resume, Inventory, Character, Save & Quit, Abandon
+      constexpr int menuSize = 6;  // Resume, Inventory, Character, Theme, Save & Quit, Abandon
 
       buttonNavigator.onNextRelease([this] {
         selectedIndex = ButtonNavigator::nextIndex(selectedIndex, menuSize);
@@ -58,11 +60,16 @@ void GameMenuActivity::loop() {
             selectedIndex = 0;
             requestUpdate();
             break;
-          case 3:  // Save & Quit
+          case 3:  // Theme
+            SETTINGS.gameTheme = (SETTINGS.gameTheme + 1) % CrossPointSettings::GAME_THEME_COUNT;
+            SETTINGS.saveToFile();
+            requestUpdate();
+            break;
+          case 4:  // Save & Quit
             setResult(MenuResult{static_cast<int>(MenuAction::SAVE_QUIT), 0, 0});
             finish();
             return;
-          case 4:  // Abandon Run
+          case 5:  // Abandon Run
             setResult(MenuResult{static_cast<int>(MenuAction::ABANDON), 0, 0});
             finish();
             return;
@@ -72,6 +79,14 @@ void GameMenuActivity::loop() {
       if (mappedInput.wasReleased(Button::Back)) {
         setResult(MenuResult{static_cast<int>(MenuAction::RESUME), 0, 0});
         finish();
+        return;
+      }
+
+      // Touch: additive alternate input path alongside the physical-button handling
+      // above. A tap landing on a row selects it and immediately activates it (see
+      // handleMenuTouch()). If activation finished the activity, return immediately
+      // exactly like the physical-button paths above do.
+      if (handleMenuTouch()) {
         return;
       }
       break;
@@ -121,6 +136,90 @@ void GameMenuActivity::loop() {
       break;
     }
   }
+}
+
+// --- Touch (Screen::Menu) ---
+
+bool GameMenuActivity::handleMenuTouch() {
+  constexpr int menuSize = 6;  // Resume, Inventory, Character, Theme, Save & Quit, Abandon
+
+  // Row geometry must mirror BaseTheme::drawButtonMenu() exactly (see renderMenu()
+  // for how contentTop/rect are computed, and BaseTheme.cpp's drawButtonMenu() for
+  // the per-row tileY formula) — not guessed independently, so hit-test rects always
+  // match what's actually drawn.
+  const auto pageWidth = renderer.getScreenWidth();
+  const auto pageHeight = renderer.getScreenHeight();
+  auto metrics = UITheme::getInstance().getMetrics();
+
+  const int contentTop = metrics.topPadding + metrics.headerHeight + metrics.verticalSpacing;
+  const int contentHeight = pageHeight - contentTop - metrics.buttonHintsHeight - metrics.verticalSpacing;
+  const Rect rect(0, contentTop, pageWidth, contentHeight);
+
+  const int rowX = rect.x + metrics.contentSidePadding;
+  const int rowWidth = rect.width - metrics.contentSidePadding * 2;
+
+  auto rowContains = [&](int index, int x, int y) {
+    const int tileY = metrics.verticalSpacing + rect.y + index * (metrics.menuRowHeight + metrics.menuSpacing);
+    return x >= rowX && x < rowX + rowWidth && y >= tileY && y < tileY + metrics.menuRowHeight;
+  };
+
+  int tx = 0;
+  int ty = 0;
+
+  if (mappedInput.wasScreenTouchDown(tx, ty)) {
+    for (int i = 0; i < menuSize; i++) {
+      if (rowContains(i, tx, ty)) {
+        if (selectedIndex != i) {
+          selectedIndex = i;
+          requestUpdate();
+        }
+        return true;
+      }
+    }
+    return false;
+  }
+
+  if (mappedInput.wasScreenTapped(tx, ty)) {
+    for (int i = 0; i < menuSize; i++) {
+      if (!rowContains(i, tx, ty)) continue;
+
+      // Single-tap-to-activate: select the row and immediately fire the same
+      // action the physical Confirm button would (not a two-step select-then-confirm).
+      selectedIndex = i;
+      switch (i) {
+        case 0:  // Resume
+          setResult(MenuResult{static_cast<int>(MenuAction::RESUME), 0, 0});
+          finish();
+          return true;
+        case 1:  // Inventory
+          currentScreen = Screen::Inventory;
+          selectedIndex = 0;
+          requestUpdate();
+          return true;
+        case 2:  // Character
+          currentScreen = Screen::Character;
+          selectedIndex = 0;
+          requestUpdate();
+          return true;
+        case 3:  // Theme
+          SETTINGS.gameTheme = (SETTINGS.gameTheme + 1) % CrossPointSettings::GAME_THEME_COUNT;
+          SETTINGS.saveToFile();
+          requestUpdate();
+          return true;
+        case 4:  // Save & Quit
+          setResult(MenuResult{static_cast<int>(MenuAction::SAVE_QUIT), 0, 0});
+          finish();
+          return true;
+        case 5:  // Abandon Run
+          setResult(MenuResult{static_cast<int>(MenuAction::ABANDON), 0, 0});
+          finish();
+          return true;
+      }
+    }
+    return false;
+  }
+
+  return false;
 }
 
 // --- Use Inventory Item ---
@@ -252,11 +351,20 @@ void GameMenuActivity::renderMenu() {
   const int contentHeight = pageHeight - contentTop - metrics.buttonHintsHeight - metrics.verticalSpacing;
 
   static const StrId items[] = {StrId::STR_DM_RESUME_GAME, StrId::STR_DM_INVENTORY, StrId::STR_DM_CHARACTER,
-                                StrId::STR_DM_SAVE_AND_QUIT, StrId::STR_DM_ABANDON_RUN};
+                                StrId::STR_DM_THEME, StrId::STR_DM_SAVE_AND_QUIT, StrId::STR_DM_ABANDON_RUN};
 
   GUI.drawButtonMenu(
-      renderer, Rect(0, contentTop, pageWidth, contentHeight), 5, selectedIndex,
-      [](int index) { return std::string(I18N.get(items[index])); }, nullptr);
+      renderer, Rect(0, contentTop, pageWidth, contentHeight), 6, selectedIndex,
+      [](int index) {
+        if (index == 3) {
+          // Theme row shows the live selection, e.g. "Theme: Default" -- mirrors
+          // the " +2"/" [E]" dynamic-suffix pattern used for inventory rows.
+          const auto* theme = game::getTheme(static_cast<game::GameThemeId>(SETTINGS.gameTheme));
+          return std::string(I18N.get(items[index])) + ": " + theme->name;
+        }
+        return std::string(I18N.get(items[index]));
+      },
+      nullptr);
 
   const auto labels = mappedInput.mapLabels(tr(STR_BACK), tr(STR_SELECT), "", "");
   GUI.drawButtonHints(renderer, labels.btn1, labels.btn2, labels.btn3, labels.btn4);

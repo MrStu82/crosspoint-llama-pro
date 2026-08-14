@@ -77,15 +77,22 @@ def get_base_version(project_dir):
 
 
 def inject_version(env):
+    project_dir = env['PROJECT_DIR']
+
+    # FIRMWARE_GIT_SHA: injected for every environment (unlike the
+    # CROSSPOINT_VERSION override below, which is dev-only) — the DEBUG
+    # settings panel reads this directly, and it should reflect the real
+    # commit regardless of which env produced the running binary.
+    short_sha = get_git_short_sha(project_dir)
+    env.Append(CPPDEFINES=[('FIRMWARE_GIT_SHA', f'\\"{short_sha}\\"')])
+
     # Only applies to the dev (default) environment; release envs set the
     # version via build_flags in platformio.ini and are unaffected.
     if env['PIOENV'] != 'default':
         return
 
-    project_dir = env['PROJECT_DIR']
     base_version = get_base_version(project_dir)
     branch = get_git_branch(project_dir)
-    short_sha = get_git_short_sha(project_dir)
     version_string = f'{base_version}-dev-{branch}-{short_sha}'
 
     env.Append(CPPDEFINES=[('CROSSPOINT_VERSION', f'\\"{version_string}\\"')])

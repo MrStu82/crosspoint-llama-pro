@@ -54,8 +54,8 @@ void TxtReaderActivity::onExit() {
   Activity::onExit();
 
   if (sessionStartTime != 0UL) {
-    const unsigned long sessionDurationMs = millis() - sessionStartTime;
-    StatsManager::getInstance().addReadingTimeSeconds(sessionDurationMs / 1000);
+    const unsigned long secs = (millis() - sessionStartTime) / 1000;
+    StatsManager::getInstance().addReadingTimeSeconds(secs);
     sessionStartTime = 0UL;
   }
   StatsManager::getInstance().save();
@@ -86,11 +86,21 @@ void TxtReaderActivity::loop() {
 
   if (prevTriggered && currentPage > 0) {
     currentPage--;
-    StatsManager::getInstance().incrementPagesRead();
+    if (sessionStartTime != 0UL) {
+      const unsigned long secs = (millis() - sessionStartTime) / 1000;
+      StatsManager::getInstance().addReadingTimeSeconds(secs);
+      sessionStartTime += secs * 1000;
+    }
+    // Backward turns (rereading) don't count as pages read.
     requestUpdate();
   } else if (nextTriggered) {
     if (currentPage < totalPages - 1) {
       currentPage++;
+      if (sessionStartTime != 0UL) {
+        const unsigned long secs = (millis() - sessionStartTime) / 1000;
+        StatsManager::getInstance().addReadingTimeSeconds(secs);
+        sessionStartTime += secs * 1000;
+      }
       StatsManager::getInstance().incrementPagesRead();
       requestUpdate();
     } else {
@@ -423,10 +433,18 @@ void TxtReaderActivity::renderPage() {
 void TxtReaderActivity::renderStatusBar() const {
   const float progress = totalPages > 0 ? (currentPage + 1) * 100.0f / totalPages : 0;
   std::string title;
-  if (SETTINGS.statusBarSpec().showsTitle()) {
+  if (SETTINGS.statusBarSpec(CrossPointSettings::Edge::BOTTOM).showsTitle()) {
     title = txt->getTitle();
   }
-  GUI.drawStatusBar(renderer, progress, currentPage + 1, totalPages, title);
+  GUI.drawStatusBar(renderer, progress, currentPage + 1, totalPages, title, 0, 0, true, false, false,
+                    CrossPointSettings::Edge::BOTTOM);
+
+  std::string topTitle;
+  if (SETTINGS.statusBarSpec(CrossPointSettings::Edge::TOP).showsTitle()) {
+    topTitle = txt->getTitle();
+  }
+  GUI.drawStatusBar(renderer, progress, currentPage + 1, totalPages, topTitle, 0, 0, true, false, false,
+                    CrossPointSettings::Edge::TOP);
 }
 
 void TxtReaderActivity::saveProgress() const {

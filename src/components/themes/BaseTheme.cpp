@@ -711,9 +711,15 @@ void BaseTheme::drawRecentBookCover(GfxRenderer& renderer, Rect rect, const std:
 void BaseTheme::drawButtonMenu(GfxRenderer& renderer, Rect rect, int buttonCount, int selectedIndex,
                                const std::function<std::string(int index)>& buttonLabel,
                                const std::function<UIIcon(int index)>& rowIcon) const {
-  for (int i = 0; i < buttonCount; ++i) {
-    const int tileY = BaseMetrics::values.verticalSpacing + rect.y +
-                      static_cast<int>(i) * (BaseMetrics::values.menuRowHeight + BaseMetrics::values.menuSpacing);
+  const int rowStep = BaseMetrics::values.menuRowHeight + BaseMetrics::values.menuSpacing;
+  const int pageItems = std::max(1, (rect.height - BaseMetrics::values.verticalSpacing) / rowStep);
+  const int safeSelectedIndex = std::max(0, selectedIndex);
+  const int pageStartIndex = (safeSelectedIndex / pageItems) * pageItems;
+  const int pageEndIndex = std::min(buttonCount, pageStartIndex + pageItems);
+
+  for (int i = pageStartIndex; i < pageEndIndex; ++i) {
+    const int row = i - pageStartIndex;
+    const int tileY = rect.y + row * rowStep;
 
     const bool selected = selectedIndex == i;
 
@@ -734,6 +740,15 @@ void BaseTheme::drawButtonMenu(GfxRenderer& renderer, Rect rect, int buttonCount
         tileY + (BaseMetrics::values.menuRowHeight - lineHeight) / 2;  // vertically centered assuming y is top of text
     // Invert text when the tile is selected, to contrast with the filled background
     renderer.drawText(UI_10_FONT_ID, textX, textY, label, selectedIndex != i);
+
+    // 8x8 downward chevron on the last visible row when more items are scrolled off below.
+    if (i == pageEndIndex - 1 && pageEndIndex < buttonCount) {
+      const int cx = rect.x + rect.width - BaseMetrics::values.contentSidePadding - 12;
+      const int cy = tileY + BaseMetrics::values.menuRowHeight / 2;
+      const int xPoints[3] = {cx - 4, cx + 4, cx};
+      const int yPoints[3] = {cy - 4, cy - 4, cy + 4};
+      renderer.fillPolygon(xPoints, yPoints, 3, !selected);
+    }
   }
 }
 
@@ -795,17 +810,25 @@ void BaseTheme::fillPopupProgress(const GfxRenderer& renderer, const Rect& layou
 
 void BaseTheme::drawStatusBar(GfxRenderer& renderer, const float bookProgress, const int currentPage,
                               const int pageCount, std::string title, const int paddingBottom, const int textYOffset,
-                              const bool fillMargin, const bool isPageBookmarked, const bool pageCountEstimated) const {
+                              const bool fillMargin, const bool isPageBookmarked, const bool pageCountEstimated,
+                              const CrossPointSettings::Edge edge) const {
   auto metrics = UITheme::getInstance().getMetrics();
   int orientedMarginTop, orientedMarginRight, orientedMarginBottom, orientedMarginLeft;
   renderer.getOrientedViewableTRBL(&orientedMarginTop, &orientedMarginRight, &orientedMarginBottom,
                                    &orientedMarginLeft);
-  const auto sb = SETTINGS.statusBarSpec();
+  const auto sb = SETTINGS.statusBarSpec(edge);
   const bool showStatusBarTextLane = sb.textLaneVisible(halClock.isAvailable());
+  const bool isTopEdge = edge == CrossPointSettings::Edge::TOP;
 
   // Draw Progress Text
   const auto screenHeight = renderer.getScreenHeight();
-  auto textY = screenHeight - UITheme::getInstance().getStatusBarHeight() - orientedMarginBottom - paddingBottom - 4;
+  // Bottom bar: text lane sits above the progress bar, both hugging the bottom edge.
+  // Top bar mirrors this from the top edge: progress bar hugs the edge, text lane sits below it.
+  auto textY = isTopEdge ? orientedMarginTop + paddingBottom +
+                               (sb.showsProgressBar() ? sb.progressBarHeightPx + metrics.progressBarMarginTop : 0) +
+                               metrics.statusBarVerticalMargin - 4
+                         : screenHeight - UITheme::getInstance().getStatusBarHeight(edge) - orientedMarginBottom -
+                               paddingBottom - 4;
 
   const int leftClusterX = metrics.statusBarHorizontalMargin + orientedMarginLeft + 1;
   const int rightClusterX = renderer.getScreenWidth() - metrics.statusBarHorizontalMargin - orientedMarginRight;
@@ -839,8 +862,10 @@ void BaseTheme::drawStatusBar(GfxRenderer& renderer, const float bookProgress, c
     const int barMarginLeft = fillMargin ? 0 : orientedMarginLeft;
     const int barMarginRight = fillMargin ? 0 : orientedMarginRight;
     const int progressBarMaxWidth = renderer.getScreenWidth() - barMarginLeft - barMarginRight;
-    const int progressBarY = renderer.getScreenHeight() - orientedMarginBottom - sb.progressBarHeightPx -
-                             paddingBottom + (fillMargin ? 1 : 0);
+    // Top bar: progress bar hugs the top margin instead of the bottom one, no bottom-fillMargin nudge.
+    const int progressBarY = isTopEdge ? orientedMarginTop + paddingBottom
+                                        : renderer.getScreenHeight() - orientedMarginBottom - sb.progressBarHeightPx -
+                                              paddingBottom + (fillMargin ? 1 : 0);
     size_t progress;
     if (sb.progressBarMode == CrossPointSettings::STATUS_BAR_PROGRESS_BAR::BOOK_PROGRESS) {
       progress = static_cast<size_t>(bookProgress);

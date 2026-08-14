@@ -116,9 +116,9 @@ bool MappedInputManager::mapButton(const Button button, bool (HalGPIO::*fn)(uint
 }
 
 namespace {
-constexpr float LEFT_EDGE_BACK_GESTURE_FRAC_X = 0.25f;
-constexpr float BOTTOM_EDGE_BACK_GESTURE_FRAC_Y = 0.14f;
+constexpr float LEFT_EDGE_BRIGHTNESS_GESTURE_FRAC_X = 0.25f;
 constexpr float TOP_EDGE_MENU_GESTURE_FRAC_Y = 0.14f;
+constexpr float BOTTOM_EDGE_BRIGHTNESS_SHEET_GESTURE_FRAC_Y = 0.14f;
 constexpr unsigned long TOUCH_DOWN_SELECT_DELAY_MS = 90;
 constexpr unsigned long TOUCH_HELD_OVERRIDE_WINDOW_MS = 250;
 }  // namespace
@@ -265,21 +265,6 @@ MappedInputManager::SwipeDir MappedInputManager::wasSwipe() const {
   return dy < 0 ? SwipeDir::Up : SwipeDir::Down;
 }
 
-bool MappedInputManager::wasBackGesture() const {
-  // Back = left-to-right swipe starting near the left edge. Edge-anchored so that
-  // mid-screen horizontal swipes stay available to activities that consume
-  // SwipeDir::Left/Right (e.g. percent selection, image viewer).
-  int sx = 0;
-  int sy = 0;
-  int ex = 0;
-  int ey = 0;
-  if (!decodeSwipe(sx, sy, ex, ey)) return false;
-  const bool hit = sx <= renderer.getScreenWidth() * LEFT_EDGE_BACK_GESTURE_FRAC_X && ex > sx &&
-                   std::abs(ex - sx) > std::abs(ey - sy);
-  if (hit) rememberTouchHeldTime();
-  return hit;
-}
-
 bool MappedInputManager::wasMenuGesture() const {
   // Downward swipe starting at the top edge (mirror of the bottom-edge home gesture).
   int sx = 0;
@@ -293,29 +278,76 @@ bool MappedInputManager::wasMenuGesture() const {
   return hit;
 }
 
+bool MappedInputManager::wasHomeKeyBackGesture() const {
+  if (!gpio.wasHomeKeyTapped()) return false;
+  // Tap = zero-duration Back edge by definition. Force getHeldTime() to 0 via
+  // the override so it can never cross GO_BACK_OR_HOME_MS-style thresholds
+  // (isPressed(Back) is also never true for this synthetic edge, since it
+  // isn't backed by mapButton()'s physical-button state at all — so the
+  // "isPressed && heldTime >= threshold" long-press branch used throughout
+  // the reader/file browser can never fire for a home-key tap either way).
+  touchHeldOverrideValid = true;
+  touchHeldOverrideMs = 0;
+  touchHeldOverrideAt = millis();
+  return true;
+}
+
 bool MappedInputManager::wasHomeGesture() const {
+  // Physical capacitive Home key (X4 Pro's GT911) LONG-HOLD is the only way to
+  // trigger the app-wide "go home" action. Bottom-edge swipe-to-home was
+  // removed per Stuart's explicit call: he has a home button and doesn't want
+  // a swipe alias for it on any screen.
+  return gpio.wasHomeKeyLongPressed();
+}
+
+bool MappedInputManager::wasBrightnessGesture() const {
+  // Left-edge upward swipe -> backlight quick-picker. Edge-anchored to the same
+  // zone previously used by the now-retired wasBackGesture() (Back is covered by
+  // the physical home key alone; see wasHomeKeyBackGesture()).
+  //
+  // The left zone (full screen height) and wasBrightnessSheetGesture()'s bottom
+  // zone (full screen width) geometrically overlap in the bottom-left corner —
+  // edge-anchoring alone does not make them mutually exclusive, since both span
+  // the *full* opposite axis. A swipe starting in that corner is excluded here
+  // so ambiguous corner swipes always resolve to the bottom drawer instead.
   int sx = 0;
   int sy = 0;
   int ex = 0;
   int ey = 0;
-  if (decodeSwipe(sx, sy, ex, ey)) {
-    const int bottomEdgeTop =
-        renderer.getScreenHeight() - static_cast<int>(renderer.getScreenHeight() * BOTTOM_EDGE_BACK_GESTURE_FRAC_Y);
-    if (sy >= bottomEdgeTop && ey < sy && std::abs(ey - sy) > std::abs(ex - sx)) {
-      rememberTouchHeldTime();
-      return true;
-    }
-  }
-  return false;
+  if (!decodeSwipe(sx, sy, ex, ey)) return false;
+  const int bottomEdgeTop =
+      static_cast<int>(renderer.getScreenHeight() * (1.0f - BOTTOM_EDGE_BRIGHTNESS_SHEET_GESTURE_FRAC_Y));
+  const bool hit = sx <= renderer.getScreenWidth() * LEFT_EDGE_BRIGHTNESS_GESTURE_FRAC_X && sy < bottomEdgeTop &&
+                   ey < sy && std::abs(ey - sy) > std::abs(ex - sx);
+  if (hit) rememberTouchHeldTime();
+  return hit;
+}
+
+bool MappedInputManager::wasBrightnessSheetGesture() const {
+  // Bottom-edge upward swipe -> quick brightness sheet. Mirrors wasMenuGesture()'s
+  // top-edge zone, decoded via the same decodeSwipe() mechanism as every other edge
+  // gesture here (no new gesture-decoding path). Bottom-left corner ambiguity with
+  // wasBrightnessGesture()'s left zone is resolved there (see its comment) in favor
+  // of this gesture, so no exclusion is needed on this side.
+  int sx = 0;
+  int sy = 0;
+  int ex = 0;
+  int ey = 0;
+  if (!decodeSwipe(sx, sy, ex, ey)) return false;
+  const int bottomEdgeTop =
+      static_cast<int>(renderer.getScreenHeight() * (1.0f - BOTTOM_EDGE_BRIGHTNESS_SHEET_GESTURE_FRAC_Y));
+  const bool hit = sy >= bottomEdgeTop && ey < sy && std::abs(ey - sy) > std::abs(ex - sx);
+  if (hit) rememberTouchHeldTime();
+  return hit;
 }
 
 bool MappedInputManager::wasPressed(const Button button) const {
-  if (button == Button::Back && wasBackGesture()) return true;
+  if (button == Button::Back && wasHomeKeyBackGesture()) return true;
   return mapButton(button, &HalGPIO::wasPressed);
 }
 
 bool MappedInputManager::wasReleased(const Button button) const {
-  if (button == Button::Back && wasBackGesture()) return true;
+  if (button == Button::Back && wasHomeKeyBackGesture()) return true;
   return mapButton(button, &HalGPIO::wasReleased);
 }
 

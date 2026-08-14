@@ -16,6 +16,7 @@ enum class SettingAction {
   None,
   RemapFrontButtons,
   CustomiseStatusBar,
+  CustomiseTopStatusBar,
   KOReaderSync,
   OPDSBrowser,
   Network,
@@ -26,6 +27,8 @@ enum class SettingAction {
   DownloadFonts,
   TextSettings,
   Frontlight,
+  UsbTransfer,
+  DebugPanel,
 };
 
 struct SettingInfo {

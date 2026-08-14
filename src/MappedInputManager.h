@@ -63,6 +63,16 @@ class MappedInputManager {
   SwipeDir wasSwipe() const;
   bool wasHomeGesture() const;
   bool wasMenuGesture() const;
+  // Left-edge upward swipe (reader-only) -> backlight quick-picker. Edge-anchored so it can't
+  // collide with wasMenuGesture()'s top-edge downward swipe. This zone previously belonged to
+  // the now-retired wasBackGesture() (Back is covered by the physical home key alone; see
+  // wasHomeKeyBackGesture()).
+  bool wasBrightnessGesture() const;
+  // Bottom-edge upward swipe -> quick brightness sheet (9-tick, windowed partial refresh).
+  // Edge-anchored to the bottom, mirroring wasMenuGesture()'s top-edge zone. The bottom-left
+  // corner is shared with wasBrightnessGesture()'s left zone; wasBrightnessGesture() excludes
+  // it so this gesture always wins there.
+  bool wasBrightnessSheetGesture() const;
   bool wasAnyPressed() const;
   bool wasAnyReleased() const;
   unsigned long getHeldTime() const;
@@ -93,7 +103,12 @@ class MappedInputManager {
   Button mapScreenDirection(Button button) const;
   Labels mapFrontLabels(const char* back, const char* confirm, const char* left, const char* right) const;
   bool mapButton(Button button, bool (HalGPIO::*fn)(uint8_t) const) const;
-  bool wasBackGesture() const;
+  // Synthesizes a Button::Back edge from a home-key tap. Overrides getHeldTime()
+  // to 0 (via the touchHeldOverride mechanism) so any duration-gated Back logic
+  // (e.g. ReaderUtils::handleBackNavigation's GO_BACK_OR_HOME_MS split) always
+  // classifies it as a short press. Sole source of Button::Back — the left-edge
+  // swipe gesture that previously also fed Back has been retired.
+  bool wasHomeKeyBackGesture() const;
   // Fetch the pending swipe (if any) and map both endpoints to logical screen coords
   bool decodeSwipe(int& sx, int& sy, int& ex, int& ey) const;
   bool listItemFromPoint(int x, int y, int& index, int itemCount, int selectedIndex, int listTop, int listHeight,

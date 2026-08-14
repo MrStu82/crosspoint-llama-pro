@@ -59,10 +59,10 @@ void HalPowerManager::setPowerSaving(bool enabled) {
 
 void HalPowerManager::startDeepSleep(HalGPIO& gpio) const {
 #ifdef ENABLE_SERIAL_LOG
-  // Tear down HWCDC so the host sees a clean disconnect and the peripheral
-  // doesn't hold power domains that interfere with USB-powered GPIO wake.
-  // logSerial is the raw HWCDC reference; Serial is the MySerialImpl proxy
-  // (which doesn't expose end()).
+  // Tear down the USB CDC device so the host sees a clean disconnect and the
+  // peripheral doesn't hold power domains that interfere with USB-powered GPIO
+  // wake. logSerial is the raw HWCDC/USBCDC reference (whichever ARDUINO_USB_MODE
+  // selects); Serial is the MySerialImpl proxy (which doesn't expose end()).
   logSerial.end();
 #endif
 

@@ -540,7 +540,14 @@ uint8_t Xtc::calculateProgress(uint32_t currentPage) const {
   if (!loaded || !parser || parser->getPageCount() == 0) {
     return 0;
   }
-  return static_cast<uint8_t>((currentPage + 1) * 100 / parser->getPageCount());
+  const uint32_t raw = (currentPage + 1) * 100 / parser->getPageCount();
+  if (raw > 100) {
+    LOG_ERR("XTC", "progress %lu%% exceeds 100 (currentPage=%lu, pageCount=%lu) - page count drifted, clamping",
+            static_cast<unsigned long>(raw), static_cast<unsigned long>(currentPage),
+            static_cast<unsigned long>(parser->getPageCount()));
+    return 100;
+  }
+  return static_cast<uint8_t>(raw);
 }
 
 xtc::XtcError Xtc::getLastError() const {

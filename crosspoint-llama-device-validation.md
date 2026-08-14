@@ -66,9 +66,20 @@ device work at all. None of it has met a bench. A green compile only proves the
 code links against these pin numbers; it proves nothing about whether the numbers
 are right.
 
-- **Frontlight — HYPOTHESIS, not confirmed.** The dual warm/cool LEDC PWM pin
-  mapping (cool/white on GPIO8, warm on GPIO9, both active-high, 10kHz/10-bit) came
-  out of an OEM firmware dump, reverse-engineered — it has never been run on a real
+- **Frontlight — HYPOTHESIS, not confirmed, and the "reverse-engineered from an
+  OEM dump" provenance is itself unverified.** The dual warm/cool LEDC PWM pin
+  mapping (cool/white on GPIO8, warm on GPIO9, both active-high, 10kHz/10-bit) was
+  never derived by anyone on this project — it was inherited from upstream
+  `freeink-sdk` commit `d24d75d` ("Add XTEink X4 Pro reverse-engineering
+  documentation," Justin Mitchell / github.com/itsthisjustin, 2026-07-21), which
+  asserts the pins came from "the OEM LEDC init (IROM 0x420a2130 → helper
+  0x420a20c0)" but ships no binary, no disassembly, no Ghidra project — only the
+  prose conclusion. Confirmed (2026-08-10) via a full search of this repo, the
+  entire `freeink-sdk` submodule history across all branches, the container
+  filesystem, and the public `Free-Ink/freeink-sdk` GitHub repo/PR #19/commit
+  history: **no dump or RE artifact exists anywhere we can reach.** Treat the
+  IROM addresses as an unbacked third-party claim, not verified evidence — it is
+  weaker than this doc previously implied. It has never been run on a real
   board. Test: turn the frontlight on, confirm any light comes on at all before
   judging anything else. Then check brightness actually ramps smoothly end-to-end
   (not stuck at one level, not inverted). Then check color-temperature: does the

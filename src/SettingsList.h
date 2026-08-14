@@ -295,7 +295,8 @@ inline std::vector<SettingInfo> getSettingsList(const SdCardFontRegistry* regist
                           "longPressMenuFunction", StrId::STR_CAT_CONTROLS),
         SettingInfo::Enum(
             StrId::STR_SHORT_PWR_BTN, &CrossPointSettings::shortPwrBtn,
-            {StrId::STR_IGNORE, StrId::STR_SLEEP, StrId::STR_PAGE_TURN, StrId::STR_FORCE_REFRESH, StrId::STR_FOOTNOTES},
+            {StrId::STR_IGNORE, StrId::STR_SLEEP, StrId::STR_PAGE_TURN, StrId::STR_FORCE_REFRESH, StrId::STR_FOOTNOTES,
+             StrId::STR_BACKLIGHT_TOGGLE},
             "shortPwrBtn", StrId::STR_CAT_CONTROLS),
         SettingInfo::Toggle(StrId::STR_PWR_BTN_FOOTNOTE_BACK, &CrossPointSettings::pwrBtnFootnoteBack,
                             "pwrBtnFootnoteBack", StrId::STR_CAT_CONTROLS),
@@ -323,6 +324,12 @@ inline std::vector<SettingInfo> getSettingsList(const SdCardFontRegistry* regist
         SettingInfo::Enum(StrId::STR_OPDS_FILENAME_FORMAT, &CrossPointSettings::opdsFilenameFormat,
                           {StrId::STR_FMT_AUTHOR_TITLE, StrId::STR_FMT_TITLE_AUTHOR, StrId::STR_FMT_TITLE},
                           "opdsFilenameFormat"),
+
+        // Deep Mines sprite theme: persisted + web-exposed, category-less so it
+        // is hidden from the generic on-device Settings screen (cycled from the
+        // in-game menu, GameMenuActivity, which owns this setting's UI).
+        SettingInfo::Enum(StrId::STR_DM_THEME, &CrossPointSettings::gameTheme,
+                          {StrId::STR_DM_THEME_DEFAULT, StrId::STR_DM_THEME_DUNGEON_CRAWLER_CARL}, "gameTheme"),
 
         // --- KOReader Sync (web-only, uses KOReaderCredentialStore) ---
         SettingInfo::DynamicString(
@@ -385,6 +392,28 @@ inline std::vector<SettingInfo> getSettingsList(const SdCardFontRegistry* regist
                           {StrId::STR_BOOK, StrId::STR_CHAPTER, StrId::STR_HIDE}, "statusBarTitle",
                           StrId::STR_CUSTOMISE_STATUS_BAR),
         SettingInfo::Toggle(StrId::STR_BATTERY, &CrossPointSettings::statusBarBattery, "statusBarBattery",
+                            StrId::STR_CUSTOMISE_STATUS_BAR),
+        // Top status bar (mirrors the bottom-bar block above; see
+        // CrossPointSettings::Edge). Registered here purely so toJson/fromJson
+        // (which iterate getSettingsList()) persist these fields — reusing the
+        // bottom bar's StrId labels means they're indistinguishable in the web
+        // UI for now. On-device editing (a second "Customise Top Status Bar"
+        // menu entry with its own labels) is the deliberate next commit, not
+        // shipped tonight.
+        SettingInfo::Toggle(StrId::STR_CHAPTER_PAGE_COUNT, &CrossPointSettings::topBarChapterPageCount,
+                            "topBarChapterPageCount", StrId::STR_CUSTOMISE_STATUS_BAR),
+        SettingInfo::Toggle(StrId::STR_BOOK_PROGRESS_PERCENTAGE, &CrossPointSettings::topBarBookProgressPercentage,
+                            "topBarBookProgressPercentage", StrId::STR_CUSTOMISE_STATUS_BAR),
+        SettingInfo::Enum(StrId::STR_PROGRESS_BAR, &CrossPointSettings::topBarProgressBar,
+                          {StrId::STR_BOOK, StrId::STR_CHAPTER, StrId::STR_HIDE}, "topBarProgressBar",
+                          StrId::STR_CUSTOMISE_STATUS_BAR),
+        SettingInfo::Enum(StrId::STR_PROGRESS_BAR_THICKNESS, &CrossPointSettings::topBarProgressBarThickness,
+                          {StrId::STR_PROGRESS_BAR_THIN, StrId::STR_PROGRESS_BAR_MEDIUM, StrId::STR_PROGRESS_BAR_THICK},
+                          "topBarProgressBarThickness", StrId::STR_CUSTOMISE_STATUS_BAR),
+        SettingInfo::Enum(StrId::STR_TITLE, &CrossPointSettings::topBarTitle,
+                          {StrId::STR_BOOK, StrId::STR_CHAPTER, StrId::STR_HIDE}, "topBarTitle",
+                          StrId::STR_CUSTOMISE_STATUS_BAR),
+        SettingInfo::Toggle(StrId::STR_BATTERY, &CrossPointSettings::topBarBattery, "topBarBattery",
                             StrId::STR_CUSTOMISE_STATUS_BAR),
         SettingInfo::Enum(StrId::STR_XTC_STATUS_BAR, &CrossPointSettings::xtcStatusBarMode,
                           {StrId::STR_HIDE, StrId::STR_BOTTOM, StrId::STR_TOP}, "xtcStatusBarMode",

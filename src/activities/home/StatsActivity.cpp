@@ -10,10 +10,12 @@
 #include <cstring>
 #include <string>
 
+#include "CrossPointSettings.h"
 #include "FsHelpers.h"
 #include "MappedInputManager.h"
 #include "RecentBooksStore.h"
 #include "StatsManager.h"
+#include "util/BookProgressBadge.h"
 #include "components/UITheme.h"
 #include "fontIds.h"
 
@@ -142,7 +144,11 @@ void StatsActivity::render(RenderLock&&) {
     const auto& book = recentBooks.front();
     currentBookTitle = book.title;
     currentBookAuthor = book.author;
-    currentProgress = book.progressPercent;
+    // RecentBook::progressPercent on the RECENT_BOOKS singleton is never populated --
+    // only HomeActivity's own locally-scoped copy of each entry gets enriched from the
+    // badge cache (see HomeActivity::loadRecentBooks). Read the badge directly here too,
+    // same as HomeActivity does, instead of trusting a field that's permanently -1.
+    currentProgress = BookProgressBadge::read(book.path).value_or(-1);
     coverBmpPath = book.coverBmpPath;
     currentBookPath = book.path;
   }
@@ -184,11 +190,10 @@ void StatsActivity::render(RenderLock&&) {
 
   int currentChapterProgress = -1;
 
-  // Note: currentProgress (whole-book %) comes only from BookProgressBadge via
-  // RecentBooksStore above — progress.bin has no book-level percent field to fall back to.
-  // data[6] here is byte 0 of the optional visibleTextOffset, not a percent; reading it as
-  // one produced the "181%" bug. Only chapter progress (page/pageCount, data[2-5]) is
-  // legitimately derivable from this file.
+  // Note: currentProgress (whole-book %) comes only from BookProgressBadge::read() above —
+  // progress.bin has no book-level percent field to fall back to. data[6] here is byte 0 of
+  // the optional visibleTextOffset, not a percent; reading it as one produced the "181%" bug.
+  // Only chapter progress (page/pageCount, data[2-5]) is legitimately derivable from this file.
   if (FsHelpers::hasEpubExtension(currentBookPath)) {
     std::string cachePath = "/.crosspoint/epub_" + std::to_string(std::hash<std::string>{}(currentBookPath));
     HalFile f;
@@ -404,5 +409,5 @@ void StatsActivity::render(RenderLock&&) {
   const auto labels = mappedInput.mapLabels(tr(STR_BACK), tr(STR_SELECT), "", "");
   GUI.drawButtonHints(renderer, labels.btn1, labels.btn2, labels.btn3, labels.btn4);
 
-  renderer.displayBuffer();
+  renderer.displayBufferGhostGuard(ghostGuardCounter_, SETTINGS.getRefreshFrequency());
 }

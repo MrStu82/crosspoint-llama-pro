@@ -5,6 +5,12 @@
 class StatsActivity final : public Activity {
   int countEpubsRecursively(const char* path);
 
+  // Owned by this activity so the ghost-guard cadence is independent of every
+  // other screen's own counter (see GfxRenderer::displayBufferGhostGuard).
+  // Starts at 1 so the very first render clears any residue left by whatever
+  // screen was on-panel before Stats was entered.
+  int ghostGuardCounter_ = 1;
+
  public:
   explicit StatsActivity(GfxRenderer& renderer, MappedInputManager& mappedInput)
       : Activity("Stats", renderer, mappedInput) {}

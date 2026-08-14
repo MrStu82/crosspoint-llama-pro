@@ -1544,6 +1544,21 @@ void GfxRenderer::displayBuffer(const HalDisplay::RefreshMode refreshMode) const
   display.displayBuffer(refreshMode, fadingFix);
 }
 
+void GfxRenderer::displayBufferGhostGuard(int& cycleCounter, int refreshFrequency,
+                                          const HalDisplay::RefreshMode normalMode) const {
+  if (cycleCounter <= 1) {
+    // HALF_REFRESH, not FULL_REFRESH -- SleepActivity.cpp's #2471 note documents
+    // FULL_REFRESH's blinking complaint, so this deliberately never escalates
+    // that far. Same technique the EPUB/TXT readers already rely on for the
+    // identical class of problem (see ReaderUtils::displayWithRefreshCycle).
+    displayBuffer(HalDisplay::HALF_REFRESH);
+    cycleCounter = refreshFrequency > 1 ? refreshFrequency : 2;
+  } else {
+    displayBuffer(normalMode);
+    cycleCounter--;
+  }
+}
+
 void GfxRenderer::displayBufferAsync(const HalDisplay::RefreshMode refreshMode) const {
   // The async path has no turn-off-screen hook, which the sunlight fading fix
   // relies on; keep those users on the blocking path.

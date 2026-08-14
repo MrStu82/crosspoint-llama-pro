@@ -58,6 +58,12 @@ class GameRenderer {
   // pure glyph rendering) until the first draw() runs.
   const game::TileTheme* activeTheme = &game::kThemeDefault;
 
+  // Owned by this renderer so the ghost-guard cadence is independent of every
+  // other screen's own counter (see GfxRenderer::displayBufferGhostGuard).
+  // Starts at 1 so the very first draw() call clears any residue left by
+  // whatever screen was on-panel before the game was entered.
+  int ghostGuardCounter = 1;
+
   void init(GfxRenderer& renderer);
 
   // Draw the full game screen

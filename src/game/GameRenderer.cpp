@@ -48,7 +48,7 @@ void GameRenderer::draw(GfxRenderer& renderer, const game::Tile* tiles, const ui
   renderer.drawLine(0, viewportEndY, screenW, viewportEndY);
   renderer.drawLine(0, controlsY, screenW, controlsY);
 
-  renderer.displayBuffer(HalDisplay::FAST_REFRESH);
+  renderer.displayBufferGhostGuard(ghostGuardCounter, SETTINGS.getRefreshFrequency(), HalDisplay::FAST_REFRESH);
 }
 
 // --- Status Bar ---

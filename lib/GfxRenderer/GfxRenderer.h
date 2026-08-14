@@ -172,6 +172,20 @@ class GfxRenderer {
   // a blocking refresh when fadingFix is enabled or the panel lacks deferral
   // support. See HalDisplay::displayBufferAsync for the baseline contract.
   void displayBufferAsync(HalDisplay::RefreshMode refreshMode = HalDisplay::FAST_REFRESH) const;
+  // Ghost-guard refresh: like displayBuffer(), but periodically substitutes
+  // HALF_REFRESH for `normalMode` to clear accumulated partial-refresh
+  // residue -- the same anti-ghosting technique the EPUB/TXT readers already
+  // use (see ReaderUtils::displayWithRefreshCycle), reused here so any caller
+  // doing many small differential refreshes in a row (game loop, live-updating
+  // stat screens) can opt in with one call instead of reinventing the counter.
+  // Deliberately never escalates to FULL_REFRESH -- see SleepActivity.cpp's
+  // #2471 note on FULL_REFRESH's blinking complaint. `cycleCounter` is owned
+  // by the caller (e.g. an activity member, initialized to 1 so the very first
+  // call clears any residue left by whatever screen preceded it) so cadence is
+  // independent per call site instead of one counter shared/reset across
+  // unrelated screens.
+  void displayBufferGhostGuard(int& cycleCounter, int refreshFrequency,
+                               HalDisplay::RefreshMode normalMode = HalDisplay::FAST_REFRESH) const;
   void waitRefreshComplete() const;
   // True when displayBufferAsync() genuinely overlaps: panel defers and
   // fadingFix isn't forcing the blocking path. Callers can skip overlap

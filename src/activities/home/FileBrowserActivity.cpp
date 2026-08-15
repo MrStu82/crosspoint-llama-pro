@@ -191,9 +191,12 @@ void FileBrowserActivity::loop() {
   // In firmware-pick mode we keep navigation simple: short Back = up dir / cancel.
   if (mode == Mode::Books && mappedInput.isPressed(MappedInputManager::Button::Back) &&
       mappedInput.getHeldTime() >= GO_HOME_MS && basepath != "/" && !lockLongPressBack) {
-    basepath = "/";
-    loadFiles();
-    selectorIndex = 0;
+    {
+      RenderLock lock(*this);
+      basepath = "/";
+      loadFiles();
+      selectorIndex = 0;
+    }
     requestUpdate();
     return;
   }
@@ -247,12 +250,14 @@ void FileBrowserActivity::loop() {
           LOG_DBG("FileBrowser", "Attempting to delete: %s", fullPath.c_str());
           if (removeDirFile(fullPath)) {
             LOG_DBG("FileBrowser", "Deleted successfully");
-            loadFiles();
-            if (files.empty()) {
-              selectorIndex = 0;
-            } else if (selectorIndex >= files.size()) {
-              // Move selection to the new "last" item
-              selectorIndex = files.size() - 1;
+            {
+              RenderLock lock(*this);
+              loadFiles();
+              if (files.empty()) {
+                selectorIndex = 0;
+              } else if (selectorIndex >= files.size()) {
+                selectorIndex = files.size() - 1;
+              }
             }
 
             requestUpdate(true);
@@ -270,15 +275,19 @@ void FileBrowserActivity::loop() {
       return;
     } else {
       // --- SHORT PRESS ACTION: OPEN/NAVIGATE ---
+      RenderLock lock(*this);
       if (basepath.back() != '/') basepath += "/";
 
       if (isDirectory) {
         basepath += entry.substr(0, entry.length() - 1);
         loadFiles();
         selectorIndex = 0;
+        lock.unlock();
         requestUpdate();
       } else {
-        onSelectBook(basepath + entry);
+        const std::string fullPath = basepath + entry;
+        lock.unlock();
+        onSelectBook(fullPath);
       }
     }
     return;
@@ -302,14 +311,16 @@ void FileBrowserActivity::loop() {
     if (mappedInput.getHeldTime() < GO_HOME_MS) {
       if (basepath != "/") {
         const std::string oldPath = basepath;
+        {
+          RenderLock lock(*this);
+          basepath.replace(basepath.find_last_of('/'), std::string::npos, "");
+          if (basepath.empty()) basepath = "/";
+          loadFiles();
 
-        basepath.replace(basepath.find_last_of('/'), std::string::npos, "");
-        if (basepath.empty()) basepath = "/";
-        loadFiles();
-
-        const auto pos = oldPath.find_last_of('/');
-        const std::string dirName = oldPath.substr(pos + 1) + "/";
-        selectorIndex = findEntry(dirName);
+          const auto pos = oldPath.find_last_of('/');
+          const std::string dirName = oldPath.substr(pos + 1) + "/";
+          selectorIndex = findEntry(dirName);
+        }
 
         requestUpdate();
       } else if (mode == Mode::PickFirmware) {

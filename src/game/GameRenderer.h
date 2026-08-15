@@ -3,11 +3,19 @@
 #include <GfxRenderer.h>
 
 #include "Achievements.h"
+#include "FrameDirtyPlanner.h"
 #include "GameTheme.h"
 #include "GameTypes.h"
 #include "MappedInputManager.h"
 
 class GameState;
+
+// DirtyWindow/FramePlan now live in FrameDirtyPlanner.h (game namespace) so
+// the pure planning logic -- and a host harness driving it -- has zero
+// GfxRenderer/HAL dependency. Aliased here so existing call sites (draw(),
+// planFrame()) don't need a `game::` prefix everywhere.
+using DirtyWindow = game::DirtyWindow;
+using FramePlan = game::FramePlan;
 
 // Data shown on the blocking death/victory overlay (Phase 7 req 2/3). Populated
 // by GameActivity right before it flips screenMode -- this struct has no
@@ -80,10 +88,29 @@ class GameRenderer {
   int ghostGuardCounter = 1;
 
   void init(GfxRenderer& renderer);
+  // Same layout math as init(), without touching a GfxRenderer -- lets a host
+  // harness (no HAL, no real display) construct a GameRenderer and drive
+  // planFrame() against known screen dimensions.
+  void initForTest(int screenWidth, int screenHeight);
 
   // Draw the full game screen
   void draw(GfxRenderer& renderer, const game::Tile* tiles, const uint8_t* fogOfWar, const game::Monster* monsters,
             uint8_t monsterCount, const game::Item* items, uint8_t itemCount, const bool* visible);
+
+  // Computes what draw() would refresh for this frame (dirty viewport cells +
+  // status bar/message changes vs. the cached previous frame), without
+  // drawing anything or touching a renderer. draw() calls this and then
+  // executes the plan; a harness calls it directly to get real, checkable
+  // numbers for a scripted walk. Shares this GameRenderer's tracker state, so
+  // repeated calls behave exactly like repeated draw() calls would.
+  FramePlan planFrame(const game::Tile* tiles, const uint8_t* fogOfWar, const game::Monster* monsters,
+                      uint8_t monsterCount, const game::Item* items, uint8_t itemCount, const bool* visible);
+
+  // Forces the next draw()/planFrame() to take the full-clear path. Call on
+  // floor change or anything else that invalidates the cached frame beyond
+  // what draw() already detects on its own (theme/viewport-origin changes are
+  // detected automatically).
+  void invalidateFrameCache() { planner_.invalidate(); }
 
   // Hit-tests a tap point against the control area (d-pad + Action/Menu buttons).
   // Returns true and sets outButton if the tap landed on a control, false otherwise.
@@ -98,6 +125,8 @@ class GameRenderer {
   void drawEndScreen(GfxRenderer& renderer, bool isVictory, const EndScreenData& data) const;
 
  private:
+  void computeLayout(int screenWidth, int screenHeight);
+
   void drawStatusBar(GfxRenderer& renderer) const;
   void drawViewport(GfxRenderer& renderer, const game::Tile* tiles, const uint8_t* fogOfWar,
                     const game::Monster* monsters, uint8_t monsterCount, const game::Item* items, uint8_t itemCount,
@@ -111,6 +140,33 @@ class GameRenderer {
   // anywhere else in this file.
   void drawCell(GfxRenderer& renderer, int screenX, int screenY, char glyph, const Sprite2bpp* sprite,
                bool isVisible, bool isExplored) const;
+  // One viewport cell's worth of drawViewport's loop body, factored out so
+  // both the full redraw (drawViewport, every cell) and Phase 8's partial
+  // redraw (draw(), only cells inside a dirty bbox) share one implementation.
+  void drawViewportCell(GfxRenderer& renderer, int viewX, int viewY, int row, int col, const game::Tile* tiles,
+                        const uint8_t* fogOfWar, const game::Monster* monsters, uint8_t monsterCount,
+                        const game::Item* items, uint8_t itemCount, const bool* visible) const;
   void drawMessages(GfxRenderer& renderer) const;
   void drawControls(GfxRenderer& renderer) const;
+
+  // Player-centered viewport top-left in map coordinates, clamped so the
+  // viewport never runs off the map edge. Thin forwarder to planner_ so
+  // drawViewport()/draw() (which need this for rendering, not just planning)
+  // don't have to build a PlannerLayout themselves every call site.
+  void computeViewOrigin(int playerX, int playerY, int* outViewX, int* outViewY) const;
+
+  // Builds the PlannerLayout FrameDirtyPlanner needs from this renderer's own
+  // computeLayout() output -- the only place screen-layout fields cross into
+  // planner_'s plain-data world.
+  game::PlannerLayout buildPlannerLayout() const;
+
+  // Formats the four status-bar fields into caller-owned buffers so
+  // drawStatusBar() (rendering) and planFrame() (diffing, via planner_) always
+  // compare/render identical text -- avoids the two ever drifting apart.
+  void formatStatusBarText(char hpBuf[24], char mpBuf[24], char depthBuf[16], char lvlBuf[16]) const;
+
+  // Owns the cached previous frame + all dirty-diff logic (see
+  // FrameDirtyPlanner.h) -- wholly free of GfxRenderer/HAL, so a host harness
+  // can drive one of these directly with zero display dependency.
+  game::FrameDirtyPlanner planner_;
 };

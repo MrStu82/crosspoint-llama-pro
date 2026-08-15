@@ -2,7 +2,6 @@
 
 #include <I18n.h>
 
-#include <algorithm>
 #include <cstdio>
 
 #include "CrossPointSettings.h"
@@ -10,9 +9,9 @@
 #include "GameState.h"
 #include "fontIds.h"
 
-void GameRenderer::init(GfxRenderer& renderer) {
-  screenW = renderer.getScreenWidth();
-  screenH = renderer.getScreenHeight();
+void GameRenderer::computeLayout(int screenWidth, int screenHeight) {
+  screenW = screenWidth;
+  screenH = screenHeight;
 
   // Compute viewport dimensions
   viewportEndY = screenH - MESSAGE_H - CONTROLS_H;
@@ -29,6 +28,12 @@ void GameRenderer::init(GfxRenderer& renderer) {
   controlsY = screenH - CONTROLS_H;
 }
 
+void GameRenderer::init(GfxRenderer& renderer) {
+  computeLayout(renderer.getScreenWidth(), renderer.getScreenHeight());
+}
+
+void GameRenderer::initForTest(int screenWidth, int screenHeight) { computeLayout(screenWidth, screenHeight); }
+
 void GameRenderer::draw(GfxRenderer& renderer, const game::Tile* tiles, const uint8_t* fogOfWar,
                         const game::Monster* monsters, uint8_t monsterCount, const game::Item* items, uint8_t itemCount,
                         const bool* visible) {
@@ -36,37 +41,119 @@ void GameRenderer::draw(GfxRenderer& renderer, const game::Tile* tiles, const ui
   // takes effect on the next draw without any extra wiring.
   activeTheme = game::getTheme(static_cast<game::GameThemeId>(SETTINGS.gameTheme));
 
-  renderer.clearScreen();
+  FramePlan plan = planFrame(tiles, fogOfWar, monsters, monsterCount, items, itemCount, visible);
 
-  drawStatusBar(renderer);
-  drawViewport(renderer, tiles, fogOfWar, monsters, monsterCount, items, itemCount, visible);
-  drawMessages(renderer);
-  drawControls(renderer);
+  if (plan.fullClear) {
+    renderer.clearScreen();
 
-  // Separator lines
-  renderer.drawLine(0, STATUS_H, screenW, STATUS_H);
-  renderer.drawLine(0, viewportEndY, screenW, viewportEndY);
-  renderer.drawLine(0, controlsY, screenW, controlsY);
+    drawStatusBar(renderer);
+    drawViewport(renderer, tiles, fogOfWar, monsters, monsterCount, items, itemCount, visible);
+    drawMessages(renderer);
+    drawControls(renderer);
 
-  renderer.displayBufferGhostGuard(ghostGuardCounter, SETTINGS.getRefreshFrequency(), HalDisplay::FAST_REFRESH);
+    // Separator lines
+    renderer.drawLine(0, STATUS_H, screenW, STATUS_H);
+    renderer.drawLine(0, viewportEndY, screenW, viewportEndY);
+    renderer.drawLine(0, controlsY, screenW, controlsY);
+
+    renderer.displayBufferGhostGuard(ghostGuardCounter, SETTINGS.getRefreshFrequency(), HalDisplay::FAST_REFRESH);
+    return;
+  }
+
+  // Partial path: only the regions planFrame() found dirty get erased,
+  // redrawn, and refreshed -- everything else already on glass is left
+  // untouched. Controls never change frame-to-frame (no dynamic content) so
+  // they're never part of a dirty window and never redrawn here.
+  const auto& p = GAME_STATE.player;
+  int viewX = 0;
+  int viewY = 0;
+  computeViewOrigin(p.x, p.y, &viewX, &viewY);
+
+  for (int i = 0; i < plan.windowCount; i++) {
+    const DirtyWindow& w = plan.windows[i];
+    renderer.fillRect(w.x, w.y, w.w, w.h, false);  // erase to white before redraw
+
+    switch (w.kind) {
+      case DirtyWindow::Kind::StatusBar:
+        drawStatusBar(renderer);
+        break;
+      case DirtyWindow::Kind::Messages:
+        drawMessages(renderer);
+        break;
+      case DirtyWindow::Kind::Viewport: {
+        int colStart = (w.x - gridOffsetX) / CELL_W;
+        int rowStart = (w.y - VIEWPORT_Y) / CELL_H;
+        int colCount = w.w / CELL_W;
+        int rowCount = w.h / CELL_H;
+        for (int row = rowStart; row < rowStart + rowCount; row++) {
+          for (int col = colStart; col < colStart + colCount; col++) {
+            drawViewportCell(renderer, viewX, viewY, row, col, tiles, fogOfWar, monsters, monsterCount, items,
+                             itemCount, visible);
+          }
+        }
+        break;
+      }
+    }
+
+    renderer.displayWindow(w.x, w.y, w.w, w.h);
+  }
+}
+
+FramePlan GameRenderer::planFrame(const game::Tile* tiles, const uint8_t* fogOfWar, const game::Monster* monsters,
+                                  uint8_t monsterCount, const game::Item* items, uint8_t itemCount,
+                                  const bool* visible) {
+  const auto& p = GAME_STATE.player;
+
+  char hpBuf[24];
+  char mpBuf[24];
+  char depthBuf[16];
+  char lvlBuf[16];
+  formatStatusBarText(hpBuf, mpBuf, depthBuf, lvlBuf);
+
+  char msg0[160];
+  char msg1[160];
+  snprintf(msg0, sizeof(msg0), "%s", GAME_STATE.getMessage(0).c_str());
+  snprintf(msg1, sizeof(msg1), "%s", GAME_STATE.getMessage(1).c_str());
+
+  return planner_.planFrame(buildPlannerLayout(), p.x, p.y, hpBuf, mpBuf, depthBuf, lvlBuf, msg0, msg1, tiles,
+                            fogOfWar, monsters, monsterCount, items, itemCount, visible, activeTheme);
+}
+
+void GameRenderer::computeViewOrigin(int playerX, int playerY, int* outViewX, int* outViewY) const {
+  planner_.computeViewOrigin(playerX, playerY, buildPlannerLayout(), outViewX, outViewY);
+}
+
+game::PlannerLayout GameRenderer::buildPlannerLayout() const {
+  game::PlannerLayout layout;
+  layout.viewCols = viewCols;
+  layout.viewRows = viewRows;
+  layout.gridOffsetX = gridOffsetX;
+  layout.viewportY = VIEWPORT_Y;
+  layout.cellW = CELL_W;
+  layout.cellH = CELL_H;
+  layout.screenW = screenW;
+  layout.statusH = STATUS_H;
+  layout.messageY = messageY;
+  layout.messageH = MESSAGE_H;
+  return layout;
 }
 
 // --- Status Bar ---
 
-void GameRenderer::drawStatusBar(GfxRenderer& renderer) const {
+void GameRenderer::formatStatusBarText(char hpBuf[24], char mpBuf[24], char depthBuf[16], char lvlBuf[16]) const {
   const auto& p = GAME_STATE.player;
+  snprintf(hpBuf, 24, "HP:%u/%u", p.hp, p.maxHp);
+  snprintf(mpBuf, 24, "MP:%u/%u", p.mp, p.maxMp);
+  snprintf(depthBuf, 16, "Dl:%u", p.dungeonDepth);
+  snprintf(lvlBuf, 16, "Cl:%u", p.charLevel);
+}
 
+void GameRenderer::drawStatusBar(GfxRenderer& renderer) const {
   char hpBuf[24];
-  snprintf(hpBuf, sizeof(hpBuf), "HP:%u/%u", p.hp, p.maxHp);
-
   char mpBuf[24];
-  snprintf(mpBuf, sizeof(mpBuf), "MP:%u/%u", p.mp, p.maxMp);
-
   char depthBuf[16];
-  snprintf(depthBuf, sizeof(depthBuf), "Dl:%u", p.dungeonDepth);
-
   char lvlBuf[16];
-  snprintf(lvlBuf, sizeof(lvlBuf), "Cl:%u", p.charLevel);
+  formatStatusBarText(hpBuf, mpBuf, depthBuf, lvlBuf);
 
   // Left side: HP and MP
   renderer.drawText(UI_10_FONT_ID, 4, STATUS_Y, hpBuf, true, EpdFontFamily::BOLD);
@@ -87,79 +174,86 @@ void GameRenderer::drawViewport(GfxRenderer& renderer, const game::Tile* tiles, 
                                 uint8_t itemCount, const bool* visible) const {
   const auto& p = GAME_STATE.player;
 
-  // Calculate viewport origin (center on player, clamped to map bounds)
-  int viewX = p.x - viewCols / 2;
-  int viewY = p.y - viewRows / 2;
-  viewX = std::max(0, std::min(viewX, game::MAP_WIDTH - viewCols));
-  viewY = std::max(0, std::min(viewY, game::MAP_HEIGHT - viewRows));
+  int viewX = 0;
+  int viewY = 0;
+  computeViewOrigin(p.x, p.y, &viewX, &viewY);
 
   // Draw each cell in the viewport
   for (int row = 0; row < viewRows; row++) {
-    int mapY = viewY + row;
-    if (mapY < 0 || mapY >= game::MAP_HEIGHT) continue;
-
-    int screenCellY = VIEWPORT_Y + row * CELL_H;
-
     for (int col = 0; col < viewCols; col++) {
-      int mapX = viewX + col;
-      if (mapX < 0 || mapX >= game::MAP_WIDTH) continue;
+      drawViewportCell(renderer, viewX, viewY, row, col, tiles, fogOfWar, monsters, monsterCount, items, itemCount,
+                       visible);
+    }
+  }
+}
 
-      int mapIdx = mapY * game::MAP_WIDTH + mapX;
-      int screenCellX = gridOffsetX + col * CELL_W;
+void GameRenderer::drawViewportCell(GfxRenderer& renderer, int viewX, int viewY, int row, int col,
+                                    const game::Tile* tiles, const uint8_t* fogOfWar, const game::Monster* monsters,
+                                    uint8_t monsterCount, const game::Item* items, uint8_t itemCount,
+                                    const bool* visible) const {
+  const auto& p = GAME_STATE.player;
 
-      bool isExplored = game::fogIsExplored(fogOfWar, mapX, mapY);
-      bool isVisible = visible[mapIdx];
+  int mapY = viewY + row;
+  if (mapY < 0 || mapY >= game::MAP_HEIGHT) return;
+  int mapX = viewX + col;
+  if (mapX < 0 || mapX >= game::MAP_WIDTH) return;
 
-      if (!isExplored && !isVisible) {
-        // Unseen tile — leave white (cleared screen)
-        continue;
+  int screenCellY = VIEWPORT_Y + row * CELL_H;
+  int screenCellX = gridOffsetX + col * CELL_W;
+
+  int mapIdx = mapY * game::MAP_WIDTH + mapX;
+
+  bool isExplored = game::fogIsExplored(fogOfWar, mapX, mapY);
+  bool isVisible = visible[mapIdx];
+
+  if (!isExplored && !isVisible) {
+    // Unseen tile — leave white (cleared screen)
+    return;
+  }
+
+  // Determine what glyph to show, and the theme-resolved sprite (if any)
+  // for the same occupant, mirroring the glyph priority order exactly
+  // (player > monster > item > tile).
+  char glyph = game::tileGlyph(tiles[mapIdx]);
+  const Sprite2bpp* sprite = activeTheme->tiles[static_cast<size_t>(tiles[mapIdx])];
+
+  // If currently visible, check for monsters and items on this tile
+  if (isVisible) {
+    // Player
+    if (mapX == p.x && mapY == p.y) {
+      glyph = '@';
+      sprite = activeTheme->player;
+    } else {
+      // Check monsters
+      bool foundMonster = false;
+      for (uint8_t m = 0; m < monsterCount; m++) {
+        if (monsters[m].x == mapX && monsters[m].y == mapY && monsters[m].hp > 0) {
+          glyph = game::MONSTER_DEFS[monsters[m].type].glyph;
+          sprite = activeTheme->monsters[monsters[m].type];
+          foundMonster = true;
+          break;
+        }
       }
-
-      // Determine what glyph to show, and the theme-resolved sprite (if any)
-      // for the same occupant, mirroring the glyph priority order exactly
-      // (player > monster > item > tile).
-      char glyph = game::tileGlyph(tiles[mapIdx]);
-      const Sprite2bpp* sprite = activeTheme->tiles[static_cast<size_t>(tiles[mapIdx])];
-
-      // If currently visible, check for monsters and items on this tile
-      if (isVisible) {
-        // Player
-        if (mapX == p.x && mapY == p.y) {
-          glyph = '@';
-          sprite = activeTheme->player;
-        } else {
-          // Check monsters
-          bool foundMonster = false;
-          for (uint8_t m = 0; m < monsterCount; m++) {
-            if (monsters[m].x == mapX && monsters[m].y == mapY && monsters[m].hp > 0) {
-              glyph = game::MONSTER_DEFS[monsters[m].type].glyph;
-              sprite = activeTheme->monsters[monsters[m].type];
-              foundMonster = true;
-              break;
-            }
-          }
-          // Check items (only if no monster shown)
-          if (!foundMonster) {
-            for (uint8_t i = 0; i < itemCount; i++) {
-              if (items[i].x == mapX && items[i].y == mapY) {
-                glyph = game::itemGlyph(items[i].type);
-                sprite = nullptr;
-                for (int d = 0; d < game::ITEM_DEF_COUNT; d++) {
-                  if (game::ITEM_DEFS[d].type == items[i].type && game::ITEM_DEFS[d].subtype == items[i].subtype) {
-                    sprite = activeTheme->items[d];
-                    break;
-                  }
-                }
+      // Check items (only if no monster shown)
+      if (!foundMonster) {
+        for (uint8_t i = 0; i < itemCount; i++) {
+          if (items[i].x == mapX && items[i].y == mapY) {
+            glyph = game::itemGlyph(items[i].type);
+            sprite = nullptr;
+            for (int d = 0; d < game::ITEM_DEF_COUNT; d++) {
+              if (game::ITEM_DEFS[d].type == items[i].type && game::ITEM_DEFS[d].subtype == items[i].subtype) {
+                sprite = activeTheme->items[d];
                 break;
               }
             }
+            break;
           }
         }
       }
-
-      drawCell(renderer, screenCellX, screenCellY, glyph, sprite, isVisible, isExplored);
     }
   }
+
+  drawCell(renderer, screenCellX, screenCellY, glyph, sprite, isVisible, isExplored);
 }
 
 void GameRenderer::drawCell(GfxRenderer& renderer, int screenX, int screenY, char glyph, const Sprite2bpp* sprite,

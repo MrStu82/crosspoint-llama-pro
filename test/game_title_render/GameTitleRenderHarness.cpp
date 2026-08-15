@@ -6,16 +6,20 @@
 // real font assets into an in-memory 480x800 1bpp framebuffer (test/game_title_render/
 // stubs/HalDisplay.h) and dumps it to a PGM.
 //
-// Build:
-//   g++ -std=c++20 -O2 -Wall -Wextra \
-//     -I test/game_title_render/stubs -I src -I src/activities -I src/activities/game \
-//     -I lib/GfxRenderer -I lib/EpdFont -I lib/EpdFont/builtinFonts -I lib/Serialization \
-//     -I src/game \
-//     test/game_title_render/GameTitleRenderHarness.cpp \
-//     lib/GfxRenderer/GfxRenderer.cpp \
-//     src/activities/Activity.cpp \
-//     src/activities/game/GameTitleActivity.cpp \
-//     -o /tmp/game_title_render_harness
+// Build: see test/game_title_render/README for the full, verified -I set and rationale
+// (this comment previously listed an abbreviated/stale flag set that no longer matches what
+// actually compiles -- the mirror/ tree and several lib/ paths below are load-bearing, not
+// optional). Short version:
+//   g++ -std=c++20 -O2 -Wall -Wextra -include Arduino.h \
+//     -I test/game_title_render/stubs -I test/game_title_render/mirror/src \
+//     -I test/game_title_render/mirror/src/activities -I test/game_title_render/mirror/src/activities/game \
+//     -I src -I src/game -I lib/EpdFont/builtinFonts -I lib/EpdFont -I lib/Epub -I lib/FsHelpers \
+//     -I lib/GfxRenderer -I lib/I18n -I lib/InflateReader -I lib/JpegToBmpConverter -I lib/JsonParser \
+//     -I lib/KOReaderSync -I lib/Logging -I lib/Memory -I lib/MiniBidi -I lib/OpdsParser \
+//     -I lib/Serialization -I lib/Txt -I lib/Utf8 -I lib/XmlParserUtils -I lib/Xtc -I lib/ZipFile \
+//     -I lib/expat -I lib/hal -I lib/miniz -I lib/uzlib -I lib/uzlib/src \
+//     -c test/game_title_render/GameTitleRenderHarness.cpp -o /tmp/objs/gametitlerenderharness.o
+//   (repeat -c per source file, then link all /tmp/objs/*.o into /tmp/game_title_render_harness)
 // Run: /tmp/game_title_render_harness /tmp/game_title.pgm
 
 #include <HalDisplay.h>

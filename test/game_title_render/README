@@ -1,0 +1,163 @@
+Host-side render harness for GameTitleActivity (the "LETHALITY UNRATED" cert
+screen). Not a gtest suite (see test/README for those) -- this compiles the
+REAL, unmodified GameTitleActivity draw calls against the REAL font/renderer
+pipeline and dumps the actual framebuffer to an image, so a layout change can
+be verified pixel-by-pixel instead of by eyeballing device coordinates in
+source.
+
+Why not gtest/CMake: GameTitleActivity pulls in the full GfxRenderer/EpdFont/
+Activity dependency graph, most of which has Arduino/FreeRTOS/SPI coupling
+that the existing CMake test targets don't need to touch. Same standalone-
+g++ technique as test/game_save/GameSaveRoundTripHarness.cpp.
+
+## Build
+
+Object files persist in /tmp/objs/ across sessions -- only recompile what
+changed, then always do a fresh full link (cheap, and avoids stale-.o bugs).
+
+  INCLUDES="-include Arduino.h \
+    -I test/game_title_render/stubs \
+    -I test/game_title_render/mirror/src \
+    -I test/game_title_render/mirror/src/activities \
+    -I test/game_title_render/mirror/src/activities/game \
+    -I src -I src/game \
+    -I lib/EpdFont/builtinFonts -I lib/EpdFont -I lib/Epub -I lib/FsHelpers \
+    -I lib/GfxRenderer -I lib/I18n -I lib/InflateReader -I lib/JpegToBmpConverter \
+    -I lib/JsonParser -I lib/KOReaderSync -I lib/Logging -I lib/Memory \
+    -I lib/MiniBidi -I lib/OpdsParser -I lib/Serialization -I lib/Txt -I lib/Utf8 \
+    -I lib/XmlParserUtils -I lib/Xtc -I lib/ZipFile -I lib/expat -I lib/hal \
+    -I lib/miniz -I lib/uzlib -I lib/uzlib/src"
+
+  mkdir -p /tmp/objs
+  for src in \
+      test/game_title_render/GameTitleRenderHarness.cpp \
+      test/game_title_render/mirror/src/activities/game/GameTitleActivity.cpp \
+      test/game_title_render/mirror/src/activities/Activity.cpp \
+      lib/GfxRenderer/GfxRenderer.cpp \
+      lib/GfxRenderer/Bitmap.cpp \
+      lib/GfxRenderer/BitmapHelpers.cpp \
+      lib/GfxRenderer/FontCacheManager.cpp \
+      lib/EpdFont/EpdFont.cpp \
+      lib/EpdFont/EpdFontFamily.cpp \
+      lib/EpdFont/FontDecompressor.cpp \
+      lib/EpdFont/SdCardFont.cpp \
+      lib/InflateReader/InflateReader.cpp \
+      lib/Utf8/Utf8.cpp \
+      lib/MiniBidi/BidiUtils.cpp \
+      lib/Memory/BuildScratch.cpp \
+      ; do
+    obj=/tmp/objs/$(basename "${src%.*}" | tr 'A-Z' 'a-z').o
+    g++ -std=c++20 -O2 -Wall -Wextra $INCLUDES -c "$src" -o "$obj"
+  done
+
+  # These three are plain C, not C++ -- compile with gcc, not g++:
+  #  - tinflate.c: void*->unsigned char* implicit conversions are C-legal, not C++-legal.
+  #  - uzlib_checksum_stub.c: same TU family as tinflate.c, same reason.
+  #  - minibidi.c: BidiUtils.cpp links against its bidi_class/do_bidi/do_shape as C symbols
+  #    (unmangled). g++ would compile it fine but name-mangle those symbols as C++, and the
+  #    link then fails with "undefined reference to bidi_class" etc -- discovered by actually
+  #    doing a from-scratch verification build of this recipe, not by inspection.
+  gcc -O2 -I test/game_title_render/stubs -I lib/uzlib -I lib/uzlib/src \
+    -c lib/uzlib/src/tinflate.c -o /tmp/objs/tinflate.o
+  gcc -O2 -I test/game_title_render/stubs -I lib/uzlib -I lib/uzlib/src \
+    -c test/game_title_render/stubs/uzlib_checksum_stub.c -o /tmp/objs/uzlib_checksum_stub.o
+  gcc -O2 -I lib/MiniBidi -c lib/MiniBidi/minibidi.c -o /tmp/objs/minibidi.o
+
+  g++ /tmp/objs/*.o -o /tmp/game_title_render_harness
+
+## Run
+
+  /tmp/game_title_render_harness /tmp/game_title.pgm
+  python3 /tmp/pgm_to_png.py /tmp/game_title.pgm /tmp/game_title.png
+
+(pgm_to_png.py is a throwaway ~50-line P5->PNG encoder, struct+zlib only, no
+external image lib dependency -- recreate it if /tmp has been wiped; there's
+nothing to it beyond a PGM header parse and a minimal PNG chunk writer.)
+
+## Why mirror/ exists, and why it's symlinks
+
+test/game_title_render/mirror/src/... are symlinks back to the real src/...
+tree, not copies. The harness compiles GameTitleActivity.cpp and Activity.cpp
+through this mirror path (rather than -I src directly for those two files)
+so their #include "GameActivity.h" / #include "ActivityManager.h" etc.
+resolve against local stub headers co-located in the mirror tree
+(mirror/src/activities/game/GameActivity.h, mirror/src/activities/
+ActivityManager.h, mirror/src/activities/RenderLock.h, mirror/src/game/
+GameState.h) instead of the real headers, without editing or forking the
+real .cpp files at all -- the .cpp compiled is byte-identical to the real
+source because it IS the real source, just reached through a symlink.
+
+Because these are symlinks, `diff`/`find` following them will make mirror/
+and src/ look like identical trees -- they are, deliberately. Don't delete
+mirror/ thinking it's a stale duplicate.
+
+## Font registration
+
+Register every font+style GameTitleActivity actually draws with, matching
+src/main.cpp's setupDisplayAndFonts() exactly:
+  - UI_10_FONT_ID, UI_12_FONT_ID: both REGULAR and BOLD faces. Several draw
+    calls (HUD blocks, cert line) use EpdFontFamily::BOLD -- registering only
+    REGULAR silently renders/measures the wrong glyphs with no error.
+  - NOTOSANS_16_FONT_ID: REGULAR only (nothing on this screen uses it bold).
+  - SMALL_FONT_ID (notosans_8_regular): added for the cert line fix, 2026-08.
+    Already used elsewhere (BootActivity, SleepActivity, FileBrowserActivity,
+    CalibreConnectActivity, CrossPointWebServerActivity) -- not a new font
+    asset. If a future change needs a font not yet registered here, check
+    src/main.cpp's setupDisplayAndFonts() for the real registration and add
+    the matching insertFont() call, don't guess at a substitute.
+
+A FontDecompressor + FontCacheManager must be wired to the renderer before
+render() runs, or every glyph bitmap comes back null silently (no crash, no
+error -- just blank text). See GameTitleRenderHarness.cpp's own comments for
+the exact call sequence.
+
+## HalDisplay stub
+
+test/game_title_render/stubs/HalDisplay.h reports the PHYSICAL panel size
+(800x480), not the logical portrait canvas (480x800) GameTitleActivity draws
+into -- GfxRenderer::begin() reads this as panelWidth/panelHeight and uses it
+to rotate logical draw coordinates into physical ones. Reporting the logical
+size here (a real mistake made once) feeds GfxRenderer a panel it thinks is
+already portrait-shaped, so its own rotation then computes physical
+coordinates outside the real bounds ("Outside range" log spam, and a wrong
+image). The harness's PGM writer un-rotates the physical buffer back to
+logical 480x800 on the way out, so the dumped image reads right-side-up.
+
+## Verifying a layout change -- do this every time, not just when it looks wrong
+
+Trusting a font's getFontAscenderSize() (or eyeballing the PNG) is not
+sufficient -- during the cert-line fix (2026-08-15) both misled the fix by a
+few pixels in ways only pixel measurement caught. Use both of the following
+on the rendered PGM/PNG before calling a layout change done:
+
+1. Row-by-row pixel density scan: for the y-range around the change, count
+   dark pixels (<128) across a fixed x-range per row. Full-width counts
+   (~390+ on this 480-wide canvas) are borders/rules; moderate/varying counts
+   are letter ink; a count of 0 is a genuinely clear row. Confirm at least
+   one fully-clear row exists between the new element and every neighboring
+   element it must not touch.
+
+2. Connected-component (flood-fill) analysis over the affected bounding box:
+   BFS/queue-based 8-connected flood fill to enumerate distinct ink blobs.
+   If the new text's blob has merged with a border's or another element's
+   blob (same component, spanning both), the row-density scan's "clear row"
+   reading was misleading (e.g. anti-aliasing) -- treat a merge as a fail
+   regardless of what the density scan showed.
+
+Only call a layout fix verified once both checks agree, on the actual
+rendered output of the real draw calls -- not the same GfxRenderer helper
+computing a metric that might be wrong.
+
+## Reference: the cert-line fix (2026-08-15)
+
+Worked example of the above: LETHALITY UNRATED at UI_12/baseline=494
+collided with the tick ring (drawTickRing, starts y=475) and, once dropped a
+size, the wordmark's own outer border (drawRect, bottoms out y=459) --
+leaving only a 16px clear band (y459-y475) for the whole line. Switched to
+SMALL_FONT_ID (already-registered, no new font asset) and picked
+baseline=473 by measuring the string's REAL ink extent in isolation (~12px
+cap-height above baseline for an all-caps string, not the font's reported
+18px ascender) rather than trusting getFontAscenderSize() directly. Verified
+clear of both neighbors by both techniques above before shipping. See
+src/activities/game/GameTitleActivity.cpp's kCertFontId/render() comments
+for the full numeric trail.

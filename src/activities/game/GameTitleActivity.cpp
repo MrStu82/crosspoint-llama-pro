@@ -40,7 +40,7 @@ void drawBlockLetter(GfxRenderer& renderer, const uint8_t* glyph, int originX, i
 }
 
 struct LetterEntry {
-  const uint8_t* glyph;
+  const uint8_t* glyph;  // nullptr = blank space (advances the cursor, draws nothing)
 };
 
 void drawWord(GfxRenderer& renderer, const LetterEntry* letters, int count, int centerX, int originY, int scale) {
@@ -49,7 +49,9 @@ void drawWord(GfxRenderer& renderer, const LetterEntry* letters, int count, int 
   int startX = centerX - totalW / 2;
 
   for (int i = 0; i < count; i++) {
-    drawBlockLetter(renderer, letters[i].glyph, startX + i * letterW, originY, scale);
+    if (letters[i].glyph != nullptr) {
+      drawBlockLetter(renderer, letters[i].glyph, startX + i * letterW, originY, scale);
+    }
   }
 }
 
@@ -134,7 +136,9 @@ void GameTitleActivity::render(RenderLock&&) {
   //     (drawWord/drawBlockLetter below), not a font call at all.
   constexpr int kHudFontId = UI_12_FONT_ID;
   constexpr int kCertFontId = UI_12_FONT_ID;
-  constexpr int kTapFontId = NOTOSANS_16_FONT_ID;
+  // NotoSans 16 overflowed the safe-area frame on "[ tap anywhere to continue ]" (both
+  // brackets sat on the border) -- UI_12 is narrower and fits with margin.
+  constexpr int kTapFontId = UI_12_FONT_ID;
   constexpr int kAttributionFontId = UI_10_FONT_ID;
 
   // White background (default)
@@ -164,15 +168,20 @@ void GameTitleActivity::render(RenderLock&&) {
   // 5. Tick ring (24 ticks every 15 degrees, r=124 to r=144)
   drawTickRing(renderer, 240, 420, 124, 144, 3);
 
-  // 6. Wordmark stamp: white-clear rect, outer/inner outline, block-letter text
+  // 6. Wordmark stamp: white-clear rect, outer/inner outline, block-letter text.
+  // Single line "WORLD DUNGEON" at scale 4 (not two stacked lines at scale 5, which ran the
+  // glyphs 400-470px, past the inner plate's 452px bottom edge and into the cert line at 494).
+  // Letter pitch = GLYPH_W*scale+scale = 24px; 13 glyphs (WORLD + space + DUNGEON) = 308px wide,
+  // well inside the inner plate's 384px width. Line height = GLYPH_H*scale = 28px, centered in
+  // the inner plate's 64px band (y=388..452): originY = 388 + (64-28)/2 = 406.
   renderer.fillRect(20, 365, 440, 110, false);
   renderer.drawRect(40, 381, 400, 78, 3, true);
   renderer.drawRect(48, 388, 384, 64, 2, true);
-  constexpr int kWordmarkScale = 5;
-  const LetterEntry world[] = {{GLYPH_LETTER_W}, {GLYPH_O}, {GLYPH_R}, {GLYPH_L}, {GLYPH_D}};
-  drawWord(renderer, world, 5, centerX, 400, kWordmarkScale);
-  const LetterEntry dungeon[] = {{GLYPH_D}, {GLYPH_U}, {GLYPH_N}, {GLYPH_G}, {GLYPH_E}, {GLYPH_O}, {GLYPH_N}};
-  drawWord(renderer, dungeon, 7, centerX, 435, kWordmarkScale);
+  constexpr int kWordmarkScale = 4;
+  const LetterEntry worldDungeon[] = {{GLYPH_LETTER_W}, {GLYPH_O}, {GLYPH_R}, {GLYPH_L}, {GLYPH_D}, {nullptr},
+                                       {GLYPH_D},        {GLYPH_U}, {GLYPH_N}, {GLYPH_G}, {GLYPH_E}, {GLYPH_O},
+                                       {GLYPH_N}};
+  drawWord(renderer, worldDungeon, 13, centerX, 406, kWordmarkScale);
 
   // 7. Certification line (mono bold 12px stand-in)
   renderer.drawCenteredText(kCertFontId, baselineToTopY(renderer, kCertFontId, 494), "LETHALITY UNRATED", true,
@@ -192,7 +201,10 @@ void GameTitleActivity::render(RenderLock&&) {
   renderer.drawCenteredText(kTapFontId, baselineToTopY(renderer, kTapFontId, 740), "[ tap anywhere to continue ]");
 
   // 10. Attribution (mono regular 10px stand-in)
-  renderer.drawCenteredText(kAttributionFontId, baselineToTopY(renderer, kAttributionFontId, 756),
+  // Baseline 756 (gap=16 from the tap prompt's 740) left the tap prompt's descenders and this
+  // line's ascenders touching with ~0px clearance (measured row 744 tap / row 745 attribution in
+  // the render harness's PGM dump) -- bumped to 766 (gap=26) for real whitespace between them.
+  renderer.drawCenteredText(kAttributionFontId, baselineToTopY(renderer, kAttributionFontId, 766),
                              "Inspired by Moria & Angband");
 
   renderer.displayBuffer();

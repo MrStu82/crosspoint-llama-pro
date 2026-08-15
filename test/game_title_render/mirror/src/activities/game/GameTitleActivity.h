@@ -1,1 +1,1 @@
-../../../../src/activities/game/GameTitleActivity.h
+../../../../../../src/activities/game/GameTitleActivity.h

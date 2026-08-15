@@ -21,7 +21,10 @@
 #include <HalDisplay.h>
 
 #include <builtinFonts/notosans_16_regular.h>
+#include <builtinFonts/notosans_8_regular.h>
+#include <builtinFonts/ubuntu_10_bold.h>
 #include <builtinFonts/ubuntu_10_regular.h>
+#include <builtinFonts/ubuntu_12_bold.h>
 #include <builtinFonts/ubuntu_12_regular.h>
 
 #include <cstdio>
@@ -52,18 +55,25 @@ int main(int argc, char** argv) {
 
   // Register the real, unmodified builtin fonts GameTitleActivity actually draws with
   // (UI_10/UI_12/NOTOSANS_16 -- see its kHudFontId/kCertFontId/kTapFontId/kAttributionFontId),
-  // exactly the way src/main.cpp's setupDisplayAndFonts() does. Only REGULAR style is needed:
-  // GameTitleActivity.cpp never passes an explicit EpdFontFamily::Style to drawText/
-  // drawCenteredText, so it always resolves to the default REGULAR face.
+  // exactly the way src/main.cpp's setupDisplayAndFonts() does. Both REGULAR and BOLD faces are
+  // needed for UI_10/UI_12 -- the cert line (item 7) and HUD blocks (items 3 & 8) draw with
+  // EpdFontFamily::BOLD, and main.cpp registers a real bold face for both (ubuntu_10_bold,
+  // ubuntu_12_bold), not a synthesized/regular-fallback bold. An earlier version of this harness
+  // only registered REGULAR, so every BOLD draw silently measured/rendered the wrong glyphs.
   static EpdFont ui10RegularFont(&ubuntu_10_regular);
-  static EpdFontFamily ui10FontFamily(&ui10RegularFont);
+  static EpdFont ui10BoldFont(&ubuntu_10_bold);
+  static EpdFontFamily ui10FontFamily(&ui10RegularFont, &ui10BoldFont);
   static EpdFont ui12RegularFont(&ubuntu_12_regular);
-  static EpdFontFamily ui12FontFamily(&ui12RegularFont);
+  static EpdFont ui12BoldFont(&ubuntu_12_bold);
+  static EpdFontFamily ui12FontFamily(&ui12RegularFont, &ui12BoldFont);
   static EpdFont notosans16RegularFont(&notosans_16_regular);
   static EpdFontFamily notosans16FontFamily(&notosans16RegularFont);
+  static EpdFont smallFont(&notosans_8_regular);
+  static EpdFontFamily smallFontFamily(&smallFont);
   renderer.insertFont(UI_10_FONT_ID, ui10FontFamily);
   renderer.insertFont(UI_12_FONT_ID, ui12FontFamily);
   renderer.insertFont(NOTOSANS_16_FONT_ID, notosans16FontFamily);
+  renderer.insertFont(SMALL_FONT_ID, smallFontFamily);
 
   // These builtin fonts store compressed glyph data (fontData->groups != nullptr) --
   // GfxRenderer::getGlyphBitmap() (GfxRenderer.cpp:60-72) requires a FontDecompressor reachable

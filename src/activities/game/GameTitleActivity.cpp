@@ -135,7 +135,23 @@ void GameTitleActivity::render(RenderLock&&) {
   //   bold condensed sans 38px (wordmark, item 6) -> font-independent pixel block letters
   //     (drawWord/drawBlockLetter below), not a font call at all.
   constexpr int kHudFontId = UI_12_FONT_ID;
-  constexpr int kCertFontId = UI_12_FONT_ID;
+  // Vertical, not horizontal, is what's tight here. The wordmark's outer plate border
+  // (drawRect(40,381,400,78,...) below) bottoms out at y=459; the tick ring (item 5,
+  // drawTickRing(...,124,144,...) around centre y=420) starts at y=475 -- only a 16px clear
+  // band between them. UI_10's ascender alone is 20px, so no baseline in that font clears
+  // both edges at once. Switched to SMALL_FONT_ID (8px notosans, already registered/used
+  // elsewhere -- BootActivity/SleepActivity/FileBrowser -- no new font asset), but its
+  // getFontAscenderSize() (18px) is a font-design metric, not this string's real cap-height --
+  // measured in isolation (baseline=700, empty canvas area) the actual ink for an all-caps
+  // string like "LETHALITY UNRATED" only spans ~12px above baseline, ~1px below. Naively using
+  // the 18px ascender in baselineToTopY() still collided with the border above (verified by
+  // render + pixel row-density scan: baseline=467 struck the border, baselines 471/472 merged
+  // into the border's connected component). The real fix isn't the font swap alone -- it's
+  // picking a baseline against the true ~12px ink height: baseline=473 puts ink at y461-472,
+  // clear of the border (ends y459, row 460 empty) and clear of the tick ring (starts y475,
+  // rows 473-474 empty). Confirmed as its own isolated connected-component, not merged with
+  // either neighbor.
+  constexpr int kCertFontId = SMALL_FONT_ID;
   // NotoSans 16 overflowed the safe-area frame on "[ tap anywhere to continue ]" (both
   // brackets sat on the border) -- UI_12 is narrower and fits with margin.
   constexpr int kTapFontId = UI_12_FONT_ID;
@@ -183,9 +199,11 @@ void GameTitleActivity::render(RenderLock&&) {
                                        {GLYPH_N}};
   drawWord(renderer, worldDungeon, 13, centerX, 406, kWordmarkScale);
 
-  // 7. Certification line (mono bold 12px stand-in)
-  renderer.drawCenteredText(kCertFontId, baselineToTopY(renderer, kCertFontId, 494), "LETHALITY UNRATED", true,
-                             EpdFontFamily::BOLD);
+  // 7. Certification line (small print, 8px) -- baseline=473 lands the real glyph ink (y461-472)
+  // clear of both the wordmark's outer border above (ends y459) and the tick ring below (starts
+  // y475). See kCertFontId's comment above for how this baseline was derived and verified.
+  renderer.drawCenteredText(kCertFontId, baselineToTopY(renderer, kCertFontId, 473), "LETHALITY UNRATED", true,
+                             EpdFontFamily::REGULAR);
 
   // 8. Bottom HUD block (mono bold 15px stand-in)
   // LIVE status-light bullet, center (45,605) r=5 -> bounding box (40,600) 10x10, fully rounded

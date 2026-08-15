@@ -641,12 +641,19 @@ void GameMenuActivity::renderAchievements() {
   // Lifetime unlock state (not per-run) -- this is an account-wide trophy
   // case, unlike the this-run-only list on the death/victory screen. A
   // locked achievement's real name is never shown here (Phase 9 req 5) --
-  // only the flash-resident STR_DM_ACHIEVEMENT_LOCKED placeholder.
+  // only the placeholder + a vague category hint (work item 4).
+  char rowBuf[80];
   for (uint8_t i = 0; i < static_cast<uint8_t>(game::AchievementId::Count); i++) {
     auto id = static_cast<game::AchievementId>(i);
     bool unlocked = ACHIEVEMENTS.isUnlocked(id);
-    renderer.drawText(UI_10_FONT_ID, x, y, unlocked ? game::achievementShortName(id) : tr(STR_DM_ACHIEVEMENT_LOCKED),
-                       true, unlocked ? EpdFontFamily::REGULAR : EpdFontFamily::ITALIC);
+    const char* text;
+    if (unlocked) {
+      text = game::achievementShortName(id);
+    } else {
+      snprintf(rowBuf, sizeof(rowBuf), "%s -- %s", tr(STR_DM_ACHIEVEMENT_LOCKED), game::achievementHint(id));
+      text = rowBuf;
+    }
+    renderer.drawText(UI_10_FONT_ID, x, y, text, true, unlocked ? EpdFontFamily::REGULAR : EpdFontFamily::ITALIC);
     y += lineH;
   }
 

@@ -33,6 +33,24 @@ inline const char* achievementShortName(AchievementId id) {
   }
 }
 
+// Vague category teaser for a still-locked achievement (Phase 9 work item 4 --
+// "locked redacted with a hint"). Never gives away the exact trigger condition,
+// only the rough flavor of it -- the real name/flavorText stays hidden until
+// AchievementBus::unlock() actually fires (see req 5: a locked one is never named).
+inline const char* achievementHint(AchievementId id) {
+  switch (id) {
+    case AchievementId::Ding: return "Grow stronger.";
+    case AchievementId::ThatllBuffOut: return "Survive the unsurvivable.";
+    case AchievementId::AudienceParticipation: return "Die to something weak.";
+    case AchievementId::EscalationOfForce: return "Overkill a monster.";
+    case AchievementId::PackRat: return "Fill your pockets.";
+    case AchievementId::SpeedRunner: return "Move fast.";
+    case AchievementId::DeepDiver: return "Go deep.";
+    case AchievementId::MaxedOut: return "Reach your peak.";
+    default: return "";
+  }
+}
+
 enum class GameEventType : uint8_t {
   MonsterKilled,
   PlayerDamaged,

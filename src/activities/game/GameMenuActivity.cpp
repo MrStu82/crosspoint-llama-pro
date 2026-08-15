@@ -33,7 +33,7 @@ void GameMenuActivity::loop() {
 
   switch (currentScreen) {
     case Screen::Menu: {
-      constexpr int menuSize = 6;  // Resume, Inventory, Character, Theme, Save & Quit, Abandon
+      constexpr int menuSize = 7;  // Resume, Inventory, Character, Achievements, Theme, Save & Quit, Abandon
 
       buttonNavigator.onNextRelease([this] {
         selectedIndex = ButtonNavigator::nextIndex(selectedIndex, menuSize);
@@ -61,16 +61,21 @@ void GameMenuActivity::loop() {
             selectedIndex = 0;
             requestUpdate();
             break;
-          case 3:  // Theme
+          case 3:  // Achievements
+            currentScreen = Screen::Achievements;
+            selectedIndex = 0;
+            requestUpdate();
+            break;
+          case 4:  // Theme
             SETTINGS.gameTheme = (SETTINGS.gameTheme + 1) % CrossPointSettings::GAME_THEME_COUNT;
             SETTINGS.saveToFile();
             requestUpdate();
             break;
-          case 4:  // Save & Quit
+          case 5:  // Save & Quit
             setResult(MenuResult{static_cast<int>(MenuAction::SAVE_QUIT), 0, 0});
             finish();
             return;
-          case 5:  // Abandon Run
+          case 6:  // Abandon Run
             setResult(MenuResult{static_cast<int>(MenuAction::ABANDON), 0, 0});
             finish();
             return;
@@ -152,13 +157,31 @@ void GameMenuActivity::loop() {
       }
       break;
     }
+
+    case Screen::Achievements: {
+      if (mappedInput.wasReleased(Button::Back) || mappedInput.wasReleased(Button::Confirm)) {
+        currentScreen = Screen::Menu;
+        selectedIndex = 3;
+        requestUpdate();
+      }
+
+      // Touch: view-only screen, same back-out-on-any-tap idiom as Screen::Character.
+      int tx, ty;
+      if (mappedInput.wasScreenTapped(tx, ty)) {
+        currentScreen = Screen::Menu;
+        selectedIndex = 3;
+        requestUpdate();
+        return;
+      }
+      break;
+    }
   }
 }
 
 // --- Touch (Screen::Menu) ---
 
 bool GameMenuActivity::handleMenuTouch() {
-  constexpr int menuSize = 6;  // Resume, Inventory, Character, Theme, Save & Quit, Abandon
+  constexpr int menuSize = 7;  // Resume, Inventory, Character, Achievements, Theme, Save & Quit, Abandon
 
   // Row geometry must mirror BaseTheme::drawButtonMenu() exactly (see renderMenu()
   // for how contentTop/rect are computed, and BaseTheme.cpp's drawButtonMenu() for
@@ -218,16 +241,21 @@ bool GameMenuActivity::handleMenuTouch() {
           selectedIndex = 0;
           requestUpdate();
           return true;
-        case 3:  // Theme
+        case 3:  // Achievements
+          currentScreen = Screen::Achievements;
+          selectedIndex = 0;
+          requestUpdate();
+          return true;
+        case 4:  // Theme
           SETTINGS.gameTheme = (SETTINGS.gameTheme + 1) % CrossPointSettings::GAME_THEME_COUNT;
           SETTINGS.saveToFile();
           requestUpdate();
           return true;
-        case 4:  // Save & Quit
+        case 5:  // Save & Quit
           setResult(MenuResult{static_cast<int>(MenuAction::SAVE_QUIT), 0, 0});
           finish();
           return true;
-        case 5:  // Abandon Run
+        case 6:  // Abandon Run
           setResult(MenuResult{static_cast<int>(MenuAction::ABANDON), 0, 0});
           finish();
           return true;
@@ -384,6 +412,9 @@ void GameMenuActivity::render(RenderLock&&) {
     case Screen::Character:
       renderCharacter();
       break;
+    case Screen::Achievements:
+      renderAchievements();
+      break;
   }
 }
 
@@ -399,13 +430,15 @@ void GameMenuActivity::renderMenu() {
   const int contentTop = metrics.topPadding + metrics.headerHeight + metrics.verticalSpacing;
   const int contentHeight = pageHeight - contentTop - metrics.buttonHintsHeight - metrics.verticalSpacing;
 
-  static const StrId items[] = {StrId::STR_DM_RESUME_GAME, StrId::STR_DM_INVENTORY, StrId::STR_DM_CHARACTER,
-                                StrId::STR_DM_THEME, StrId::STR_DM_SAVE_AND_QUIT, StrId::STR_DM_ABANDON_RUN};
+  static const StrId items[] = {StrId::STR_DM_RESUME_GAME,   StrId::STR_DM_INVENTORY,
+                                StrId::STR_DM_CHARACTER,     StrId::STR_DM_ACHIEVEMENTS_TITLE,
+                                StrId::STR_DM_THEME,         StrId::STR_DM_SAVE_AND_QUIT,
+                                StrId::STR_DM_ABANDON_RUN};
 
   GUI.drawButtonMenu(
-      renderer, Rect(0, contentTop, pageWidth, contentHeight), 6, selectedIndex,
+      renderer, Rect(0, contentTop, pageWidth, contentHeight), 7, selectedIndex,
       [](int index) {
-        if (index == 3) {
+        if (index == 4) {
           // Theme row shows the live selection, e.g. "Theme: Default" -- mirrors
           // the " +2"/" [E]" dynamic-suffix pattern used for inventory rows.
           const auto* theme = game::getTheme(static_cast<game::GameThemeId>(SETTINGS.gameTheme));
@@ -584,6 +617,37 @@ void GameMenuActivity::renderCharacter() {
   }
   if (!hasEquipped) {
     renderer.drawText(UI_10_FONT_ID, x + 10, y, "(none)");
+  }
+
+  const auto labels = mappedInput.mapLabels(tr(STR_BACK), "", "", "");
+  GUI.drawButtonHints(renderer, labels.btn1, labels.btn2, labels.btn3, labels.btn4);
+
+  renderer.displayBuffer();
+}
+
+void GameMenuActivity::renderAchievements() {
+  renderer.clearScreen();
+
+  const auto pageWidth = renderer.getScreenWidth();
+  auto metrics = UITheme::getInstance().getMetrics();
+
+  GUI.drawHeader(renderer, Rect(0, metrics.topPadding, pageWidth, metrics.headerHeight),
+                 tr(STR_DM_ACHIEVEMENTS_TITLE));
+
+  const int x = metrics.contentSidePadding;
+  int y = metrics.topPadding + metrics.headerHeight + metrics.verticalSpacing + 10;
+  constexpr int lineH = 28;
+
+  // Lifetime unlock state (not per-run) -- this is an account-wide trophy
+  // case, unlike the this-run-only list on the death/victory screen. A
+  // locked achievement's real name is never shown here (Phase 9 req 5) --
+  // only the flash-resident STR_DM_ACHIEVEMENT_LOCKED placeholder.
+  for (uint8_t i = 0; i < static_cast<uint8_t>(game::AchievementId::Count); i++) {
+    auto id = static_cast<game::AchievementId>(i);
+    bool unlocked = ACHIEVEMENTS.isUnlocked(id);
+    renderer.drawText(UI_10_FONT_ID, x, y, unlocked ? game::achievementShortName(id) : tr(STR_DM_ACHIEVEMENT_LOCKED),
+                       true, unlocked ? EpdFontFamily::REGULAR : EpdFontFamily::ITALIC);
+    y += lineH;
   }
 
   const auto labels = mappedInput.mapLabels(tr(STR_BACK), "", "", "");

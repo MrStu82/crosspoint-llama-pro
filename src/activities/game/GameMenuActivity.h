@@ -20,13 +20,14 @@ class GameMenuActivity final : public Activity {
   void render(RenderLock&&) override;
 
  private:
-  enum class Screen { Menu, Inventory, Character };
+  enum class Screen { Menu, Inventory, Character, Achievements };
 
   void useInventoryItem(int index);
 
   void renderMenu();
   void renderInventory();
   void renderCharacter();
+  void renderAchievements();
 
   // Touch support for the Screen::Menu row list (Resume/Inventory/Character/Save &
   // Quit/Abandon Run), additive alongside the existing physical-button navigation.

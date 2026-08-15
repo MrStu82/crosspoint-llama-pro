@@ -211,6 +211,17 @@ void BmpViewerActivity::loop() {
     return;
   }
 
+  // Bottom button-hint strip, same touch idiom as EndOfBookOptions /
+  // EpubReaderPercentSelectionActivity: right third mirrors the "Set sleep cover" hint,
+  // giving the Confirm-gated action below a touch-reachable equivalent.
+  int tx = 0;
+  int ty = 0;
+  if (mappedInput.wasScreenTapped(tx, ty) && ty >= renderer.getScreenHeight() - 80 &&
+      tx > renderer.getScreenWidth() * 2 / 3) {
+    doSetSleepCover();
+    return;
+  }
+
   if (mappedInput.wasReleased(MappedInputManager::Button::Confirm)) {
     doSetSleepCover();
     return;

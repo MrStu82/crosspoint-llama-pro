@@ -56,12 +56,21 @@ bool AchievementBus::save() const {
   return true;
 }
 
+void AchievementBus::resetRun() {
+  for (auto& u : unlockedThisRun) u = false;
+}
+
 bool AchievementBus::isUnlocked(game::AchievementId id) const {
   return unlocked[static_cast<uint8_t>(id)];
 }
 
+bool AchievementBus::isUnlockedThisRun(game::AchievementId id) const {
+  return unlockedThisRun[static_cast<uint8_t>(id)];
+}
+
 void AchievementBus::unlock(game::AchievementId id, const char* flavorText) {
   uint8_t idx = static_cast<uint8_t>(id);
+  unlockedThisRun[idx] = true;
   if (unlocked[idx]) return;
   unlocked[idx] = true;
   save();

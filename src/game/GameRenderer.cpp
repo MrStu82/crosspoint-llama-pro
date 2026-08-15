@@ -336,3 +336,62 @@ bool GameRenderer::hitTestControls(int x, int y, MappedInputManager::Button& out
   outButton = (buttonIndex == 0) ? MappedInputManager::Button::Confirm : MappedInputManager::Button::Back;
   return true;
 }
+
+void GameRenderer::drawEndScreen(GfxRenderer& renderer, bool isVictory, const EndScreenData& data) const {
+  // Deliberately no clearScreen() -- see header comment. The box below fully
+  // occludes its own footprint; whatever's still visible outside its edges
+  // (status bar/viewport/controls from the frame this overlay landed on) is
+  // acceptable leftover for a one-shot modal.
+  const int boxW = screenW - 60;
+  const int boxH = 360;
+  const int boxX = (screenW - boxW) / 2;
+  const int boxY = (screenH - boxH) / 2;
+
+  renderer.fillRoundedRect(boxX, boxY, boxW, boxH, 8, Color::White);
+  renderer.drawRoundedRect(boxX, boxY, boxW, boxH, 2, 8, true);
+
+  int y = boxY + 30;
+  renderer.drawCenteredText(NOTOSANS_18_FONT_ID, y, isVictory ? tr(STR_DM_VICTORY) : tr(STR_DM_YOU_DIED), true);
+  y += 34;
+
+  char line[64];
+  if (!isVictory) {
+    snprintf(line, sizeof(line), "%s %s", tr(STR_DM_DEATH_CAUSE), data.cause);
+    renderer.drawCenteredText(UI_12_FONT_ID, y, line, true);
+    y += 26;
+  }
+
+  snprintf(line, sizeof(line), "%s %u", tr(STR_DM_STAT_FLOOR), data.floor);
+  renderer.drawCenteredText(UI_12_FONT_ID, y, line, true);
+  y += 22;
+
+  snprintf(line, sizeof(line), "%s %u", tr(STR_DM_STAT_TURNS), data.turns);
+  renderer.drawCenteredText(UI_12_FONT_ID, y, line, true);
+  y += 22;
+
+  snprintf(line, sizeof(line), "%s %u", tr(STR_DM_STAT_KILLS), data.kills);
+  renderer.drawCenteredText(UI_12_FONT_ID, y, line, true);
+  y += 22;
+
+  snprintf(line, sizeof(line), "%s %u", tr(STR_DM_STAT_LEVEL), data.level);
+  renderer.drawCenteredText(UI_12_FONT_ID, y, line, true);
+  y += 30;
+
+  renderer.drawCenteredText(UI_12_FONT_ID, y, tr(STR_DM_ACHIEVEMENTS), true);
+  y += 22;
+
+  if (data.unlockedCount == 0) {
+    renderer.drawCenteredText(UI_10_FONT_ID, y, tr(STR_DM_NO_ACHIEVEMENTS), true);
+  } else {
+    for (uint8_t i = 0; i < data.unlockedCount; i++) {
+      renderer.drawCenteredText(UI_10_FONT_ID, y, game::achievementShortName(data.unlockedIds[i]), true);
+      y += 18;
+    }
+  }
+
+  renderer.drawCenteredText(UI_10_FONT_ID, boxY + boxH - 24, tr(STR_DM_TAP_TO_CONTINUE), true);
+
+  // One-shot full-refresh: new high-contrast content over a stale buffer
+  // needs a clean waveform, not the periodic ghost-guard cadence draw() uses.
+  renderer.displayBuffer(HalDisplay::FULL_REFRESH);
+}

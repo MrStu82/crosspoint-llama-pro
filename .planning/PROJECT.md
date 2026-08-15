@@ -81,10 +81,28 @@ Phase 6 — Tamagotchi overhaul (Stuart: "a complete mess", "a big graphical ove
 | Phase 5 top drawer delivers the bottom drawer's *feel* (edge-pull, slide, dismiss), not a shared base class; `TextSettingsActivity` keeps its own state; DRY applies narrowly to edge-drag + animation if it lifts out cleanly | Parent corrected the original "reuse the implementation" wording after flagging it would force ~200 lines of convergence between two structurally different components (2026-08-10) | — Pending |
 | Phase 6 gated on real research before implementation (items 4/5 are research-then-build, not just item 5's styling) | Parent: "needs to BE a Tamagotchi, not merely look like one" — mechanics correctness first, Tamagotchi Uni visual style second | — Pending |
 
+### Active (Milestone 3: World Dungeon, plan doc dispatched 2026-08-15)
+
+Source: `/workspace/inbox/a2a-1786788310195-g5xaw8/world-dungeon-build-plan.html`. Six-phase build for the World Dungeon game component (existing `src/game/DungeonGenerator.*`, `AchievementBus.*`). Requirements per phase confirmed as written by parent 2026-08-15, msg 3618 — no negotiation, build to them.
+
+Phase 7 (World Dungeon Phase 0, "Correctness"):
+- [ ] No victory item (Master Key/Ring of Power) in the random loot pool across 10,000 generated floors — placed on boss defeat instead
+- [ ] Blocking death screen (cause, floor, turns, kills, level, achievements this run), dismissed only by explicit tap
+- [ ] Blocking victory screen, same data shape, doesn't eject to launcher
+- [ ] Depth-weighted monster selection: mean tier at depth 26 measurably higher than depth 5 over 1,000 floors
+- [ ] One persistent RNG stream on `GameState`, seeded once per run, serialised with the save — identical seed replays identically, no repeated combat roll on the same tile/turn
+- [ ] `turnCount` → `uint32_t`; opened-door state persists through save/reload
+- [ ] Turn 70,000 reached with regen still firing at correct cadence
+
+Phase 8 (World Dungeon Phase 1, "Reclaim the frame" — dirty-rect rendering): requirements TBD, pulled from plan doc when Phase 7 is closing. **Known constraint for Phase 7's own build**: the death/victory screens must not be written as an unconditional `clearScreen()` full repaint — Phase 8's dirty-rect work lands directly on top of them (parent, msg 3622).
+
+Phases 9-12 (World Dungeon Phases 2-5: Voice, Decisions, The Show, The Co-star): requirements TBD, pulled from plan doc as each phase opens.
+
 ## Milestones
 
 - **Milestone 1 (Phases 1-4, X4 Pro UI Layout Fixes)**: Complete 2026-08-07. All 6 requirements shipped and reported.
 - **Milestone 2 (Phases 5-6, dispatch #322096, 2026-08-10)**: In progress. Bottom drawer + brightness control (prior deliverable, separate from this milestone) confirmed working by Stuart — do not touch their behavior except where Phase 5's landscape-edge fix requires it.
+- **Milestone 3 (Phases 7-12, World Dungeon, dispatched 2026-08-15)**: Started. Flash cadence per parent's ruling (msg 3622, 2026-08-15): **three images, not six** — phases pair up 7+8, 9+10, 11+12. Each phase still runs its own full gate loop and is signed off individually; only the flash-to-Stuart is batched per pair. The 4 touch-gap-audit fixes (`EndOfBookOptions.cpp`, `EpubReaderPercentSelectionActivity.cpp`, `BmpViewerActivity.cpp`, `WifiSelectionActivity.cpp`) and the outstanding `LOG_INF` instrumentation for `wasHomeKeyBackGesture()` ride the 7+8 image, not their own.
 
 ---
-*Last updated: 2026-08-10 — Milestone 2 (dispatch #322096) added as Phases 5-6*
+*Last updated: 2026-08-15 — Milestone 3 (World Dungeon) added as Phases 7-12, flash cadence set to 3 paired images*

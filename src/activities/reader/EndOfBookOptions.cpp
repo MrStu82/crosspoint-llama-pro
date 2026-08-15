@@ -45,7 +45,7 @@ std::string EndOfBookOptions::fullPath(const size_t index) const {
 }
 
 EndOfBookOptions::Action EndOfBookOptions::handleMenuInput(const MappedInputManager& input, std::string* openPath) {
-  if (input.wasReleased(MappedInputManager::Button::Confirm)) {
+  const auto openSelected = [&]() -> Action {
     if (selector < static_cast<int>(names.size())) {
       if (openPath) {
         *openPath = fullPath(selector);
@@ -53,12 +53,29 @@ EndOfBookOptions::Action EndOfBookOptions::handleMenuInput(const MappedInputMana
       return Action::OpenBook;
     }
     return Action::GoHome;  // "Home" entry selected
+  };
+
+  if (input.wasReleased(MappedInputManager::Button::Confirm)) {
+    return openSelected();
   }
 
   // Short-press Back returns to the last page; a long press falls through to the
   // reader's own handler (file browser). Home is reached through the list's Home entry.
   if (input.wasReleased(MappedInputManager::Button::Back) && input.getHeldTime() < ReaderUtils::GO_HOME_MS) {
     return Action::LastPage;
+  }
+
+  // Bottom button-hint strip, same touch idiom as IntervalSelectionActivity /
+  // EpubReaderPercentSelectionActivity: right third mirrors the "Open" hint, giving the
+  // Confirm-gated open/select action a touch-reachable equivalent. Left third is left
+  // alone here (unlike those screens) since short-press Back above already has a home-key
+  // touch path with a distinct meaning (last page, not cancel) that a tap-zone shouldn't
+  // shadow.
+  int tx = 0;
+  int ty = 0;
+  if (input.wasScreenTapped(tx, ty) && ty >= input.getRenderer().getScreenHeight() - 80 &&
+      tx > input.getRenderer().getScreenWidth() * 2 / 3) {
+    return openSelected();
   }
 
   // Selection movement on the standard list navigation buttons (side Up/Down plus front

@@ -296,8 +296,19 @@ uint8_t placeMonsters(Tile* tiles, Monster* monsters, Rng& rng, uint8_t depth) {
     }
     if (occupied) continue;
 
-    // Pick a random eligible type, biased toward depth-appropriate monsters
-    uint8_t typeIdx = eligible[rng.nextRange(eligibleCount)];
+    // Pick an eligible type, weighted toward the harder (higher-index) end of the
+    // eligible list as depth increases. eligible[] is built in MONSTER_DEFS order,
+    // which is itself roughly tier-ordered, so a higher chosen index means a tougher
+    // monster. Bias is done by taking the max of several uniform draws over the
+    // eligible range — more draws pull the result toward the top of the range.
+    // depth 1-7: 1 draw (uniform), 8-15: 2, 16-23: 3, 24-26: 4 draws.
+    uint8_t rolls = 1 + static_cast<uint8_t>(depth / 8);
+    uint8_t bestIdx = 0;
+    for (uint8_t r = 0; r < rolls; r++) {
+      uint8_t v = static_cast<uint8_t>(rng.nextRange(eligibleCount));
+      if (v > bestIdx) bestIdx = v;
+    }
+    uint8_t typeIdx = eligible[bestIdx];
     const auto& def = game::MONSTER_DEFS[typeIdx];
 
     Monster& m = monsters[placed];
@@ -315,6 +326,10 @@ uint8_t placeMonsters(Tile* tiles, Monster* monsters, Rng& rng, uint8_t depth) {
 
 // --- Item Placement ---
 
+static_assert(game::RING_OF_POWER_DEF == game::ITEM_DEF_COUNT - 1,
+              "placeItems() assumes the Ring of Power is the last ITEM_DEFS entry to exclude it "
+              "from the random roll via ITEM_DEF_COUNT - 1");
+
 uint8_t placeItems(Tile* tiles, Item* items, Rng& rng, uint8_t depth) {
   int count = std::min(2 + static_cast<int>(depth), static_cast<int>(game::MAX_ITEMS_PER_LEVEL));
   uint8_t placed = 0;
@@ -323,8 +338,9 @@ uint8_t placeItems(Tile* tiles, Item* items, Rng& rng, uint8_t depth) {
     int16_t ix, iy;
     if (!findRandomFloor(tiles, rng, ix, iy)) continue;
 
-    // Pick a random item type
-    uint8_t defIdx = static_cast<uint8_t>(rng.nextRange(game::ITEM_DEF_COUNT));
+    // Pick a random item type. Excludes RING_OF_POWER_DEF (the quest item, always the last
+    // entry) — it's only ever placed as the boss's death drop, never random floor loot.
+    uint8_t defIdx = static_cast<uint8_t>(rng.nextRange(game::ITEM_DEF_COUNT - 1));
     const auto& def = game::ITEM_DEFS[defIdx];
 
     Item& item = items[placed];

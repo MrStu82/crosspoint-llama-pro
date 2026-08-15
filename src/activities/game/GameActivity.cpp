@@ -113,6 +113,10 @@ void GameActivity::onEnter() {
 // --- Render ---
 
 void GameActivity::render(RenderLock&&) {
+  if (screenMode != GameScreenMode::Playing) {
+    gameRenderer.drawEndScreen(renderer, screenMode == GameScreenMode::Victory, endScreenData);
+    return;
+  }
   gameRenderer.draw(renderer, tiles, fogOfWar, monsters, monsterCount, levelItems, itemCount, visible);
 }
 
@@ -120,6 +124,24 @@ void GameActivity::render(RenderLock&&) {
 
 void GameActivity::loop() {
   using Button = MappedInputManager::Button;
+
+  if (screenMode != GameScreenMode::Playing) {
+    // Blocking death/victory screen: tap-dismiss only (Phase 7 req 2/3) --
+    // any button release or screen tap completes the navigation that
+    // handlePlayerDeath()/handleVictory() deferred. Save deletion already
+    // happened at that point, so this is purely "leave the screen".
+    bool dismissed = mappedInput.wasReleased(Button::Up) || mappedInput.wasReleased(Button::Down) ||
+                     mappedInput.wasReleased(Button::Left) || mappedInput.wasReleased(Button::Right) ||
+                     mappedInput.wasReleased(Button::Confirm) || mappedInput.wasReleased(Button::Back);
+    if (!dismissed) {
+      int tx, ty;
+      dismissed = mappedInput.wasScreenTapped(tx, ty);
+    }
+    if (dismissed) {
+      onGoHome();
+    }
+    return;
+  }
 
   Button pressed = Button::Confirm;
   bool hasButton = false;
@@ -236,9 +258,13 @@ void GameActivity::handleMove(int dx, int dy) {
   if (target == game::Tile::DoorClosed) {
     // Open the door
     tiles[newY * game::MAP_WIDTH + newX] = game::Tile::DoorOpen;
+    game::fogSetExplored(doorOpen, newX, newY);  // persist across save/reload (Phase 7 req 6)
     GAME_STATE.addMessage("You open the door.");
     p.turnCount++;
-    processMonsterTurns();
+    if (processMonsterTurns()) {
+      handlePlayerDeath();
+      return;
+    }
     computeVisibility();
     requestUpdate();
     return;
@@ -252,8 +278,7 @@ void GameActivity::handleMove(int dx, int dy) {
       int atkPower = static_cast<int>(p.strength) + equippedAttackBonus();
       int damage = std::max(1, atkPower - static_cast<int>(def.defense));
       // Add some variance
-      game::Rng rng(p.turnCount ^ (p.x * 31 + p.y * 37));
-      damage = std::max(1, damage + rng.nextRangeInclusive(-damage / 4, damage / 4));
+      damage = std::max(1, damage + GAME_STATE.rollRangeInclusive(-damage / 4, damage / 4));
 
       monsters[i].hp = (damage >= monsters[i].hp) ? 0 : monsters[i].hp - damage;
 
@@ -262,6 +287,7 @@ void GameActivity::handleMove(int dx, int dy) {
         snprintf(msgBuf, sizeof(msgBuf), "You slay the %s! (+%uXP)", def.name, def.expValue);
         GAME_STATE.addMessage(msgBuf);
         p.experience += def.expValue;
+        p.kills++;
 
         game::GameEvent killEvent{};
         killEvent.type = game::GameEventType::MonsterKilled;
@@ -293,7 +319,10 @@ void GameActivity::handleMove(int dx, int dy) {
       monsters[i].state = static_cast<uint8_t>(game::MonsterState::Hostile);
 
       p.turnCount++;
-      processMonsterTurns();
+      if (processMonsterTurns()) {
+        handlePlayerDeath();
+        return;
+      }
       computeVisibility();
       requestUpdate();
       return;
@@ -305,7 +334,10 @@ void GameActivity::handleMove(int dx, int dy) {
   p.y = static_cast<int16_t>(newY);
   p.turnCount++;
 
-  processMonsterTurns();
+  if (processMonsterTurns()) {
+    handlePlayerDeath();
+    return;
+  }
   computeVisibility();
   requestUpdate();
 }
@@ -315,7 +347,9 @@ void GameActivity::handleMove(int dx, int dy) {
 void GameActivity::handleAction() {
   auto& p = GAME_STATE.player;
 
-  // Dead players can't act
+  // Defensive fallback only -- loop()'s screenMode gate normally stops input
+  // from reaching handleAction() at all once dead. handlePlayerDeath() is
+  // idempotent, so a redundant call here is harmless.
   if (p.hp == 0) {
     handlePlayerDeath();
     return;
@@ -423,7 +457,10 @@ void GameActivity::handleAction() {
       itemCount--;
 
       p.turnCount++;
-      processMonsterTurns();
+      if (processMonsterTurns()) {
+        handlePlayerDeath();
+        return;
+      }
       requestUpdate();
       return;
     }
@@ -435,9 +472,9 @@ void GameActivity::handleAction() {
 
 // --- Monster AI ---
 
-void GameActivity::processMonsterTurns() {
+bool GameActivity::processMonsterTurns() {
   auto& p = GAME_STATE.player;
-  if (p.hp == 0) return;
+  if (p.hp == 0) return true;
 
   for (uint8_t i = 0; i < monsterCount; i++) {
     auto& m = monsters[i];
@@ -454,9 +491,8 @@ void GameActivity::processMonsterTurns() {
       // Wake up if player is nearby and visible
       if (dist2 <= FOV_RADIUS * FOV_RADIUS && visible[m.y * game::MAP_WIDTH + m.x]) {
         // Wake chance based on distance — closer = more likely
-        game::Rng rng(p.turnCount ^ (m.x * 17 + m.y * 13 + i));
         int wakeChance = 80 - dist2;  // Very likely when close
-        if (static_cast<int>(rng.nextRange(100)) < wakeChance) {
+        if (static_cast<int>(GAME_STATE.rollRange(100)) < wakeChance) {
           m.state = static_cast<uint8_t>(game::MonsterState::Hostile);
           state = game::MonsterState::Hostile;
         }
@@ -471,8 +507,7 @@ void GameActivity::processMonsterTurns() {
         state = game::MonsterState::Hostile;
       } else {
         // Random wander
-        game::Rng rng(p.turnCount ^ (m.x * 23 + m.y * 29 + i * 7));
-        int dir = rng.nextRange(4);
+        int dir = static_cast<int>(GAME_STATE.rollRange(4));
         int wmx = m.x + ((dir == 0) ? 1 : (dir == 1) ? -1 : 0);
         int wmy = m.y + ((dir == 2) ? 1 : (dir == 3) ? -1 : 0);
 
@@ -502,7 +537,7 @@ void GameActivity::processMonsterTurns() {
       // Adjacent to player? Attack!
       if (abs(dx) <= 1 && abs(dy) <= 1 && dist2 <= 2) {
         monsterAttackPlayer(m);
-        if (p.hp == 0) return;  // Player died
+        if (p.hp == 0) return true;  // Player died
         continue;
       }
 
@@ -557,6 +592,8 @@ void GameActivity::processMonsterTurns() {
   if (p.mp < p.maxMp && p.turnCount % (regenRate + 5) == 0) {
     p.mp++;
   }
+
+  return false;
 }
 
 void GameActivity::monsterAttackPlayer(game::Monster& m) {
@@ -566,8 +603,7 @@ void GameActivity::monsterAttackPlayer(game::Monster& m) {
   // Monster attack vs player dexterity + armor bonus
   int playerDef = static_cast<int>(p.dexterity / 3) + equippedDefenseBonus();
   int damage = std::max(1, static_cast<int>(def.attack) - playerDef);
-  game::Rng rng(p.turnCount ^ (m.x * 41 + m.y * 43));
-  damage = std::max(1, damage + rng.nextRangeInclusive(-damage / 4, damage / 4));
+  damage = std::max(1, damage + GAME_STATE.rollRangeInclusive(-damage / 4, damage / 4));
 
   // Apply damage
   p.hp = (static_cast<uint16_t>(damage) >= p.hp) ? 0 : p.hp - static_cast<uint16_t>(damage);
@@ -576,6 +612,7 @@ void GameActivity::monsterAttackPlayer(game::Monster& m) {
   if (p.hp == 0) {
     snprintf(msgBuf, sizeof(msgBuf), "The %s kills you!", def.name);
     GAME_STATE.addMessage(msgBuf);
+    snprintf(deathCause, sizeof(deathCause), "%s", def.name);
 
     game::GameEvent deathEvent{};
     deathEvent.type = game::GameEventType::PlayerDied;
@@ -624,34 +661,64 @@ void GameActivity::checkLevelUp() {
   }
 }
 
+// --- End Screen Data ---
+
+void GameActivity::populateEndScreenData() {
+  const auto& p = GAME_STATE.player;
+
+  snprintf(endScreenData.cause, sizeof(endScreenData.cause), "%s", deathCause);
+  endScreenData.floor = p.dungeonDepth;
+  endScreenData.turns = p.turnCount;
+  endScreenData.kills = p.kills;
+  endScreenData.level = p.charLevel;
+
+  endScreenData.unlockedCount = 0;
+  for (uint8_t i = 0; i < static_cast<uint8_t>(game::AchievementId::Count); i++) {
+    auto id = static_cast<game::AchievementId>(i);
+    if (ACHIEVEMENTS.isUnlockedThisRun(id)) {
+      endScreenData.unlockedIds[endScreenData.unlockedCount++] = id;
+    }
+  }
+}
+
 // --- Player Death ---
 
 void GameActivity::handlePlayerDeath() {
-  GAME_STATE.addMessage("Press any key to return...");
-  requestUpdate();
+  // Idempotent: handleAction()'s dead-player branch can still reach this after
+  // the death screen is already up (e.g. a stray input before loop()'s dismiss
+  // gating takes over on the very same frame) — don't redo the teardown twice.
+  if (screenMode == GameScreenMode::Death) return;
 
-  // Delete save data — permadeath!
+  if (deathCause[0] == '\0') {
+    snprintf(deathCause, sizeof(deathCause), "%s", "Unknown causes");
+  }
+
+  populateEndScreenData();
+
+  // Delete save data — permadeath! Done immediately (not deferred to dismiss)
+  // so an app crash/kill while the death screen is up can't leave a save file
+  // for a character that's already dead.
   GameSave::deleteAll();
   GAME_STATE.deleteSaveFile();
 
-  onGoHome();
+  screenMode = GameScreenMode::Death;
+  requestUpdate();
 }
 
 // --- Victory ---
 
 void GameActivity::handleVictory() {
-  auto& p = GAME_STATE.player;
+  // Idempotent, mirrors handlePlayerDeath()'s guard.
+  if (screenMode == GameScreenMode::Victory) return;
 
-  char msgBuf[64];
-  snprintf(msgBuf, sizeof(msgBuf), "Victory! Depth %u, Level %u, %u turns.", p.dungeonDepth, p.charLevel, p.turnCount);
-  GAME_STATE.addMessage(msgBuf);
-  requestUpdate();
+  populateEndScreenData();
 
   // Clear save — the quest is complete
   GameSave::deleteAll();
   GAME_STATE.deleteSaveFile();
 
-  onGoHome();
+  screenMode = GameScreenMode::Victory;
+  requestUpdate();
 }
 
 // --- Level Management ---
@@ -666,12 +733,24 @@ void GameActivity::loadOrGenerateLevel() {
 
   // Clear fog
   memset(fogOfWar, 0, sizeof(fogOfWar));
+  memset(doorOpen, 0, sizeof(doorOpen));
   memset(visible, 0, sizeof(visible));
 
   // If we have saved state for this level, overlay it
   if (GameSave::hasLevel(p.dungeonDepth)) {
-    // Load saved fog, monsters, and items (overrides generated state)
-    GameSave::loadLevel(p.dungeonDepth, fogOfWar, monsters, monsterCount, levelItems, itemCount);
+    // Load saved fog, door state, monsters, and items (overrides generated state)
+    GameSave::loadLevel(p.dungeonDepth, fogOfWar, doorOpen, monsters, monsterCount, levelItems, itemCount);
+
+    // DungeonGenerator::generate() above reset every door tile to DoorClosed;
+    // re-open the ones the player had already opened before saving (Phase 7 req 6).
+    for (int y = 0; y < game::MAP_HEIGHT; y++) {
+      for (int x = 0; x < game::MAP_WIDTH; x++) {
+        int idx = y * game::MAP_WIDTH + x;
+        if (tiles[idx] == game::Tile::DoorClosed && game::fogIsExplored(doorOpen, x, y)) {
+          tiles[idx] = game::Tile::DoorOpen;
+        }
+      }
+    }
   } else {
     // First visit — place player at stairs up
     p.x = result.stairsUpX;
@@ -680,7 +759,8 @@ void GameActivity::loadOrGenerateLevel() {
 }
 
 void GameActivity::saveCurrentLevel() {
-  GameSave::saveLevel(GAME_STATE.player.dungeonDepth, fogOfWar, monsters, monsterCount, levelItems, itemCount);
+  GameSave::saveLevel(GAME_STATE.player.dungeonDepth, fogOfWar, doorOpen, monsters, monsterCount, levelItems,
+                      itemCount);
 }
 
 // --- Visibility ---

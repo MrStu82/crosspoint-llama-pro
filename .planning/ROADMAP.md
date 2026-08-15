@@ -129,3 +129,29 @@ Plans:
 | 4. USB mass storage (§3.1) | 1/1 | Complete | 2026-08-07 |
 | 5. Small fixes (#322096 Phase 1) | 0/? | Not started | - |
 | 6. Tamagotchi overhaul (#322096 Phase 2) | 0/? | Not started | - |
+| 7. World Dungeon: Correctness | 0/? | In progress | - |
+| 8. World Dungeon: Reclaim the frame | 0/? | Not started | - |
+| 9. World Dungeon: Voice | 0/? | Not started | - |
+| 10. World Dungeon: Decisions | 0/? | Not started | - |
+| 11. World Dungeon: The Show | 0/? | Not started | - |
+| 12. World Dungeon: The Co-star | 0/? | Not started | - |
+
+### Phase 7: World Dungeon — Correctness
+**Goal**: Loot, death/victory, monster balance, RNG determinism, save integrity, long-run stability all correct per the plan doc's Phase 0 requirements.
+**Depends on**: Nothing (fresh milestone; existing `DungeonGenerator`/`AchievementBus` source is the starting point)
+**Requirements**: see PROJECT.md Milestone 3 / Phase 7 checklist
+**Gate**: HOST — all 7 requirements automated (run counts stated, e.g. 10,000-floor loot sweep, 1,000-floor monster-tier sweep, 70,000-turn soak), reusing the `ach_test/` harness pattern (forced positive/negative/boundary/persistence/no-double-fire style cases). GLASS — die once and read the death screen, force a win via seeded RNG and read the victory screen. Image ships paired with Phase 8, per parent's flash-cadence ruling.
+**Constraint carried into Phase 7's own build**: death/victory screens must not be a `clearScreen()` full repaint — Phase 8's dirty-rect work lands on top of them immediately after.
+**Plans**: TBD
+
+Plans:
+- [ ] 07-01: TBD
+
+### Phase 8: World Dungeon — Reclaim the frame (dirty-rect rendering)
+**Goal**: TBD, pulled from plan doc when Phase 7 is closing.
+**Depends on**: Phase 7
+**Requirements**: TBD
+**Plans**: TBD
+
+### Phases 9-12: World Dungeon — Voice / Decisions / The Show / The Co-star
+Requirements TBD, pulled from the plan doc as each phase opens. Flash cadence: 9+10 pair, 11+12 pair.

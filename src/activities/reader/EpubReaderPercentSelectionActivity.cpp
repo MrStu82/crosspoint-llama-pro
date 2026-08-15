@@ -79,11 +79,28 @@ void EpubReaderPercentSelectionActivity::loop() {
     return;
   }
 
-  if (mappedInput.wasScreenTapped(tx, ty) && tx >= barX - 20 && tx < barX + barWidth + 20 && ty >= barY - 24 &&
-      ty < barY + barHeight + 24) {
-    percent = std::clamp((tx - barX) * 100 / barWidth, 0, 100);
-    requestUpdate();
-    return;
+  if (mappedInput.wasScreenTapped(tx, ty)) {
+    if (tx >= barX - 20 && tx < barX + barWidth + 20 && ty >= barY - 24 && ty < barY + barHeight + 24) {
+      percent = std::clamp((tx - barX) * 100 / barWidth, 0, 100);
+      requestUpdate();
+      return;
+    }
+
+    // Bottom button-hint strip: left third mirrors the Back hint (cancel), right third
+    // mirrors the Select hint (confirm) — same touch affordance as IntervalSelectionActivity,
+    // giving the Confirm-gated commit below a touch-reachable equivalent.
+    if (ty >= renderer.getScreenHeight() - 80) {
+      if (tx < renderer.getScreenWidth() / 3) {
+        ActivityResult result;
+        result.isCancelled = true;
+        setResult(std::move(result));
+        finish();
+      } else if (tx > renderer.getScreenWidth() * 2 / 3) {
+        setResult(PercentResult{percent});
+        finish();
+      }
+      return;
+    }
   }
 
   const auto swipe = mappedInput.wasSwipe();

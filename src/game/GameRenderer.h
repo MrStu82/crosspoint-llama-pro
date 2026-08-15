@@ -2,11 +2,26 @@
 
 #include <GfxRenderer.h>
 
+#include "Achievements.h"
 #include "GameTheme.h"
 #include "GameTypes.h"
 #include "MappedInputManager.h"
 
 class GameState;
+
+// Data shown on the blocking death/victory overlay (Phase 7 req 2/3). Populated
+// by GameActivity right before it flips screenMode -- this struct has no
+// knowledge of AchievementBus/GameState, it's just the rendered fields.
+struct EndScreenData {
+  char cause[32] = "";  // Death only; ignored for victory.
+  uint8_t floor = 0;
+  uint32_t turns = 0;
+  uint16_t kills = 0;
+  uint8_t level = 0;
+  // Achievements unlocked THIS run. unlockedCount indexes into unlockedIds.
+  game::AchievementId unlockedIds[static_cast<uint8_t>(game::AchievementId::Count)];
+  uint8_t unlockedCount = 0;
+};
 
 // Renders the dungeon viewport, status bar, message log, and on-screen controls.
 // The control area is also the touch control surface: a left-side d-pad (Up/Down/
@@ -73,6 +88,14 @@ class GameRenderer {
   // Hit-tests a tap point against the control area (d-pad + Action/Menu buttons).
   // Returns true and sets outButton if the tap landed on a control, false otherwise.
   bool hitTestControls(int x, int y, MappedInputManager::Button& outButton) const;
+
+  // Paints the blocking death/victory overlay on top of whatever's already on
+  // the panel (Phase 7 req 2/3). Deliberately does NOT call clearScreen() --
+  // Phase 8's dirty-rect rewrite lands on top of this, and a full repaint here
+  // would fight it. Draws a self-contained bordered box centered on screen;
+  // triggers its own FULL_REFRESH since this is new high-contrast content over
+  // a stale buffer (ghost-guard cadence doesn't apply to a one-shot modal).
+  void drawEndScreen(GfxRenderer& renderer, bool isVictory, const EndScreenData& data) const;
 
  private:
   void drawStatusBar(GfxRenderer& renderer) const;

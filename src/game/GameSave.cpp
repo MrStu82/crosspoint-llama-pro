@@ -7,7 +7,7 @@
 #include <cstdio>
 
 namespace {
-constexpr uint8_t LEVEL_FILE_VERSION = 1;
+constexpr uint8_t LEVEL_FILE_VERSION = 2;  // v2: added door-open bitmap (Phase 7 req 6)
 constexpr char SAVE_DIR[] = "/.crosspoint/game";
 
 void levelPath(uint8_t depth, char* buf, size_t bufSize) {
@@ -15,8 +15,9 @@ void levelPath(uint8_t depth, char* buf, size_t bufSize) {
 }
 }  // namespace
 
-bool GameSave::saveLevel(uint8_t depth, const uint8_t* fogOfWar, const game::Monster* monsters, uint8_t monsterCount,
-                         const game::Item* items, uint8_t itemCount) {
+bool GameSave::saveLevel(uint8_t depth, const uint8_t* fogOfWar, const uint8_t* doorOpen,
+                         const game::Monster* monsters, uint8_t monsterCount, const game::Item* items,
+                         uint8_t itemCount) {
   Storage.mkdir(SAVE_DIR);
 
   char path[48];
@@ -33,6 +34,9 @@ bool GameSave::saveLevel(uint8_t depth, const uint8_t* fogOfWar, const game::Mon
 
   // Fog of war bitmap
   file.write(fogOfWar, game::FOG_SIZE);
+
+  // Door-open bitmap (same MAP_SIZE-bit layout as fogOfWar)
+  file.write(doorOpen, game::FOG_SIZE);
 
   // Monsters
   serialization::writePod(file, monsterCount);
@@ -51,8 +55,8 @@ bool GameSave::saveLevel(uint8_t depth, const uint8_t* fogOfWar, const game::Mon
   return true;
 }
 
-bool GameSave::loadLevel(uint8_t depth, uint8_t* fogOfWar, game::Monster* monsters, uint8_t& monsterCount,
-                         game::Item* items, uint8_t& itemCount) {
+bool GameSave::loadLevel(uint8_t depth, uint8_t* fogOfWar, uint8_t* doorOpen, game::Monster* monsters,
+                         uint8_t& monsterCount, game::Item* items, uint8_t& itemCount) {
   char path[48];
   levelPath(depth, path, sizeof(path));
 
@@ -74,6 +78,18 @@ bool GameSave::loadLevel(uint8_t depth, uint8_t* fogOfWar, game::Monster* monste
 
   // Fog of war
   file.read(fogOfWar, game::FOG_SIZE);
+
+  // Door-open bitmap: only present in v2+ files. Older files simply don't have
+  // these bytes, so skip the read entirely rather than consuming bytes that
+  // belong to the monster/item section that follows.
+  if (version >= 2) {
+    if (doorOpen != nullptr) {
+      file.read(doorOpen, game::FOG_SIZE);
+    } else {
+      uint8_t discard[game::FOG_SIZE];
+      file.read(discard, game::FOG_SIZE);
+    }
+  }
 
   // Monsters
   serialization::readPod(file, monsterCount);

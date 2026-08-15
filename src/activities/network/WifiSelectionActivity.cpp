@@ -467,7 +467,17 @@ void WifiSelectionActivity::loop() {
       onComplete(false);
       return;
     }
-    if (autoConnecting && mappedInput.wasPressed(MappedInputManager::Button::Confirm)) {
+    // Bottom button-hint strip, same touch idiom used elsewhere in this file: right
+    // third mirrors the "Show networks" hint, giving the Confirm-gated skip-auto-connect
+    // action below a touch-reachable equivalent. Only shown/reachable while autoConnecting,
+    // matching the hint itself (drawn only in that case).
+    int tx = 0;
+    int ty = 0;
+    const bool tappedShowNetworks = mappedInput.wasScreenTapped(tx, ty) &&
+                                     ty >= renderer.getScreenHeight() - 80 &&
+                                     tx > renderer.getScreenWidth() * 2 / 3;
+    if (autoConnecting &&
+        (mappedInput.wasPressed(MappedInputManager::Button::Confirm) || tappedShowNetworks)) {
       autoConnecting = false;
       manualNetworkListRequested = true;
       requestUpdate();
@@ -484,7 +494,12 @@ void WifiSelectionActivity::loop() {
         onComplete(false);
         return;
       }
-      if (mappedInput.wasPressed(MappedInputManager::Button::Confirm)) {
+      int tx = 0;
+      int ty = 0;
+      const bool tappedShowNetworks = mappedInput.wasScreenTapped(tx, ty) &&
+                                       ty >= renderer.getScreenHeight() - 80 &&
+                                       tx > renderer.getScreenWidth() * 2 / 3;
+      if (mappedInput.wasPressed(MappedInputManager::Button::Confirm) || tappedShowNetworks) {
         showNetworkListFromAutoConnect();
         return;
       }

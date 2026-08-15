@@ -72,7 +72,12 @@ struct Player {
   uint16_t gold = 0;
   uint8_t dungeonDepth = 1;
   uint32_t gameSeed = 0;
-  uint16_t turnCount = 0;
+  uint32_t turnCount = 0;
+  uint16_t kills = 0;
+  // Persistent combat RNG stream state (see struct Rng below). Seeded once from gameSeed at
+  // run start, advanced (never reseeded) by every combat/AI roll, serialised with the save so a
+  // reloaded run continues the exact same stream instead of restarting it.
+  uint32_t combatRngState = 1;
 };
 
 struct Monster {

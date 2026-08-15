@@ -27,6 +27,12 @@ class GameState {
   // Add a message to the log
   void addMessage(const char* msg);
 
+  // Draw from the persistent combat RNG stream (player.combatRngState), advancing it in place.
+  // Never construct a local game::Rng for a combat/AI roll — always go through these so the
+  // stream is genuinely continuous across the whole run and correctly serialises with the save.
+  uint32_t rollRange(uint32_t max);
+  int rollRangeInclusive(int min, int max);
+
   // Get the Nth most recent message (0 = most recent)
   const std::string& getMessage(int recencyIndex) const;
 

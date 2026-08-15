@@ -12,6 +12,19 @@ enum class AchievementId : uint8_t {
   Count = 4,
 };
 
+// Short display name for the end-of-run screen (Phase 7 req 2/3). Kept separate
+// from the flavor-text unlock messages in AchievementBus::emit(), which are
+// chat-log lines, not a fixed-width UI label.
+inline const char* achievementShortName(AchievementId id) {
+  switch (id) {
+    case AchievementId::Ding: return "Ding!";
+    case AchievementId::ThatllBuffOut: return "That'll Buff Out";
+    case AchievementId::AudienceParticipation: return "Audience Participation";
+    case AchievementId::EscalationOfForce: return "Escalation of Force";
+    default: return "";
+  }
+}
+
 enum class GameEventType : uint8_t {
   MonsterKilled,
   PlayerDamaged,

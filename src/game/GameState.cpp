@@ -6,8 +6,11 @@
 
 #include <cstring>
 
+#include "AchievementBus.h"
+
 namespace {
-constexpr uint8_t SAVE_FILE_VERSION = 1;
+constexpr uint8_t SAVE_FILE_VERSION = 2;  // v2: turnCount widened to uint32_t, added kills +
+                                          // combatRngState to Player (Phase 7, one bump for all three)
 constexpr char SAVE_DIR[] = "/.crosspoint/game";
 constexpr char SAVE_FILE[] = "/.crosspoint/game/save.bin";
 }  // namespace
@@ -30,6 +33,8 @@ void GameState::newGame(uint32_t seed) {
   player.gold = 0;
   player.dungeonDepth = 1;
   player.turnCount = 0;
+  player.kills = 0;
+  player.combatRngState = seed ? seed : 1;  // game::Rng treats 0 as invalid; mirror that here
 
   inventoryCount = 0;
   memset(inventory, 0, sizeof(inventory));
@@ -41,6 +46,10 @@ void GameState::newGame(uint32_t seed) {
   }
 
   addMessage("You enter the World Dungeon...");
+
+  // Fresh run — the death/victory screen's achievement list should only reflect
+  // what THIS run earned, not carryover from a prior run in the same session.
+  ACHIEVEMENTS.resetRun();
 }
 
 void GameState::addMessage(const char* msg) {
@@ -64,6 +73,20 @@ const std::string& GameState::getMessage(int recencyIndex) const {
   // Most recent is at (head + count - 1), go backwards by recencyIndex
   int idx = (messageHead + messageCount - 1 - recencyIndex) % game::MAX_MESSAGES;
   return messages[idx];
+}
+
+uint32_t GameState::rollRange(uint32_t max) {
+  game::Rng rng(player.combatRngState);
+  uint32_t v = rng.nextRange(max);
+  player.combatRngState = rng.state;
+  return v;
+}
+
+int GameState::rollRangeInclusive(int min, int max) {
+  game::Rng rng(player.combatRngState);
+  int v = rng.nextRangeInclusive(min, max);
+  player.combatRngState = rng.state;
+  return v;
 }
 
 bool GameState::saveToFile() const {
@@ -107,8 +130,11 @@ bool GameState::loadFromFile() {
 
   uint8_t version;
   serialization::readPod(file, version);
-  if (version > SAVE_FILE_VERSION) {
-    LOG_ERR("DM", "Unknown save version %u", version);
+  if (version != SAVE_FILE_VERSION) {
+    // Player is written as raw POD — any layout change (this file's v1->v2 widened turnCount
+    // and added fields) makes an older file's bytes unsafe to reinterpret as the new struct.
+    // Reject rather than risk a corrupted read; player starts a fresh run.
+    LOG_ERR("DM", "Incompatible save version %u (expected %u)", version, SAVE_FILE_VERSION);
     file.close();
     return false;
   }

@@ -75,13 +75,56 @@ path (`displayWindow()` on that one rect) and never forces a full-screen clear.
 
 ## Requirement 6 — new achievement fire/no-fire matrix
 
-| Achievement | Event | Fire condition | No-fire condition |
-|---|---|---|---|
-| `PackRat` | `ItemPickedUp` | `GAME_STATE.inventoryCount >= MAX_INVENTORY` (20) at time of pickup | pickup with `inventoryCount < 20` |
-| `SpeedRunner` | `FloorChanged` | `dungeonDepth >= 5 && turnCount < 150` | floor change with `dungeonDepth < 5`, or `dungeonDepth >= 5` but `turnCount >= 150` |
-| `DeepDiver` | `FloorChanged` | `dungeonDepth >= 10` | floor change with `dungeonDepth < 10` |
-| `MaxedOut` | `LevelUp` | `event.newLevel >= 20` | level-up with `newLevel < 20` |
+Executed host harness (`/workspace/agent/ach_test/`, real unmodified `AchievementBus.cpp`/`.h`/
+`Achievements.h` compiled against host mocks — same harness class as Requirement 2's sim), covering per
+parent's explicit ask: each predicate driven over threshold (fires once), each driven just under threshold
+(does not fire), `achievements.bin` written/dumped/reloaded into a fresh instance with flags read back set,
+and an already-unlocked id re-triggered (no second unlock event, no re-write).
 
-All four route through the shared `AchievementBus::unlock()`, which no-ops on a second call for an
-already-unlocked id (`if (unlocked[idx]) return;`, `AchievementBus.cpp:76`) — confirmed idempotent, matching
-the Phase 7 fire/no-fire pattern for the original 4 achievements (re-checked, unchanged this phase).
+Compile: `g++ -std=c++17 -Imocks -Isrc -I../crosspoint-llama-pro/lib/Serialization test_main.cpp src/AchievementBus.cpp -o ach_test_bin`
+
+```
+PASS: PackRat does NOT unlock at inventoryCount=19 (just under threshold 20)
+PASS: PackRat unlocks at inventoryCount=20 (at threshold)
+PASS: PackRat unlock message reaches GAME_STATE.addMessage()
+PASS: PackRat does not re-fire on a second over-threshold pickup
+PASS: SpeedRunner does NOT unlock at turnCount=150 (boundary, condition requires <150)
+PASS: SpeedRunner does NOT unlock at dungeonDepth=4 (just under threshold 5) even with low turnCount
+PASS: SpeedRunner unlocks at dungeonDepth=5, turnCount=149 (both thresholds satisfied)
+PASS: SpeedRunner unlock message reaches GAME_STATE.addMessage()
+PASS: SpeedRunner does not re-fire on a second qualifying FloorChanged event
+PASS: DeepDiver does NOT unlock at dungeonDepth=9 (just under threshold 10)
+PASS: DeepDiver unlocks at dungeonDepth=10 (at threshold)
+PASS: DeepDiver unlock message reaches GAME_STATE.addMessage()
+PASS: DeepDiver does not re-fire on a second, deeper qualifying FloorChanged event
+PASS: MaxedOut does NOT unlock at newLevel=19 (just under threshold 20)
+PASS: MaxedOut unlocks at newLevel=20 (at threshold)
+PASS: MaxedOut unlock message reaches GAME_STATE.addMessage()
+PASS: MaxedOut does not re-fire on a second, higher-level qualifying LevelUp event
+PASS: all four new achievements unlocked in-memory before dump/reload
+PASS: achievements.bin non-empty on disk before reload
+achievements.bin bytes (10): 01 08 01 00 00 00 01 01 01 01
+PASS: byte count matches version(1)+count(1)+8 bool flags
+PASS: version byte == 1
+PASS: count byte == 8 (AchievementId::Count)
+PASS: PackRat flag reads back set after reload
+PASS: SpeedRunner flag reads back set after reload
+PASS: DeepDiver flag reads back set after reload
+PASS: MaxedOut flag reads back set after reload
+PASS: re-triggering already-unlocked PackRat/MaxedOut adds no new messages (no second unlock event)
+PASS: openFileForWrite() call count unchanged after re-trigger (unlock() returns before save() on an already-unlocked id, no re-write to disk)
+
+=== ALL PASS (0 failure(s)) ===
+```
+
+Full run including the pre-existing Phase 7 scenarios: 49/49 PASS. Byte layout is
+`[version=01][count=08][unlocked[0..7]]`, index order `Ding, ThatllBuffOut, AudienceParticipation,
+EscalationOfForce, PackRat, SpeedRunner, DeepDiver, MaxedOut`. In this run's byte dump (`01 00 00 00 01 01
+01 01`), byte 0 (`Ding`) is set because Scenario 1 unlocks it earlier in the same run; bytes 1-3
+(`ThatllBuffOut`, `AudienceParticipation`, `EscalationOfForce`) stay `00` (unexercised by this scenario);
+bytes 4-7 (`PackRat, SpeedRunner, DeepDiver, MaxedOut`) are the four Phase 9 achievements this requirement
+targets, all `01`.
+
+"No re-write" is proven via `HalStorage::openFileForWrite()` call-count instrumentation
+(`mocks/HalStorage.h`), not filesystem mtime — mtime is only 1-second granular and can't distinguish "never
+wrote" from "wrote identical bytes again within the same second."

@@ -72,6 +72,13 @@ path (`displayWindow()` on that one rect) and never forces a full-screen clear.
 - **Redaction**: the locked branch of `renderAchievements()` only ever calls `tr(STR_DM_ACHIEVEMENT_LOCKED)`
   and `achievementHint(id)` — `achievementShortName(id)` (the real name) is structurally unreachable on that
   branch, not just conditionally hidden.
+- **Save-migration property (flagged by parent's independent source read, 2026-08-15)**: `load()` reads
+  `min(storedCount, COUNT)` bool flags from disk, not a hardcoded 4 or a fixed `COUNT`. A pre-Phase-9
+  `achievements.bin` (written when `COUNT == 4`) therefore loads cleanly into this 8-achievement build — the
+  stored 4 flags land on `Ding..EscalationOfForce` in order, the new `PackRat..MaxedOut` slots simply never
+  get read and stay at their zero-initialized `locked` default. No explicit migration code was written or is
+  needed. This is the property that protects the next person who adds a 9th achievement too, as long as
+  `load()`'s `min()` clamp isn't removed.
 
 ## Requirement 6 — new achievement fire/no-fire matrix
 

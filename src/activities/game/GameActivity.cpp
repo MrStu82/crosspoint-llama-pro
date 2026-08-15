@@ -480,6 +480,13 @@ void GameActivity::handleAction() {
             break;
           }
         }
+
+        game::GameEvent pickupEvent{};
+        pickupEvent.type = game::GameEventType::ItemPickedUp;
+        ACHIEVEMENTS.emit(pickupEvent);
+        if (ACHIEVEMENTS.hasNewUnlock()) {
+          gameRenderer.showNotification(NotificationKind::Achievement, ACHIEVEMENTS.consumeNewUnlockFlavor());
+        }
       }
 
       // Remove from level by swapping with last

@@ -9,7 +9,11 @@ enum class AchievementId : uint8_t {
   ThatllBuffOut = 1,
   AudienceParticipation = 2,
   EscalationOfForce = 3,
-  Count = 4,
+  PackRat = 4,
+  SpeedRunner = 5,
+  DeepDiver = 6,
+  MaxedOut = 7,
+  Count = 8,
 };
 
 // Short display name for the end-of-run screen (Phase 7 req 2/3). Kept separate
@@ -21,6 +25,10 @@ inline const char* achievementShortName(AchievementId id) {
     case AchievementId::ThatllBuffOut: return "That'll Buff Out";
     case AchievementId::AudienceParticipation: return "Audience Participation";
     case AchievementId::EscalationOfForce: return "Escalation of Force";
+    case AchievementId::PackRat: return "Pack Rat";
+    case AchievementId::SpeedRunner: return "Speed Runner";
+    case AchievementId::DeepDiver: return "Deep Diver";
+    case AchievementId::MaxedOut: return "Maxed Out";
     default: return "";
   }
 }
@@ -31,6 +39,7 @@ enum class GameEventType : uint8_t {
   PlayerDied,
   FloorChanged,
   ItemUsed,
+  ItemPickedUp,
   LevelUp,
 };
 

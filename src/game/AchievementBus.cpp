@@ -93,6 +93,9 @@ void AchievementBus::emit(const game::GameEvent& event) {
   switch (event.type) {
     case GameEventType::LevelUp:
       unlock(AchievementId::Ding, "Achievement: Ding! (You leveled up. Groundbreaking.)");
+      if (event.newLevel >= 20) {
+        unlock(AchievementId::MaxedOut, "Achievement: Maxed Out (Level 20. The System raises your ad rates.)");
+      }
       break;
 
     case GameEventType::PlayerDamaged:
@@ -104,6 +107,12 @@ void AchievementBus::emit(const game::GameEvent& event) {
         unlock(AchievementId::ThatllBuffOut, "Achievement: That'll Buff Out (You should be dead. You're welcome.)");
       }
       wasCriticalThisFloor = false;
+      if (GAME_STATE.player.dungeonDepth >= 5 && GAME_STATE.player.turnCount < 150) {
+        unlock(AchievementId::SpeedRunner, "Achievement: Speed Runner (The System hasn't even finished the ads yet.)");
+      }
+      if (GAME_STATE.player.dungeonDepth >= 10) {
+        unlock(AchievementId::DeepDiver, "Achievement: Deep Diver (Floor 10. The mines get quieter down here.)");
+      }
       break;
 
     case GameEventType::PlayerDied:
@@ -120,6 +129,12 @@ void AchievementBus::emit(const game::GameEvent& event) {
 
     case GameEventType::ItemUsed:
       // No seed achievement hangs off this event yet.
+      break;
+
+    case GameEventType::ItemPickedUp:
+      if (GAME_STATE.inventoryCount >= game::MAX_INVENTORY) {
+        unlock(AchievementId::PackRat, "Achievement: Pack Rat (Your pack is bursting. The System charges storage fees.)");
+      }
       break;
   }
 }

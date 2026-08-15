@@ -9,6 +9,7 @@
 #include "MappedInputManager.h"
 #include "activities/ActivityResult.h"
 #include "game/AchievementBus.h"
+#include "game/FlavorText.h"
 #include "game/GameSave.h"
 
 // --- FOV ---
@@ -282,9 +283,10 @@ void GameActivity::handleMove(int dx, int dy) {
 
       monsters[i].hp = (damage >= monsters[i].hp) ? 0 : monsters[i].hp - damage;
 
-      char msgBuf[64];
+      char msgBuf[96];
       if (monsters[i].hp == 0) {
-        snprintf(msgBuf, sizeof(msgBuf), "You slay the %s! (+%uXP)", def.name, def.expValue);
+        const char* flavor = FLAVOR_TEXT.pick(game::FlavorCategory::MonsterKilled);
+        snprintf(msgBuf, sizeof(msgBuf), "You slay the %s! (+%uXP) %s", def.name, def.expValue, flavor);
         GAME_STATE.addMessage(msgBuf);
         p.experience += def.expValue;
         p.kills++;
@@ -294,6 +296,9 @@ void GameActivity::handleMove(int dx, int dy) {
         killEvent.damage = static_cast<uint16_t>(damage);
         killEvent.monsterMaxHp = def.baseHp;
         ACHIEVEMENTS.emit(killEvent);
+        if (ACHIEVEMENTS.hasNewUnlock()) {
+          gameRenderer.showNotification(NotificationKind::Achievement, ACHIEVEMENTS.consumeNewUnlockFlavor());
+        }
 
         checkLevelUp();
 
@@ -311,7 +316,9 @@ void GameActivity::handleMove(int dx, int dy) {
           GAME_STATE.addMessage("Something glints on the ground...");
         }
       } else {
-        snprintf(msgBuf, sizeof(msgBuf), "You hit the %s for %d.", def.name, damage);
+        auto band = game::hitBandForDamage(static_cast<uint16_t>(damage), def.baseHp);
+        const char* flavor = FLAVOR_TEXT.pick(band);
+        snprintf(msgBuf, sizeof(msgBuf), "You hit the %s for %d. %s", def.name, damage, flavor);
         GAME_STATE.addMessage(msgBuf);
       }
 
@@ -371,9 +378,32 @@ void GameActivity::handleAction() {
     game::GameEvent floorEvent{};
     floorEvent.type = game::GameEventType::FloorChanged;
     ACHIEVEMENTS.emit(floorEvent);
+    if (ACHIEVEMENTS.hasNewUnlock()) {
+      gameRenderer.showNotification(NotificationKind::Achievement, ACHIEVEMENTS.consumeNewUnlockFlavor());
+    }
 
-    GAME_STATE.addMessage("You descend deeper...");
+    {
+      char msgBuf[96];
+      const char* flavor = FLAVOR_TEXT.pick(game::FlavorCategory::FloorEntry);
+      snprintf(msgBuf, sizeof(msgBuf), "You descend deeper... %s", flavor);
+      GAME_STATE.addMessage(msgBuf);
+      gameRenderer.showNotification(NotificationKind::FloorEntry, msgBuf);
+    }
     loadOrGenerateLevel();
+
+    // Boss-floor arrival: the boss monster type is always seeded on the deepest
+    // level (see game::BOSS_MONSTER_TYPE) -- surface it as its own System beat.
+    for (int i = 0; i < monsterCount; i++) {
+      if (monsters[i].type == game::BOSS_MONSTER_TYPE) {
+        char msgBuf[96];
+        const char* flavor = FLAVOR_TEXT.pick(game::FlavorCategory::BossArrival);
+        snprintf(msgBuf, sizeof(msgBuf), "%s", flavor);
+        GAME_STATE.addMessage(msgBuf);
+        gameRenderer.showNotification(NotificationKind::BossArrival, msgBuf);
+        break;
+      }
+    }
+
     // Place player at stairs up on new level
     for (int i = 0; i < game::MAP_SIZE; i++) {
       if (tiles[i] == game::Tile::StairsUp) {
@@ -608,19 +638,26 @@ void GameActivity::monsterAttackPlayer(game::Monster& m) {
   // Apply damage
   p.hp = (static_cast<uint16_t>(damage) >= p.hp) ? 0 : p.hp - static_cast<uint16_t>(damage);
 
-  char msgBuf[64];
+  char msgBuf[96];
   if (p.hp == 0) {
-    snprintf(msgBuf, sizeof(msgBuf), "The %s kills you!", def.name);
+    const char* flavor = FLAVOR_TEXT.pick(game::FlavorCategory::PlayerDeath);
+    snprintf(msgBuf, sizeof(msgBuf), "The %s kills you! %s", def.name, flavor);
     GAME_STATE.addMessage(msgBuf);
     snprintf(deathCause, sizeof(deathCause), "%s", def.name);
+    gameRenderer.showNotification(NotificationKind::Death, msgBuf);
 
     game::GameEvent deathEvent{};
     deathEvent.type = game::GameEventType::PlayerDied;
     deathEvent.monsterMaxHp = def.baseHp;
     deathEvent.monsterAttack = def.attack;
     ACHIEVEMENTS.emit(deathEvent);
+    if (ACHIEVEMENTS.hasNewUnlock()) {
+      gameRenderer.showNotification(NotificationKind::Achievement, ACHIEVEMENTS.consumeNewUnlockFlavor());
+    }
   } else {
-    snprintf(msgBuf, sizeof(msgBuf), "The %s hits you for %d.", def.name, damage);
+    auto band = game::damagedBandForDamage(static_cast<uint16_t>(damage), p.maxHp);
+    const char* flavor = FLAVOR_TEXT.pick(band);
+    snprintf(msgBuf, sizeof(msgBuf), "The %s hits you for %d. %s", def.name, damage, flavor);
     GAME_STATE.addMessage(msgBuf);
   }
 
@@ -644,6 +681,9 @@ void GameActivity::checkLevelUp() {
     levelEvent.type = game::GameEventType::LevelUp;
     levelEvent.newLevel = p.charLevel;
     ACHIEVEMENTS.emit(levelEvent);
+    if (ACHIEVEMENTS.hasNewUnlock()) {
+      gameRenderer.showNotification(NotificationKind::Achievement, ACHIEVEMENTS.consumeNewUnlockFlavor());
+    }
 
     // Stat gains
     uint16_t hpGain = 4 + p.constitution / 4;
@@ -655,9 +695,11 @@ void GameActivity::checkLevelUp() {
     p.strength += 1;
     p.dexterity += 1;
 
-    char msgBuf[48];
-    snprintf(msgBuf, sizeof(msgBuf), "Welcome to level %u!", p.charLevel);
+    char msgBuf[96];
+    const char* flavor = FLAVOR_TEXT.pick(game::FlavorCategory::LevelUp);
+    snprintf(msgBuf, sizeof(msgBuf), "Welcome to level %u! %s", p.charLevel, flavor);
     GAME_STATE.addMessage(msgBuf);
+    gameRenderer.showNotification(NotificationKind::LevelUp, msgBuf);
   }
 }
 

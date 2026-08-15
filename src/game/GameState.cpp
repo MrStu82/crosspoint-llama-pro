@@ -7,6 +7,7 @@
 #include <cstring>
 
 #include "AchievementBus.h"
+#include "FlavorText.h"
 
 namespace {
 constexpr uint8_t SAVE_FILE_VERSION = 2;  // v2: turnCount widened to uint32_t, added kills +
@@ -50,6 +51,8 @@ void GameState::newGame(uint32_t seed) {
   // Fresh run — the death/victory screen's achievement list should only reflect
   // what THIS run earned, not carryover from a prior run in the same session.
   ACHIEVEMENTS.resetRun();
+  // Fresh run has no "last shown" flavour-variant history to avoid repeating against.
+  FLAVOR_TEXT.resetRun();
 }
 
 void GameState::addMessage(const char* msg) {

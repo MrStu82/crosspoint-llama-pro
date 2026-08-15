@@ -4,6 +4,8 @@
 #include <Logging.h>
 #include <Serialization.h>
 
+#include <cstdio>
+
 #include "GameState.h"
 
 namespace {
@@ -75,6 +77,13 @@ void AchievementBus::unlock(game::AchievementId id, const char* flavorText) {
   unlocked[idx] = true;
   save();
   GAME_STATE.addMessage(flavorText);
+  snprintf(lastUnlockFlavor_, sizeof(lastUnlockFlavor_), "%s", flavorText);
+  hasNewUnlock_ = true;
+}
+
+const char* AchievementBus::consumeNewUnlockFlavor() {
+  hasNewUnlock_ = false;
+  return lastUnlockFlavor_;
 }
 
 void AchievementBus::emit(const game::GameEvent& event) {

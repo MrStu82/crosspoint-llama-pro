@@ -17,6 +17,17 @@ class GameState;
 using DirtyWindow = game::DirtyWindow;
 using FramePlan = game::FramePlan;
 
+// Boxed System notification kinds (Phase 9 work item 3). Each kind maps to a
+// fixed, flash-resident title string (see kNotificationTitle in
+// GameRenderer.cpp) -- never per-turn constructed, only ever a StrId lookup.
+enum class NotificationKind {
+  LevelUp,
+  Achievement,
+  FloorEntry,
+  BossArrival,
+  Death,
+};
+
 // Data shown on the blocking death/victory overlay (Phase 7 req 2/3). Populated
 // by GameActivity right before it flips screenMode -- this struct has no
 // knowledge of AchievementBus/GameState, it's just the rendered fields.
@@ -124,6 +135,21 @@ class GameRenderer {
   // a stale buffer (ghost-guard cadence doesn't apply to a one-shot modal).
   void drawEndScreen(GfxRenderer& renderer, bool isVictory, const EndScreenData& data) const;
 
+  // Shows a boxed System notification (Phase 9 work item 3): bordered box,
+  // inverted (black-filled, white-text) title bar, body text below. `body`
+  // is copied into a fixed-size buffer (no heap, no per-turn construction --
+  // req 3) and truncated if it overflows. Marks the notification region
+  // dirty so the next planFrame()/draw() call paints it via the normal
+  // partial-refresh path (never FULL_REFRESH -- req 4).
+  void showNotification(NotificationKind kind, const char* body);
+
+  // Clears the active notification. Marks the region dirty so the next
+  // planFrame()/draw() call erases it back to white via a partial refresh.
+  // No-op (no dirty window queued) if nothing is currently showing.
+  void dismissNotification();
+
+  bool notificationActive() const { return notificationActive_; }
+
  private:
   void computeLayout(int screenWidth, int screenHeight);
 
@@ -148,6 +174,19 @@ class GameRenderer {
                         const game::Item* items, uint8_t itemCount, const bool* visible) const;
   void drawMessages(GfxRenderer& renderer) const;
   void drawControls(GfxRenderer& renderer) const;
+  // Draws the notification box's current contents (title bar + body) inside
+  // notificationRect(). Called from draw()'s partial path when the
+  // Notification window's kind switch case fires and notificationActive_ is
+  // true; if a dismiss is pending instead, draw() has already erased the
+  // rect to white via fillRect() before the switch and there's nothing more
+  // to do, so this is only ever called on show, never on dismiss.
+  void drawNotification(GfxRenderer& renderer) const;
+
+  // Fixed-position box near the top of the viewport, full-width minus a
+  // margin. Doesn't depend on notification content, only on screen layout,
+  // so both draw()'s partial path and the FramePlan-building code in
+  // planFrame() can compute the identical rect independently.
+  DirtyWindow notificationRect() const;
 
   // Player-centered viewport top-left in map coordinates, clamped so the
   // viewport never runs off the map edge. Thin forwarder to planner_ so
@@ -169,4 +208,18 @@ class GameRenderer {
   // FrameDirtyPlanner.h) -- wholly free of GfxRenderer/HAL, so a host harness
   // can drive one of these directly with zero display dependency.
   game::FrameDirtyPlanner planner_;
+
+  // --- Boxed System notification state (Phase 9 work item 3) ---
+  static constexpr int NOTIFICATION_MARGIN_X = 20;
+  static constexpr int NOTIFICATION_TITLE_H = 26;
+  static constexpr int NOTIFICATION_H = 96;
+  static constexpr size_t NOTIFICATION_BODY_LEN = 96;
+
+  bool notificationActive_ = false;
+  NotificationKind notificationKind_ = NotificationKind::LevelUp;
+  char notificationBody_[NOTIFICATION_BODY_LEN] = "";
+  // Set by showNotification()/dismissNotification(), consumed (and cleared)
+  // the next time planFrame() builds a FramePlan -- exactly one Notification
+  // DirtyWindow is queued per state change, not one per frame.
+  bool notificationDirty_ = false;
 };

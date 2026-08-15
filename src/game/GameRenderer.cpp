@@ -50,6 +50,9 @@ void GameRenderer::draw(GfxRenderer& renderer, const game::Tile* tiles, const ui
     drawViewport(renderer, tiles, fogOfWar, monsters, monsterCount, items, itemCount, visible);
     drawMessages(renderer);
     drawControls(renderer);
+    if (notificationActive_) {
+      drawNotification(renderer);
+    }
 
     // Separator lines
     renderer.drawLine(0, STATUS_H, screenW, STATUS_H);
@@ -93,6 +96,13 @@ void GameRenderer::draw(GfxRenderer& renderer, const game::Tile* tiles, const ui
         }
         break;
       }
+      case DirtyWindow::Kind::Notification:
+        // A dismiss only needs the erase-to-white already done above; a live
+        // notification also needs its box/title/body painted back in.
+        if (notificationActive_) {
+          drawNotification(renderer);
+        }
+        break;
     }
 
     renderer.displayWindow(w.x, w.y, w.w, w.h);
@@ -115,8 +125,24 @@ FramePlan GameRenderer::planFrame(const game::Tile* tiles, const uint8_t* fogOfW
   snprintf(msg0, sizeof(msg0), "%s", GAME_STATE.getMessage(0).c_str());
   snprintf(msg1, sizeof(msg1), "%s", GAME_STATE.getMessage(1).c_str());
 
-  return planner_.planFrame(buildPlannerLayout(), p.x, p.y, hpBuf, mpBuf, depthBuf, lvlBuf, msg0, msg1, tiles,
-                            fogOfWar, monsters, monsterCount, items, itemCount, visible, activeTheme);
+  FramePlan plan = planner_.planFrame(buildPlannerLayout(), p.x, p.y, hpBuf, mpBuf, depthBuf, lvlBuf, msg0, msg1,
+                                      tiles, fogOfWar, monsters, monsterCount, items, itemCount, visible,
+                                      activeTheme);
+
+  // Notification box is entirely outside FrameDirtyPlanner's own diff logic
+  // (it has no concept of it) -- appended here as its own window only when
+  // showNotification()/dismissNotification() actually changed state since
+  // the last planFrame() call, and only on an already-partial frame (a
+  // fullClear frame already repaints everything, notification included, via
+  // GameRenderer::draw()'s fullClear branch).
+  if (notificationDirty_) {
+    notificationDirty_ = false;
+    if (!plan.fullClear && plan.windowCount < 4) {
+      plan.windows[plan.windowCount++] = notificationRect();
+    }
+  }
+
+  return plan;
 }
 
 void GameRenderer::computeViewOrigin(int playerX, int playerY, int* outViewX, int* outViewY) const {
@@ -488,4 +514,60 @@ void GameRenderer::drawEndScreen(GfxRenderer& renderer, bool isVictory, const En
   // One-shot full-refresh: new high-contrast content over a stale buffer
   // needs a clean waveform, not the periodic ghost-guard cadence draw() uses.
   renderer.displayBuffer(HalDisplay::FULL_REFRESH);
+}
+
+// Title string per NotificationKind (Phase 9 work item 3, requirement 3 --
+// flash-resident lookup, never per-turn constructed). Indexed directly by
+// the enum, so any future NotificationKind addition that forgets an entry
+// here fails loudly at compile time via the array-size mismatch below.
+static constexpr StrId kNotificationTitleId[] = {
+    StrId::STR_DM_NOTIF_LEVEL_UP,
+    StrId::STR_DM_NOTIF_ACHIEVEMENT,
+    StrId::STR_DM_NOTIF_FLOOR_ENTRY,
+    StrId::STR_DM_NOTIF_BOSS_ARRIVAL,
+    StrId::STR_DM_NOTIF_DEATH,
+};
+
+void GameRenderer::showNotification(NotificationKind kind, const char* body) {
+  notificationActive_ = true;
+  notificationKind_ = kind;
+  snprintf(notificationBody_, NOTIFICATION_BODY_LEN, "%s", body);
+  notificationDirty_ = true;
+}
+
+void GameRenderer::dismissNotification() {
+  if (!notificationActive_) return;
+  notificationActive_ = false;
+  notificationDirty_ = true;
+}
+
+DirtyWindow GameRenderer::notificationRect() const {
+  // Fixed position near the top of the viewport, full-width minus a side
+  // margin -- depends only on screen layout (computeLayout() output), never
+  // on notification content, so draw()'s partial path and planFrame()'s
+  // FramePlan-building code always agree on the same rect without sharing
+  // any extra state.
+  DirtyWindow w;
+  w.kind = DirtyWindow::Kind::Notification;
+  w.x = NOTIFICATION_MARGIN_X;
+  w.y = VIEWPORT_Y + 8;
+  w.w = screenW - 2 * NOTIFICATION_MARGIN_X;
+  w.h = NOTIFICATION_H;
+  return w;
+}
+
+void GameRenderer::drawNotification(GfxRenderer& renderer) const {
+  const DirtyWindow rect = notificationRect();
+
+  renderer.fillRoundedRect(rect.x, rect.y, rect.w, rect.h, 6, Color::White);
+  renderer.drawRoundedRect(rect.x, rect.y, rect.w, rect.h, 2, 6, true);
+
+  // Inverted (black-filled) title bar across the top of the box, white
+  // centered text -- the "SYSTEM:" boxed-notification look the spec calls
+  // for, reusing the same primitives drawEndScreen() already proved out.
+  renderer.fillRect(rect.x, rect.y, rect.w, NOTIFICATION_TITLE_H, true);
+  const char* title = I18n::getInstance().get(kNotificationTitleId[static_cast<uint8_t>(notificationKind_)]);
+  renderer.drawCenteredText(UI_12_FONT_ID, rect.y + 6, title, false);
+
+  renderer.drawCenteredText(UI_10_FONT_ID, rect.y + NOTIFICATION_TITLE_H + 12, notificationBody_, true);
 }

@@ -129,9 +129,9 @@ Plans:
 | 4. USB mass storage (§3.1) | 1/1 | Complete | 2026-08-07 |
 | 5. Small fixes (#322096 Phase 1) | 0/? | Not started | - |
 | 6. Tamagotchi overhaul (#322096 Phase 2) | 0/? | Not started | - |
-| 7. World Dungeon: Correctness | 0/? | In progress | - |
-| 8. World Dungeon: Reclaim the frame | 0/? | Not started | - |
-| 9. World Dungeon: Voice | 0/? | Not started | - |
+| 7. World Dungeon: Correctness | 1/1 | Complete | 2026-08-15 |
+| 8. World Dungeon: Reclaim the frame | 1/1 | Complete | 2026-08-15 |
+| 9. World Dungeon: Voice | 0/1 | In progress | - |
 | 10. World Dungeon: Decisions | 0/? | Not started | - |
 | 11. World Dungeon: The Show | 0/? | Not started | - |
 | 12. World Dungeon: The Co-star | 0/? | Not started | - |
@@ -140,18 +140,46 @@ Plans:
 **Goal**: Loot, death/victory, monster balance, RNG determinism, save integrity, long-run stability all correct per the plan doc's Phase 0 requirements.
 **Depends on**: Nothing (fresh milestone; existing `DungeonGenerator`/`AchievementBus` source is the starting point)
 **Requirements**: see PROJECT.md Milestone 3 / Phase 7 checklist
-**Gate**: HOST — all 7 requirements automated (run counts stated, e.g. 10,000-floor loot sweep, 1,000-floor monster-tier sweep, 70,000-turn soak), reusing the `ach_test/` harness pattern (forced positive/negative/boundary/persistence/no-double-fire style cases). GLASS — die once and read the death screen, force a win via seeded RNG and read the victory screen. Image ships paired with Phase 8, per parent's flash-cadence ruling.
+**Gate**: HOST — all 7 requirements automated (run counts stated, e.g. 10,000-floor loot sweep, 1,000-floor monster-tier sweep, 70,000-turn soak), reusing the `ach_test/` harness pattern (forced positive/negative/boundary/persistence/no-double-fire style cases). GLASS — die once and read the death screen, force a win via seeded RNG and read the victory screen.
 **Constraint carried into Phase 7's own build**: death/victory screens must not be a `clearScreen()` full repaint — Phase 8's dirty-rect work lands on top of them immediately after.
+**Status**: Complete, closed by parent 2026-08-15 (prior session).
 **Plans**: TBD
 
 Plans:
-- [ ] 07-01: TBD
+- [x] 07-01: Correctness pass — closed.
 
 ### Phase 8: World Dungeon — Reclaim the frame (dirty-rect rendering)
-**Goal**: TBD, pulled from plan doc when Phase 7 is closing.
+**Goal**: Partial E-ink refresh via `FrameDirtyPlanner` — dirty-rect tracking replaces full-screen repaint for in-game rendering.
 **Depends on**: Phase 7
-**Requirements**: TBD
+**Requirements**: see PROJECT.md Milestone 3 / Phase 8 checklist
+**Status**: Complete, closed by parent 2026-08-15 (prior session).
 **Plans**: TBD
 
-### Phases 9-12: World Dungeon — Voice / Decisions / The Show / The Co-star
-Requirements TBD, pulled from the plan doc as each phase opens. Flash cadence: 9+10 pair, 11+12 pair.
+Plans:
+- [x] 08-01: Dirty-rect planner — closed.
+
+### Phase 9: World Dungeon — Voice ("make it Dungeon Crawler Carl")
+**Goal**: Replace the game's Tolkien-pastiche register with a Dungeon Crawler Carl (System-dungeon/gameshow) voice — bestiary/item naming, flavour text, boxed System notifications, an achievements screen, and new achievement/event coverage. Parent's framing: "the phase where it stops being a Tolkien pastiche... highest feeling-per-byte in the whole plan and almost entirely text."
+**Depends on**: Phase 8
+**Work items**:
+  1. Rewrite `MONSTER_DEFS` and `ITEM_DEFS` (`src/game/GameTypes.h`) into DCC-register names. Glyphs and stat blocks untouched — a string swap, not a balance pass.
+  2. System flavour tables keyed by event and outcome band, drawn from the run's RNG stream (`Player::combatRngState`, proven persistent in Phase 7).
+  3. Boxed System notifications — bordered box, inverted title bar — for level-up, achievement, floor entry, boss arrival, death.
+  4. Achievements screen in the game menu: unlocked named, locked redacted with a hint.
+  5. Four new achievements off events the bus already carries, plus one new `ItemPickedUp` event.
+**Requirements** (each proven, not asserted):
+  1. Zero Tolkien-derived proper nouns anywhere in source. Grep-proven with the pattern list in evidence, not eyeballed.
+  2. Every combat outcome band has ≥3 flavour variants and never repeats twice consecutively. Proven by simulation over a long run, not by counting the table.
+  3. All flavour text is `const char*` in flash. No per-turn string construction. Allocation trace required.
+  4. Notification box renders inside the partial-refresh budget and does not trigger a full flash. Report windowCount and dirty area for a box appearing and dismissing, using the Phase 8 `FrameDirtyPlanner` instrument.
+  5. Achievements screen lists every defined achievement; unlock state survives a reload; a locked one is never named.
+  6. Each new achievement proven to fire AND proven not to fire — both directions, matching the Phase 7 fire/no-fire proof pattern.
+**Gate**: HOST ONLY — grep proof, variant coverage, unlock/no-unlock matrix, allocation trace showing no per-turn heap churn. No glass gate this phase — per the revised delivery plan (2026-08-15), Stuart flashes once at the very end of the whole World Dungeon milestone, not per-phase.
+**Status**: In progress, opened 2026-08-15 (work item 1 done, requirement 1's grep proof re-runs clean).
+**Plans**: TBD
+
+Plans:
+- [ ] 09-01: TBD
+
+### Phases 10-12: World Dungeon — Decisions / The Show / The Co-star
+Requirements TBD, pulled from the plan doc as each phase opens. **Flash cadence (revised 2026-08-15, supersedes the old 9+10/11+12 pairing): no interim images at all — one final flash to Stuart when Phase 12 closes.** Every phase gate stays host-machine-verified evidence to parent, same rigor as before; there is no glass gate again until the very last phase closes.

@@ -110,33 +110,35 @@ struct MonsterDef {
   uint16_t expValue;
 };
 
-// Tolkien-inspired bestiary
+// Dungeon Crawler Carl register — System-dungeon bestiary, not fantasy pastiche.
+// Glyphs and stat blocks are unchanged from the prior table (Phase 9 work item 1:
+// string swap only, not a balance pass).
 inline constexpr MonsterDef MONSTER_DEFS[] = {
     {"Giant Rat", 'r', 1, 4, 2, 0, 5},
     {"Bat", 'b', 1, 3, 1, 0, 3},
-    {"Kobold", 'k', 1, 6, 3, 1, 8},
+    {"Sewer Ratling", 'k', 1, 6, 3, 1, 8},
     {"Grid Bug", 'x', 1, 2, 1, 0, 2},
-    {"Goblin", 'g', 2, 8, 4, 2, 12},
-    {"Orc", 'o', 3, 12, 6, 3, 20},
-    {"Warg", 'w', 3, 10, 7, 2, 18},
+    {"Mutant Scav", 'g', 2, 8, 4, 2, 12},
+    {"Brood Grunt", 'o', 3, 12, 6, 3, 20},
+    {"Hound-Beast", 'w', 3, 10, 7, 2, 18},
     {"Large Spider", 'S', 4, 14, 5, 2, 22},
     {"Skeleton", 's', 4, 10, 5, 4, 15},
-    {"Uruk-hai", 'U', 5, 18, 8, 5, 30},
-    {"Cave Troll", 'T', 6, 30, 10, 6, 50},
-    {"Wight", 'W', 7, 20, 9, 5, 40},
+    {"Broodkin Berserker", 'U', 5, 18, 8, 5, 30},
+    {"Cave Brute", 'T', 6, 30, 10, 6, 50},
+    {"Husk Wraith", 'W', 7, 20, 9, 5, 40},
     {"Shade", 'G', 8, 16, 11, 3, 45},
-    {"Oliphaunt", 'O', 9, 50, 12, 8, 80},
-    {"Olog-hai", 'P', 10, 40, 14, 9, 70},
+    {"Siege Beast", 'O', 9, 50, 12, 8, 80},
+    {"Ogre Warlord", 'P', 10, 40, 14, 9, 70},
     {"Fire Drake", 'd', 12, 35, 13, 7, 90},
-    {"Nazgul", 'N', 15, 60, 18, 12, 150},
+    {"Reaper Unit", 'N', 15, 60, 18, 12, 150},
     {"Young Dragon", 'D', 18, 80, 20, 14, 200},
-    {"Balrog", 'B', 22, 120, 25, 16, 500},
+    {"Inferno Titan", 'B', 22, 120, 25, 16, 500},
     {"Ancient Dragon", 'D', 25, 150, 30, 20, 1000},
-    // Boss — The Necromancer (Sauron in fair form), always on the deepest level
-    {"The Necromancer", 'p', 26, 250, 35, 22, 5000},
+    // Boss — The Adjudicator, the System's floor-26 arbiter, always on the deepest level
+    {"The Adjudicator", 'p', 26, 250, 35, 22, 5000},
 };
 inline constexpr int MONSTER_DEF_COUNT = sizeof(MONSTER_DEFS) / sizeof(MONSTER_DEFS[0]);
-inline constexpr int BOSS_MONSTER_TYPE = MONSTER_DEF_COUNT - 1;  // Index of The Necromancer
+inline constexpr int BOSS_MONSTER_TYPE = MONSTER_DEF_COUNT - 1;  // Index of The Adjudicator
 
 struct ItemDef {
   const char* name;
@@ -154,12 +156,12 @@ inline constexpr ItemDef ITEM_DEFS[] = {
     {"Short Sword", '/', static_cast<uint8_t>(ItemType::Weapon), 1, 15, 4, 0},
     {"Long Sword", '/', static_cast<uint8_t>(ItemType::Weapon), 2, 30, 6, 0},
     {"Battle Axe", '/', static_cast<uint8_t>(ItemType::Weapon), 3, 50, 8, 0},
-    {"Mithril Blade", '/', static_cast<uint8_t>(ItemType::Weapon), 4, 200, 12, 0},
+    {"Nanoweave Blade", '/', static_cast<uint8_t>(ItemType::Weapon), 4, 200, 12, 0},
     // Armor
     {"Leather Armor", '[', static_cast<uint8_t>(ItemType::Armor), 0, 10, 0, 2},
     {"Chain Mail", '[', static_cast<uint8_t>(ItemType::Armor), 1, 30, 0, 4},
     {"Plate Mail", '[', static_cast<uint8_t>(ItemType::Armor), 2, 60, 0, 6},
-    {"Mithril Coat", '[', static_cast<uint8_t>(ItemType::Armor), 3, 300, 0, 10},
+    {"Nanoweave Coat", '[', static_cast<uint8_t>(ItemType::Armor), 3, 300, 0, 10},
     // Shields
     {"Wooden Shield", ')', static_cast<uint8_t>(ItemType::Shield), 0, 8, 0, 1},
     {"Iron Shield", ')', static_cast<uint8_t>(ItemType::Shield), 1, 25, 0, 3},
@@ -173,10 +175,10 @@ inline constexpr ItemDef ITEM_DEFS[] = {
     {"Scroll of Mapping", '?', static_cast<uint8_t>(ItemType::Scroll), 2, 40, 0, 0},
     // Food
     {"Rations", '%', static_cast<uint8_t>(ItemType::Food), 0, 5, 0, 0},
-    {"Lembas Bread", '%', static_cast<uint8_t>(ItemType::Food), 1, 30, 0, 0},
+    {"Nutrient Bar", '%', static_cast<uint8_t>(ItemType::Food), 1, 30, 0, 0},
     // Gold
     {"Gold Coins", '$', static_cast<uint8_t>(ItemType::Gold), 0, 1, 0, 0},
-    // Quest item — dropped by The Necromancer
+    // Quest item — dropped by The Adjudicator
     {"Ring of Power", '=', static_cast<uint8_t>(ItemType::Ring), 0, 999, 0, 0},
 };
 inline constexpr int ITEM_DEF_COUNT = sizeof(ITEM_DEFS) / sizeof(ITEM_DEFS[0]);

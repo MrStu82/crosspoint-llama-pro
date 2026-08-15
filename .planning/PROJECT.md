@@ -85,24 +85,36 @@ Phase 6 — Tamagotchi overhaul (Stuart: "a complete mess", "a big graphical ove
 
 Source: `/workspace/inbox/a2a-1786788310195-g5xaw8/world-dungeon-build-plan.html`. Six-phase build for the World Dungeon game component (existing `src/game/DungeonGenerator.*`, `AchievementBus.*`). Requirements per phase confirmed as written by parent 2026-08-15, msg 3618 — no negotiation, build to them.
 
-Phase 7 (World Dungeon Phase 0, "Correctness"):
-- [ ] No victory item (Master Key/Ring of Power) in the random loot pool across 10,000 generated floors — placed on boss defeat instead
-- [ ] Blocking death screen (cause, floor, turns, kills, level, achievements this run), dismissed only by explicit tap
-- [ ] Blocking victory screen, same data shape, doesn't eject to launcher
-- [ ] Depth-weighted monster selection: mean tier at depth 26 measurably higher than depth 5 over 1,000 floors
-- [ ] One persistent RNG stream on `GameState`, seeded once per run, serialised with the save — identical seed replays identically, no repeated combat roll on the same tile/turn
-- [ ] `turnCount` → `uint32_t`; opened-door state persists through save/reload
-- [ ] Turn 70,000 reached with regen still firing at correct cadence
+Phase 7 (World Dungeon Phase 0, "Correctness") — CLOSED by parent 2026-08-15:
+- [x] No victory item (Master Key/Ring of Power) in the random loot pool across 10,000 generated floors — placed on boss defeat instead
+- [x] Blocking death screen (cause, floor, turns, kills, level, achievements this run), dismissed only by explicit tap
+- [x] Blocking victory screen, same data shape, doesn't eject to launcher
+- [x] Depth-weighted monster selection: mean tier at depth 26 measurably higher than depth 5 over 1,000 floors
+- [x] One persistent RNG stream on `GameState`, seeded once per run, serialised with the save — identical seed replays identically, no repeated combat roll on the same tile/turn
+- [x] `turnCount` → `uint32_t`; opened-door state persists through save/reload
+- [x] Turn 70,000 reached with regen still firing at correct cadence
 
-Phase 8 (World Dungeon Phase 1, "Reclaim the frame" — dirty-rect rendering): requirements TBD, pulled from plan doc when Phase 7 is closing. **Known constraint for Phase 7's own build**: the death/victory screens must not be written as an unconditional `clearScreen()` full repaint — Phase 8's dirty-rect work lands directly on top of them (parent, msg 3622).
+Phase 8 (World Dungeon Phase 1, "Reclaim the frame" — dirty-rect rendering) — CLOSED by parent 2026-08-15: `FrameDirtyPlanner`-based partial E-ink refresh shipped, host-gated. Constraint honored from Phase 7's own build: death/victory screens were not written as an unconditional `clearScreen()` full repaint, so Phase 8's dirty-rect work landed directly on top of them (parent, msg 3622).
 
-Phases 9-12 (World Dungeon Phases 2-5: Voice, Decisions, The Show, The Co-star): requirements TBD, pulled from plan doc as each phase opens.
+Phase 9 (World Dungeon Phase 2, "Voice — make it Dungeon Crawler Carl") — dispatched 2026-08-15 (parent msg 3652), IN PROGRESS:
+- [x] Work item 1: `MONSTER_DEFS`/`ITEM_DEFS` (`src/game/GameTypes.h`) rewritten into DCC-register names, glyphs/stats/array-order untouched; matching comments fixed in `GameTheme.h` and `GameMenuActivity.cpp`. Requirement 1 grep re-run clean (word-boundary scan across `src/game/`, `src/activities/game/`).
+- [x] Work item 2: System flavour tables (`src/game/FlavorText.h`/`.cpp`) — 12 categories (4 hit bands, 3 damaged bands, MonsterKilled, PlayerDeath, LevelUp, FloorEntry, BossArrival), 3 `constexpr const char*` variants each, drawn via `GameState::rollRange` (persistent `Player::combatRngState`) with non-repeat-consecutive tracking. Wired into all 7 `GameActivity.cpp` message sites (kill, hit, damaged, death, level-up, floor-entry, boss-arrival via new `BOSS_MONSTER_TYPE` check on floor load). `FLAVOR_TEXT.resetRun()` wired into `GameState::newGame()` alongside `ACHIEVEMENTS.resetRun()`. Requirement 2/3 simulation+allocation-trace evidence still pending (Task #7).
+- [ ] Work item 3: Boxed System notifications (bordered box, inverted title bar) for level-up/achievement/floor-entry/boss-arrival/death
+- [ ] Work item 4: Achievements screen in the game menu — unlocked named, locked redacted with a hint
+- [ ] Work item 5: Four new achievements + one new `ItemPickedUp` event
+- [ ] Requirement 2: ≥3 flavour variants per outcome band, no consecutive repeat, proven by simulation
+- [ ] Requirement 3: all flavour text `const char*` in flash, no per-turn string construction, allocation trace
+- [ ] Requirement 4: notification box stays inside partial-refresh budget, windowCount/dirty-area report via `FrameDirtyPlanner`
+- [ ] Requirement 5: achievements screen completeness/reload-survival/redaction proof
+- [ ] Requirement 6: each new achievement proven to fire AND not fire
+
+Phases 10-12 (World Dungeon Phases 3-5: Decisions, The Show, The Co-star): requirements TBD, pulled from plan doc as each phase opens.
 
 ## Milestones
 
 - **Milestone 1 (Phases 1-4, X4 Pro UI Layout Fixes)**: Complete 2026-08-07. All 6 requirements shipped and reported.
 - **Milestone 2 (Phases 5-6, dispatch #322096, 2026-08-10)**: In progress. Bottom drawer + brightness control (prior deliverable, separate from this milestone) confirmed working by Stuart — do not touch their behavior except where Phase 5's landscape-edge fix requires it.
-- **Milestone 3 (Phases 7-12, World Dungeon, dispatched 2026-08-15)**: Started. Flash cadence per parent's ruling (msg 3622, 2026-08-15): **three images, not six** — phases pair up 7+8, 9+10, 11+12. Each phase still runs its own full gate loop and is signed off individually; only the flash-to-Stuart is batched per pair. The 4 touch-gap-audit fixes (`EndOfBookOptions.cpp`, `EpubReaderPercentSelectionActivity.cpp`, `BmpViewerActivity.cpp`, `WifiSelectionActivity.cpp`) and the outstanding `LOG_INF` instrumentation for `wasHomeKeyBackGesture()` ride the 7+8 image, not their own.
+- **Milestone 3 (Phases 7-12, World Dungeon, dispatched 2026-08-15)**: In progress, Phases 7-8 closed, Phase 9 opened. **Flash cadence superseded 2026-08-15 (parent msg 3650, direct from Stuart): no interim images at all.** Stuart wants exactly one finished flash at the very end of the whole milestone (Phase 12 close), not the earlier three-paired-image plan (msg 3622, now void). Every phase still runs its own full host-gate loop with machine-verified evidence delivered to parent per phase — only the on-glass flash-to-Stuart step is deferred to the very end, since he now has zero chance to catch anything on-device before then. The 4 touch-gap-audit fixes and the outstanding `LOG_INF` instrumentation for `wasHomeKeyBackGesture()`, previously slated to ride the 7+8 image, now ride whatever the final image turns out to be.
 
 ---
 *Last updated: 2026-08-15 — Milestone 3 (World Dungeon) added as Phases 7-12, flash cadence set to 3 paired images*

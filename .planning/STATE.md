@@ -2,27 +2,32 @@
 gsd_state_version: '1.0'
 status: in_progress
 progress:
-  total_phases: 6
-  completed_phases: 5
+  total_phases: 12
+  completed_phases: 8
   total_plans: 4
   completed_plans: 4
-  percent: 83
+  percent: 67
 ---
 
 # Project State
 
 ## Project Reference
 
-See: .planning/PROJECT.md (updated 2026-08-10)
+See: .planning/PROJECT.md (updated 2026-08-15)
 
 **Core value:** Every screen renders correctly and fully on-panel on the X4 Pro, with no clipped/overflowing content and no touch targets crowded against the bezel.
-**Current focus:** Milestone 1 (Phases 1-4) complete and shipped. Milestone 2 (Phases 5-6, dispatch #322096, 2026-08-10): Phase 5 (small fixes: stats page, landscape drawer edge, top-drawer feel) shipped and confirmed on origin. Phase 6 (Tamagotchi overhaul) is in progress — care-loop mechanics rebuilt with real Bandai-style controls, poop/sickness, and care-mistake evolution gating, plus a sprite-based Care Menu UI, all landed on origin.
+**Current focus:** Milestone 3 (Phases 7-12, World Dungeon). Phases 7 (Correctness) and 8 (Reclaim the frame / dirty-rect rendering) are closed. Phase 9 ("Voice — make it Dungeon Crawler Carl") is in progress on branch `phase-7-world-dungeon-correctness`. **Delivery plan changed 2026-08-15 (parent msg 3650, direct from Stuart): no interim on-glass flashes — build straight through Phases 9, 10, 11 with host-only machine-verified gates per phase, ship parent exactly one final image when Phase 12 closes.** Milestone 1 (Phases 1-4) and Milestone 2 (Phases 5-6, Tamagotchi overhaul) are prior, separately-shipped work — see their sections below for history, not current activity.
 
 ## Current Position
 
-Phase: 6 of 6 — in progress
-Plan: none written formally — working item-by-item off REQUIREMENTS.md directly given the scope of each item
-Status: Milestone 1 (Phases 1-4) confirmed complete at HEAD `8634a75d`. Milestone 2 scaffolded 2026-08-10. Phase 5 complete and confirmed on origin `phase4-usb-msc`. Phase 6 in progress, four commits landed on origin.
+Phase: 9 of 12 — in progress (Milestone 3)
+Plan: none written formally — working item-by-item off parent's dispatched Phase 9 spec (msg 3652) directly
+Status: Phase 9 work item 1 (rename `MONSTER_DEFS`/`ITEM_DEFS` off Tolkien nouns into a DCC register) is done — requirement 1's word-boundary grep re-runs clean. Work item 2 (System flavour tables, `src/game/FlavorText.h`/`.cpp`) is done — 12 categories, 3 variants each, non-repeat-consecutive, drawn off the persistent combat RNG stream, wired into all 7 message call sites in `GameActivity.cpp` (kill/hit/damaged/death/level-up/floor-entry/boss-arrival). Work items 3-5 (boxed notifications, achievements screen, new achievements/event) not yet started. No build/gate run yet this phase — requirements 2/3 (variant-coverage simulation, allocation trace) deferred to the host-gate pass (Task #7) once all work items land.
+
+### Milestone 1/2 history (prior, not current focus)
+
+Milestone 1 (Phases 1-4, X4 Pro UI Layout Fixes): complete 2026-08-07, confirmed at HEAD `8634a75d`.
+Milestone 2 (Phases 5-6, dispatch #322096, 2026-08-10): Phase 5 (small fixes: stats page, landscape drawer edge, top-drawer feel) shipped and confirmed on origin. Phase 6 (Tamagotchi overhaul) reached a working state — care-loop mechanics rebuilt with real Bandai-style controls, poop/sickness, sleep cycle, discipline-as-stat, and care-mistake evolution gating, plus a sprite-based Care Menu UI — before Milestone 3 (World Dungeon) was dispatched and became the active focus. Milestone 2's remaining item (TAMA-02 Tamagotchi Uni visual restyle) is paused, not abandoned — pick back up if parent reopens it.
 
 **Phase 5 — complete, confirmed on origin:**
 - STAT-01 (stats page font/sizing/clipping): fixed in `StatsActivity.cpp` (baseline/top-edge conversion fix + numeric-overflow guard). Committed+pushed `cdb2daf2`.
@@ -49,7 +54,7 @@ Last activity: 2026-08-11 — build-order item 2 (discipline as a persisted stat
 - The earlier "carve a gap from the content budget" open question was resolved without touching the content budget at all: `BaseTheme::drawButtonHints()` is a complete no-op on touch hardware (`if (gpio.hasTouch()) { return; }`), so `bottomReserved` was already blank/unused pixels there. The fix simply stops flushing that already-dead band to the panel — the reader page underneath shows through it for free, satisfying parent's "sliver of page peeking through IS the requirement" ruling without shrinking any existing region or risking a new overflow.
 - Fit-check uses `LOG_ERR` (not `assert()`), per repo CLAUDE.md's error-handling hierarchy — this is a configuration-sanity check (theme metrics could change bottomReserved in the future), not a fatal "impossible state".
 
-Progress: [████████░░] 83% (5/6 phases complete)
+Progress: [████████░░] 67% (8/12 phases complete)
 
 ## Performance Metrics
 
@@ -75,19 +80,21 @@ Progress: [████████░░] 83% (5/6 phases complete)
 Decisions are logged in PROJECT.md Key Decisions table.
 Recent decisions affecting current work:
 
+- Milestone 3 delivery plan changed 2026-08-15 (parent msg 3650, direct from Stuart): no interim on-glass flashes for Phases 9-11 — build straight through, host-gate every phase exactly as strictly as before, ship one final image only when Phase 12 closes. Supersedes the earlier 3-paired-image plan (msg 3622).
+- Phase 9 work item 1 (MONSTER_DEFS/ITEM_DEFS rename) is a pure string swap: array order/index, glyphs, and stat blocks are untouched, since `GameTheme.h`'s `kThemeCarl.monsters[]` art-slot array is positionally (not name-) matched to `MONSTER_DEFS` — reordering would silently desync monster art slots.
 - Milestone 2 Phase 5 top drawer delivers the bottom drawer's *feel* (edge-pull, slide, dismiss), not a shared base class; `TextSettingsActivity` keeps its own tab/list/preview state; DRY applies narrowly to edge-drag detection + slide/dismiss animation if it lifts out cleanly (parent corrected the original "reuse the implementation" wording 2026-08-10, see PROJECT.md)
-- Milestone 2 Phase 6 is research-then-build: care-loop mechanics and Tamagotchi Uni visual reference must be researched and documented before implementation, per parent's "needs to BE a Tamagotchi, not merely look like one" — mechanics-first pass shipped (real RTC-driven meters, poop/sickness, care-mistake evolution gating); the UNI visual-style pass (TAMA-02's screen-layout/icon-ring/palette match) has not started, current Care Menu is a generic 4-column icon grid with heart-pip meters, not yet restyled to Tamagotchi Uni's specific shape
-- Phase 6 sequencing was "don't block Phase 5" — satisfied; Phase 5 shipped independently before Phase 6 work began
+- Milestone 2 Phase 6 is research-then-build: care-loop mechanics and Tamagotchi Uni visual reference must be researched and documented before implementation, per parent's "needs to BE a Tamagotchi, not merely look like one" — mechanics-first pass shipped (real RTC-driven meters, poop/sickness, care-mistake evolution gating); the UNI visual-style pass (TAMA-02's screen-layout/icon-ring/palette match) is paused, not started
 
 ### Pending Todos
 
-- Write the Phase 6 gap analysis: with real meters/sickness/death/evolution and the sprite Care Menu now in, identify what of the authentic care loop is still missing against a Tamagotchi/Tamagotchi Uni reference (sleep cycle, discipline-as-a-tracked-stat, evolution branching) — see gap-analysis doc once written
-- TAMA-02 (Tamagotchi Uni visual restyle) not started — current UI is functional but generic, not yet matched to Tamagotchi Uni's specific screen layout/icon shape/palette
+- Phase 9 work items 2-5: flavour tables, boxed System notifications, achievements screen, 4 new achievements + `ItemPickedUp` event
+- Phase 9 host gate harnesses for all 6 requirements (grep proof, variant-coverage sim, allocation trace, notification-box dirty-rect report, achievements-screen proof, fire/no-fire matrix)
+- Milestone 2 paused item: TAMA-02 (Tamagotchi Uni visual restyle) not started — pick back up only if parent reopens Milestone 2
 
 ### Blockers/Concerns
 
-- Phase 6's ESP32-based RAM/flash ceiling constrains how much additional persisted state (e.g. a discipline stat, sleep-schedule state) a further mechanics pass can add — flag as a design constraint if the gap-analysis plan proposes new persisted fields
-- STATE.md drifted stale this session (showed Phase 6 "not started" while four real commits already existed on origin) — caught by parent checking `git log` directly rather than trusting this file's prose. Going forward: cross-check this file against `git log origin/<branch>` before reporting status, don't just read the prose.
+- None currently blocking Phase 9. `GameActivity.cpp`'s exact item-pickup call site (needed for the new `ItemPickedUp` emit) not yet located — routine lookup, not a blocker.
+- Standing lesson (from Milestone 2): STATE.md can drift stale relative to real repo/session state if not actively kept current — cross-check against `git log`/session context before reporting status, don't just trust this file's prose. Applies doubly now that Phase 9's host-only gate means there's no glass checkpoint forcing a status re-check.
 
 ## Deferred Items
 
@@ -100,6 +107,6 @@ Items acknowledged and carried forward from previous milestone close:
 
 ## Session Continuity
 
-Last session: 2026-08-11
-Stopped at: STATE.md reconciled against `git log` (Phase 5 complete, Phase 6 in progress with 4 real commits). Next: write the Phase 6 authentic-care-loop gap analysis (sleep cycle / discipline-as-stat / evolution branching are the leading candidates from source review), then build + deliver a flashable bin to Stuart via parent.
+Last session: 2026-08-15
+Stopped at: Planning docs (ROADMAP.md, PROJECT.md, STATE.md) updated with Phase 9's full spec and the revised single-final-flash delivery plan, per parent's explicit "update before you cut code" instruction. Phase 9 work item 1 (DCC rename) done and grep-clean. Next: work item 2 (flavour tables keyed by event/outcome band, sourced from `combatRngState`).
 Resume file: None

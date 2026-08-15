@@ -60,15 +60,15 @@ inline constexpr TileTheme kThemeCarl = {
     },
     &PlayerDefault,
     {
-        nullptr, nullptr, nullptr, nullptr, nullptr,  // Giant Rat..Goblin
-        nullptr, nullptr, nullptr, nullptr, nullptr,  // Orc..Uruk-hai
-        nullptr, nullptr, nullptr, nullptr, nullptr,  // Cave Troll..Olog-hai
+        nullptr, nullptr, nullptr, nullptr, nullptr,  // Giant Rat..Mutant Scav
+        nullptr, nullptr, nullptr, nullptr, nullptr,  // Brood Grunt..Broodkin Berserker
+        nullptr, nullptr, nullptr, nullptr, nullptr,  // Cave Brute..Ogre Warlord
         &FireDrakeCarl,  // Fire Drake (index 15)
-        nullptr,         // Nazgul
+        nullptr,         // Reaper Unit
         nullptr,         // Young Dragon -- not recoverable, drawn fresh post-verdict
-        nullptr,         // Balrog
+        nullptr,         // Inferno Titan
         nullptr,         // Ancient Dragon -- not recoverable, drawn fresh post-verdict
-        nullptr,         // The Necromancer (boss)
+        nullptr,         // The Adjudicator (boss)
     },
     {},  // items -- unpopulated, falls back to glyph rendering
 };

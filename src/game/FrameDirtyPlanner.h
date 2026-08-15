@@ -18,7 +18,7 @@ namespace game {
 // A screen-coordinate rectangle that changed and needs a `displayWindow()`
 // refresh.
 struct DirtyWindow {
-  enum class Kind { Viewport, StatusBar, Messages };
+  enum class Kind { Viewport, StatusBar, Messages, Notification };
   Kind kind = Kind::Viewport;
   int x = 0, y = 0, w = 0, h = 0;
 };
@@ -29,7 +29,7 @@ struct DirtyWindow {
 // full-screen rect through the same code as a small partial update.
 struct FramePlan {
   bool fullClear = false;
-  DirtyWindow windows[3];  // at most: viewport bbox, status bar, message log
+  DirtyWindow windows[4];  // at most: viewport bbox, status bar, message log, notification box
   int windowCount = 0;
 
   int64_t totalDirtyArea() const {

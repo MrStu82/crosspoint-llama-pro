@@ -306,12 +306,12 @@ void GameMenuActivity::useInventoryItem(int index) {
         p.hp = std::min(static_cast<uint16_t>(p.hp + heal), p.maxHp);
         snprintf(msgBuf, sizeof(msgBuf), "That hit the spot. (HP +%u)", heal);
         consumed = true;
-      } else if (item.subtype == 1) {  // Lembas
+      } else if (item.subtype == 1) {  // Nutrient Bar
         uint16_t heal = p.maxHp / 2;
         p.hp = std::min(static_cast<uint16_t>(p.hp + heal), p.maxHp);
         uint16_t mana = p.maxMp / 2;
         p.mp = std::min(static_cast<uint16_t>(p.mp + mana), p.maxMp);
-        snprintf(msgBuf, sizeof(msgBuf), "The elven bread restores you!");
+        snprintf(msgBuf, sizeof(msgBuf), "The System ration restores you!");
         consumed = true;
       }
       break;

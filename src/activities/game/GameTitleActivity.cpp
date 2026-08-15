@@ -167,7 +167,7 @@ void GameTitleActivity::render(RenderLock&&) {
   // 6. Wordmark stamp: white-clear rect, outer/inner outline, block-letter text
   renderer.fillRect(20, 365, 440, 110, false);
   renderer.drawRect(40, 381, 400, 78, 3, true);
-  renderer.drawRect(48, 388, 385, 64, 2, true);
+  renderer.drawRect(48, 388, 384, 64, 2, true);
   constexpr int kWordmarkScale = 5;
   const LetterEntry world[] = {{GLYPH_LETTER_W}, {GLYPH_O}, {GLYPH_R}, {GLYPH_L}, {GLYPH_D}};
   drawWord(renderer, world, 5, centerX, 400, kWordmarkScale);

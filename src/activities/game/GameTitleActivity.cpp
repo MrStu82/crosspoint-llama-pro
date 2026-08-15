@@ -83,14 +83,15 @@ void GameTitleActivity::loop() {
 
 void GameTitleActivity::render(RenderLock&&) {
   const auto pageWidth = renderer.getScreenWidth();
+  const auto pageHeight = renderer.getScreenHeight();
   const int centerX = pageWidth / 2;
 
   // White background (default)
   renderer.clearScreen();
 
   // Draw a decorative double border
-  renderer.drawRect(10, 10, pageWidth - 20, 480);
-  renderer.drawRect(13, 13, pageWidth - 26, 474);
+  renderer.drawRect(10, 10, pageWidth - 20, pageHeight - 20);
+  renderer.drawRect(13, 13, pageWidth - 26, pageHeight - 26);
 
   // Flavor text
   renderer.drawCenteredText(UI_10_FONT_ID, 40, "A roguelike for the CrossPoint Reader");

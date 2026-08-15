@@ -11,6 +11,7 @@
 #include "MappedInputManager.h"
 #include "components/UITheme.h"
 #include "fontIds.h"
+#include "game/AchievementBus.h"
 #include "game/GameState.h"
 #include "game/GameTheme.h"
 #include "game/GameTypes.h"
@@ -355,6 +356,10 @@ void GameMenuActivity::useInventoryItem(int index) {
   GAME_STATE.addMessage(msgBuf);
 
   if (consumed) {
+    game::GameEvent itemEvent{};
+    itemEvent.type = game::GameEventType::ItemUsed;
+    ACHIEVEMENTS.emit(itemEvent);
+
     // Remove item by shifting
     for (int i = index; i < GAME_STATE.inventoryCount - 1; i++) {
       GAME_STATE.inventory[i] = GAME_STATE.inventory[i + 1];

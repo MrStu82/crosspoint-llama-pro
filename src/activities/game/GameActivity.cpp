@@ -8,6 +8,7 @@
 #include "GameMenuActivity.h"
 #include "MappedInputManager.h"
 #include "activities/ActivityResult.h"
+#include "game/AchievementBus.h"
 #include "game/GameSave.h"
 
 // --- FOV ---
@@ -93,6 +94,9 @@ void GameActivity::onEnter() {
   Activity::onEnter();
 
   gameRenderer.init(renderer);
+
+  // Achievement unlock state is account-level, not tied to the per-run save.
+  ACHIEVEMENTS.load();
 
   // Load save or start new game
   if (GAME_STATE.hasSaveFile()) {
@@ -258,6 +262,13 @@ void GameActivity::handleMove(int dx, int dy) {
         snprintf(msgBuf, sizeof(msgBuf), "You slay the %s! (+%uXP)", def.name, def.expValue);
         GAME_STATE.addMessage(msgBuf);
         p.experience += def.expValue;
+
+        game::GameEvent killEvent{};
+        killEvent.type = game::GameEventType::MonsterKilled;
+        killEvent.damage = static_cast<uint16_t>(damage);
+        killEvent.monsterMaxHp = def.baseHp;
+        ACHIEVEMENTS.emit(killEvent);
+
         checkLevelUp();
 
         // Boss drops the Ring of Power
@@ -322,6 +333,11 @@ void GameActivity::handleAction() {
     }
     saveCurrentLevel();
     p.dungeonDepth++;
+
+    game::GameEvent floorEvent{};
+    floorEvent.type = game::GameEventType::FloorChanged;
+    ACHIEVEMENTS.emit(floorEvent);
+
     GAME_STATE.addMessage("You descend deeper...");
     loadOrGenerateLevel();
     // Place player at stairs up on new level
@@ -560,10 +576,23 @@ void GameActivity::monsterAttackPlayer(game::Monster& m) {
   if (p.hp == 0) {
     snprintf(msgBuf, sizeof(msgBuf), "The %s kills you!", def.name);
     GAME_STATE.addMessage(msgBuf);
+
+    game::GameEvent deathEvent{};
+    deathEvent.type = game::GameEventType::PlayerDied;
+    deathEvent.monsterMaxHp = def.baseHp;
+    deathEvent.monsterAttack = def.attack;
+    ACHIEVEMENTS.emit(deathEvent);
   } else {
     snprintf(msgBuf, sizeof(msgBuf), "The %s hits you for %d.", def.name, damage);
     GAME_STATE.addMessage(msgBuf);
   }
+
+  game::GameEvent damageEvent{};
+  damageEvent.type = game::GameEventType::PlayerDamaged;
+  damageEvent.damage = static_cast<uint16_t>(damage);
+  damageEvent.hpAfter = p.hp;
+  damageEvent.maxHp = p.maxHp;
+  ACHIEVEMENTS.emit(damageEvent);
 }
 
 // --- Level Up ---
@@ -573,6 +602,11 @@ void GameActivity::checkLevelUp() {
 
   while (p.charLevel < 50 && p.experience >= game::xpForLevel(p.charLevel + 1)) {
     p.charLevel++;
+
+    game::GameEvent levelEvent{};
+    levelEvent.type = game::GameEventType::LevelUp;
+    levelEvent.newLevel = p.charLevel;
+    ACHIEVEMENTS.emit(levelEvent);
 
     // Stat gains
     uint16_t hpGain = 4 + p.constitution / 4;

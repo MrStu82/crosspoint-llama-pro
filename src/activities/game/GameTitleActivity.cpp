@@ -2,6 +2,8 @@
 
 #include <GfxRenderer.h>
 
+#include <cmath>
+
 #include "GameActivity.h"
 #include "MappedInputManager.h"
 #include "fontIds.h"
@@ -51,6 +53,42 @@ void drawWord(GfxRenderer& renderer, const LetterEntry* letters, int count, int 
   }
 }
 
+// Converts a baseline y (Pixel's spec convention) to the top-edge y drawText/drawCenteredText
+// expect — GfxRenderer.cpp:569 adds the font's ascender to the y passed in before using it as
+// the glyph baseline, so passing a baseline straight through double-applies the ascent.
+int baselineToTopY(const GfxRenderer& renderer, int fontId, int baselineY) {
+  return baselineY - renderer.getFontAscenderSize(fontId);
+}
+
+// Corner tick plus-mark: two crossing strokes centered on (cx, cy), each arm reaching
+// armSpan px out from center in both directions.
+void drawCornerTick(GfxRenderer& renderer, int cx, int cy, int armSpan, int strokeWidth) {
+  renderer.drawLine(cx - armSpan, cy, cx + armSpan, cy, strokeWidth, true);
+  renderer.drawLine(cx, cy - armSpan, cx, cy + armSpan, strokeWidth, true);
+}
+
+// Full circle outline built from 4 quadrant arcs (GfxRenderer::drawArc only draws one
+// quadrant per call, selected by xDir/yDir in {-1,1}).
+void drawCircleOutline(GfxRenderer& renderer, int radius, int cx, int cy, int strokeWidth) {
+  renderer.drawArc(radius, cx, cy, 1, 1, strokeWidth, true);
+  renderer.drawArc(radius, cx, cy, 1, -1, strokeWidth, true);
+  renderer.drawArc(radius, cx, cy, -1, 1, strokeWidth, true);
+  renderer.drawArc(radius, cx, cy, -1, -1, strokeWidth, true);
+}
+
+// 24 radial ticks around (cx, cy) every 15 degrees, each running from rInner to rOuter.
+void drawTickRing(GfxRenderer& renderer, int cx, int cy, int rInner, int rOuter, int strokeWidth) {
+  constexpr int kTickCount = 24;
+  for (int i = 0; i < kTickCount; i++) {
+    const float angle = static_cast<float>(i) * (static_cast<float>(M_PI) / 12.0f);  // i * 15 deg
+    const int x1 = cx + static_cast<int>(std::lround(std::cos(angle) * rInner));
+    const int y1 = cy + static_cast<int>(std::lround(std::sin(angle) * rInner));
+    const int x2 = cx + static_cast<int>(std::lround(std::cos(angle) * rOuter));
+    const int y2 = cy + static_cast<int>(std::lround(std::sin(angle) * rOuter));
+    renderer.drawLine(x1, y1, x2, y2, strokeWidth, true);
+  }
+}
+
 }  // namespace
 
 // --- Lifecycle ---
@@ -83,55 +121,79 @@ void GameTitleActivity::loop() {
 
 void GameTitleActivity::render(RenderLock&&) {
   const auto pageWidth = renderer.getScreenWidth();
-  const auto pageHeight = renderer.getScreenHeight();
   const int centerX = pageWidth / 2;
+
+  // Font substitutions: this codebase has no mono, condensed, 15px, or 38px font asset
+  // (confirmed against src/fontIds.h and lib/EpdFont/builtinFonts/) — Pixel's spec calls for
+  // all four. Nearest available stand-ins, flagged back to her:
+  //   mono bold 15px  (HUD blocks, items 3 & 8) -> UI_12_FONT_ID, BOLD
+  //   mono bold 12px  (cert line, item 7)       -> UI_12_FONT_ID, BOLD (exact size match)
+  //   mono regular 16px (tap prompt, item 9)    -> NOTOSANS_16_FONT_ID, REGULAR
+  //   mono regular 10px (attribution, item 10)  -> UI_10_FONT_ID, REGULAR
+  //   bold condensed sans 38px (wordmark, item 6) -> font-independent pixel block letters
+  //     (drawWord/drawBlockLetter below), not a font call at all.
+  constexpr int kHudFontId = UI_12_FONT_ID;
+  constexpr int kCertFontId = UI_12_FONT_ID;
+  constexpr int kTapFontId = NOTOSANS_16_FONT_ID;
+  constexpr int kAttributionFontId = UI_10_FONT_ID;
 
   // White background (default)
   renderer.clearScreen();
 
-  // Draw a decorative double border
-  renderer.drawRect(10, 10, pageWidth - 20, pageHeight - 20);
-  renderer.drawRect(13, 13, pageWidth - 26, pageHeight - 26);
+  // 1. Safe-area frame
+  renderer.drawRect(20, 20, 440, 760, 3, true);
 
-  // Flavor text
-  renderer.drawCenteredText(UI_10_FONT_ID, 40, "A roguelike for the CrossPoint Reader");
+  // 2. Corner ticks (plus-marks, 17px arm span, 4px stroke)
+  drawCornerTick(renderer, 20, 20, 17, 4);
+  drawCornerTick(renderer, 460, 20, 17, 4);
+  drawCornerTick(renderer, 20, 780, 17, 4);
+  drawCornerTick(renderer, 460, 780, 17, 4);
 
-  // Separator line
-  renderer.drawLine(40, 70, pageWidth - 40, 70);
+  // 3. Top HUD block (mono bold 15px stand-in, left-aligned x=40)
+  renderer.drawText(kHudFontId, 40, baselineToTopY(renderer, kHudFontId, 100), "FLOOR ---- 01", true,
+                     EpdFontFamily::BOLD);
+  renderer.drawText(kHudFontId, 40, baselineToTopY(renderer, kHudFontId, 124), "STATUS --- DESCENDING", true,
+                     EpdFontFamily::BOLD);
+  renderer.drawText(kHudFontId, 40, baselineToTopY(renderer, kHudFontId, 148), "AUDIENCE - 4.2M", true,
+                     EpdFontFamily::BOLD);
 
-  // Block letter title: "WORLD"
-  constexpr int SCALE = 8;
+  // 4. Broadcast seal (two concentric circles, center 240,420)
+  drawCircleOutline(renderer, 110, 240, 420, 3);
+  drawCircleOutline(renderer, 130, 240, 420, 3);
+
+  // 5. Tick ring (24 ticks every 15 degrees, r=124 to r=144)
+  drawTickRing(renderer, 240, 420, 124, 144, 3);
+
+  // 6. Wordmark stamp: white-clear rect, outer/inner outline, block-letter text
+  renderer.fillRect(20, 365, 440, 110, false);
+  renderer.drawRect(40, 381, 400, 78, 3, true);
+  renderer.drawRect(48, 388, 385, 64, 2, true);
+  constexpr int kWordmarkScale = 5;
   const LetterEntry world[] = {{GLYPH_LETTER_W}, {GLYPH_O}, {GLYPH_R}, {GLYPH_L}, {GLYPH_D}};
-  drawWord(renderer, world, 5, centerX, 90, SCALE);
-
-  // Block letter title: "DUNGEON"
+  drawWord(renderer, world, 5, centerX, 400, kWordmarkScale);
   const LetterEntry dungeon[] = {{GLYPH_D}, {GLYPH_U}, {GLYPH_N}, {GLYPH_G}, {GLYPH_E}, {GLYPH_O}, {GLYPH_N}};
-  drawWord(renderer, dungeon, 7, centerX, 160, SCALE);
+  drawWord(renderer, dungeon, 7, centerX, 435, kWordmarkScale);
 
-  // Separator line
-  renderer.drawLine(40, 230, pageWidth - 40, 230);
+  // 7. Certification line (mono bold 12px stand-in)
+  renderer.drawCenteredText(kCertFontId, baselineToTopY(renderer, kCertFontId, 494), "LETHALITY UNRATED", true,
+                             EpdFontFamily::BOLD);
 
-  // Subtitle
-  renderer.drawCenteredText(UI_10_FONT_ID, 250, "W O R L D    D U N G E O N", true, EpdFontFamily::BOLD);
+  // 8. Bottom HUD block (mono bold 15px stand-in)
+  // LIVE status-light bullet, center (45,605) r=5 -> bounding box (40,600) 10x10, fully rounded
+  renderer.fillRoundedRect(40, 600, 10, 10, 5, Color::Black);
+  renderer.drawText(kHudFontId, 58, baselineToTopY(renderer, kHudFontId, 610), "SIGNAL --- LIVE", true,
+                     EpdFontFamily::BOLD);
+  renderer.drawText(kHudFontId, 52, baselineToTopY(renderer, kHudFontId, 634), "EXIT ------ DENIED", true,
+                     EpdFontFamily::BOLD);
+  renderer.drawText(kHudFontId, 52, baselineToTopY(renderer, kHudFontId, 658), "SPONSOR --- UNKNOWN", true,
+                     EpdFontFamily::BOLD);
 
-  // Decorative pickaxe symbol
-  renderer.drawCenteredText(UI_10_FONT_ID, 290, "--- * ---");
+  // 9. Tap prompt (mono regular 16px stand-in)
+  renderer.drawCenteredText(kTapFontId, baselineToTopY(renderer, kTapFontId, 740), "[ tap anywhere to continue ]");
 
-  // Version
-  renderer.drawCenteredText(UI_10_FONT_ID, 340, "v0.1.0");
-
-  // Credits
-  renderer.drawCenteredText(SMALL_FONT_ID, 400, "Inspired by Moria & Angband");
-
-  // Separator
-  renderer.drawLine(40, 460, pageWidth - 40, 460);
-
-  // Goal hint
-  renderer.drawCenteredText(SMALL_FONT_ID, 500, "Descend 26 levels. Defeat the Necromancer.");
-  renderer.drawCenteredText(SMALL_FONT_ID, 525, "Claim the Ring of Power.");
-
-  // Press any key prompt
-  renderer.drawCenteredText(UI_10_FONT_ID, 740, "[ tap anywhere to continue ]");
+  // 10. Attribution (mono regular 10px stand-in)
+  renderer.drawCenteredText(kAttributionFontId, baselineToTopY(renderer, kAttributionFontId, 756),
+                             "Inspired by Moria & Angband");
 
   renderer.displayBuffer();
   rendered = true;

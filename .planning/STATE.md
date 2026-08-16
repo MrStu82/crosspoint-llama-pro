@@ -3,10 +3,10 @@ gsd_state_version: '1.0'
 status: in_progress
 progress:
   total_phases: 12
-  completed_phases: 9
-  total_plans: 4
-  completed_plans: 4
-  percent: 75
+  completed_phases: 10
+  total_plans: 5
+  completed_plans: 5
+  percent: 83
 ---
 
 # Project State
@@ -16,14 +16,15 @@ progress:
 See: .planning/PROJECT.md (updated 2026-08-15)
 
 **Core value:** Every screen renders correctly and fully on-panel on the X4 Pro, with no clipped/overflowing content and no touch targets crowded against the bezel.
-**Current focus:** Milestone 3 (Phases 7-12, World Dungeon). Phases 7 (Correctness), 8 (Reclaim the frame / dirty-rect rendering), and 9 (Voice — DCC flavour/achievements) are closed. Phase 10 (throw mechanic + Percussive Maintenance achievement) is opening on branch `phase-7-world-dungeon-correctness`, dispatched directly by parent (msgs 3748/3750/3752, 2026-08-15) with standing authorization to proceed through implementation without further check-in. **Delivery plan (parent msg 3650, direct from Stuart): no interim on-glass flashes — build straight through Phases 9, 10, 11 with host-only machine-verified gates per phase, ship parent exactly one final image when Phase 12 closes.** Milestone 1 (Phases 1-4) and Milestone 2 (Phases 5-6, Tamagotchi overhaul) are prior, separately-shipped work — see their sections below for history, not current activity.
+**Current focus:** Milestone 3 (Phases 7-12, World Dungeon). Phases 7 (Correctness), 8 (Reclaim the frame / dirty-rect rendering), 9 (Voice — DCC flavour/achievements), and 10 (Decisions — throw mechanic + Percussive Maintenance) are closed. Phase 11 (The Show — loot boxes, *Sponsored Content*) is opening on branch `phase-7-world-dungeon-correctness`, per parent's explicit "then Phase 11... Go" (msg 3756, 2026-08-16), with standing authorization to proceed through implementation without further check-in. **Delivery plan (parent msg 3650, direct from Stuart): no interim on-glass flashes — build straight through Phases 9, 10, 11 with host-only machine-verified gates per phase, ship parent exactly one final image when Phase 12 closes.** Milestone 1 (Phases 1-4) and Milestone 2 (Phases 5-6, Tamagotchi overhaul) are prior, separately-shipped work — see their sections below for history, not current activity.
 
 ## Current Position
 
-Phase: 10 of 12 — opening (Milestone 3)
-Plan: no formal 10-01 plan doc yet, but Phase 10's goal/work-items/requirements/gate are now drafted in ROADMAP.md (2026-08-15) off Explore-agent codebase reconnaissance (input dispatch in `GameActivity.cpp`, `AchievementBus`/`GameEventType` event system, `Item`/`ItemFlag` inventory model, melee damage-calc precedent — confirmed no existing projectile/ranged/thrown system anywhere in the codebase). 5 work items: `bool throwable` field on `ItemDef` (corrected 2026-08-15 from an earlier `ItemFlag::Throwable` bit-flag idea — throwability is a property of an item's definition/type, not a per-instance runtime flag, so it belongs on `ItemDef`), directional throw-target input reusing the existing 4-dir input (no new cursor system, matches turn-based model), dexterity-based throw damage formula distinct from melee's strength-based one, new `GameEventType::ItemThrown`, new `AchievementId::PercussiveMaintenance` (index 8, bumps Count to 9) firing on thrown-kill. Rendering stays impact-only, no flight animation — codebase has no animation loop and adding one is out of scope.
-Status: **Phase 9 is fully closed** — work items 1-5 all landed (`c0d1525`, `6964d1f`, `a1d8f6e`, `259c556`), host gate evidence package delivered and PROJECT.md closure recorded in `071e65b`. This file (STATE.md) had drifted stale relative to that closure (still showing work items 3-5 as "not yet started") — corrected 2026-08-15 per the standing lesson below (line 97) after a git-log cross-check confirmed full completion, not by assumption.
+Phase: 11 of 12 — opening (Milestone 3)
+Plan: Phase 10 closed 2026-08-16 — throw mechanic (`bool throwable` on `ItemDef`, directional throw-target input, dexterity-based damage curve, `GameEventType::ItemThrown`, `AchievementId::PercussiveMaintenance`) landed in one commit-set (`b1b4f1e2`), build green (Trantor `x4pro`, 59.91s), all 5 requirements proven PASS on host — see `.planning/evidence/phase10-gate.md`. Phase 11 (loot boxes, Sponsored Content) not yet scoped — no reconnaissance or work-item draft done yet.
+Status: **Phase 10 is fully closed.** Requirement 1 (throwable/non-throwable correctness) proven by `ITEM_DEFS[]` inspection. Requirement 2 (damage curve distinct from melee) proven by a 462-case host simulation (442 non-coincidental mismatches, confirmed distinct example + variance-width check). Requirement 3 (stack-aware consumption) proven by a 13-assertion host simulation mirroring `handleThrow()`'s consumption block verbatim. Requirement 4 (PercussiveMaintenance fire/no-fire matrix) proven via the `ach_test/` harness extended with a new scenario — 58/58 total assertions PASS, including catching and fixing two pre-existing stale Phase-9-era assertions (hardcoded `AchievementId::Count == 8`, now 9) unrelated to this phase's own correctness. Requirement 5 (no dirty-rect regression) proven by source inspection — `handleThrow()` reuses the existing single-`requestUpdate()`-per-handler pattern and the same bounded `showNotification()`/`FrameDirtyPlanner` mechanism as every other handler, no new redraw path. Full evidence in `.planning/evidence/phase10-gate.md`.
 Also landed this session, off the game_title_render cert-line fix thread (not a Phase 9/10 work item, but same branch/session): `9eb56a0` (cert-line UI_10 fix, both wordmark-border and tick-ring collisions resolved, parent + Pixel signed off) and `4718cab` (host-render-harness README, build recipe verified from a genuine clean-room rebuild, catching 3 real recipe bugs before documenting).
+Open judgment call flagged for parent, not yet resolved: `handleThrow()`'s kill branch emits only `ItemThrown` (per parent's literal instruction), not also `MonsterKilled` — so a thrown kill cannot trigger the pre-existing `EscalationOfForce` overkill achievement. Deliberate reading of the instruction as given, surfaced in case that's not the intended scope.
 
 ### Milestone 1/2 history (prior, not current focus)
 

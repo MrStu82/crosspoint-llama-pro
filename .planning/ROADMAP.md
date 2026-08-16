@@ -131,8 +131,8 @@ Plans:
 | 6. Tamagotchi overhaul (#322096 Phase 2) | 0/? | Not started | - |
 | 7. World Dungeon: Correctness | 1/1 | Complete | 2026-08-15 |
 | 8. World Dungeon: Reclaim the frame | 1/1 | Complete | 2026-08-15 |
-| 9. World Dungeon: Voice | 0/1 | In progress | - |
-| 10. World Dungeon: Decisions | 0/? | Not started | - |
+| 9. World Dungeon: Voice | 1/1 | Complete | 2026-08-15 |
+| 10. World Dungeon: Decisions | 1/1 | Complete | 2026-08-16 |
 | 11. World Dungeon: The Show | 0/? | Not started | - |
 | 12. World Dungeon: The Co-star | 0/? | Not started | - |
 
@@ -198,11 +198,11 @@ Plans:
   4. `PercussiveMaintenance` fires exactly once on the first thrown-item kill and never fires on a thrown miss, a thrown non-kill hit, or a melee kill — proven fire/no-fire both directions, matching the Phase 7/9 proof pattern.
   5. Throw resolution stays inside the existing turn-based dirty-rect render model — no new animation loop, no full-flash regression — proven via the Phase 8 `FrameDirtyPlanner` instrument, same technique as Phase 9 requirement 4.
 **Gate**: HOST ONLY — grep proof, damage-curve simulation, inventory-count assertions, unlock/no-unlock matrix, dirty-rect instrument report. No glass gate this phase, per the standing delivery-plan.
-**Status**: Opening 2026-08-15. Plan doc not yet written — drafting 10-01 next.
-**Plans**: TBD
+**Status**: Closed 2026-08-16. All 5 work items landed in one commit-set (`b1b4f1e2`), build green (Trantor `x4pro`, 59.91s), all 5 requirements proven PASS, host gate evidence recorded in `.planning/evidence/phase10-gate.md`.
+**Plans**: n/a — worked directly off the dispatched spec (parent msgs 3748/3750/3752/3756), no formal plan doc written.
 
 Plans:
-- [ ] 10-01: TBD
+- [x] 10-01: Throw mechanic + PercussiveMaintenance — closed, see evidence/phase10-gate.md.
 
 ### Phases 11-12: World Dungeon — The Show / The Co-star
 Requirements TBD, pulled from the plan doc as each phase opens. **Flash cadence (revised 2026-08-15, supersedes the old 9+10/11+12 pairing): no interim images at all — one final flash to Stuart when Phase 12 closes.** Every phase gate stays host-machine-verified evidence to parent, same rigor as before; there is no glass gate again until the very last phase closes.

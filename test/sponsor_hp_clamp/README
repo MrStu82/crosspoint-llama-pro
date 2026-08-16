@@ -1,0 +1,127 @@
+Host-side regression harness for the HP-over-cap bug flagged in review at
+commit ad370e9: a +maxHp sponsor from the previous floor could leave hp
+above the new floor's effective cap once that sponsor rolled off, letting
+the HUD show e.g. "HP: 22 / 20". Not a gtest suite (see test/README for
+those) -- this compiles the REAL, unmodified GameActivity.cpp (specifically
+its private loadOrGenerateLevel(), exercised only through the real public
+onEnter() entry point) against the REAL GfxRenderer/EpdFont/DungeonGenerator/
+GameState/GameSave/AchievementBus/FlavorText pipeline, so the clamp is
+proven against shipped code, not a transcription of it.
+
+Same standalone-g++, symlinked-mirror-with-shadow-headers technique as
+test/game_title_render/ -- see that README's "Why mirror/ exists" section
+for the general explanation. This harness needed two additional shadow
+headers beyond that precedent (test/sponsor_hp_clamp/stubs/
+MappedInputManager.h, test/sponsor_hp_clamp/stubs_settings/
+CrossPointSettings.h) because GameActivity.cpp pulls in a wider dependency
+surface than GameTitleActivity.cpp did -- see the comment at the top of each
+stub for exactly why the real header wasn't usable and why the stub is
+correct rather than a workaround-in-hiding.
+
+## Why loadOrGenerateLevel() is reachable at all
+
+It's private. It's called unconditionally, exactly once, from the real
+public GameActivity::onEnter() (GameActivity.cpp:98-114) -- the only public
+entry point that reaches it. Real gameplay floor transitions instead go
+through render()'s StairsDown/StairsUp branches, which would require
+simulating RenderLock/movement and isn't worth it here: the harness instead
+runs many independent trials, each via GAME_STATE.newGame() + a fresh
+GameActivity + onEnter(), and inspects whatever sponsor onEnter() actually
+rolled and whether hp survived clamped.
+
+## Build
+
+  INCLUDES="-include Arduino.h \
+    -I test/sponsor_hp_clamp/stubs_settings \
+    -I test/sponsor_hp_clamp/stubs \
+    -I test/sponsor_hp_clamp/mirror/src \
+    -I test/sponsor_hp_clamp/mirror/src/activities \
+    -I test/sponsor_hp_clamp/mirror/src/activities/game \
+    -I src -I src/game \
+    -I lib/EpdFont/builtinFonts -I lib/EpdFont -I lib/Epub -I lib/FsHelpers \
+    -I lib/GfxRenderer -I lib/I18n -I lib/InflateReader -I lib/JpegToBmpConverter \
+    -I lib/JsonParser -I lib/KOReaderSync -I lib/Logging -I lib/Memory \
+    -I lib/MiniBidi -I lib/OpdsParser -I lib/Serialization -I lib/Txt -I lib/Utf8 \
+    -I lib/XmlParserUtils -I lib/Xtc -I lib/ZipFile -I lib/expat -I lib/hal \
+    -I lib/miniz -I lib/uzlib -I lib/uzlib/src \
+    -I /home/skippy/build/crosspoint-llama-pro/.pio/libdeps/x4pro/ArduinoJson/src"
+
+Two real prerequisites, not stubs -- run once if missing:
+  - I18n codegen (needed by GameRenderer.cpp's #include "I18nKeys.h"):
+      python3 scripts/gen_i18n.py
+  - ArduinoJson (real vendored dep per platformio.ini:99, reused from the
+    old non-git ~/build/crosspoint-llama-pro/.pio/libdeps/x4pro cache --
+    not re-vendored, not faked).
+
+  mkdir -p /tmp/objs2
+  for src in \
+      test/sponsor_hp_clamp/SponsorHpClampHarness.cpp \
+      test/sponsor_hp_clamp/mirror/src/activities/game/GameActivity.cpp \
+      test/sponsor_hp_clamp/mirror/src/activities/Activity.cpp \
+      src/game/AchievementBus.cpp \
+      src/game/DungeonGenerator.cpp \
+      src/game/FlavorText.cpp \
+      src/game/GameRenderer.cpp \
+      src/game/GameSave.cpp \
+      src/game/GameSprites.cpp \
+      src/game/GameState.cpp \
+      lib/GfxRenderer/GfxRenderer.cpp \
+      lib/GfxRenderer/Bitmap.cpp \
+      lib/GfxRenderer/BitmapHelpers.cpp \
+      lib/GfxRenderer/FontCacheManager.cpp \
+      lib/EpdFont/EpdFont.cpp \
+      lib/EpdFont/EpdFontFamily.cpp \
+      lib/EpdFont/FontDecompressor.cpp \
+      lib/EpdFont/SdCardFont.cpp \
+      lib/InflateReader/InflateReader.cpp \
+      lib/Utf8/Utf8.cpp \
+      lib/MiniBidi/BidiUtils.cpp \
+      lib/Memory/BuildScratch.cpp \
+      lib/I18n/I18n.cpp \
+      lib/I18n/I18nStrings.cpp \
+      ; do
+    obj=/tmp/objs2/$(basename "${src%.*}" | tr 'A-Z' 'a-z').o
+    g++ -std=c++20 -O2 -Wall -Wextra $INCLUDES -c "$src" -o "$obj"
+  done
+
+  # Plain C, not C++ -- same reasons as test/game_title_render/README:
+  gcc -O2 -I test/game_title_render/stubs -I lib/uzlib -I lib/uzlib/src \
+    -c lib/uzlib/src/tinflate.c -o /tmp/objs2/tinflate.o
+  gcc -O2 -I test/game_title_render/stubs -I lib/uzlib -I lib/uzlib/src \
+    -c test/game_title_render/stubs/uzlib_checksum_stub.c -o /tmp/objs2/uzlib_checksum_stub.o
+  gcc -O2 -I lib/MiniBidi -c lib/MiniBidi/minibidi.c -o /tmp/objs2/minibidi.o
+
+  g++ /tmp/objs2/*.o -o /tmp/sponsor_hp_clamp_harness
+
+## Run
+
+  /tmp/sponsor_hp_clamp_harness
+
+Prints one summary line ("[sponsor-hp-clamp] N trials ... M/N rolled a
+different sponsor, K clamp violations (worst overage X hp)") plus
+"ALL CHECKS PASSED" or "K CHECK(S) FAILED", exit code 0/1.
+
+## Shadow headers used, and exactly why each is scoped-safe
+
+- stubs/MappedInputManager.h: GameActivity.cpp's own calls (wasReleased,
+  wasScreenTapped) are never reached by the onEnter()-only call path, but
+  GameRenderer.h references MappedInputManager::Button/SwipeDir/etc. in
+  unused method signatures, so the full real type surface must exist even
+  though nothing calls it. All bodies are inert no-ops.
+- stubs_settings/CrossPointSettings.h: only referenced from
+  GameRenderer::draw() (SETTINGS.gameTheme, SETTINGS.getRefreshFrequency()),
+  never called by this harness since it never invokes render()/draw(). Real
+  CrossPointSettings pulls in a hardware-coupled BoardConfig.h chain
+  (freeink-sdk symlink) inappropriate for a host harness -- unlike
+  ArduinoJson, which is a genuine reusable dependency and is NOT stubbed.
+- mirror/src/activities/game/GameMenuActivity.h: same pattern, pre-existing
+  from before this harness -- GameActivity holds one as a sibling activity
+  but this harness's onEnter()-only path never transitions into it.
+
+## Why mirror/ exists
+
+Same as test/game_title_render/README: mirror/src/... are symlinks back to
+the real src/... tree, not copies, so GameActivity.cpp and Activity.cpp
+compile byte-identical to shipped source. Only the two headers above are
+real shadow stubs, both justified above by call-path analysis, not
+convenience.

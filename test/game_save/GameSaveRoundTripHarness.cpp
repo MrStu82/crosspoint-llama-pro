@@ -236,6 +236,53 @@ void testOldSaveNullptrCompatPath(const std::string& sdRoot) {
               okA, sentinelIntact);
 }
 
+// --- Req: top-level SAVE_FILE_VERSION v3 file is cleanly REJECTED by the ------
+// --- current v4 loader, not misread as a v4 struct -----------------------
+//
+// This targets GameState.cpp's top-level SAVE_FILE_VERSION (currently 4), which
+// is distinct from GameSave.cpp's per-floor LEVEL_FILE_VERSION already covered
+// by testOldSaveNullptrCompatPath() above. Hand-crafts a file with version byte
+// 3 followed by a Player-sized block of poison bytes (0xAA), matching the exact
+// on-disk shape saveToFile() would have produced under a hypothetical v3 (a
+// version byte + raw POD Player struct), then loads it through the REAL,
+// current loadFromFile(). Proves: (a) load is refused (returns false), and
+// (b) the live in-memory player is NOT corrupted by the rejected read -- the
+// version check must reject before the raw-POD Player read, not after.
+void testV3SaveRejectedByV4Loader(const std::string& sdRoot) {
+  std::string dir = sdRoot + "/.crosspoint/game";
+  std::string cmd = "mkdir -p '" + dir + "'";
+  system(cmd.c_str());
+  std::string path = dir + "/save.bin";
+
+  FILE* f = fopen(path.c_str(), "wb");
+  uint8_t version = 3;
+  fwrite(&version, sizeof(version), 1, f);
+  std::vector<uint8_t> poison(sizeof(game::Player), 0xAA);
+  fwrite(poison.data(), 1, poison.size(), f);
+  // A trailing inventoryCount byte a real v4 file would also expect next --
+  // deliberately poisoned too, so if the version check is somehow bypassed
+  // the read would visibly misbehave rather than accidentally look sane.
+  uint8_t inventoryCount = 0xAA;
+  fwrite(&inventoryCount, sizeof(inventoryCount), 1, f);
+  fclose(f);
+
+  // Prime known-good in-memory state via a real newGame() first, so any
+  // corruption from the rejected load attempt is directly observable.
+  GAME_STATE.newGame(0x1234);
+  uint32_t knownHp = GAME_STATE.player.hp;
+  uint32_t knownDepth = GAME_STATE.player.dungeonDepth;
+
+  bool loaded = GAME_STATE.loadFromFile();
+  CHECK(!loaded, "loadFromFile() returned true for a v3 file against a v4 loader -- should reject");
+  CHECK(GAME_STATE.player.hp == knownHp, "in-memory hp corrupted by a rejected v3 load: got %u, expected %u (pre-load newGame value)",
+        GAME_STATE.player.hp, knownHp);
+  CHECK(GAME_STATE.player.dungeonDepth == knownDepth, "in-memory dungeonDepth corrupted by a rejected v3 load: got %u, expected %u",
+        GAME_STATE.player.dungeonDepth, knownDepth);
+
+  std::printf("[save-compat] hand-crafted v3 save file (version byte + poisoned Player bytes) against real v4 "
+              "loadFromFile(): loaded=%d (expected 0), in-memory state left intact after rejection\n", loaded);
+}
+
 }  // namespace
 
 int main() {
@@ -246,6 +293,7 @@ int main() {
   testCombatRngSurvivesSaveReload();
   testDoorOpenBitmapRoundTrips();
   testOldSaveNullptrCompatPath(sdRoot);
+  testV3SaveRejectedByV4Loader(sdRoot);
 
   if (failures == 0) {
     std::printf("ALL CHECKS PASSED\n");

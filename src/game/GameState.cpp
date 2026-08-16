@@ -10,8 +10,9 @@
 #include "FlavorText.h"
 
 namespace {
-constexpr uint8_t SAVE_FILE_VERSION = 2;  // v2: turnCount widened to uint32_t, added kills +
+constexpr uint8_t SAVE_FILE_VERSION = 3;  // v2: turnCount widened to uint32_t, added kills +
                                           // combatRngState to Player (Phase 7, one bump for all three)
+                                          // v3: added hunger to Player (Phase 11)
 constexpr char SAVE_DIR[] = "/.crosspoint/game";
 constexpr char SAVE_FILE[] = "/.crosspoint/game/save.bin";
 }  // namespace

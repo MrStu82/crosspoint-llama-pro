@@ -409,16 +409,21 @@ void GameMenuActivity::useInventoryItem(int index) {
       break;
 
     case game::ItemType::Food:
+      // Eating never costs a turn (this whole activity is turn-free), so it always fully
+      // relieves hunger instantly and safely -- see processMonsterTurns() for the tick this
+      // exists to counter, and the escapability guarantee that depends on this being turn-free.
       if (item.subtype == 0) {  // Rations
         uint16_t heal = 5;
         p.hp = std::min(static_cast<uint16_t>(p.hp + heal), p.maxHp);
-        snprintf(msgBuf, sizeof(msgBuf), "That hit the spot. (HP +%u)", heal);
+        p.hunger = 0;
+        snprintf(msgBuf, sizeof(msgBuf), "That hit the spot. (HP +%u, hunger sated)", heal);
         consumed = true;
       } else if (item.subtype == 1) {  // Nutrient Bar
         uint16_t heal = p.maxHp / 2;
         p.hp = std::min(static_cast<uint16_t>(p.hp + heal), p.maxHp);
         uint16_t mana = p.maxMp / 2;
         p.mp = std::min(static_cast<uint16_t>(p.mp + mana), p.maxMp);
+        p.hunger = 0;
         snprintf(msgBuf, sizeof(msgBuf), "The System ration restores you!");
         consumed = true;
       }

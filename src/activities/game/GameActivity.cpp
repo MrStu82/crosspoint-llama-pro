@@ -332,6 +332,19 @@ void GameActivity::handleMove(int dx, int dy) {
           itemCount++;
           GAME_STATE.addMessage("Something glints on the ground...");
         }
+        // Boss also drops the Master Key (Phase 11 work item 4) -- same trigger, separate slot.
+        if (monsters[i].type == game::BOSS_MONSTER_TYPE && itemCount < game::MAX_ITEMS_PER_LEVEL) {
+          auto& key = levelItems[itemCount];
+          key.x = monsters[i].x;
+          key.y = monsters[i].y;
+          key.type = game::ITEM_DEFS[game::MASTER_KEY_DEF].type;
+          key.subtype = game::ITEM_DEFS[game::MASTER_KEY_DEF].subtype;
+          key.count = 1;
+          key.enchantment = 0;
+          key.flags = 0;
+          itemCount++;
+          GAME_STATE.addMessage("The Adjudicator's key clatters to the floor. The System logs a chargeback.");
+        }
       } else {
         auto band = game::hitBandForDamage(static_cast<uint16_t>(damage), def.baseHp);
         const char* flavor = FLAVOR_TEXT.pick(band);
@@ -624,6 +637,20 @@ void GameActivity::handleThrow(game::Direction dir, int inventoryIndex) {
         itemCount++;
         GAME_STATE.addMessage("Something glints on the ground...");
       }
+      // Boss also drops the Master Key on a thrown kill -- same parity requirement as the
+      // Ring above (see the handleMove() kill branch, which this mirrors).
+      if (mon.type == game::BOSS_MONSTER_TYPE && itemCount < game::MAX_ITEMS_PER_LEVEL) {
+        auto& key = levelItems[itemCount];
+        key.x = mon.x;
+        key.y = mon.y;
+        key.type = game::ITEM_DEFS[game::MASTER_KEY_DEF].type;
+        key.subtype = game::ITEM_DEFS[game::MASTER_KEY_DEF].subtype;
+        key.count = 1;
+        key.enchantment = 0;
+        key.flags = 0;
+        itemCount++;
+        GAME_STATE.addMessage("The Adjudicator's key clatters to the floor. The System logs a chargeback.");
+      }
     } else {
       auto band = game::hitBandForDamage(static_cast<uint16_t>(damage), monDef.baseHp);
       const char* flavor = FLAVOR_TEXT.pick(band);
@@ -783,6 +810,24 @@ bool GameActivity::processMonsterTurns() {
   // MP regenerates a bit slower
   if (p.mp < p.maxMp && p.turnCount % (regenRate + 5) == 0) {
     p.mp++;
+  }
+
+  // Hunger clock (Phase 11): ticks every turn, fully relieved by eating (see
+  // GameMenuActivity's Food case) -- eating never costs a turn, so a player
+  // holding any food item can always zero this out before it kills them, even
+  // from the worst reachable state (max hunger, 1 hp).
+  if (p.hunger < game::HUNGER_MAX) {
+    p.hunger++;
+    if (p.hunger == game::HUNGER_HUNGRY_THRESHOLD) {
+      GAME_STATE.addMessage("Your stomach growls. The System suggests a snack (sold separately).");
+    } else if (p.hunger == game::HUNGER_STARVING_THRESHOLD) {
+      GAME_STATE.addMessage("You're starving. Find food, or the System will recoup its losses.");
+    }
+  } else if (p.hp > 0) {
+    uint16_t dmg = game::HUNGER_STARVE_DAMAGE;
+    p.hp = (dmg >= p.hp) ? 0 : static_cast<uint16_t>(p.hp - dmg);
+    GAME_STATE.addMessage("Hunger gnaws at you. Dead air doesn't rate well, but neither do you.");
+    if (p.hp == 0) return true;
   }
 
   return false;

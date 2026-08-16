@@ -5,6 +5,19 @@ Commit under gate: `b1b4f1e215fa171b2877a576184bae93f73ab931` (`GameActivity.cpp
 damage calc, item consumption, and `emit(ItemThrown)` landed together in one commit-set, per
 parent's explicit instruction).
 
+**Follow-up fix, closed under this same gate (parent msg 3758, ruling on the judgment call flagged
+below): commit `72eac4b4acb343cc5df016dbb82e70a3dcc4f762`.** Build: Trantor `x4pro`, SUCCESS,
+39.79s. Two changes: (1) `handleThrow()`'s kill branch now also emits `GameEventType::MonsterKilled`
+(populating `damage`/`monsterMaxHp`, mirroring `handleMove()`'s kill branch) so a thrown boss
+overkill unlocks `EscalationOfForce` the same as a melee kill does; (2) `AchievementBus`'s
+single-flag/pointer pending-unlock design (which could only surface ONE flavor text even when an
+`emit()` unlocked several at once — a pre-existing general defect, not throw-specific, already
+latent via `FloorChanged`'s triple-check and `LevelUp`'s double-check) replaced with a bounded FIFO
+queue (`MAX_PENDING_UNLOCKS=3`) drained via `consumeNewUnlockFlavor()`; `GameActivity` gained one
+choke-point helper (`showPendingAchievementNotifications()`) applied uniformly at all 6
+notification call sites (melee kill, floor change, item pickup, throw, player death, level up).
+See Requirement 4 below for the extended test evidence.
+
 Parent's ruling (msg 3756, already settled, no code change needed): Percussive Maintenance stays
 gated on `killedMonster` — "merely lobbing a potion at a wall isn't" the achievement, killing with
 a thrown object is.
@@ -151,6 +164,32 @@ version(1) + count(1) + 9 flags. Two pre-existing Phase-9-era hardcoded assertio
 proof — a harness staleness bug from before this phase, not a Phase 10 regression; the real
 on-disk serialization was already correct.
 
+**Extended per parent's msg 3758 ruling — new Scenario 14, thrown-overkill double-unlock:**
+`ItemThrown(killedMonster=true)` followed by `MonsterKilled(damage>=3x monsterMaxHp)` (mirroring
+`handleThrow()`'s real emit order) unlocks BOTH `PercussiveMaintenance` and `EscalationOfForce` in
+one turn, and `consumeNewUnlockFlavor()` surfaces both flavor texts in FIFO order (Percussive
+Maintenance first, Escalation of Force second) — proving the queue fix, not just the individual
+achievement predicates:
+
+```
+PASS: (scenario 14 setup) PercussiveMaintenance starts locked on fresh save slot
+PASS: (scenario 14 setup) EscalationOfForce starts locked on fresh save slot
+PASS: (scenario 14 setup) no pending unlocks before any event
+PASS: thrown-overkill: PercussiveMaintenance unlocks from the ItemThrown(killedMonster=true) emit
+PASS: thrown-overkill: EscalationOfForce ALSO unlocks from the new MonsterKilled(damage>=3x) emit
+PASS: thrown-overkill: pending-unlock queue is non-empty after two unlocks in one turn
+PASS: thrown-overkill: first queued flavor is PercussiveMaintenance (FIFO order, emitted first)
+PASS: thrown-overkill: queue still has a second pending unlock after consuming the first (this is the exact bug: previously the single-flag/pointer design would have already been overwritten/cleared here)
+PASS: thrown-overkill: second queued flavor is EscalationOfForce -- BOTH unlocks surfaced, neither silently swallowed
+PASS: thrown-overkill: queue is empty after draining both pending unlocks
+PASS: consumeNewUnlockFlavor() on an empty queue returns an empty string, not stale data
+```
+
+Full re-run including this new scenario: ALL PASS, 0 failures — the "whole 58" (now 68 assertions
+counting the new scenario) re-verified clean under the fix, per parent's explicit instruction that
+the two stale-assertion corrections above prove the harness can rot and must be re-run in full, not
+spot-checked.
+
 ## Requirement 5 — no dirty-rect/redraw regression
 
 `handleThrow()` (`GameActivity.cpp:517-645`) calls `requestUpdate()` exactly once, at the end of
@@ -181,8 +220,7 @@ on content — the same bounded `DirtyWindow` the frame planner already accounts
 
 All 5 requirements PASS. Phase 10 ("Decisions" — throw resolution) is closed.
 
-Open judgment call flagged for parent, not a defect: `handleThrow()`'s kill branch emits only
-`GameEventType::ItemThrown` (per parent's literal instruction), not also `MonsterKilled` — so a
-thrown kill can never trigger the pre-existing `EscalationOfForce` overkill achievement (gated on
-`MonsterKilled`). Deliberate reading of the instruction as given, surfaced for parent to weigh in
-on if that's not the intended scope.
+Judgment call flagged above was resolved by parent (msg 3758): "emit `MonsterKilled` as well...
+Populate `damage` and `monsterMaxHp` on it, same as the `handleMove()` kill branch." Implemented
+and re-gated in commit `72eac4b4acb343cc5df016dbb82e70a3dcc4f762` — see the follow-up note at the
+top of this document and the extended Requirement 4 evidence above. No open items remain.

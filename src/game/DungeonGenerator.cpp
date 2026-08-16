@@ -328,7 +328,10 @@ uint8_t placeMonsters(Tile* tiles, Monster* monsters, Rng& rng, uint8_t depth) {
 
 static_assert(game::RING_OF_POWER_DEF == game::ITEM_DEF_COUNT - 1,
               "placeItems() assumes the Ring of Power is the last ITEM_DEFS entry to exclude it "
-              "from the random roll via ITEM_DEF_COUNT - 1");
+              "from the random roll via ITEM_DEF_COUNT - 2");
+static_assert(game::MASTER_KEY_DEF == game::ITEM_DEF_COUNT - 2,
+              "placeItems() assumes the Master Key is the second-to-last ITEM_DEFS entry so both "
+              "quest items are excluded together via ITEM_DEF_COUNT - 2");
 
 uint8_t placeItems(Tile* tiles, Item* items, Rng& rng, uint8_t depth) {
   int count = std::min(2 + static_cast<int>(depth), static_cast<int>(game::MAX_ITEMS_PER_LEVEL));
@@ -338,9 +341,10 @@ uint8_t placeItems(Tile* tiles, Item* items, Rng& rng, uint8_t depth) {
     int16_t ix, iy;
     if (!findRandomFloor(tiles, rng, ix, iy)) continue;
 
-    // Pick a random item type. Excludes RING_OF_POWER_DEF (the quest item, always the last
-    // entry) — it's only ever placed as the boss's death drop, never random floor loot.
-    uint8_t defIdx = static_cast<uint8_t>(rng.nextRange(game::ITEM_DEF_COUNT - 1));
+    // Pick a random item type. Excludes RING_OF_POWER_DEF and MASTER_KEY_DEF (the two quest
+    // items, always the last two entries) — both are only ever placed as the boss's death drop,
+    // never random floor loot.
+    uint8_t defIdx = static_cast<uint8_t>(rng.nextRange(game::ITEM_DEF_COUNT - 2));
     const auto& def = game::ITEM_DEFS[defIdx];
 
     Item& item = items[placed];

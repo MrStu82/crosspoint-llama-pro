@@ -16,6 +16,19 @@ constexpr int MAX_INVENTORY = 20;
 constexpr int MAX_MESSAGES = 10;
 constexpr int MAX_DEPTH = 26;
 
+// --- Hunger clock (Phase 11) ---
+// Increments by 1 every player turn (see processMonsterTurns()). Fully relieved
+// (reset to 0) by eating any Food item -- item use never advances turnCount, so
+// eating is always instant and safe regardless of current hp/hunger, guaranteeing
+// escapability from the worst reachable state as long as one food item exists.
+constexpr uint16_t HUNGER_MAX = 500;
+constexpr uint16_t HUNGER_HUNGRY_THRESHOLD = 300;
+constexpr uint16_t HUNGER_STARVING_THRESHOLD = 450;
+// Applied every turn once hunger has capped at HUNGER_MAX -- exceeds the fastest
+// possible natural regen (1 hp per >=5 turns), so starvation is always a strictly
+// net loss and death is bounded at HUNGER_MAX + ceil(maxHp / this) turns with zero food.
+constexpr uint16_t HUNGER_STARVE_DAMAGE = 2;
+
 // --- Enums ---
 
 enum class Tile : uint8_t {
@@ -78,6 +91,10 @@ struct Player {
   // run start, advanced (never reseeded) by every combat/AI roll, serialised with the save so a
   // reloaded run continues the exact same stream instead of restarting it.
   uint32_t combatRngState = 1;
+  // Hunger clock (Phase 11). 0 = fully fed, HUNGER_MAX = starving (takes damage
+  // every turn). See processMonsterTurns() for the tick and GameMenuActivity's
+  // Food case for the reset-on-eat.
+  uint16_t hunger = 0;
 };
 
 struct Monster {
@@ -179,11 +196,14 @@ inline constexpr ItemDef ITEM_DEFS[] = {
     {"Nutrient Bar", '%', static_cast<uint8_t>(ItemType::Food), 1, 30, 0, 0, false},
     // Gold
     {"Gold Coins", '$', static_cast<uint8_t>(ItemType::Gold), 0, 1, 0, 0, false},
+    // Quest item — dropped by The Adjudicator on floor 26 (Phase 11 work item 4)
+    {"Master Key", '"', static_cast<uint8_t>(ItemType::Amulet), 0, 500, 0, 0, false},
     // Quest item — dropped by The Adjudicator
     {"Ring of Power", '=', static_cast<uint8_t>(ItemType::Ring), 0, 999, 0, 0, false},
 };
 inline constexpr int ITEM_DEF_COUNT = sizeof(ITEM_DEFS) / sizeof(ITEM_DEFS[0]);
 inline constexpr int RING_OF_POWER_DEF = ITEM_DEF_COUNT - 1;  // Index of Ring of Power
+inline constexpr int MASTER_KEY_DEF = RING_OF_POWER_DEF - 1;  // Index of Master Key
 
 // --- Glyph lookup helpers ---
 

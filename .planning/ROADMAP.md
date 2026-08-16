@@ -198,11 +198,12 @@ Plans:
   4. `PercussiveMaintenance` fires exactly once on the first thrown-item kill and never fires on a thrown miss, a thrown non-kill hit, or a melee kill — proven fire/no-fire both directions, matching the Phase 7/9 proof pattern.
   5. Throw resolution stays inside the existing turn-based dirty-rect render model — no new animation loop, no full-flash regression — proven via the Phase 8 `FrameDirtyPlanner` instrument, same technique as Phase 9 requirement 4.
 **Gate**: HOST ONLY — grep proof, damage-curve simulation, inventory-count assertions, unlock/no-unlock matrix, dirty-rect instrument report. No glass gate this phase, per the standing delivery-plan.
-**Status**: Closed 2026-08-16. All 5 work items landed in one commit-set (`b1b4f1e2`), build green (Trantor `x4pro`, 59.91s), all 5 requirements proven PASS, host gate evidence recorded in `.planning/evidence/phase10-gate.md`.
-**Plans**: n/a — worked directly off the dispatched spec (parent msgs 3748/3750/3752/3756), no formal plan doc written.
+**Status**: Closed 2026-08-16. All 5 work items landed in one commit-set (`b1b4f1e2`), build green (Trantor `x4pro`, 59.91s), all 5 requirements proven PASS, host gate evidence recorded in `.planning/evidence/phase10-gate.md`. Follow-up fix required by parent's ruling (msg 3758, same day): `handleThrow()`'s kill branch now also emits `MonsterKilled` (populating `damage`/`monsterMaxHp`) so a thrown boss overkill can trigger `EscalationOfForce` alongside `PercussiveMaintenance`; `AchievementBus`'s single-unlock-slot design was widened to a bounded FIFO (`MAX_PENDING_UNLOCKS=3`) so both surface instead of the second being silently swallowed. New Scenario 14 (thrown-overkill double-unlock) added to the `ach_test` harness; full 68-assertion re-run clean (`=== ALL PASS (0 failure(s)) ===`), catching and fixing two pre-existing stale Phase-9-era assertions along the way. Landed as commit `72eac4b4acb343cc5df016dbb82e70a3dcc4f762`, Trantor build green (39.79s), pushed `d5dc2d9..72eac4b`. No open items remain on Phase 10.
+**Plans**: n/a — worked directly off the dispatched spec (parent msgs 3748/3750/3752/3756/3758), no formal plan doc written.
 
 Plans:
 - [x] 10-01: Throw mechanic + PercussiveMaintenance — closed, see evidence/phase10-gate.md.
+- [x] 10-02: Follow-up fix (MonsterKilled emit on thrown kills + AchievementBus multi-unlock queue) per parent msg 3758 — closed, commit `72eac4b4acb343cc5df016dbb82e70a3dcc4f762`, see evidence/phase10-gate.md.
 
 ### Phases 11-12: World Dungeon — The Show / The Co-star
 Requirements TBD, pulled from the plan doc as each phase opens. **Flash cadence (revised 2026-08-15, supersedes the old 9+10/11+12 pairing): no interim images at all — one final flash to Stuart when Phase 12 closes.** Every phase gate stays host-machine-verified evidence to parent, same rigor as before; there is no glass gate again until the very last phase closes.

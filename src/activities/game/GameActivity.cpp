@@ -422,13 +422,8 @@ void GameActivity::handleAction() {
     {
       char msgBuf[144];
       const char* flavor = FLAVOR_TEXT.pick(game::FlavorCategory::FloorEntry);
-      if (themeId == 0) {
-        // "Standard Tier" -- no theme to call out, keep the plain message.
-        snprintf(msgBuf, sizeof(msgBuf), "You descend deeper... %s", flavor);
-      } else {
-        snprintf(msgBuf, sizeof(msgBuf), "You descend deeper... %s Floor %u - %s.", flavor, p.dungeonDepth,
-                 game::THEME_DEFS[themeId].name);
-      }
+      snprintf(msgBuf, sizeof(msgBuf), "You descend deeper... %s Floor %u - %s.", flavor, p.dungeonDepth,
+               game::THEME_DEFS[themeId].name);
       GAME_STATE.addMessage(msgBuf);
       gameRenderer.showNotification(NotificationKind::FloorEntry, msgBuf);
     }
@@ -497,7 +492,9 @@ void GameActivity::handleAction() {
 
       // Gold goes straight to purse
       if (static_cast<game::ItemType>(levelItems[i].type) == game::ItemType::Gold) {
-        uint16_t amount = levelItems[i].count * 10;
+        int base = levelItems[i].count * 10;
+        int pct = game::sponsorGoldPercentModifier(p.activeSponsorId);
+        uint16_t amount = static_cast<uint16_t>(base + (base * pct) / 100);
         p.gold += amount;
         char msgBuf[48];
         snprintf(msgBuf, sizeof(msgBuf), "You pick up %u gold.", amount);
@@ -994,6 +991,12 @@ void GameActivity::loadOrGenerateLevel() {
   // reloading a save can land a different sponsor. Nothing to clear on the way out;
   // the next call here just overwrites it, and it's only ever read at point of use.
   p.activeSponsorId = static_cast<uint8_t>(GAME_STATE.rollRange(game::SPONSOR_DEF_COUNT));
+
+  // A +maxHp sponsor from the previous floor can leave hp above the new
+  // (possibly lower) effective cap once it's gone -- clamp immediately so the
+  // HUD never shows e.g. "HP: 22 / 20".
+  uint16_t cap = game::effectiveMaxHp(p);
+  if (p.hp > cap) p.hp = cap;
 
   // Always regenerate from seed (deterministic)
   auto result = DungeonGenerator::generate(p.gameSeed, p.dungeonDepth, tiles, monsters, levelItems);

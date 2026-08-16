@@ -242,7 +242,7 @@ static_assert(static_cast<ItemType>(ITEM_DEFS[LOOT_BOX_DEF].type) == ItemType::L
 // stats are never mutated, so there is nothing to clear on FloorChanged, no
 // drift risk across save/load, and no leak between floors.
 
-enum class SponsorStat : uint8_t { None, Attack, Defense, MaxHp };
+enum class SponsorStat : uint8_t { None, Attack, Defense, MaxHp, GoldPercent };
 
 struct SponsorDef {
   const char* name;
@@ -255,11 +255,12 @@ struct SponsorDef {
 // no trademark symbol, no em dash, no smart quotes.
 inline constexpr SponsorDef SPONSOR_DEFS[] = {
     {"No Sponsor", SponsorStat::None, 0},
-    {"System Uptime Guarantee (tm)", SponsorStat::MaxHp, 2},
-    {"Adjudicator's Legal Team", SponsorStat::Defense, -1},
-    {"IronClad Insurance", SponsorStat::Defense, 1},
-    {"Vantablack Energy Drink", SponsorStat::Attack, 1},
-    {"Generic Store-Brand Sponsor", SponsorStat::None, 0},
+    {"Big Hollow Insurance", SponsorStat::MaxHp, 2},
+    {"Vantage Extraction Partners", SponsorStat::GoldPercent, 10},
+    {"Quiet Room Wellness", SponsorStat::Attack, 1},
+    {"Loyalty Plus (Terms Apply)", SponsorStat::Defense, 1},
+    {"The Adjudicator's Legal Team", SponsorStat::Defense, -1},
+    {"System Uptime Guarantee (tm)", SponsorStat::GoldPercent, -5},
 };
 inline constexpr int SPONSOR_DEF_COUNT = sizeof(SPONSOR_DEFS) / sizeof(SPONSOR_DEFS[0]);
 inline constexpr uint8_t SPONSOR_NONE = 0;
@@ -274,6 +275,14 @@ inline int sponsorDefenseModifier(uint8_t sponsorId) {
   if (sponsorId >= SPONSOR_DEF_COUNT) return 0;
   const SponsorDef& s = SPONSOR_DEFS[sponsorId];
   return s.stat == SponsorStat::Defense ? s.amount : 0;
+}
+
+// Percent modifier applied to gold awards (loot box wins, floor pickups),
+// read at the point gold is credited -- never mutates Player::gold itself.
+inline int sponsorGoldPercentModifier(uint8_t sponsorId) {
+  if (sponsorId >= SPONSOR_DEF_COUNT) return 0;
+  const SponsorDef& s = SPONSOR_DEFS[sponsorId];
+  return s.stat == SponsorStat::GoldPercent ? s.amount : 0;
 }
 
 // maxHp as modified by the active sponsor, read at the point of use (regen
@@ -303,13 +312,15 @@ struct ThemeDef {
                         // eligibleCount/count/which monsters are eligible.
 };
 
-// All strings ASCII-only, plain hyphens only (no em dash).
+// All strings ASCII-only, plain hyphens only (no em dash). No "no theme"
+// sentinel -- every floor gets one of the six named themes.
 inline constexpr ThemeDef THEME_DEFS[] = {
-    {"Standard Tier", 0},
+    {"The Break Room", -1},
+    {"Compliance Corridor", 0},
     {"The Quarterly Pit", 1},
-    {"Legacy Systems Wing", -1},
-    {"Synergy Annex", 0},
-    {"Cost Center Sublevel", 1},
+    {"Server Room (Cold Aisle)", 0},
+    {"The Onboarding Wing", 0},
+    {"The Executive Suite", 1},
 };
 inline constexpr int THEME_DEF_COUNT = sizeof(THEME_DEFS) / sizeof(THEME_DEFS[0]);
 // themeForDepth() is defined further below, after Rng and levelSeed().

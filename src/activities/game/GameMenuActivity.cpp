@@ -387,9 +387,9 @@ void GameMenuActivity::useInventoryItem(int index) {
   bool consumed = false;
   // 160, not 128 -- the loot box gold-win message with a sponsor courtesy clause appended
   // (Phase 11) is the longest message in this switch: fixed text (112) + longest gold roll
-  // "999" (3) + longest sponsor name "System Uptime Guarantee (tm)" (29) + null = 145,
-  // rounded up with headroom so a future sponsor/item name addition doesn't silently
-  // truncate mid-punchline.
+  // "999" (3) + longest sponsor name "The Adjudicator's Legal Team" / "System Uptime
+  // Guarantee (tm)" (28) + null = 144, rounded up with headroom so a future sponsor/item
+  // name addition doesn't silently truncate mid-punchline.
   char msgBuf[160];
 
   switch (type) {
@@ -478,7 +478,9 @@ void GameMenuActivity::useInventoryItem(int index) {
       bool hasSponsor = p.activeSponsorId != game::SPONSOR_NONE;
 
       if (reward.type == static_cast<uint8_t>(game::ItemType::Gold)) {
-        uint16_t amount = static_cast<uint16_t>(GAME_STATE.rollRangeInclusive(1, 10 + p.dungeonDepth * 5));
+        int base = GAME_STATE.rollRangeInclusive(1, 10 + p.dungeonDepth * 5);
+        int pct = game::sponsorGoldPercentModifier(p.activeSponsorId);
+        uint16_t amount = static_cast<uint16_t>(base + (base * pct) / 100);
         p.gold += amount;
         if (hasSponsor) {
           snprintf(msgBuf, sizeof(msgBuf),

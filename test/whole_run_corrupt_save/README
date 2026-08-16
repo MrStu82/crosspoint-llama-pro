@@ -3,6 +3,8 @@ notice: GameActivity::onEnter() finds GAME_STATE.hasSaveFile() true but
 GAME_STATE.loadFromFile() false (a present-but-unloadable save.bin), lands in
 the CorruptSaveNotice/WholeRun modal, and a scripted Confirm button release
 drives the real loop() into GameActivity::resolveWholeRunCorruptNotice().
+There is a single Continue outcome now (Stuart's locked spec, msg 3940) --
+no selection, no purge branch -- Confirm and Back both resolve identically.
 Not a gtest suite (see test/README for those) -- this compiles the REAL,
 unmodified Activity.cpp/GameActivity.cpp against the REAL GameState.cpp/
 GameSave.cpp/DungeonGenerator.cpp/AchievementBus.cpp/FlavorText.cpp, so the
@@ -19,21 +21,19 @@ for the general explanation.
 
 ## Why the private state is never read directly
 
-screenMode / corruptNoticeScope / corruptNoticeSelection are all private on
-GameActivity with no accessor, and per this project's precedent
-(test/sponsor_hp_clamp/), a friend/accessor is avoided rather than added
-just for a test. This harness instead asserts only through observable
-PUBLIC side effects:
+screenMode / corruptNoticeScope are private on GameActivity with no
+accessor, and per this project's precedent (test/sponsor_hp_clamp/), a
+friend/accessor is avoided rather than added just for a test. This harness
+instead asserts only through observable PUBLIC side effects:
   - GAME_STATE.hasSaveFile() / Storage.exists(...) before and after Confirm,
-    to prove GAME_STATE.deleteSaveFile() actually ran (purge=true, since
-    corruptNoticeSelection defaults to 0 = Purge per GameActivity.cpp's
-    onEnter() comment).
+    to prove save.bin was left untouched (there is no purge branch anymore --
+    Stuart's locked spec, msg 3940).
   - GAME_STATE.player.{turnCount,hp,maxHp,dungeonDepth} after Confirm, to
     prove GAME_STATE.newGame() ran and produced fresh state.
   - A second harmless loop() call staying stable, as the strongest available
     proof screenMode flipped back to Playing (a stuck CorruptSaveNotice modal
-    would still accept Up/Down/Confirm and mutate corruptNoticeSelection
-    again instead of being a no-op).
+    would still re-run resolveWholeRunCorruptNotice() on another Confirm
+    release instead of being a no-op).
 
 If a future change makes any of this genuinely unprovable indirectly, add a
 narrowly-scoped test-only accessor rather than reaching further into

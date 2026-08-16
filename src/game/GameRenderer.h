@@ -9,6 +9,7 @@
 #include "MappedInputManager.h"
 
 class GameState;
+struct Rect;
 
 // DirtyWindow/FramePlan now live in FrameDirtyPlanner.h (game namespace) so
 // the pure planning logic -- and a host harness driving it -- has zero
@@ -135,15 +136,22 @@ class GameRenderer {
   // a stale buffer (ghost-guard cadence doesn't apply to a one-shot modal).
   void drawEndScreen(GfxRenderer& renderer, bool isVictory, const EndScreenData& data) const;
 
-  // Paints the blocking corrupt-save notice (Phase 12): a rounded box with
+  // Paints the blocking corrupt-save notice (Phase 12/13): a rounded box with
   // title, wrapped body (floor number substituted into the %u placeholder),
-  // and two selectable options (Purge/Leave), the current selection shown via
-  // a filled highlight bar. Same "no clearScreen(), self-contained box, one-shot
+  // and a single tappable Continue button -- there is no second option; the
+  // save file is always left untouched on disk and a new run always starts
+  // (Stuart's locked spec, msg 3940: "no delete, no second option, no choice
+  // at all"). Same "no clearScreen(), self-contained box, one-shot
   // FULL_REFRESH" shape as drawEndScreen() -- same modal genre, same overlay
-  // discipline. `selection` is 0 for Purge, 1 for Leave. `wholeRun` selects the
-  // whole-save-file body copy (no floor-number substitution) instead of the
-  // per-level one; `depth` is ignored when `wholeRun` is true.
-  void drawCorruptSaveNotice(GfxRenderer& renderer, bool wholeRun, uint8_t depth, uint8_t selection) const;
+  // discipline. `wholeRun` selects the whole-save-file body copy (no
+  // floor-number substitution) instead of the per-level one; `depth` is
+  // ignored when `wholeRun` is true.
+  void drawCorruptSaveNotice(GfxRenderer& renderer, bool wholeRun, uint8_t depth) const;
+
+  // Hit-tests a tap point against the Continue button drawn by
+  // drawCorruptSaveNotice(). Shares corruptNoticeContinueRect() with the
+  // draw call so the drawn button and its touch region can never drift apart.
+  bool hitTestCorruptSaveNoticeContinue(int x, int y) const;
 
   // Shows a boxed System notification (Phase 9 work item 3): bordered box,
   // inverted (black-filled, white-text) title bar, body text below. `body`
@@ -208,6 +216,12 @@ class GameRenderer {
   // computeLayout() output -- the only place screen-layout fields cross into
   // planner_'s plain-data world.
   game::PlannerLayout buildPlannerLayout() const;
+
+  // Screen rect of the corrupt-save notice's single Continue button (Phase
+  // 13). Depends only on screenW/screenH, so drawCorruptSaveNotice() and
+  // hitTestCorruptSaveNoticeContinue() computing it independently always
+  // agree -- same reasoning as notificationRect() above.
+  Rect corruptNoticeContinueRect() const;
 
   // Formats the four status-bar fields into caller-owned buffers so
   // drawStatusBar() (rendering) and planFrame() (diffing, via planner_) always

@@ -9,8 +9,10 @@
 // Which screen GameActivity is currently presenting. Playing is the normal loop/render
 // path; Death/Victory are the blocking end-of-run screens (Phase 7 req 2/3) — deliberately
 // thin (GameRenderer::drawEndScreen() never calls clearScreen()) since Phase 8 rewrites the
-// redraw model underneath them. CorruptSaveNotice is the blocking two-option System notice
-// shown when loadOrGenerateLevel() rejects a level save (Phase 12 corrupt-save handling).
+// redraw model underneath them. CorruptSaveNotice is the blocking, single-Continue System
+// notice shown when loadOrGenerateLevel() rejects a level save (Phase 12/13 corrupt-save
+// handling) -- it explains and continues, there is no choice to make (Stuart's locked spec,
+// msg 3940).
 enum class GameScreenMode : uint8_t { Playing, Death, Victory, CorruptSaveNotice };
 
 // Which save CorruptSaveNotice is currently reporting on -- see corruptNoticeScope below.
@@ -63,26 +65,24 @@ class GameActivity final : public Activity {
   // can trigger before the overlay is torn down).
   EndScreenData endScreenData;
 
-  // CorruptSaveNotice state (Phase 12, extended to whole-run rejection): which save was
+  // CorruptSaveNotice state (Phase 12/13, extended to whole-run rejection): which save was
   // rejected -- PerLevel (a single level_NN.bin, set by loadOrGenerateLevel()) or WholeRun
-  // (save.bin itself, set by onEnter() when GameState::loadFromFile() returns false) --
-  // the floor number to report in the notice body (PerLevel only), and which option is
-  // currently highlighted. Purge is index 0 (default highlight per spec), Leave is index 1.
-  // Only meaningful while screenMode == CorruptSaveNotice. The two scopes resolve Confirm
-  // differently (see loop()): PerLevel's freshly generated floor is already authoritative
-  // either way, but WholeRun has no valid run state at all until newGame() runs, so both of
-  // its options must call newGame() before play begins.
+  // (save.bin itself, set by onEnter() when GameState::loadFromFile() returns false) -- and
+  // the floor number to report in the notice body (PerLevel only). Only meaningful while
+  // screenMode == CorruptSaveNotice. There is no selection to track anymore -- the notice has
+  // a single Continue outcome per scope (Stuart's locked spec, msg 3940): PerLevel's freshly
+  // generated floor is already authoritative, WholeRun has no valid run state at all until
+  // newGame() runs.
   CorruptNoticeScope corruptNoticeScope = CorruptNoticeScope::PerLevel;
   uint8_t corruptNoticeDepth = 0;
-  uint8_t corruptNoticeSelection = 0;
 
   void loadOrGenerateLevel();
   void saveCurrentLevel();
-  // Resolves a WholeRun CorruptSaveNotice: purge=true deletes save.bin first, purge=false
-  // leaves it on disk untouched -- either way calls GAME_STATE.newGame() so play never
-  // begins on the state a rejected loadFromFile() left behind, then proceeds into a fresh
-  // run exactly as GameTitleActivity's own "start new game" path does.
-  void resolveWholeRunCorruptNotice(bool purge);
+  // Resolves a WholeRun CorruptSaveNotice: save.bin is always left untouched on disk (no
+  // purge branch -- Stuart's locked spec, msg 3940) and GAME_STATE.newGame() always runs, so
+  // play never begins on the state a rejected loadFromFile() left behind, then proceeds into
+  // a fresh run exactly as GameTitleActivity's own "start new game" path does.
+  void resolveWholeRunCorruptNotice();
   void computeVisibility();
   void handleMove(int dx, int dy);
   void handleAction();

@@ -1,0 +1,110 @@
+Narrow host-side geometry test for the corrupt-save notice's Continue button
+(parent, msg 3946/3948): replaces the killed test/corrupt_notice_touch/
+full-pipeline harness ("four stub-gaps deep"). Tests
+GameRenderer::hitTestCorruptSaveNoticeContinue() directly -- a public
+function, pure geometry, no display, no Bitmap, no i18n codegen, no HalFile.
+
+This compiles the REAL, unmodified GameRenderer.cpp/UITheme.cpp (plus the
+four real, unmodified theme .cpp files their static-instance construction
+transitively touches) against fast stub shadows of every heavy dependency
+(GfxRenderer, HalDisplay, EpdFontFamily, I18n/StrId, GameState) -- same
+"shadow header/.cpp, real .cpp never actually reaches it at runtime"
+technique as test/whole_run_corrupt_save/, adapted for a render/UI target
+instead of an activity/control-flow target.
+
+Not a gtest suite (see test/README for those).
+
+## Why GameRenderer::initForTest() is enough
+
+GameRenderer::initForTest(screenW, screenH) is a small, public, test-only
+entry point (GameRenderer.h) that sets screenW/screenH and calls the
+private computeLayout() -- no GfxRenderer instance, no HAL, nothing
+display-related. hitTestCorruptSaveNoticeContinue() is likewise public,
+pure geometry over screenW/screenH -- the same entry point
+GameActivity::loop()'s real touch dispatch calls in production. Neither
+function touches GfxRenderer, HalDisplay, or I18n at all; those only need
+to exist because GameRenderer.cpp is one translation unit and its other
+(unreached, by this harness) methods reference them -- the linker needs
+every symbol to resolve even though this harness's main() never calls
+those other methods.
+
+## Why the button's rect is discovered by scanning, not read directly
+
+corruptNoticeContinueRect() is private -- the harness never reads it.
+Instead CorruptNoticeHitTestHarness.cpp scans hitTestCorruptSaveNoticeContinue(x, y)
+across the full screen to discover the hit region's bounds, then asserts a
+point at the discovered center is a hit and a point above the discovered
+top edge is not -- proving the button responds to touch without hardcoding
+any pixel geometry that could silently drift out of sync with the real
+layout code.
+
+## Build
+
+  INCLUDES="-I test/corrupt_notice_hittest/stubs \
+    -I src -I src/game -I src/components \
+    -I lib/GfxRenderer -I lib/hal -I lib/I18n"
+
+  mkdir -p test/corrupt_notice_hittest/build
+  for f in \
+      test/corrupt_notice_hittest/CorruptNoticeHitTestHarness.cpp \
+      src/game/GameRenderer.cpp \
+      src/components/UITheme.cpp \
+      test/corrupt_notice_hittest/stub_themes/BaseTheme.cpp \
+      test/corrupt_notice_hittest/stub_themes/LyraTheme.cpp \
+      test/corrupt_notice_hittest/stub_themes/RoundedRaffTheme.cpp \
+      test/corrupt_notice_hittest/stub_themes/Lyra3CoversTheme.cpp \
+      test/corrupt_notice_hittest/stub_gamestate/GameState.cpp \
+      src/game/GameSprites.cpp; do
+    g++ -std=c++20 -O0 -Wall -Wextra $INCLUDES -c "$f" \
+      -o "test/corrupt_notice_hittest/build/$(basename $f .cpp).o"
+  done
+  g++ test/corrupt_notice_hittest/build/*.o \
+    -o test/corrupt_notice_hittest/build/corrupt_notice_hittest_harness
+
+  ./test/corrupt_notice_hittest/build/corrupt_notice_hittest_harness
+
+NOTE: all four theme .cpp files (BaseTheme/LyraTheme/RoundedRaffTheme/
+Lyra3CoversTheme) are the inert stub_themes/ versions (real headers, empty
+out-of-line method bodies), not the real .cpp files. An earlier draft of
+this README used the REAL BaseTheme.cpp, on the theory that only its
+constructor/vtable needed to link -- that turned out wrong in practice:
+BaseTheme.cpp's own body (not just its transitive header includes) pulls
+in HalClock.h -> Arduino.h and constructs real Bitmap objects from file
+paths, both explicitly out of scope per parent's msg 3946/3948 ("no
+display, no Bitmap"). The stub version's empty out-of-line bodies satisfy
+the Itanium ABI key-function/vtable-linking requirement without any of
+that -- confirmed sufficient because this harness's tested path
+(GameRenderer::initForTest() + hitTestCorruptSaveNoticeContinue()) never
+actually invokes any BaseTheme paint method at runtime; the linker only
+needs every symbol GameRenderer.cpp/UITheme.cpp reference to resolve, not
+for real ones to be reachable. All four stub themes link because
+UITheme::instance's constructor (UITheme.cpp) can construct any of the
+four depending on SETTINGS.uiTheme -- stubs/CrossPointSettings.h's
+uiTheme default (LYRA_3_COVERS, matching the real class's own default)
+determines which one is actually constructed at runtime, but since all
+four are equally inert stubs it doesn't matter which for this harness.
+
+## Notable stub-placement gotcha (same class as test/whole_run_corrupt_save/)
+
+GameRenderer.h does `#include <GfxRenderer.h>` (angle-bracket) so the stub
+must be reachable via a flat -I stub dir (test/corrupt_notice_hittest/stubs/GfxRenderer.h)
+-- confirmed correct. UITheme.cpp does `"components/themes/BaseTheme.h"` etc.
+(quoted, subdir-qualified) -- these are REAL headers, included via -I src
+resolving src/components/themes/BaseTheme.h directly; no stub needed for
+the .h, only for BaseTheme.cpp's sibling theme .cpp files where a stub is
+used.
+
+## i18n codegen gap (parent, msg 3946 -- logged separately)
+
+lib/I18n/I18nKeys.h is gitignored and generated by scripts/gen_i18n.py --
+never present in a clean checkout. This harness's stubs/I18n.h is a
+hand-written shadow covering only the 20 StrId keys GameRenderer.cpp
+actually references (confirmed via grep), not a substitute for real
+codegen. See /workspace/agent/crosspoint_backlog.md for the tracked
+follow-up item.
+
+## Output
+
+PASS prints all assertions passed (including the discovered hit-region
+bounds) and exits 0; any failed CHECK() prints to stderr, the run still
+completes so all checks are reported, and main() exits 1.

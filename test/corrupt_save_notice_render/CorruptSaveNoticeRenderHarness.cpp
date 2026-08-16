@@ -39,15 +39,14 @@ static constexpr int kLogicalHeight = 800;
 
 int main(int argc, char** argv) {
   const char* outPath = argc > 1 ? argv[1] : "/tmp/corrupt_save_notice.pgm";
-  // depth/selection are harness-only inputs (not read from real save data) -- default to a
-  // representative mid-run floor number and the Purge (default-highlighted) selection, matching
-  // the approved notice copy's "Floor %u" placeholder and GameRenderer.h's documented
-  // selection=0-is-Purge/1-is-Leave contract.
+  // depth is a harness-only input (not read from real save data) -- defaults to a
+  // representative mid-run floor number, matching the approved notice copy's "Floor %u"
+  // placeholder. There is no selection input anymore -- the notice has a single Continue
+  // button and no choice to make (Stuart's locked spec, msg 3940).
   const unsigned depth = argc > 2 ? static_cast<unsigned>(std::atoi(argv[2])) : 7;
-  const uint8_t selection = argc > 3 ? static_cast<uint8_t>(std::atoi(argv[3])) : 0;
   // wholeRun defaults to false (per-level notice, the original behavior this harness was
-  // built for) -- pass a 4th arg of 1 to render the whole-run/no-floor-number variant instead.
-  const bool wholeRun = argc > 4 ? std::atoi(argv[4]) != 0 : false;
+  // built for) -- pass a 3rd arg of 1 to render the whole-run/no-floor-number variant instead.
+  const bool wholeRun = argc > 3 ? std::atoi(argv[3]) != 0 : false;
 
   GfxRenderer renderer(display);
   renderer.begin();  // sets frameBuffer/panelWidth/panelHeight from the display -- required
@@ -80,7 +79,7 @@ int main(int argc, char** argv) {
 
   GameRenderer gameRenderer;
   gameRenderer.initForTest(kLogicalWidth, kLogicalHeight);
-  gameRenderer.drawCorruptSaveNotice(renderer, wholeRun, depth, selection);
+  gameRenderer.drawCorruptSaveNotice(renderer, wholeRun, depth);
 
   // Dump the framebuffer, un-rotating physical->logical exactly as
   // GameTitleRenderHarness.cpp does (same Portrait rotation convention).
@@ -105,7 +104,7 @@ int main(int argc, char** argv) {
     }
   }
   std::fclose(f);
-  std::fprintf(stderr, "wrote %s (%dx%d), depth=%u selection=%u\n", outPath, kLogicalWidth,
-               kLogicalHeight, depth, selection);
+  std::fprintf(stderr, "wrote %s (%dx%d), depth=%u wholeRun=%d\n", outPath, kLogicalWidth,
+               kLogicalHeight, depth, wholeRun ? 1 : 0);
   return 0;
 }

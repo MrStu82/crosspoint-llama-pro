@@ -7,11 +7,11 @@
 //
 // GameActivity/Activity/GameState/GameSave/DungeonGenerator/AchievementBus/
 // FlavorText are compiled for real (via mirror/ symlinks for the two
-// activities files). screenMode/corruptNoticeScope/corruptNoticeSelection are
-// all private on GameActivity with no accessor -- per the sponsor_hp_clamp
-// precedent, this harness never adds a friend/accessor and instead asserts
-// only through observable PUBLIC side effects: GAME_STATE.player fields after
-// newGame(), and real presence/absence of the stub-filesystem save file.
+// activities files). screenMode/corruptNoticeScope are both private on
+// GameActivity with no accessor -- per the sponsor_hp_clamp precedent, this
+// harness never adds a friend/accessor and instead asserts only through
+// observable PUBLIC side effects: GAME_STATE.player fields after newGame(),
+// and real presence/absence of the stub-filesystem save file.
 
 #include <cstdio>
 #include <cstring>
@@ -89,20 +89,23 @@ int main() {
   // had NOT landed in CorruptSaveNotice/WholeRun (e.g. a regression made it
   // fall through to normal play), this Confirm would either be silently
   // ignored by the Playing-mode branch or drive unrelated game logic --
-  // either way the post-conditions below (save file deleted, fresh newGame()
-  // state) would fail to hold, which is how this indirectly proves the modal
-  // branch was actually taken.
+  // either way the post-conditions below (save file untouched, fresh
+  // newGame() state) would fail to hold, which is how this indirectly proves
+  // the modal branch was actually taken. Confirm has no live trigger path on
+  // x4pro hardware, but this harness targets the shared GameActivity control
+  // flow, not any specific board's input wiring -- Back exercises the same
+  // resolveWholeRunCorruptNotice() call, see the second loop() below.
   input.nextReleased = MappedInputManager::Button::Confirm;
   activity.loop();
 
-  // --- Post-conditions: resolveWholeRunCorruptNotice(purge=true) ran ---
-  // corruptNoticeSelection defaults to 0 (Purge highlighted by default, per
-  // GameActivity.cpp's onEnter() comment), so Confirm on first frame resolves
-  // with purge=true.
+  // --- Post-conditions: resolveWholeRunCorruptNotice() ran ---
+  // There is no purge branch anymore (Stuart's locked spec, msg 3940) --
+  // save.bin is always left untouched on disk, and Confirm/Back both resolve
+  // identically (single outcome, no selection to make).
 
-  // 1. GAME_STATE.deleteSaveFile() actually removed the stub save file.
-  CHECK(!GAME_STATE.hasSaveFile(), "expected save.bin deleted after purge-confirm");
-  CHECK(!Storage.exists("/.crosspoint/game/save.bin"), "expected save.bin physically absent from fake_sd");
+  // 1. save.bin was left on disk, untouched.
+  CHECK(GAME_STATE.hasSaveFile(), "expected save.bin left untouched after Continue (no purge branch)");
+  CHECK(Storage.exists("/.crosspoint/game/save.bin"), "expected save.bin still physically present on fake_sd");
 
   // 2. GAME_STATE.newGame() produced fresh player state.
   CHECK(GAME_STATE.player.turnCount == 0, "expected fresh turnCount==0 after resolveWholeRunCorruptNotice");
@@ -114,16 +117,14 @@ int main() {
         GAME_STATE.player.dungeonDepth);
 
   // 3. screenMode flipped back to Playing is only observable indirectly: a
-  // second loop() call with no CorruptSaveNotice-specific input pending
-  // should now be safe to run without touching corruptNoticeSelection/modal
-  // state again (if screenMode were still CorruptSaveNotice, a stray Up/Down
-  // release would have flipped corruptNoticeSelection and left the modal
-  // active -- instead exercise a a harmless Confirm no-op release and confirm
-  // no crash and state remains resolved, which is the strongest available
-  // proof without a private accessor).
+  // second loop() call with the same Confirm release should now be a
+  // harmless no-op instead of re-resolving the modal a second time (kept as
+  // Confirm rather than Back to avoid exercising Playing-mode's pause-menu
+  // Back handling, which this harness's stubs aren't set up to model).
   input.nextReleased = MappedInputManager::Button::Confirm;
   activity.loop();
-  CHECK(!GAME_STATE.hasSaveFile(), "expected resolved state to remain stable after a second loop() call");
+  CHECK(GAME_STATE.hasSaveFile(), "expected resolved state to remain stable after a second loop() call");
+  CHECK(GAME_STATE.player.turnCount == 0, "expected player state to remain stable after a second loop() call");
 
   if (failures == 0) {
     printf("PASS: all assertions passed (whole-run corrupt save -> Confirm -> resolveWholeRunCorruptNotice)\n");

@@ -518,11 +518,38 @@ void GameRenderer::drawEndScreen(GfxRenderer& renderer, bool isVictory, const En
   renderer.displayBuffer(HalDisplay::FULL_REFRESH);
 }
 
-void GameRenderer::drawCorruptSaveNotice(GfxRenderer& renderer, bool wholeRun, uint8_t depth, uint8_t selection) const {
+Rect GameRenderer::corruptNoticeContinueRect() const {
+  // Mirrors the box geometry drawCorruptSaveNotice() computes -- kept in one
+  // place so the drawn button and its touch region can never drift apart.
+  const int boxW = screenW - 60;
+  const int boxH = 340;
+  const int boxX = (screenW - boxW) / 2;
+  const int boxY = (screenH - boxH) / 2;
+
+  // Same running-y layout drawCorruptSaveNotice() uses to reach the option
+  // row area: title (+53), body (+bodyH+10). The single Continue button is
+  // centered in the footprint the old two-row Purge/Leave layout occupied, so
+  // the title/body spacing Pixel measured above it is untouched.
+  const int bodyH = 150;
+  const int optionAreaY = boxY + 26 + 53 + bodyH + 10;
+  const int optionAreaH = 76;  // old two-row footprint: 2 * (optionH=34 + 8) - 8
+  const int continueH = 34;
+  const int continueMarginX = 40;
+
+  return Rect(boxX + continueMarginX, optionAreaY + (optionAreaH - continueH) / 2, boxW - 2 * continueMarginX,
+             continueH);
+}
+
+bool GameRenderer::hitTestCorruptSaveNoticeContinue(int x, int y) const {
+  const Rect r = corruptNoticeContinueRect();
+  return x >= r.x && x < r.x + r.width && y >= r.y && y < r.y + r.height;
+}
+
+void GameRenderer::drawCorruptSaveNotice(GfxRenderer& renderer, bool wholeRun, uint8_t depth) const {
   // Same overlay discipline as drawEndScreen(): no clearScreen(), self-contained
   // box, one-shot FULL_REFRESH -- this is the blocking corrupt-save notice
-  // (Phase 12), not the fixed single-dismiss showNotification() system, since
-  // it needs two selectable options.
+  // (Phase 12/13), not the fixed single-dismiss showNotification() system,
+  // since it explains itself before continuing rather than just naming an event.
   const int boxW = screenW - 60;
   const int boxH = 340;
   const int boxX = (screenW - boxW) / 2;
@@ -565,26 +592,18 @@ void GameRenderer::drawCorruptSaveNotice(GfxRenderer& renderer, bool wholeRun, u
                                    EpdFontFamily::REGULAR, UITheme::TextVerticalAlignment::TOP);
   y += bodyH + 10;
 
-  // Two option rows, Purge (index 0) then Leave (index 1) -- selection is shown
-  // via a filled highlight bar behind the currently-selected row's text, same
-  // visual language as a selected list row elsewhere in the UI (inverted fill,
-  // not a border) so it reads unambiguously as "this one, if you press Confirm".
-  const char* optionLabels[2] = {tr(STR_DM_CORRUPT_NOTICE_PURGE), tr(STR_DM_CORRUPT_NOTICE_LEAVE)};
-  const int optionH = 34;
-  const int optionMarginX = 40;
-  for (int i = 0; i < 2; i++) {
-    int rowY = y + i * (optionH + 8);
-    if (selection == i) {
-      renderer.fillRoundedRect(boxX + optionMarginX, rowY, boxW - 2 * optionMarginX, optionH, 4, Color::Black);
-    } else {
-      renderer.drawRoundedRect(boxX + optionMarginX, rowY, boxW - 2 * optionMarginX, optionH, 2, 4, true);
-    }
-    // Baseline shifted up 7px from the original rowY+optionH/2-8 (Pixel's on-render
-    // measurement: descenders were clipped by the highlight bar, ink sitting 14px
-    // below the row top and only 1px above the row bottom) so padding is ~7/7 and
-    // descenders (e.g. "Purge the record"'s "g") clear the bar.
-    renderer.drawCenteredText(UI_12_FONT_ID, rowY + optionH / 2 - 15, optionLabels[i], selection != i);
-  }
+  // Single Continue button -- no second option, no selection to toggle
+  // (Stuart's locked spec, msg 3940). Filled black, same inverted-fill visual
+  // language the old highlighted row used, so it reads unambiguously as a
+  // tappable affordance rather than plain text. Geometry shared with
+  // hitTestCorruptSaveNoticeContinue() via corruptNoticeContinueRect() so the
+  // drawn button and its touch region can never drift apart.
+  const Rect continueRect = corruptNoticeContinueRect();
+  renderer.fillRoundedRect(continueRect.x, continueRect.y, continueRect.width, continueRect.height, 4, Color::Black);
+  // Baseline offset matches the old option row's Pixel-measured -15 (descenders
+  // clear the fill bar).
+  renderer.drawCenteredText(UI_12_FONT_ID, continueRect.y + continueRect.height / 2 - 15,
+                            tr(STR_DM_CORRUPT_NOTICE_CONTINUE), /*black=*/false);
 
   // One-shot full-refresh: same reasoning as drawEndScreen() -- new
   // high-contrast content over a stale buffer needs a clean waveform.

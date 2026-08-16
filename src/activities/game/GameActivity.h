@@ -9,8 +9,9 @@
 // Which screen GameActivity is currently presenting. Playing is the normal loop/render
 // path; Death/Victory are the blocking end-of-run screens (Phase 7 req 2/3) — deliberately
 // thin (GameRenderer::drawEndScreen() never calls clearScreen()) since Phase 8 rewrites the
-// redraw model underneath them.
-enum class GameScreenMode : uint8_t { Playing, Death, Victory };
+// redraw model underneath them. CorruptSaveNotice is the blocking two-option System notice
+// shown when loadOrGenerateLevel() rejects a level save (Phase 12 corrupt-save handling).
+enum class GameScreenMode : uint8_t { Playing, Death, Victory, CorruptSaveNotice };
 
 // Main Deep Mines gameplay loop: dungeon viewport, movement, combat, item pickup, and
 // stairs/level transitions. The in-game pause menu (GameMenuActivity) is launched via
@@ -58,6 +59,13 @@ class GameActivity final : public Activity {
   // changing shape once a new run starts (which onGoHome()'s eventual dismiss
   // can trigger before the overlay is torn down).
   EndScreenData endScreenData;
+
+  // CorruptSaveNotice state (Phase 12): the floor number to report in the notice body
+  // (captured at the point loadOrGenerateLevel() rejects that floor's save), and which
+  // option is currently highlighted. Purge is index 0 (default highlight per spec), Leave
+  // is index 1. Only meaningful while screenMode == CorruptSaveNotice.
+  uint8_t corruptNoticeDepth = 0;
+  uint8_t corruptNoticeSelection = 0;
 
   void loadOrGenerateLevel();
   void saveCurrentLevel();

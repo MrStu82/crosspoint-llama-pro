@@ -7,6 +7,7 @@
 #include "CrossPointSettings.h"
 #include "GameSprites.h"
 #include "GameState.h"
+#include "components/UITheme.h"
 #include "fontIds.h"
 
 void GameRenderer::computeLayout(int screenWidth, int screenHeight) {
@@ -513,6 +514,55 @@ void GameRenderer::drawEndScreen(GfxRenderer& renderer, bool isVictory, const En
 
   // One-shot full-refresh: new high-contrast content over a stale buffer
   // needs a clean waveform, not the periodic ghost-guard cadence draw() uses.
+  renderer.displayBuffer(HalDisplay::FULL_REFRESH);
+}
+
+void GameRenderer::drawCorruptSaveNotice(GfxRenderer& renderer, uint8_t depth, uint8_t selection) const {
+  // Same overlay discipline as drawEndScreen(): no clearScreen(), self-contained
+  // box, one-shot FULL_REFRESH -- this is the blocking corrupt-save notice
+  // (Phase 12), not the fixed single-dismiss showNotification() system, since
+  // it needs two selectable options.
+  const int boxW = screenW - 60;
+  const int boxH = 340;
+  const int boxX = (screenW - boxW) / 2;
+  const int boxY = (screenH - boxH) / 2;
+
+  renderer.fillRoundedRect(boxX, boxY, boxW, boxH, 8, Color::White);
+  renderer.drawRoundedRect(boxX, boxY, boxW, boxH, 2, 8, true);
+
+  int y = boxY + 26;
+  renderer.drawCenteredText(NOTOSANS_18_FONT_ID, y, tr(STR_DM_CORRUPT_NOTICE_TITLE), true);
+  y += 40;
+
+  char body[192];
+  snprintf(body, sizeof(body), tr(STR_DM_CORRUPT_NOTICE_BODY), static_cast<unsigned>(depth));
+
+  const int bodyMarginX = 24;
+  const int bodyH = 150;
+  Rect bodyBounds(boxX + bodyMarginX, y, boxW - 2 * bodyMarginX, bodyH);
+  UITheme::drawCenteredWrappedText(renderer, bodyBounds, UI_12_FONT_ID, body, /*maxLines=*/6, true,
+                                   EpdFontFamily::REGULAR, UITheme::TextVerticalAlignment::TOP);
+  y += bodyH + 10;
+
+  // Two option rows, Purge (index 0) then Leave (index 1) -- selection is shown
+  // via a filled highlight bar behind the currently-selected row's text, same
+  // visual language as a selected list row elsewhere in the UI (inverted fill,
+  // not a border) so it reads unambiguously as "this one, if you press Confirm".
+  const char* optionLabels[2] = {tr(STR_DM_CORRUPT_NOTICE_PURGE), tr(STR_DM_CORRUPT_NOTICE_LEAVE)};
+  const int optionH = 34;
+  const int optionMarginX = 40;
+  for (int i = 0; i < 2; i++) {
+    int rowY = y + i * (optionH + 8);
+    if (selection == i) {
+      renderer.fillRoundedRect(boxX + optionMarginX, rowY, boxW - 2 * optionMarginX, optionH, 4, Color::Black);
+    } else {
+      renderer.drawRoundedRect(boxX + optionMarginX, rowY, boxW - 2 * optionMarginX, optionH, 2, 4, true);
+    }
+    renderer.drawCenteredText(UI_12_FONT_ID, rowY + optionH / 2 - 8, optionLabels[i], selection != i);
+  }
+
+  // One-shot full-refresh: same reasoning as drawEndScreen() -- new
+  // high-contrast content over a stale buffer needs a clean waveform.
   renderer.displayBuffer(HalDisplay::FULL_REFRESH);
 }
 

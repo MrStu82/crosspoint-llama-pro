@@ -7,7 +7,12 @@
 // This is the seam a host harness hooks: build a FrameDirtyPlanner, feed it a
 // PlannerLayout + scripted game state, and read real, checkable FramePlan
 // results without any renderer/display involved. GameRenderer owns one of
-// these and delegates its draw()/planFrame() to it -- see GameRenderer.h.
+// these for its dirty-rect bookkeeping (planFrame()), but its
+// drawViewportCell() is a SEPARATE, independently hand-written
+// implementation of this same cell-visual-priority logic -- it does not call
+// through to computeCellVisual() below. Keep any change to the priority
+// order or MONSTER_DEFS/item/tile lookups in sync in both places by hand
+// until they're deduplicated (tracked as follow-up work, not yet done).
 
 #include "DirtyRectTracker.h"
 #include "GameTheme.h"

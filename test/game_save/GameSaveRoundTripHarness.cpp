@@ -283,6 +283,131 @@ void testV3SaveRejectedByV4Loader(const std::string& sdRoot) {
               "loadFromFile(): loaded=%d (expected 0), in-memory state left intact after rejection\n", loaded);
 }
 
+// --- Req (parent, 2026-08-16): prove the inventoryCount reject-not-clamp -----
+// --- boundary is exercised both sides, as a permanent regression test -------
+//
+// GameState.cpp rejects (reason "bad index") rather than clamps when a
+// save.bin's inventoryCount exceeds game::MAX_INVENTORY. Confirmed via git
+// history that MAX_INVENTORY has never changed since its introduction, so
+// this branch is unreachable for any save a real build ever wrote -- but
+// parent's condition for shipping was proof, not just the history check:
+// count == MAX must still load cleanly, and count == MAX+1 must still
+// reject, forever, regardless of future refactors.
+void testInventoryCountBoundary(const std::string& sdRoot) {
+  std::string path = sdRoot + "/.crosspoint/game/save.bin";
+
+  GAME_STATE.newGame(0xABCD);
+  GAME_STATE.inventoryCount = game::MAX_INVENTORY;
+  for (int i = 0; i < game::MAX_INVENTORY; i++) {
+    GAME_STATE.inventory[i] = game::Item{static_cast<int16_t>(i), static_cast<int16_t>(i),
+                                         static_cast<uint8_t>(game::ItemType::Gold), 0,
+                                         static_cast<uint8_t>(i + 1), 0, 0};
+  }
+  bool saved = GAME_STATE.saveToFile();
+  CHECK(saved, "saveToFile() failed while priming inventory-boundary fixture");
+
+  // Reset live state, then confirm count == MAX loads cleanly.
+  GAME_STATE.newGame(0x1111);
+  bool loadedAtMax = GAME_STATE.loadFromFile();
+  CHECK(loadedAtMax, "loadFromFile() rejected a save with inventoryCount == MAX_INVENTORY (%d) -- should load cleanly",
+        game::MAX_INVENTORY);
+  CHECK(GAME_STATE.inventoryCount == game::MAX_INVENTORY,
+        "inventoryCount mismatch after max-boundary load: got %u, expected %d", GAME_STATE.inventoryCount,
+        game::MAX_INVENTORY);
+  CHECK(GAME_STATE.inventory[game::MAX_INVENTORY - 1].count == game::MAX_INVENTORY,
+        "last inventory slot's data didn't round-trip at the count==MAX boundary");
+
+  SaveValidity validAtMax = GameState::validateSaveFile();
+  CHECK(validAtMax.status == SaveValidity::Status::Valid,
+        "validateSaveFile() disagreed with loadFromFile() at count==MAX boundary");
+
+  // Hand-corrupt the on-disk inventoryCount byte to MAX+1, leaving every
+  // other byte (the Player block and the MAX_INVENTORY item entries already
+  // on disk) untouched -- proves the count check alone is what trips, not a
+  // side effect of truncation.
+  long offset = 1 /* version byte */ + static_cast<long>(sizeof(game::Player));
+  FILE* f = fopen(path.c_str(), "r+b");
+  CHECK(f != nullptr, "couldn't reopen save.bin to corrupt inventoryCount byte");
+  if (f) {
+    fseek(f, offset, SEEK_SET);
+    uint8_t overMax = static_cast<uint8_t>(game::MAX_INVENTORY + 1);
+    fwrite(&overMax, sizeof(overMax), 1, f);
+    fclose(f);
+  }
+
+  SaveValidity invalidOverMax = GameState::validateSaveFile();
+  CHECK(invalidOverMax.status == SaveValidity::Status::Invalid,
+        "validateSaveFile() did not reject inventoryCount == MAX+1 (%d)", game::MAX_INVENTORY + 1);
+  CHECK(invalidOverMax.reason != nullptr && std::strcmp(invalidOverMax.reason, "bad index") == 0,
+        "wrong rejection reason for inventoryCount == MAX+1: got \"%s\", expected \"bad index\"", invalidOverMax.reason);
+
+  uint32_t hpBeforeRejectedLoad = GAME_STATE.player.hp;
+  bool loadedOverMax = GAME_STATE.loadFromFile();
+  CHECK(!loadedOverMax, "loadFromFile() returned true for inventoryCount == MAX+1 -- should reject");
+  CHECK(GAME_STATE.player.hp == hpBeforeRejectedLoad, "live state mutated by a rejected over-max-inventory load");
+
+  std::printf("[inventory-boundary] count==MAX(%d) loads clean, count==MAX+1 rejects with reason \"%s\"\n",
+              game::MAX_INVENTORY, invalidOverMax.reason);
+}
+
+// Same proof, for messageCount vs game::MAX_MESSAGES.
+void testMessageCountBoundary(const std::string& sdRoot) {
+  std::string path = sdRoot + "/.crosspoint/game/save.bin";
+
+  GAME_STATE.newGame(0xBEEF);
+  // newGame() already seeds one message ("You enter..."); fill the ring
+  // buffer up to exactly MAX_MESSAGES via the real addMessage() API so the
+  // on-disk shape matches what actual play would produce.
+  char buf[16];
+  while (GAME_STATE.messageCount < game::MAX_MESSAGES) {
+    std::snprintf(buf, sizeof(buf), "msg%u", GAME_STATE.messageCount);
+    GAME_STATE.addMessage(buf);
+  }
+  CHECK(GAME_STATE.messageCount == game::MAX_MESSAGES, "test setup didn't reach messageCount == MAX_MESSAGES");
+  bool saved = GAME_STATE.saveToFile();
+  CHECK(saved, "saveToFile() failed while priming message-boundary fixture");
+
+  GAME_STATE.newGame(0x2222);
+  bool loadedAtMax = GAME_STATE.loadFromFile();
+  CHECK(loadedAtMax, "loadFromFile() rejected a save with messageCount == MAX_MESSAGES (%d) -- should load cleanly",
+        game::MAX_MESSAGES);
+  CHECK(GAME_STATE.messageCount == game::MAX_MESSAGES,
+        "messageCount mismatch after max-boundary load: got %u, expected %d", GAME_STATE.messageCount,
+        game::MAX_MESSAGES);
+
+  SaveValidity validAtMax = GameState::validateSaveFile();
+  CHECK(validAtMax.status == SaveValidity::Status::Valid,
+        "validateSaveFile() disagreed with loadFromFile() at messageCount==MAX boundary");
+
+  // messageCount byte sits right after inventoryCount + its item entries.
+  // inventoryCount is 0 here (fresh newGame(), never touched), so this
+  // collapses to version + Player + one zero-count byte.
+  long offset = 1 /* version */ + static_cast<long>(sizeof(game::Player)) + 1 /* inventoryCount byte */ +
+                static_cast<long>(GAME_STATE.inventoryCount) * static_cast<long>(sizeof(game::Item));
+  FILE* f = fopen(path.c_str(), "r+b");
+  CHECK(f != nullptr, "couldn't reopen save.bin to corrupt messageCount byte");
+  if (f) {
+    fseek(f, offset, SEEK_SET);
+    uint8_t overMax = static_cast<uint8_t>(game::MAX_MESSAGES + 1);
+    fwrite(&overMax, sizeof(overMax), 1, f);
+    fclose(f);
+  }
+
+  SaveValidity invalidOverMax = GameState::validateSaveFile();
+  CHECK(invalidOverMax.status == SaveValidity::Status::Invalid,
+        "validateSaveFile() did not reject messageCount == MAX+1 (%d)", game::MAX_MESSAGES + 1);
+  CHECK(invalidOverMax.reason != nullptr && std::strcmp(invalidOverMax.reason, "bad index") == 0,
+        "wrong rejection reason for messageCount == MAX+1: got \"%s\", expected \"bad index\"", invalidOverMax.reason);
+
+  uint32_t hpBeforeRejectedLoad = GAME_STATE.player.hp;
+  bool loadedOverMax = GAME_STATE.loadFromFile();
+  CHECK(!loadedOverMax, "loadFromFile() returned true for messageCount == MAX+1 -- should reject");
+  CHECK(GAME_STATE.player.hp == hpBeforeRejectedLoad, "live state mutated by a rejected over-max-message load");
+
+  std::printf("[message-boundary] count==MAX(%d) loads clean, count==MAX+1 rejects with reason \"%s\"\n",
+              game::MAX_MESSAGES, invalidOverMax.reason);
+}
+
 }  // namespace
 
 int main() {
@@ -294,6 +419,8 @@ int main() {
   testDoorOpenBitmapRoundTrips();
   testOldSaveNullptrCompatPath(sdRoot);
   testV3SaveRejectedByV4Loader(sdRoot);
+  testInventoryCountBoundary(sdRoot);
+  testMessageCountBoundary(sdRoot);
 
   if (failures == 0) {
     std::printf("ALL CHECKS PASSED\n");

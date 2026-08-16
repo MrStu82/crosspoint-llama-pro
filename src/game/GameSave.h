@@ -3,6 +3,7 @@
 #include <cstdint>
 
 #include "GameTypes.h"
+#include "SaveValidity.h"
 
 // Handles per-level state persistence.
 // Stores deltas from seed-generated state: fog of war, surviving monsters,
@@ -25,6 +26,13 @@ class GameSave {
 
   // Check if a saved level file exists
   static bool hasLevel(uint8_t depth);
+
+  // Read-only validity check for level `depth`'s save file -- does it exist,
+  // and if so, is it loadable? Internally shares loadLevel()'s exact
+  // parse/validate path (see GameSave.cpp), so this can never drift from what
+  // loadLevel() actually accepts or rejects. Used by both the load-boundary
+  // notification and the Save Data Audit menu scan.
+  static SaveValidity validateLevel(uint8_t depth);
 
   // Delete a specific level file
   static void deleteLevel(uint8_t depth);

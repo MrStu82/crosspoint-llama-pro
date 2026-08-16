@@ -3,6 +3,7 @@
 #include <string>
 
 #include "GameTypes.h"
+#include "SaveValidity.h"
 
 class GameState {
   static GameState instance;
@@ -41,6 +42,13 @@ class GameState {
   bool loadFromFile();
   bool hasSaveFile() const;
   void deleteSaveFile() const;
+
+  // Read-only validity check for save.bin -- does it exist, and if so, is it
+  // loadable? Internally shares loadFromFile()'s exact parse/validate path
+  // (see GameState.cpp), so this can never drift from what loadFromFile()
+  // actually accepts or rejects. Used by both the load-boundary notification
+  // and the Save Data Audit menu scan.
+  static SaveValidity validateSaveFile();
 };
 
 #define GAME_STATE GameState::getInstance()

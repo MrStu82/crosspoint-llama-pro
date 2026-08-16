@@ -16,6 +16,126 @@ constexpr uint8_t SAVE_FILE_VERSION = 4;  // v2: turnCount widened to uint32_t, 
                                           // v4: added activeSponsorId to Player (Phase 11 sponsors)
 constexpr char SAVE_DIR[] = "/.crosspoint/game";
 constexpr char SAVE_FILE[] = "/.crosspoint/game/save.bin";
+
+// A log message longer than this in a save file cannot be one this build ever
+// wrote (see addMessage()/game log usage) -- treated as corrupt rather than
+// trusted verbatim, so a bogus length field can't drive a huge std::string
+// resize.
+constexpr uint32_t MAX_MESSAGE_LEN = 512;
+
+// readPod()/readString() discard the actual-bytes-read count everywhere else
+// in the codebase, so a truncated file today reads partial/garbage data with
+// zero error signal. These checked variants are local to this file (not
+// folded into the shared Serialization.h, which other systems like the
+// book/EPUB cache also depend on) and are the only source of the "truncated"
+// validity reason below.
+template <typename T>
+bool readPodChecked(HalFile& file, T& value) {
+  int n = file.read(reinterpret_cast<uint8_t*>(&value), sizeof(T));
+  return n == static_cast<int>(sizeof(T));
+}
+
+bool readStringChecked(HalFile& file, std::string& s) {
+  uint32_t len;
+  if (!readPodChecked(file, len)) return false;
+  if (len > MAX_MESSAGE_LEN) return false;
+  s.resize(len);
+  if (len == 0) return true;
+  int n = file.read(reinterpret_cast<uint8_t*>(&s[0]), len);
+  return n == static_cast<int>(len);
+}
+
+// Plain-data staging area for a parsed save.bin -- mirrors GameState's
+// persisted fields but lives independently of any live instance, so a
+// stale/incompatible file can be rejected atomically without ever touching
+// GAME_STATE's current run.
+struct StagedSave {
+  game::Player player{};
+  game::Item inventory[game::MAX_INVENTORY]{};
+  uint8_t inventoryCount = 0;
+  std::string messages[game::MAX_MESSAGES];
+  uint8_t messageCount = 0;
+  uint8_t messageHead = 0;
+};
+
+// Parses and validates save.bin's contents into a staging area, without
+// touching any live GameState. Both GameState::loadFromFile() and
+// GameState::validateSaveFile() call this exact function -- there is only one
+// definition of "valid" for the whole-game save file. On any Invalid result,
+// `reason` is one of "version", "truncated", or "bad index" (never blank),
+// and the staged output must not be trusted/committed.
+SaveValidity parseSaveFile(HalFile& file, StagedSave& out) {
+  SaveValidity result;
+
+  uint8_t version;
+  if (!readPodChecked(file, version)) {
+    result.status = SaveValidity::Status::Invalid;
+    result.reason = "truncated";
+    return result;
+  }
+  if (version != SAVE_FILE_VERSION) {
+    // Player is written as raw POD -- any layout change (this file's
+    // version history widened turnCount and added fields over time) makes an
+    // older file's bytes unsafe to reinterpret as the new struct. Reject
+    // rather than risk a corrupted read.
+    result.status = SaveValidity::Status::Invalid;
+    result.reason = "version";
+    return result;
+  }
+
+  if (!readPodChecked(file, out.player)) {
+    result.status = SaveValidity::Status::Invalid;
+    result.reason = "truncated";
+    return result;
+  }
+
+  // Inventory
+  if (!readPodChecked(file, out.inventoryCount)) {
+    result.status = SaveValidity::Status::Invalid;
+    result.reason = "truncated";
+    return result;
+  }
+  if (out.inventoryCount > game::MAX_INVENTORY) {
+    // A count field this far out of range means the file wasn't written by a
+    // build with this MAX_INVENTORY -- same load-boundary trust issue as an
+    // out-of-range monster.type in a level file (GameSave.cpp). Reject rather
+    // than clamp: silently dropping inventory items past the clamp point is
+    // data loss with no error signal, not a safe recovery.
+    result.status = SaveValidity::Status::Invalid;
+    result.reason = "bad index";
+    return result;
+  }
+  for (uint8_t i = 0; i < out.inventoryCount; i++) {
+    if (!readPodChecked(file, out.inventory[i])) {
+      result.status = SaveValidity::Status::Invalid;
+      result.reason = "truncated";
+      return result;
+    }
+  }
+
+  // Message log
+  if (!readPodChecked(file, out.messageCount) || !readPodChecked(file, out.messageHead)) {
+    result.status = SaveValidity::Status::Invalid;
+    result.reason = "truncated";
+    return result;
+  }
+  if (out.messageCount > game::MAX_MESSAGES) {
+    result.status = SaveValidity::Status::Invalid;
+    result.reason = "bad index";
+    return result;
+  }
+  for (uint8_t i = 0; i < out.messageCount; i++) {
+    int idx = (out.messageHead + i) % game::MAX_MESSAGES;
+    if (!readStringChecked(file, out.messages[idx])) {
+      result.status = SaveValidity::Status::Invalid;
+      result.reason = "truncated";
+      return result;
+    }
+  }
+
+  result.status = SaveValidity::Status::Valid;
+  return result;
+}
 }  // namespace
 
 GameState GameState::instance;
@@ -133,44 +253,28 @@ bool GameState::loadFromFile() {
     return false;
   }
 
-  uint8_t version;
-  serialization::readPod(file, version);
-  if (version != SAVE_FILE_VERSION) {
-    // Player is written as raw POD — any layout change (this file's v1->v2 widened turnCount
-    // and added fields) makes an older file's bytes unsafe to reinterpret as the new struct.
-    // Reject rather than risk a corrupted read; player starts a fresh run.
-    LOG_ERR("DM", "Incompatible save version %u (expected %u)", version, SAVE_FILE_VERSION);
-    file.close();
+  // Staged into a local struct and only committed to this instance once the
+  // ENTIRE file has validated cleanly -- same atomic reject-not-clamp
+  // philosophy as GameSave::loadLevel(). The caller's current run state is
+  // left completely untouched on any rejection.
+  StagedSave staged;
+  SaveValidity validity = parseSaveFile(file, staged);
+  file.close();
+
+  if (validity.status != SaveValidity::Status::Valid) {
+    LOG_ERR("DM", "Save file rejected: %s", validity.reason);
     return false;
   }
 
-  // Player
-  serialization::readPod(file, player);
-
-  // Inventory
-  serialization::readPod(file, inventoryCount);
-  if (inventoryCount > game::MAX_INVENTORY) {
-    inventoryCount = game::MAX_INVENTORY;
-  }
-  for (uint8_t i = 0; i < inventoryCount; i++) {
-    serialization::readPod(file, inventory[i]);
+  player = staged.player;
+  inventoryCount = staged.inventoryCount;
+  memcpy(inventory, staged.inventory, sizeof(inventory));
+  messageCount = staged.messageCount;
+  messageHead = staged.messageHead;
+  for (int i = 0; i < game::MAX_MESSAGES; i++) {
+    messages[i] = staged.messages[i];
   }
 
-  // Message log
-  serialization::readPod(file, messageCount);
-  serialization::readPod(file, messageHead);
-  if (messageCount > game::MAX_MESSAGES) {
-    messageCount = game::MAX_MESSAGES;
-  }
-  for (auto& msg : messages) {
-    msg.clear();
-  }
-  for (uint8_t i = 0; i < messageCount; i++) {
-    int idx = (messageHead + i) % game::MAX_MESSAGES;
-    serialization::readString(file, messages[idx]);
-  }
-
-  file.close();
   LOG_INF("DM", "Game loaded (depth %u, turn %u)", player.dungeonDepth, player.turnCount);
   return true;
 }
@@ -182,4 +286,26 @@ bool GameState::hasSaveFile() const {
 void GameState::deleteSaveFile() const {
   Storage.remove(SAVE_FILE);
   LOG_INF("DM", "Save file deleted");
+}
+
+SaveValidity GameState::validateSaveFile() {
+  SaveValidity result;
+  if (!Storage.exists(SAVE_FILE)) {
+    result.status = SaveValidity::Status::NotPresent;
+    return result;
+  }
+
+  HalFile file;
+  if (!Storage.openFileForRead("DM", SAVE_FILE, file)) {
+    // Exists but can't be opened -- treat as corrupt rather than silently
+    // reporting NotPresent, since Storage.exists() already said yes.
+    result.status = SaveValidity::Status::Invalid;
+    result.reason = "truncated";
+    return result;
+  }
+
+  StagedSave staged;
+  result = parseSaveFile(file, staged);
+  file.close();
+  return result;
 }

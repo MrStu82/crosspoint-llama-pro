@@ -135,6 +135,14 @@ class GameRenderer {
   // a stale buffer (ghost-guard cadence doesn't apply to a one-shot modal).
   void drawEndScreen(GfxRenderer& renderer, bool isVictory, const EndScreenData& data) const;
 
+  // Paints the blocking corrupt-save notice (Phase 12): a rounded box with
+  // title, wrapped body (floor number substituted into the %u placeholder),
+  // and two selectable options (Purge/Leave), the current selection shown via
+  // a filled highlight bar. Same "no clearScreen(), self-contained box, one-shot
+  // FULL_REFRESH" shape as drawEndScreen() -- same modal genre, same overlay
+  // discipline. `selection` is 0 for Purge, 1 for Leave.
+  void drawCorruptSaveNotice(GfxRenderer& renderer, uint8_t depth, uint8_t selection) const;
+
   // Shows a boxed System notification (Phase 9 work item 3): bordered box,
   // inverted (black-filled, white-text) title bar, body text below. `body`
   // is copied into a fixed-size buffer (no heap, no per-turn construction --

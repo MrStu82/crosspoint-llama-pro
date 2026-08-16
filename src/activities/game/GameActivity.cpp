@@ -119,6 +119,10 @@ void GameActivity::onEnter() {
 // --- Render ---
 
 void GameActivity::render(RenderLock&&) {
+  if (screenMode == GameScreenMode::CorruptSaveNotice) {
+    gameRenderer.drawCorruptSaveNotice(renderer, corruptNoticeDepth, corruptNoticeSelection);
+    return;
+  }
   if (screenMode != GameScreenMode::Playing) {
     gameRenderer.drawEndScreen(renderer, screenMode == GameScreenMode::Victory, endScreenData);
     return;
@@ -130,6 +134,41 @@ void GameActivity::render(RenderLock&&) {
 
 void GameActivity::loop() {
   using Button = MappedInputManager::Button;
+
+  if (screenMode == GameScreenMode::CorruptSaveNotice) {
+    // Existing input scheme only (per spec) -- Up/Down toggle the highlighted
+    // option, Confirm commits it, Back is a shortcut for "Leave it" (same
+    // back-out behavior Death/Victory's dismiss uses, just without deleting
+    // anything). No screen-tap handling here: this is a text-heavy modal with
+    // two options, not a control surface, and touch isn't part of the existing
+    // idiom for option popups elsewhere in the game (GameMenuActivity is
+    // button-driven).
+    if (mappedInput.wasReleased(Button::Up) || mappedInput.wasReleased(Button::Down)) {
+      corruptNoticeSelection = corruptNoticeSelection == 0 ? 1 : 0;
+      requestUpdate();
+      return;
+    }
+    if (mappedInput.wasReleased(Button::Back)) {
+      onGoHome();
+      return;
+    }
+    if (mappedInput.wasReleased(Button::Confirm)) {
+      if (corruptNoticeSelection == 0) {
+        // Purge the record: the freshly generated floor computed at the top of
+        // loadOrGenerateLevel() is already authoritative (loadLevel() left it
+        // untouched on rejection) -- purging just removes the unloadable file
+        // so future visits to this floor don't hit the same rejection again.
+        GameSave::deleteLevel(corruptNoticeDepth);
+        screenMode = GameScreenMode::Playing;
+        requestUpdate();
+      } else {
+        // Leave it: back out without touching the rejected file.
+        onGoHome();
+      }
+      return;
+    }
+    return;
+  }
 
   if (screenMode != GameScreenMode::Playing) {
     // Blocking death/victory screen: tap-dismiss only (Phase 7 req 2/3) --
@@ -1017,16 +1056,27 @@ void GameActivity::loadOrGenerateLevel() {
 
   // If we have saved state for this level, overlay it
   if (GameSave::hasLevel(p.dungeonDepth)) {
-    // Load saved fog, door state, monsters, and items (overrides generated state)
-    GameSave::loadLevel(p.dungeonDepth, fogOfWar, doorOpen, monsters, monsterCount, levelItems, itemCount);
-
-    // DungeonGenerator::generate() above reset every door tile to DoorClosed;
-    // re-open the ones the player had already opened before saving (Phase 7 req 6).
-    for (int y = 0; y < game::MAP_HEIGHT; y++) {
-      for (int x = 0; x < game::MAP_WIDTH; x++) {
-        int idx = y * game::MAP_WIDTH + x;
-        if (tiles[idx] == game::Tile::DoorClosed && game::fogIsExplored(doorOpen, x, y)) {
-          tiles[idx] = game::Tile::DoorOpen;
+    // Load saved fog, door state, monsters, and items (overrides generated state).
+    // loadLevel() commits fogOfWar/doorOpen/monsters/levelItems atomically: on
+    // a rejected (stale/corrupt) file it returns false having left all of them
+    // untouched, so the freshly generated floor computed above stays authoritative.
+    if (!GameSave::loadLevel(p.dungeonDepth, fogOfWar, doorOpen, monsters, monsterCount, levelItems, itemCount)) {
+      LOG_ERR("DM", "Level %u save rejected, keeping freshly generated floor", p.dungeonDepth);
+      // Surface the rejection to the player instead of silently swapping in the
+      // fresh floor (Phase 12) -- the freshly generated floor above is already
+      // authoritative, this just blocks normal play until they acknowledge it.
+      corruptNoticeDepth = p.dungeonDepth;
+      corruptNoticeSelection = 0;  // Purge highlighted by default, per spec.
+      screenMode = GameScreenMode::CorruptSaveNotice;
+    } else {
+      // DungeonGenerator::generate() above reset every door tile to DoorClosed;
+      // re-open the ones the player had already opened before saving (Phase 7 req 6).
+      for (int y = 0; y < game::MAP_HEIGHT; y++) {
+        for (int x = 0; x < game::MAP_WIDTH; x++) {
+          int idx = y * game::MAP_WIDTH + x;
+          if (tiles[idx] == game::Tile::DoorClosed && game::fogIsExplored(doorOpen, x, y)) {
+            tiles[idx] = game::Tile::DoorOpen;
+          }
         }
       }
     }

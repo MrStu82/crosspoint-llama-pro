@@ -96,19 +96,22 @@ void resetSdRoot(const char* path) {
   ::mkdir(path, 0755);
 }
 
-// Byte-for-byte the same v1-level-file shape GameSaveRoundTripHarness.cpp's
-// writeV1LevelFile() writes: version=1, depth, fog, [no door bytes],
-// monsterCount+monsters, itemCount+items. Reused verbatim (not
-// reimplemented from a description) because that function is not exported
-// -- duplicating it here keeps this harness a single standalone TU, same
-// convention as the rest of test/game_save/.
-void writeV1LevelFile(const char* fullPath, uint8_t depth, const uint8_t* fog, const game::Monster* monsters,
-                       uint8_t monsterCount, const game::Item* items, uint8_t itemCount) {
+// Current (post-Fix-2) v3-level-file shape: version=3, depth, gameSeed,
+// fog, doorOpen, monsterCount+monsters, itemCount+items. Used (instead of
+// writeV1LevelFile) wherever this harness needs to isolate monster.type
+// validation from the (now separate, already-covered-elsewhere) version/seed
+// rejection path -- a v1 file would now be rejected outright on version
+// alone, which would prove nothing about the monster.type check specifically.
+void writeV3LevelFile(const char* fullPath, uint8_t depth, uint32_t gameSeed, const uint8_t* fog,
+                       const uint8_t* doorOpen, const game::Monster* monsters, uint8_t monsterCount,
+                       const game::Item* items, uint8_t itemCount) {
   FILE* f = fopen(fullPath, "wb");
-  uint8_t version = 1;
+  uint8_t version = 3;
   fwrite(&version, sizeof(version), 1, f);
   fwrite(&depth, sizeof(depth), 1, f);
+  fwrite(&gameSeed, sizeof(gameSeed), 1, f);
   fwrite(fog, 1, game::FOG_SIZE, f);
+  fwrite(doorOpen, 1, game::FOG_SIZE, f);
   fwrite(&monsterCount, sizeof(monsterCount), 1, f);
   for (uint8_t i = 0; i < monsterCount; i++) fwrite(&monsters[i], sizeof(game::Monster), 1, f);
   fwrite(&itemCount, sizeof(itemCount), 1, f);
@@ -147,6 +150,7 @@ void writeV1LevelFile(const char* fullPath, uint8_t depth, const uint8_t* fog, c
 // FrameDirtyPlanner::computeCellVisual() path with no fault.
 void testStaleSaveOobMonsterRejectedAtomically(const std::string& sdRoot) {
   constexpr uint8_t kDepth = 1;
+  constexpr uint32_t kActiveSeed = 0x7E57;
   std::string dir = sdRoot + "/.crosspoint/game";
   std::string cmd = "mkdir -p '" + dir + "'";
   system(cmd.c_str());
@@ -154,17 +158,22 @@ void testStaleSaveOobMonsterRejectedAtomically(const std::string& sdRoot) {
   std::snprintf(path, sizeof(path), "%s/level_%02u.bin", dir.c_str(), kDepth);
 
   std::vector<uint8_t> fog(game::FOG_SIZE, 0);
+  std::vector<uint8_t> doorOpen(game::FOG_SIZE, 0);
   // Monster sits at (5,5); type is deliberately far outside
   // [0, MONSTER_DEF_COUNT) -- 200 is not a plausible in-range value for any
   // version of this table, matching an old/corrupt/incompatible save byte,
-  // not an off-by-one.
+  // not an off-by-one. File is otherwise a genuinely well-formed, correctly
+  // seeded v3 file (matching kActiveSeed below) so this isolates the
+  // monster.type validation path from the separate version/seed rejection
+  // path (already covered by StaleStateAndCrossSeedLevelHarness.cpp and
+  // GameSaveRoundTripHarness.cpp's testOldSaveFileRejected).
   constexpr uint8_t kPoisonedType = 200;
   static_assert(kPoisonedType >= game::MONSTER_DEF_COUNT, "poisoned type must be genuinely out of range");
   game::Monster fileMonsters[1];
   fileMonsters[0] = game::Monster{5, 5, kPoisonedType, 10, static_cast<uint8_t>(game::MonsterState::Wandering)};
   game::Item fileItems[0];
 
-  writeV1LevelFile(path, kDepth, fog.data(), fileMonsters, 1, fileItems, 0);
+  writeV3LevelFile(path, kDepth, kActiveSeed, fog.data(), doorOpen.data(), fileMonsters, 1, fileItems, 0);
 
   // --- Step 1: seed the caller's arrays with sentinel "fresh floor" values,
   // exactly as GameActivity::loadOrGenerateLevel() would have them right
@@ -182,8 +191,8 @@ void testStaleSaveOobMonsterRejectedAtomically(const std::string& sdRoot) {
 
   // --- Step 2: load the poisoned file through the REAL, unmodified
   // GameSave::loadLevel() ---
-  bool loaded = GameSave::loadLevel(kDepth, loadedFog.data(), nullptr, loadedMonsters, loadedMonsterCount,
-                                     loadedItems, loadedItemCount);
+  bool loaded = GameSave::loadLevel(kDepth, kActiveSeed, loadedFog.data(), nullptr, loadedMonsters,
+                                     loadedMonsterCount, loadedItems, loadedItemCount);
   CHECK(!loaded, "loadLevel() accepted a file with an out-of-range monster.type=%u -- the load-boundary "
                  "validation fix is not rejecting it",
         kPoisonedType);
@@ -206,13 +215,13 @@ void testStaleSaveOobMonsterRejectedAtomically(const std::string& sdRoot) {
   std::snprintf(path2, sizeof(path2), "%s/level_%02u.bin", dir2.c_str(), static_cast<unsigned>(kDepth + 1));
   game::Monster validFileMonsters[1];
   validFileMonsters[0] = game::Monster{5, 5, kFreshType, 10, static_cast<uint8_t>(game::MonsterState::Wandering)};
-  writeV1LevelFile(path2, kDepth + 1, fog.data(), validFileMonsters, 1, fileItems, 0);
+  writeV3LevelFile(path2, kDepth + 1, kActiveSeed, fog.data(), doorOpen.data(), validFileMonsters, 1, fileItems, 0);
 
   std::vector<uint8_t> validLoadedFog(game::FOG_SIZE, 0);
   game::Monster validLoadedMonsters[game::MAX_MONSTERS];
   game::Item validLoadedItems[game::MAX_ITEMS_PER_LEVEL];
   uint8_t validLoadedMonsterCount = 0, validLoadedItemCount = 0;
-  bool validLoaded = GameSave::loadLevel(kDepth + 1, validLoadedFog.data(), nullptr, validLoadedMonsters,
+  bool validLoaded = GameSave::loadLevel(kDepth + 1, kActiveSeed, validLoadedFog.data(), nullptr, validLoadedMonsters,
                                           validLoadedMonsterCount, validLoadedItems, validLoadedItemCount);
   CHECK(validLoaded && validLoadedMonsterCount == 1 && validLoadedMonsters[0].type == kFreshType,
         "loadLevel() failed to load a genuinely well-formed save file -- the fix is over-rejecting");

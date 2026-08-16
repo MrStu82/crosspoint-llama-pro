@@ -1,0 +1,96 @@
+Host-side control-flow regression harness for the whole-run corrupt-save
+notice: GameActivity::onEnter() finds GAME_STATE.hasSaveFile() true but
+GAME_STATE.loadFromFile() false (a present-but-unloadable save.bin), lands in
+the CorruptSaveNotice/WholeRun modal, and a scripted Confirm button release
+drives the real loop() into GameActivity::resolveWholeRunCorruptNotice().
+Not a gtest suite (see test/README for those) -- this compiles the REAL,
+unmodified Activity.cpp/GameActivity.cpp against the REAL GameState.cpp/
+GameSave.cpp/DungeonGenerator.cpp/AchievementBus.cpp/FlavorText.cpp, so the
+resolve path is proven against shipped code, not a transcription of it.
+
+This is a LOGIC/control-flow test, not a pixel-rendering test: GfxRenderer
+and GameRenderer are stubbed (fast-compiling fakes), unlike the
+test/sponsor_hp_clamp/ precedent, which links the real GameRenderer for a
+different (HUD-value) purpose. Nothing here ever draws a frame.
+
+Same standalone-g++, symlinked-mirror-with-shadow-headers technique as
+test/game_title_render/ -- see that README's "Why mirror/ exists" section
+for the general explanation.
+
+## Why the private state is never read directly
+
+screenMode / corruptNoticeScope / corruptNoticeSelection are all private on
+GameActivity with no accessor, and per this project's precedent
+(test/sponsor_hp_clamp/), a friend/accessor is avoided rather than added
+just for a test. This harness instead asserts only through observable
+PUBLIC side effects:
+  - GAME_STATE.hasSaveFile() / Storage.exists(...) before and after Confirm,
+    to prove GAME_STATE.deleteSaveFile() actually ran (purge=true, since
+    corruptNoticeSelection defaults to 0 = Purge per GameActivity.cpp's
+    onEnter() comment).
+  - GAME_STATE.player.{turnCount,hp,maxHp,dungeonDepth} after Confirm, to
+    prove GAME_STATE.newGame() ran and produced fresh state.
+  - A second harmless loop() call staying stable, as the strongest available
+    proof screenMode flipped back to Playing (a stuck CorruptSaveNotice modal
+    would still accept Up/Down/Confirm and mutate corruptNoticeSelection
+    again instead of being a no-op).
+
+If a future change makes any of this genuinely unprovable indirectly, add a
+narrowly-scoped test-only accessor rather than reaching further into
+private internals with tricks (see the task-level instruction this harness
+was built under).
+
+## Build
+
+  INCLUDES="-include Arduino.h \
+    -I test/whole_run_corrupt_save/stubs \
+    -I test/whole_run_corrupt_save/mirror/src \
+    -I test/whole_run_corrupt_save/mirror/src/activities \
+    -I test/whole_run_corrupt_save/mirror/src/activities/game \
+    -I src -I src/game \
+    -I lib/Serialization -I lib/Memory"
+
+  mkdir -p test/whole_run_corrupt_save/build
+  for f in \
+      test/whole_run_corrupt_save/WholeRunCorruptSaveHarness.cpp \
+      test/whole_run_corrupt_save/mirror/src/activities/Activity.cpp \
+      test/whole_run_corrupt_save/mirror/src/activities/game/GameActivity.cpp \
+      src/game/GameState.cpp \
+      src/game/GameSave.cpp \
+      src/game/DungeonGenerator.cpp \
+      src/game/AchievementBus.cpp \
+      src/game/FlavorText.cpp; do
+    g++ -std=c++20 -O0 -Wall -Wextra $INCLUDES -c "$f" \
+      -o "test/whole_run_corrupt_save/build/$(basename $f .cpp).o"
+  done
+  g++ test/whole_run_corrupt_save/build/*.o \
+    -o test/whole_run_corrupt_save/build/whole_run_corrupt_save_harness
+
+  ./test/whole_run_corrupt_save/build/whole_run_corrupt_save_harness
+
+`-include Arduino.h` is required (not just an -I stub dir) because
+GameActivity.cpp calls millis() with no explicit #include of its own --
+on the real ESP32 Arduino toolchain, Arduino.h is force-included globally
+via the build system, and this harness replicates that with -include
+rather than editing the real .cpp to add a header it doesn't itself declare.
+
+## Notable stub-placement gotcha
+
+GameActivity.h does `#include "game/GameRenderer.h"` (not a bare
+"GameRenderer.h") -- the stub must live at stubs/game/GameRenderer.h, not
+stubs/GameRenderer.h, or g++'s quoted-include search resolves straight
+through to the real src/game/GameRenderer.h via the -I src/game path
+instead of ever reaching the stub, silently pulling in the full font/EPD
+pipeline this harness deliberately avoids. Caught only at link time
+(undefined references to the stub's inert bodies, because the real
+GameRenderer.cpp was never compiled in) -- worth remembering before adding
+any other stub whose real header is included via a "subdir/Name.h" path.
+
+## Output
+
+Fully deterministic: a fresh stub-filesystem save.bin is hand-written with
+version byte 0xFF (guaranteed to mismatch SAVE_FILE_VERSION, no dependency
+on knowing its current value) every run, and the stub SD root under
+test/whole_run_corrupt_save/build/fake_sd is wiped at the start of main().
+PASS prints all assertions passed and exits 0; any failed CHECK() prints to
+stderr, the run still completes, and main() exits 1.

@@ -9,7 +9,7 @@
 #include <cstring>
 
 namespace {
-constexpr uint8_t LEVEL_FILE_VERSION = 2;  // v2: added door-open bitmap (Phase 7 req 6)
+constexpr uint8_t LEVEL_FILE_VERSION = 3;  // v3: added gameSeed header field (cross-seed rejection)
 constexpr char SAVE_DIR[] = "/.crosspoint/game";
 
 void levelPath(uint8_t depth, char* buf, size_t bufSize) {
@@ -36,11 +36,11 @@ bool readBytesChecked(HalFile& file, uint8_t* buf, size_t count) {
 // touching any caller-owned live state. Both GameSave::loadLevel() and
 // GameSave::validateLevel() call this exact function -- there is only one
 // definition of "valid" for a level file. On any Invalid result, `reason` is
-// one of "version", "truncated", or "bad index" (never blank), and the staged
-// output must not be trusted/committed.
-SaveValidity parseLevelFile(HalFile& file, uint8_t* stagedFog, uint8_t* stagedDoor, game::Monster* stagedMonsters,
-                            uint8_t& stagedMonsterCount, game::Item* stagedItems, uint8_t& stagedItemCount,
-                            uint8_t& outVersion) {
+// one of "version", "truncated", "seed", or "bad index" (never blank), and
+// the staged output must not be trusted/committed.
+SaveValidity parseLevelFile(HalFile& file, uint32_t expectedSeed, uint8_t* stagedFog, uint8_t* stagedDoor,
+                            game::Monster* stagedMonsters, uint8_t& stagedMonsterCount, game::Item* stagedItems,
+                            uint8_t& stagedItemCount, uint8_t& outVersion) {
   SaveValidity result;
 
   uint8_t version;
@@ -49,7 +49,11 @@ SaveValidity parseLevelFile(HalFile& file, uint8_t* stagedFog, uint8_t* stagedDo
     result.reason = "truncated";
     return result;
   }
-  if (version > LEVEL_FILE_VERSION) {
+  // Exact match, not "<=": a file from before the gameSeed field existed has
+  // no seed to check and must not be grandfathered in -- rejecting it here is
+  // the correct outcome (it would otherwise silently overlay state from a
+  // dungeon layout generated under an unknown, unverifiable seed).
+  if (version != LEVEL_FILE_VERSION) {
     result.status = SaveValidity::Status::Invalid;
     result.reason = "version";
     return result;
@@ -63,24 +67,31 @@ SaveValidity parseLevelFile(HalFile& file, uint8_t* stagedFog, uint8_t* stagedDo
     return result;
   }
 
+  uint32_t savedSeed;
+  if (!readPodChecked(file, savedSeed)) {
+    result.status = SaveValidity::Status::Invalid;
+    result.reason = "truncated";
+    return result;
+  }
+  if (savedSeed != expectedSeed) {
+    // This level file belongs to a different run (e.g. stale leftover from a
+    // previous save that was purged/replaced) -- reject rather than overlay
+    // its fog/monsters/items onto a dungeon generated from a different seed.
+    result.status = SaveValidity::Status::Invalid;
+    result.reason = "seed";
+    return result;
+  }
+
   if (!readBytesChecked(file, stagedFog, game::FOG_SIZE)) {
     result.status = SaveValidity::Status::Invalid;
     result.reason = "truncated";
     return result;
   }
 
-  // Door-open bitmap: only present in v2+ files. Older files simply don't have
-  // these bytes, so skip the read entirely rather than consuming bytes that
-  // belong to the monster/item section that follows. stagedDoor is left
-  // untouched (garbage) for v1 -- outVersion tells the caller not to commit
-  // it, exactly mirroring the pre-staging code's "never even reference
-  // doorOpen for v1" contract (GameSave.h).
-  if (version >= 2) {
-    if (!readBytesChecked(file, stagedDoor, game::FOG_SIZE)) {
-      result.status = SaveValidity::Status::Invalid;
-      result.reason = "truncated";
-      return result;
-    }
+  if (!readBytesChecked(file, stagedDoor, game::FOG_SIZE)) {
+    result.status = SaveValidity::Status::Invalid;
+    result.reason = "truncated";
+    return result;
   }
 
   // Monsters
@@ -100,10 +111,10 @@ SaveValidity parseLevelFile(HalFile& file, uint8_t* stagedFog, uint8_t* stagedDo
     }
     // monster.type is used as a raw, unchecked index into MONSTER_DEFS[] (and
     // the active theme's sprite table, same size) by both render call sites.
-    // A stale level file can carry any byte here -- LEVEL_FILE_VERSION's
-    // backward-compat range (any version <= 2) says nothing about whether
-    // MONSTER_DEFS[] has grown or shrunk since that file was written, so this
-    // is a load-boundary trust issue, not a range-of-valid-gameplay issue.
+    // A stale level file can carry any byte here -- an exact LEVEL_FILE_VERSION
+    // match says nothing about whether MONSTER_DEFS[] has grown or shrunk since
+    // that file was written, so this is a load-boundary trust issue, not a
+    // range-of-valid-gameplay issue.
     // Reject the whole level rather than clamp: a corrupt monster silently
     // becoming monster zero is a wrong monster, not a recovered one, and the
     // freshly generated floor the caller already has is the correct fallback.
@@ -136,7 +147,7 @@ SaveValidity parseLevelFile(HalFile& file, uint8_t* stagedFog, uint8_t* stagedDo
 }
 }  // namespace
 
-bool GameSave::saveLevel(uint8_t depth, const uint8_t* fogOfWar, const uint8_t* doorOpen,
+bool GameSave::saveLevel(uint8_t depth, uint32_t gameSeed, const uint8_t* fogOfWar, const uint8_t* doorOpen,
                          const game::Monster* monsters, uint8_t monsterCount, const game::Item* items,
                          uint8_t itemCount) {
   Storage.mkdir(SAVE_DIR);
@@ -152,6 +163,7 @@ bool GameSave::saveLevel(uint8_t depth, const uint8_t* fogOfWar, const uint8_t* 
 
   serialization::writePod(file, LEVEL_FILE_VERSION);
   serialization::writePod(file, depth);
+  serialization::writePod(file, gameSeed);
 
   // Fog of war bitmap
   file.write(fogOfWar, game::FOG_SIZE);
@@ -176,8 +188,8 @@ bool GameSave::saveLevel(uint8_t depth, const uint8_t* fogOfWar, const uint8_t* 
   return true;
 }
 
-bool GameSave::loadLevel(uint8_t depth, uint8_t* fogOfWar, uint8_t* doorOpen, game::Monster* monsters,
-                         uint8_t& monsterCount, game::Item* items, uint8_t& itemCount) {
+bool GameSave::loadLevel(uint8_t depth, uint32_t expectedSeed, uint8_t* fogOfWar, uint8_t* doorOpen,
+                         game::Monster* monsters, uint8_t& monsterCount, game::Item* items, uint8_t& itemCount) {
   char path[48];
   levelPath(depth, path, sizeof(path));
 
@@ -207,7 +219,7 @@ bool GameSave::loadLevel(uint8_t depth, uint8_t* fogOfWar, uint8_t* doorOpen, ga
   uint8_t stagedMonsterCount = 0;
   uint8_t stagedItemCount = 0;
   uint8_t parsedVersion = 0;
-  SaveValidity validity = parseLevelFile(file, stagedFog.get(), stagedDoor.get(), stagedMonsters.get(),
+  SaveValidity validity = parseLevelFile(file, expectedSeed, stagedFog.get(), stagedDoor.get(), stagedMonsters.get(),
                                          stagedMonsterCount, stagedItems.get(), stagedItemCount, parsedVersion);
   file.close();
 
@@ -218,13 +230,11 @@ bool GameSave::loadLevel(uint8_t depth, uint8_t* fogOfWar, uint8_t* doorOpen, ga
 
   // Full file validated -- commit the staged data as the one atomic write to
   // the caller's arrays. A rejection above never reaches this line, so the
-  // caller's freshly generated floor is left completely untouched.
+  // caller's freshly generated floor is left completely untouched. Every file
+  // that reaches here is an exact LEVEL_FILE_VERSION match, so the door-open
+  // bitmap is always present and always committed.
   memcpy(fogOfWar, stagedFog.get(), game::FOG_SIZE);
-  // v1 files never had a door-open bitmap -- stagedDoor holds garbage for
-  // them (see parseLevelFile), so only commit when the file actually carried
-  // this data. A non-null doorOpen buffer on a v1 load must come back exactly
-  // as the caller passed it in (GameSave.h contract).
-  if (doorOpen != nullptr && parsedVersion >= 2) {
+  if (doorOpen != nullptr) {
     memcpy(doorOpen, stagedDoor.get(), game::FOG_SIZE);
   }
   memcpy(monsters, stagedMonsters.get(), stagedMonsterCount * sizeof(game::Monster));
@@ -236,7 +246,7 @@ bool GameSave::loadLevel(uint8_t depth, uint8_t* fogOfWar, uint8_t* doorOpen, ga
   return true;
 }
 
-SaveValidity GameSave::validateLevel(uint8_t depth) {
+SaveValidity GameSave::validateLevel(uint8_t depth, uint32_t expectedSeed) {
   char path[48];
   levelPath(depth, path, sizeof(path));
 
@@ -274,8 +284,8 @@ SaveValidity GameSave::validateLevel(uint8_t depth) {
   uint8_t stagedMonsterCount = 0;
   uint8_t stagedItemCount = 0;
   uint8_t parsedVersion = 0;
-  result = parseLevelFile(file, stagedFog.get(), stagedDoor.get(), stagedMonsters.get(), stagedMonsterCount,
-                          stagedItems.get(), stagedItemCount, parsedVersion);
+  result = parseLevelFile(file, expectedSeed, stagedFog.get(), stagedDoor.get(), stagedMonsters.get(),
+                          stagedMonsterCount, stagedItems.get(), stagedItemCount, parsedVersion);
   file.close();
   return result;
 }

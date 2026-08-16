@@ -711,8 +711,9 @@ void GfxRenderer::drawLine(int x1, int y1, int x2, int y2, const bool state) con
 }
 
 void GfxRenderer::drawLine(int x1, int y1, int x2, int y2, const int lineWidth, const bool state) const {
+  const int half = lineWidth / 2;
   for (int i = 0; i < lineWidth; i++) {
-    drawLine(x1, y1 + i, x2, y2 + i, state);
+    drawLine(x1, y1 + i - half, x2, y2 + i - half, state);
   }
 }
 

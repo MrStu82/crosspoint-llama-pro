@@ -13,6 +13,9 @@
 // shown when loadOrGenerateLevel() rejects a level save (Phase 12 corrupt-save handling).
 enum class GameScreenMode : uint8_t { Playing, Death, Victory, CorruptSaveNotice };
 
+// Which save CorruptSaveNotice is currently reporting on -- see corruptNoticeScope below.
+enum class CorruptNoticeScope : uint8_t { PerLevel, WholeRun };
+
 // Main Deep Mines gameplay loop: dungeon viewport, movement, combat, item pickup, and
 // stairs/level transitions. The in-game pause menu (GameMenuActivity) is launched via
 // startActivityForResult and reports back which action was taken via MenuResult.
@@ -60,15 +63,26 @@ class GameActivity final : public Activity {
   // can trigger before the overlay is torn down).
   EndScreenData endScreenData;
 
-  // CorruptSaveNotice state (Phase 12): the floor number to report in the notice body
-  // (captured at the point loadOrGenerateLevel() rejects that floor's save), and which
-  // option is currently highlighted. Purge is index 0 (default highlight per spec), Leave
-  // is index 1. Only meaningful while screenMode == CorruptSaveNotice.
+  // CorruptSaveNotice state (Phase 12, extended to whole-run rejection): which save was
+  // rejected -- PerLevel (a single level_NN.bin, set by loadOrGenerateLevel()) or WholeRun
+  // (save.bin itself, set by onEnter() when GameState::loadFromFile() returns false) --
+  // the floor number to report in the notice body (PerLevel only), and which option is
+  // currently highlighted. Purge is index 0 (default highlight per spec), Leave is index 1.
+  // Only meaningful while screenMode == CorruptSaveNotice. The two scopes resolve Confirm
+  // differently (see loop()): PerLevel's freshly generated floor is already authoritative
+  // either way, but WholeRun has no valid run state at all until newGame() runs, so both of
+  // its options must call newGame() before play begins.
+  CorruptNoticeScope corruptNoticeScope = CorruptNoticeScope::PerLevel;
   uint8_t corruptNoticeDepth = 0;
   uint8_t corruptNoticeSelection = 0;
 
   void loadOrGenerateLevel();
   void saveCurrentLevel();
+  // Resolves a WholeRun CorruptSaveNotice: purge=true deletes save.bin first, purge=false
+  // leaves it on disk untouched -- either way calls GAME_STATE.newGame() so play never
+  // begins on the state a rejected loadFromFile() left behind, then proceeds into a fresh
+  // run exactly as GameTitleActivity's own "start new game" path does.
+  void resolveWholeRunCorruptNotice(bool purge);
   void computeVisibility();
   void handleMove(int dx, int dy);
   void handleAction();

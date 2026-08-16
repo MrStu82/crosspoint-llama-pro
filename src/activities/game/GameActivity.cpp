@@ -104,12 +104,18 @@ void GameActivity::onEnter() {
   // Achievement unlock state is account-level, not tied to the per-run save.
   ACHIEVEMENTS.load();
 
-  // Load save or start new game
-  if (GAME_STATE.hasSaveFile()) {
-    GAME_STATE.loadFromFile();
+  // Load save or start new game. GAME_STATE is a session-lifetime singleton
+  // (GameState.h) -- it is never reset to defaults on its own, so a rejected
+  // load must not fall through into play: without an explicit newGame(), the
+  // player would resume whatever half-formed run state happened to still be
+  // sitting in memory from before, not a clean start.
+  if (GAME_STATE.hasSaveFile() && !GAME_STATE.loadFromFile()) {
+    corruptNoticeScope = CorruptNoticeScope::WholeRun;
+    corruptNoticeSelection = 0;  // Purge highlighted by default, per spec.
+    screenMode = GameScreenMode::CorruptSaveNotice;
+    requestUpdate();
+    return;
   }
-  // If no save was loaded, newGame() was already called before entering this activity
-  // (see GameTitleActivity::loop()).
 
   loadOrGenerateLevel();
   computeVisibility();
@@ -120,7 +126,8 @@ void GameActivity::onEnter() {
 
 void GameActivity::render(RenderLock&&) {
   if (screenMode == GameScreenMode::CorruptSaveNotice) {
-    gameRenderer.drawCorruptSaveNotice(renderer, corruptNoticeDepth, corruptNoticeSelection);
+    gameRenderer.drawCorruptSaveNotice(renderer, corruptNoticeScope == CorruptNoticeScope::WholeRun,
+                                       corruptNoticeDepth, corruptNoticeSelection);
     return;
   }
   if (screenMode != GameScreenMode::Playing) {
@@ -149,10 +156,21 @@ void GameActivity::loop() {
       return;
     }
     if (mappedInput.wasReleased(Button::Back)) {
-      onGoHome();
+      if (corruptNoticeScope == CorruptNoticeScope::WholeRun) {
+        // Back is a shortcut for "Leave it" -- for a whole-run rejection that
+        // means starting a fresh run with save.bin left untouched on disk, not
+        // going home (there is no valid run state to go back to yet).
+        resolveWholeRunCorruptNotice(/*purge=*/false);
+      } else {
+        onGoHome();
+      }
       return;
     }
     if (mappedInput.wasReleased(Button::Confirm)) {
+      if (corruptNoticeScope == CorruptNoticeScope::WholeRun) {
+        resolveWholeRunCorruptNotice(corruptNoticeSelection == 0);
+        return;
+      }
       if (corruptNoticeSelection == 0) {
         // Purge the record: the freshly generated floor computed at the top of
         // loadOrGenerateLevel() is already authoritative (loadLevel() left it
@@ -1029,6 +1047,20 @@ void GameActivity::handleVictory() {
 
 // --- Level Management ---
 
+void GameActivity::resolveWholeRunCorruptNotice(bool purge) {
+  if (purge) {
+    GAME_STATE.deleteSaveFile();
+  }
+  // Same seed-derivation GameTitleActivity uses to start a new game -- there is
+  // no salvageable seed from a rejected save.bin, so this is a genuine fresh run.
+  GAME_STATE.newGame(static_cast<uint32_t>(millis()) ^ 0xDEADBEEFu);
+  corruptNoticeScope = CorruptNoticeScope::PerLevel;
+  screenMode = GameScreenMode::Playing;
+  loadOrGenerateLevel();
+  computeVisibility();
+  requestUpdate();
+}
+
 void GameActivity::loadOrGenerateLevel() {
   auto& p = GAME_STATE.player;
 
@@ -1060,7 +1092,8 @@ void GameActivity::loadOrGenerateLevel() {
     // loadLevel() commits fogOfWar/doorOpen/monsters/levelItems atomically: on
     // a rejected (stale/corrupt) file it returns false having left all of them
     // untouched, so the freshly generated floor computed above stays authoritative.
-    if (!GameSave::loadLevel(p.dungeonDepth, fogOfWar, doorOpen, monsters, monsterCount, levelItems, itemCount)) {
+    if (!GameSave::loadLevel(p.dungeonDepth, p.gameSeed, fogOfWar, doorOpen, monsters, monsterCount, levelItems,
+                             itemCount)) {
       LOG_ERR("DM", "Level %u save rejected, keeping freshly generated floor", p.dungeonDepth);
       // Surface the rejection to the player instead of silently swapping in the
       // fresh floor (Phase 12) -- the freshly generated floor above is already
@@ -1088,8 +1121,8 @@ void GameActivity::loadOrGenerateLevel() {
 }
 
 void GameActivity::saveCurrentLevel() {
-  GameSave::saveLevel(GAME_STATE.player.dungeonDepth, fogOfWar, doorOpen, monsters, monsterCount, levelItems,
-                      itemCount);
+  GameSave::saveLevel(GAME_STATE.player.dungeonDepth, GAME_STATE.player.gameSeed, fogOfWar, doorOpen, monsters,
+                      monsterCount, levelItems, itemCount);
 }
 
 // --- Visibility ---

@@ -127,6 +127,7 @@ void fillPattern(uint8_t* buf, int size, uint8_t seed) {
 
 void testDoorOpenBitmapRoundTrips() {
   constexpr uint8_t kDepth = 7;
+  constexpr uint32_t kSeed = 0x9876;
 
   std::vector<uint8_t> fog(game::FOG_SIZE), doorOpen(game::FOG_SIZE);
   fillPattern(fog.data(), game::FOG_SIZE, 0x11);
@@ -139,7 +140,7 @@ void testDoorOpenBitmapRoundTrips() {
   game::Item items[1];
   items[0] = game::Item{2, 3, static_cast<uint8_t>(game::ItemType::Weapon), 1, 1, 0, 0};
 
-  CHECK(GameSave::saveLevel(kDepth, fog.data(), doorOpen.data(), monsters, 2, items, 1),
+  CHECK(GameSave::saveLevel(kDepth, kSeed, fog.data(), doorOpen.data(), monsters, 2, items, 1),
         "saveLevel() returned false");
 
   std::vector<uint8_t> fog2(game::FOG_SIZE, 0xAA), doorOpen2(game::FOG_SIZE, 0xAA);
@@ -147,7 +148,7 @@ void testDoorOpenBitmapRoundTrips() {
   game::Item items2[game::MAX_ITEMS_PER_LEVEL];
   uint8_t monsterCount2 = 0, itemCount2 = 0;
 
-  CHECK(GameSave::loadLevel(kDepth, fog2.data(), doorOpen2.data(), monsters2, monsterCount2, items2, itemCount2),
+  CHECK(GameSave::loadLevel(kDepth, kSeed, fog2.data(), doorOpen2.data(), monsters2, monsterCount2, items2, itemCount2),
         "loadLevel() returned false");
 
   CHECK(std::memcmp(fog.data(), fog2.data(), game::FOG_SIZE) == 0, "fogOfWar bitmap did not round-trip intact");
@@ -161,15 +162,20 @@ void testDoorOpenBitmapRoundTrips() {
               game::FOG_SIZE);
 }
 
-// --- Req 6b: pre-door-persistence (v1) save file loads without crash, ------
-// --- doorOpen left untouched when the caller passes nullptr or a buffer ---
+// --- Req 6b (updated for Fix 2, 2026-08-16): pre-seed-field (v1) level file
+// --- is cleanly REJECTED by the current v3 loader, not misread -------------
 //
 // Hand-crafts a v1-format file byte-for-byte (the format GameSave.cpp used
-// before LEVEL_FILE_VERSION was bumped to 2 for the door-open bitmap) --
-// version=1, depth, fog, [no door bytes], monsterCount+monsters,
-// itemCount+items -- then loads it through the REAL, current loadLevel() to
-// prove the version-gated skip-read actually lines the parser back up on the
-// monster/item section instead of reading door bytes that were never written.
+// before LEVEL_FILE_VERSION was bumped to 2 for the door-open bitmap, and
+// well before the v3 gameSeed field) -- version=1, depth, fog, [no door
+// bytes], monsterCount+monsters, itemCount+items -- then loads it through the
+// REAL, current loadLevel() to prove it is rejected outright rather than
+// misread. Per parent's explicit ruling on Fix 2: "an old file without the
+// [seed] field is simply rejected, which is the correct outcome anyway" --
+// pre-v3 files are NOT grandfathered in via backward compatibility, they die
+// on the version check before the parser ever gets to the (nonexistent) seed
+// field. This intentionally inverts the pre-Fix-2 version of this test, which
+// asserted a successful nullptr-compat load; that contract no longer exists.
 void writeV1LevelFile(const char* fullPath, uint8_t depth, const uint8_t* fog, const game::Monster* monsters,
                        uint8_t monsterCount, const game::Item* items, uint8_t itemCount) {
   FILE* f = fopen(fullPath, "wb");
@@ -185,8 +191,9 @@ void writeV1LevelFile(const char* fullPath, uint8_t depth, const uint8_t* fog, c
   fclose(f);
 }
 
-void testOldSaveNullptrCompatPath(const std::string& sdRoot) {
+void testOldSaveFileRejected(const std::string& sdRoot) {
   constexpr uint8_t kDepth = 12;
+  constexpr uint32_t kActiveSeed = 0x5150;
   std::string dir = sdRoot + "/.crosspoint/game";
   std::string cmd = "mkdir -p '" + dir + "'";
   system(cmd.c_str());
@@ -202,38 +209,38 @@ void testOldSaveNullptrCompatPath(const std::string& sdRoot) {
 
   writeV1LevelFile(path, kDepth, fog.data(), monsters, 1, items, 1);
 
-  // Case A: caller passes nullptr for doorOpen (matches the documented
-  // contract in GameSave.h) -- must not crash, must still load everything else.
-  std::vector<uint8_t> fog2(game::FOG_SIZE, 0);
+  // Case A: caller passes nullptr for doorOpen -- must not crash, must
+  // reject cleanly (version mismatch, checked before any seed/door/monster
+  // parsing happens) and must not mutate the caller's sentinel buffers.
+  std::vector<uint8_t> fog2(game::FOG_SIZE, 0x33);  // sentinel
   game::Monster monsters2[game::MAX_MONSTERS];
   game::Item items2[game::MAX_ITEMS_PER_LEVEL];
-  uint8_t monsterCount2 = 0, itemCount2 = 0;
-  bool okA = GameSave::loadLevel(kDepth, fog2.data(), nullptr, monsters2, monsterCount2, items2, itemCount2);
-  CHECK(okA, "loadLevel() with doorOpen=nullptr on a v1 file returned false (should succeed)");
-  CHECK(std::memcmp(fog.data(), fog2.data(), game::FOG_SIZE) == 0, "fog corrupted when loading v1 file with doorOpen=nullptr");
-  CHECK(monsterCount2 == 1 && monsters2[0].hp == 8, "monster data misaligned when loading v1 file with doorOpen=nullptr -- "
-                                                     "the version-gated discard-read is not consuming the right byte count");
-  CHECK(itemCount2 == 1 && items2[0].count == 3, "item data misaligned when loading v1 file with doorOpen=nullptr");
+  uint8_t monsterCount2 = 7, itemCount2 = 7;  // sentinel, must stay untouched on rejection
+  bool okA = GameSave::loadLevel(kDepth, kActiveSeed, fog2.data(), nullptr, monsters2, monsterCount2, items2, itemCount2);
+  CHECK(!okA, "loadLevel() with doorOpen=nullptr on a v1 file returned true (should reject -- pre-v3 files have no "
+              "seed field and must not be grandfathered in)");
+  CHECK(fog2[0] == 0x33, "fog buffer was written to despite a rejected v1 load");
+  CHECK(monsterCount2 == 7 && itemCount2 == 7, "monster/item counts were written to despite a rejected v1 load");
 
-  // Case B: caller passes a real (non-null) doorOpen buffer against a v1
-  // file -- contract says it's left untouched since v1 never wrote those
-  // bytes. Sentinel-fill first and confirm it survives unchanged.
+  // Case B: caller passes a real (non-null) doorOpen buffer against the same
+  // v1 file -- same rejection expected, sentinel buffer must survive untouched.
   std::vector<uint8_t> fog3(game::FOG_SIZE, 0);
   std::vector<uint8_t> doorOpen3(game::FOG_SIZE, 0x5A);  // sentinel
   game::Monster monsters3[game::MAX_MONSTERS];
   game::Item items3[game::MAX_ITEMS_PER_LEVEL];
   uint8_t monsterCount3 = 0, itemCount3 = 0;
-  bool okB = GameSave::loadLevel(kDepth, fog3.data(), doorOpen3.data(), monsters3, monsterCount3, items3, itemCount3);
-  CHECK(okB, "loadLevel() with a real doorOpen buffer on a v1 file returned false (should succeed)");
+  bool okB = GameSave::loadLevel(kDepth, kActiveSeed, fog3.data(), doorOpen3.data(), monsters3, monsterCount3, items3,
+                                 itemCount3);
+  CHECK(!okB, "loadLevel() with a real doorOpen buffer on a v1 file returned true (should reject)");
   bool sentinelIntact = true;
   for (int i = 0; i < game::FOG_SIZE; i++) {
     if (doorOpen3[i] != 0x5A) { sentinelIntact = false; break; }
   }
-  CHECK(sentinelIntact, "doorOpen buffer was written to when loading a v1 file (should be left untouched per GameSave.h contract)");
-  CHECK(monsterCount3 == 1 && itemCount3 == 1, "monster/item counts wrong on the non-null-doorOpen v1 load");
+  CHECK(sentinelIntact, "doorOpen buffer was written to when loading a rejected v1 file");
 
-  std::printf("[req6b] v1 (pre-door-persistence) file: nullptr-doorOpen load ok=%d, sentinel-buffer left untouched=%d\n",
-              okA, sentinelIntact);
+  std::printf("[req6b] v1 (pre-seed-field) file: nullptr-doorOpen load rejected=%d, real-doorOpen load rejected=%d, "
+              "sentinel-buffer left untouched=%d\n",
+              !okA, !okB, sentinelIntact);
 }
 
 // --- Req: top-level SAVE_FILE_VERSION v3 file is cleanly REJECTED by the ------
@@ -417,7 +424,7 @@ int main() {
 
   testCombatRngSurvivesSaveReload();
   testDoorOpenBitmapRoundTrips();
-  testOldSaveNullptrCompatPath(sdRoot);
+  testOldSaveFileRejected(sdRoot);
   testV3SaveRejectedByV4Loader(sdRoot);
   testInventoryCountBoundary(sdRoot);
   testMessageCountBoundary(sdRoot);

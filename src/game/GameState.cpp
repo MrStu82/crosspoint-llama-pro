@@ -1,5 +1,6 @@
 #include "GameState.h"
 
+#include <Arduino.h>
 #include <HalStorage.h>
 #include <Logging.h>
 #include <Serialization.h>
@@ -263,6 +264,18 @@ bool GameState::loadFromFile() {
 
   if (validity.status != SaveValidity::Status::Valid) {
     LOG_ERR("DM", "Save file rejected: %s", validity.reason);
+    // Defense in depth: never leave whatever run happened to be sitting in
+    // this session-lifetime singleton (GameState.h) looking like a live,
+    // playable run after a rejection. GameActivity::onEnter() is expected to
+    // route a rejected load through CorruptSaveNotice and call newGame()
+    // itself with a real fresh seed before play resumes -- but a caller that
+    // (by bug or omission) discards this return value and falls straight
+    // through to play must not end up resuming the stale prior run either.
+    // Same seed derivation as GameTitleActivity.cpp and
+    // GameActivity::resolveWholeRunCorruptNotice() use for a genuine new run
+    // -- there is no salvageable seed from a rejected save.bin, and this
+    // fallback must be a real, playable run rather than a fixed dungeon.
+    newGame(static_cast<uint32_t>(millis()) ^ 0xDEADBEEFu);
     return false;
   }
 

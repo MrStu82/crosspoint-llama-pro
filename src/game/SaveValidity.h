@@ -10,8 +10,8 @@
 struct SaveValidity {
   enum class Status : uint8_t { NotPresent, Valid, Invalid };
   Status status = Status::NotPresent;
-  // Populated only when status == Invalid. One of "version", "truncated", "bad
-  // index" -- the fixed reason vocabulary the Save Data Audit screen displays.
+  // Populated only when status == Invalid. One of "version", "truncated", "seed",
+  // "bad index" -- the fixed reason vocabulary the Save Data Audit screen displays.
   // Never blank when status == Invalid.
   const char* reason = "";
 };

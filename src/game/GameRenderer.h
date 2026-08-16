@@ -140,8 +140,10 @@ class GameRenderer {
   // and two selectable options (Purge/Leave), the current selection shown via
   // a filled highlight bar. Same "no clearScreen(), self-contained box, one-shot
   // FULL_REFRESH" shape as drawEndScreen() -- same modal genre, same overlay
-  // discipline. `selection` is 0 for Purge, 1 for Leave.
-  void drawCorruptSaveNotice(GfxRenderer& renderer, uint8_t depth, uint8_t selection) const;
+  // discipline. `selection` is 0 for Purge, 1 for Leave. `wholeRun` selects the
+  // whole-save-file body copy (no floor-number substitution) instead of the
+  // per-level one; `depth` is ignored when `wholeRun` is true.
+  void drawCorruptSaveNotice(GfxRenderer& renderer, bool wholeRun, uint8_t depth, uint8_t selection) const;
 
   // Shows a boxed System notification (Phase 9 work item 3): bordered box,
   // inverted (black-filled, white-text) title bar, body text below. `body`

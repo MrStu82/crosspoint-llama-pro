@@ -459,14 +459,10 @@ void GameMenuActivity::useInventoryItem(int index) {
       // steps -- the joke only lands if a deep floor can still hand back rations). Excludes
       // Ring of Power / Master Key (positional, same technique placeItems() uses in
       // DungeonGenerator.cpp) and the crate itself (LOOT_BOX_DEF, GameTypes.h) so opening one
-      // can't just hand back another unopened crate.
-      uint8_t eligible[game::ITEM_DEF_COUNT];
-      uint8_t eligibleCount = 0;
-      for (uint8_t d = 0; d < game::ITEM_DEF_COUNT - 2; d++) {
-        if (d == game::LOOT_BOX_DEF) continue;
-        eligible[eligibleCount++] = d;
-      }
-      const auto& reward = game::ITEM_DEFS[eligible[GAME_STATE.rollRange(eligibleCount)]];
+      // can't just hand back another unopened crate. Selection itself lives in
+      // game::selectLootBoxReward() (GameTypes.h) so it's host-harness-linkable.
+      const auto& reward = game::ITEM_DEFS[game::selectLootBoxReward(
+          [](uint32_t max) { return GAME_STATE.rollRange(max); })];
 
       // When sponsors land as their own work item, this narration takes the sponsor name from
       // that system instead of hardcoding "SPONSORED CONTENT" -- not building a second string

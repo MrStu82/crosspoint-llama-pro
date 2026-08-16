@@ -232,6 +232,25 @@ static_assert(static_cast<ItemType>(ITEM_DEFS[LOOT_BOX_DEF].type) == ItemType::L
               "LOOT_BOX_DEF must point at the Sponsor Crate entry -- if ITEM_DEFS is ever "
               "reordered, update this index or the reward roll's self-exclusion breaks");
 
+// Sponsor Crate reward selection (Phase 11 loot boxes). Uniform draw over
+// ITEM_DEFS, excluding Ring of Power/Master Key (last two entries, positional
+// quest-item placement only) and the crate itself (LOOT_BOX_DEF) so opening
+// one can never hand back another unopened crate. rollFn takes max (exclusive)
+// and returns a value in [0, max) -- the caller supplies the real combat RNG
+// (GAME_STATE.rollRange) or a deterministic stand-in for host-harness testing.
+// Free of GameActivity/GameState so it can be linked and exercised outside the
+// firmware build. Behaviour identical to the inline loop it replaces; no new
+// state.
+inline uint8_t selectLootBoxReward(uint32_t (*rollFn)(uint32_t)) {
+  uint8_t eligible[ITEM_DEF_COUNT];
+  uint8_t eligibleCount = 0;
+  for (uint8_t d = 0; d < ITEM_DEF_COUNT - 2; d++) {
+    if (d == LOOT_BOX_DEF) continue;
+    eligible[eligibleCount++] = d;
+  }
+  return eligible[rollFn(eligibleCount)];
+}
+
 // --- Sponsors (Phase 11) ---
 // Per-floor, personal cosmetic-with-teeth modifier. Rolled fresh every floor
 // load (GameActivity::loadOrGenerateLevel(), true RNG stream via

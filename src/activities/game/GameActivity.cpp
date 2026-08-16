@@ -61,6 +61,8 @@ int equippedAttackBonus() {
       }
     }
   }
+  // Sponsors (Phase 11): applied at point of use, never written into base stats.
+  bonus += game::sponsorAttackModifier(GAME_STATE.player.activeSponsorId);
   return bonus;
 }
 
@@ -78,6 +80,8 @@ int equippedDefenseBonus() {
       }
     }
   }
+  // Sponsors (Phase 11): applied at point of use, never written into base stats.
+  bonus += game::sponsorDefenseModifier(GAME_STATE.player.activeSponsorId);
   return bonus;
 }
 
@@ -410,10 +414,21 @@ void GameActivity::handleAction() {
     ACHIEVEMENTS.emit(floorEvent);
     showPendingAchievementNotifications();
 
+    // Themed floor (Phase 11): pure function of seed+depth, safe to recompute here
+    // ahead of loadOrGenerateLevel() -- same value DungeonGenerator::generate() will
+    // derive internally, decorative only (see GameTypes.h).
+    uint8_t themeId = game::themeForDepth(p.gameSeed, p.dungeonDepth);
+
     {
-      char msgBuf[96];
+      char msgBuf[144];
       const char* flavor = FLAVOR_TEXT.pick(game::FlavorCategory::FloorEntry);
-      snprintf(msgBuf, sizeof(msgBuf), "You descend deeper... %s", flavor);
+      if (themeId == 0) {
+        // "Standard Tier" -- no theme to call out, keep the plain message.
+        snprintf(msgBuf, sizeof(msgBuf), "You descend deeper... %s", flavor);
+      } else {
+        snprintf(msgBuf, sizeof(msgBuf), "You descend deeper... %s Floor %u - %s.", flavor, p.dungeonDepth,
+                 game::THEME_DEFS[themeId].name);
+      }
       GAME_STATE.addMessage(msgBuf);
       gameRenderer.showNotification(NotificationKind::FloorEntry, msgBuf);
     }
@@ -804,7 +819,7 @@ bool GameActivity::processMonsterTurns() {
 
   // Natural regeneration: heal 1 HP every (20 - CON/2) turns, minimum every 5 turns
   int regenRate = std::max(5, 20 - static_cast<int>(p.constitution) / 2);
-  if (p.hp > 0 && p.hp < p.maxHp && p.turnCount % regenRate == 0) {
+  if (p.hp > 0 && p.hp < game::effectiveMaxHp(p) && p.turnCount % regenRate == 0) {
     p.hp++;
   }
   // MP regenerates a bit slower
@@ -837,8 +852,11 @@ void GameActivity::monsterAttackPlayer(game::Monster& m) {
   auto& p = GAME_STATE.player;
   const auto& def = game::MONSTER_DEFS[m.type];
 
-  // Monster attack vs player dexterity + armor bonus
+  // Monster attack vs player dexterity + armor bonus. Sponsor modifiers (e.g. the
+  // Adjudicator's Legal Team) can drive this negative -- clamp to zero so a bad
+  // sponsor roll can never flip into a damage multiplier via the subtraction below.
   int playerDef = static_cast<int>(p.dexterity / 3) + equippedDefenseBonus();
+  if (playerDef < 0) playerDef = 0;
   int damage = std::max(1, static_cast<int>(def.attack) - playerDef);
   damage = std::max(1, damage + GAME_STATE.rollRangeInclusive(-damage / 4, damage / 4));
 
@@ -860,7 +878,7 @@ void GameActivity::monsterAttackPlayer(game::Monster& m) {
     ACHIEVEMENTS.emit(deathEvent);
     showPendingAchievementNotifications();
   } else {
-    auto band = game::damagedBandForDamage(static_cast<uint16_t>(damage), p.maxHp);
+    auto band = game::damagedBandForDamage(static_cast<uint16_t>(damage), game::effectiveMaxHp(p));
     const char* flavor = FLAVOR_TEXT.pick(band);
     snprintf(msgBuf, sizeof(msgBuf), "The %s hits you for %d. %s", def.name, damage, flavor);
     GAME_STATE.addMessage(msgBuf);
@@ -870,7 +888,7 @@ void GameActivity::monsterAttackPlayer(game::Monster& m) {
   damageEvent.type = game::GameEventType::PlayerDamaged;
   damageEvent.damage = static_cast<uint16_t>(damage);
   damageEvent.hpAfter = p.hp;
-  damageEvent.maxHp = p.maxHp;
+  damageEvent.maxHp = game::effectiveMaxHp(p);
   ACHIEVEMENTS.emit(damageEvent);
 }
 
@@ -970,6 +988,12 @@ void GameActivity::handleVictory() {
 
 void GameActivity::loadOrGenerateLevel() {
   auto& p = GAME_STATE.player;
+
+  // Sponsors (Phase 11): per-floor and personal -- rolled fresh from the true combat
+  // RNG stream (not derived from gameSeed+depth), so revisiting the same floor or
+  // reloading a save can land a different sponsor. Nothing to clear on the way out;
+  // the next call here just overwrites it, and it's only ever read at point of use.
+  p.activeSponsorId = static_cast<uint8_t>(GAME_STATE.rollRange(game::SPONSOR_DEF_COUNT));
 
   // Always regenerate from seed (deterministic)
   auto result = DungeonGenerator::generate(p.gameSeed, p.dungeonDepth, tiles, monsters, levelItems);

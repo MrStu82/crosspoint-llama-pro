@@ -96,6 +96,14 @@ struct Player {
   // every turn). See processMonsterTurns() for the tick and GameMenuActivity's
   // Food case for the reset-on-eat.
   uint16_t hunger = 0;
+  // Active per-floor sponsor (Phase 11), index into SPONSOR_DEFS. Rolled fresh
+  // on every floor load (see GameActivity::loadOrGenerateLevel()) via a true
+  // RNG stream -- never derived from the level seed, so reloading a floor can
+  // roll a different sponsor. Base stats (strength/maxHp/etc.) are never
+  // mutated by a sponsor; its modifier is applied only at the point of use
+  // (equippedAttackBonus(), equippedDefenseBonus(), effectiveMaxHp()), so
+  // there is nothing to clear, leak, or clamp on FloorChanged.
+  uint8_t activeSponsorId = 0;
 };
 
 struct Monster {
@@ -204,9 +212,9 @@ inline constexpr ItemDef ITEM_DEFS[] = {
     // so it stays outside RING_OF_POWER_DEF/MASTER_KEY_DEF's roll exclusion without disturbing
     // RATIONS_DEF's hardcoded index above.
     {"Sponsor Crate", '&', static_cast<uint8_t>(ItemType::LootBox), 0, 0, 0, 0, false},
-    // Quest item — dropped by The Adjudicator on floor 26 (Phase 11 work item 4)
+    // Quest item -- dropped by The Adjudicator on floor 26 (Phase 11 work item 4)
     {"Master Key", '"', static_cast<uint8_t>(ItemType::Amulet), 0, 500, 0, 0, false},
-    // Quest item — dropped by The Adjudicator
+    // Quest item -- dropped by The Adjudicator
     {"Ring of Power", '=', static_cast<uint8_t>(ItemType::Ring), 0, 999, 0, 0, false},
 };
 inline constexpr int ITEM_DEF_COUNT = sizeof(ITEM_DEFS) / sizeof(ITEM_DEFS[0]);
@@ -223,6 +231,88 @@ inline constexpr int LOOT_BOX_DEF = 20;
 static_assert(static_cast<ItemType>(ITEM_DEFS[LOOT_BOX_DEF].type) == ItemType::LootBox,
               "LOOT_BOX_DEF must point at the Sponsor Crate entry -- if ITEM_DEFS is ever "
               "reordered, update this index or the reward roll's self-exclusion breaks");
+
+// --- Sponsors (Phase 11) ---
+// Per-floor, personal cosmetic-with-teeth modifier. Rolled fresh every floor
+// load (GameActivity::loadOrGenerateLevel(), true RNG stream via
+// GAME_STATE.rollRange -- not derived from the level seed, so revisiting a
+// floor can roll a different sponsor). Stored as an id on Player
+// (activeSponsorId above) and applied ONLY at the point a stat is used
+// (equippedAttackBonus(), equippedDefenseBonus(), effectiveMaxHp()) -- base
+// stats are never mutated, so there is nothing to clear on FloorChanged, no
+// drift risk across save/load, and no leak between floors.
+
+enum class SponsorStat : uint8_t { None, Attack, Defense, MaxHp };
+
+struct SponsorDef {
+  const char* name;
+  SponsorStat stat;
+  int8_t amount;  // May be negative (e.g. a defense-reducing sponsor)
+};
+
+// Index 0 is the "no sponsor" sentinel (SPONSOR_NONE). All strings ASCII-only
+// -- the builtin bitmap font is not guaranteed to have glyphs above 0x7F, so
+// no trademark symbol, no em dash, no smart quotes.
+inline constexpr SponsorDef SPONSOR_DEFS[] = {
+    {"No Sponsor", SponsorStat::None, 0},
+    {"System Uptime Guarantee (tm)", SponsorStat::MaxHp, 2},
+    {"Adjudicator's Legal Team", SponsorStat::Defense, -1},
+    {"IronClad Insurance", SponsorStat::Defense, 1},
+    {"Vantablack Energy Drink", SponsorStat::Attack, 1},
+    {"Generic Store-Brand Sponsor", SponsorStat::None, 0},
+};
+inline constexpr int SPONSOR_DEF_COUNT = sizeof(SPONSOR_DEFS) / sizeof(SPONSOR_DEFS[0]);
+inline constexpr uint8_t SPONSOR_NONE = 0;
+
+inline int sponsorAttackModifier(uint8_t sponsorId) {
+  if (sponsorId >= SPONSOR_DEF_COUNT) return 0;
+  const SponsorDef& s = SPONSOR_DEFS[sponsorId];
+  return s.stat == SponsorStat::Attack ? s.amount : 0;
+}
+
+inline int sponsorDefenseModifier(uint8_t sponsorId) {
+  if (sponsorId >= SPONSOR_DEF_COUNT) return 0;
+  const SponsorDef& s = SPONSOR_DEFS[sponsorId];
+  return s.stat == SponsorStat::Defense ? s.amount : 0;
+}
+
+// maxHp as modified by the active sponsor, read at the point of use (regen
+// tick, damage-band selection, damage-event reporting, healing/food clamps)
+// instead of ever writing back into Player::maxHp. Clamped to a minimum of 1
+// so a hypothetical negative-maxHp sponsor could never produce a 0/negative
+// cap.
+inline uint16_t effectiveMaxHp(const Player& p) {
+  if (p.activeSponsorId >= SPONSOR_DEF_COUNT) return p.maxHp;
+  const SponsorDef& s = SPONSOR_DEFS[p.activeSponsorId];
+  if (s.stat != SponsorStat::MaxHp) return p.maxHp;
+  int v = static_cast<int>(p.maxHp) + s.amount;
+  return v < 1 ? 1 : static_cast<uint16_t>(v);
+}
+
+// --- Themed floors (Phase 11) ---
+// Decorate, never gate: a theme may change the floor's name/flavor text and
+// nudge monster selection within the SAME eligible range placeMonsters()
+// already computes. It never changes reachability, item availability, or the
+// food guarantee (RATIONS_DEF is still forced onto every floor unconditionally
+// -- see DungeonGenerator.cpp).
+
+struct ThemeDef {
+  const char* name;
+  int8_t monsterBias;  // Added to placeMonsters()'s bestIdx roll, then
+                        // clamped into [0, eligibleCount-1] -- never changes
+                        // eligibleCount/count/which monsters are eligible.
+};
+
+// All strings ASCII-only, plain hyphens only (no em dash).
+inline constexpr ThemeDef THEME_DEFS[] = {
+    {"Standard Tier", 0},
+    {"The Quarterly Pit", 1},
+    {"Legacy Systems Wing", -1},
+    {"Synergy Annex", 0},
+    {"Cost Center Sublevel", 1},
+};
+inline constexpr int THEME_DEF_COUNT = sizeof(THEME_DEFS) / sizeof(THEME_DEFS[0]);
+// themeForDepth() is defined further below, after Rng and levelSeed().
 
 // --- Glyph lookup helpers ---
 
@@ -305,6 +395,15 @@ inline uint32_t xpForLevel(uint16_t level) {
 
 inline uint32_t levelSeed(uint32_t gameSeed, uint8_t depth) {
   return gameSeed ^ (depth * 2654435761u);
+}
+
+// Deterministic per-depth theme pick, independent of the dungeon generator's
+// own Rng(levelSeed(gameSeed, depth)) stream (XORed with a distinct constant)
+// so revisiting a floor always shows the same theme without correlating with
+// -- or perturbing -- room/monster/item generation.
+inline uint8_t themeForDepth(uint32_t gameSeed, uint8_t depth) {
+  Rng rng(levelSeed(gameSeed, depth) ^ 0x5AC38A2Du);
+  return static_cast<uint8_t>(rng.nextRange(THEME_DEF_COUNT));
 }
 
 }  // namespace game

@@ -168,7 +168,7 @@ game::PlannerLayout GameRenderer::buildPlannerLayout() const {
 
 void GameRenderer::formatStatusBarText(char hpBuf[24], char mpBuf[24], char depthBuf[16], char lvlBuf[16]) const {
   const auto& p = GAME_STATE.player;
-  snprintf(hpBuf, 24, "HP:%u/%u", p.hp, p.maxHp);
+  snprintf(hpBuf, 24, "HP:%u/%u", p.hp, game::effectiveMaxHp(p));
   snprintf(mpBuf, 24, "MP:%u/%u", p.mp, p.maxMp);
   snprintf(depthBuf, 16, "Dl:%u", p.dungeonDepth);
   snprintf(lvlBuf, 16, "Cl:%u", p.charLevel);

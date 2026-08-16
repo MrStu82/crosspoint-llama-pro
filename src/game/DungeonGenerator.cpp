@@ -268,7 +268,7 @@ bool findRandomFloor(const Tile* tiles, Rng& rng, int16_t& outX, int16_t& outY, 
 
 // --- Monster Placement ---
 
-uint8_t placeMonsters(Tile* tiles, Monster* monsters, Rng& rng, uint8_t depth) {
+uint8_t placeMonsters(Tile* tiles, Monster* monsters, Rng& rng, uint8_t depth, uint8_t themeId) {
   int count = std::min(3 + depth * 2, static_cast<int>(game::MAX_MONSTERS));
   uint8_t placed = 0;
 
@@ -308,6 +308,12 @@ uint8_t placeMonsters(Tile* tiles, Monster* monsters, Rng& rng, uint8_t depth) {
       uint8_t v = static_cast<uint8_t>(rng.nextRange(eligibleCount));
       if (v > bestIdx) bestIdx = v;
     }
+    // Themed floor (Phase 11): decorative nudge only, clamped back into the same
+    // untouched [0, eligibleCount-1] range -- never changes which types are eligible.
+    int16_t biased = static_cast<int16_t>(bestIdx) + game::THEME_DEFS[themeId].monsterBias;
+    if (biased < 0) biased = 0;
+    if (biased > eligibleCount - 1) biased = eligibleCount - 1;
+    bestIdx = static_cast<uint8_t>(biased);
     uint8_t typeIdx = eligible[bestIdx];
     const auto& def = game::MONSTER_DEFS[typeIdx];
 
@@ -405,6 +411,11 @@ DungeonGenerator::Result DungeonGenerator::generate(uint32_t gameSeed, uint8_t d
                                                     Item* items) {
   Rng rng(game::levelSeed(gameSeed, depth));
 
+  // Themed floor (Phase 11): its own independent RNG stream (see game::themeForDepth's
+  // seed perturbation) so the theme pick never correlates with or consumes from the
+  // dungeon layout/monster/item rng above.
+  uint8_t themeId = game::themeForDepth(gameSeed, depth);
+
   // Fill with walls
   for (int i = 0; i < game::MAP_SIZE; i++) {
     tiles[i] = Tile::Wall;
@@ -445,8 +456,9 @@ DungeonGenerator::Result DungeonGenerator::generate(uint32_t gameSeed, uint8_t d
   result.stairsDownY = downY;
 
   // Place monsters and items
-  result.monsterCount = placeMonsters(tiles, monsters, rng, depth);
+  result.monsterCount = placeMonsters(tiles, monsters, rng, depth, themeId);
   result.itemCount = placeItems(tiles, items, rng, depth);
+  result.themeId = themeId;
 
   // On the deepest level, place The Necromancer near the stairs down
   if (depth == game::MAX_DEPTH && result.monsterCount < game::MAX_MONSTERS) {

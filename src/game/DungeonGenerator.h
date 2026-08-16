@@ -12,6 +12,9 @@ class DungeonGenerator {
     int16_t stairsDownX, stairsDownY;
     uint8_t monsterCount;
     uint8_t itemCount;
+    // Themed floor (Phase 11) -- index into game::THEME_DEFS, derived deterministically
+    // from gameSeed+depth via game::themeForDepth(). Decorative only (see GameTypes.h).
+    uint8_t themeId;
   };
 
   // Generate a level into the provided tile grid, monster and item arrays.

@@ -385,16 +385,19 @@ void GameMenuActivity::useInventoryItem(int index) {
   auto type = static_cast<game::ItemType>(item.type);
 
   bool consumed = false;
-  // 128, not 64 -- the loot box copy below (parent-approved verbatim) is longer than every
-  // other message in this switch.
-  char msgBuf[128];
+  // 160, not 128 -- the loot box gold-win message with a sponsor courtesy clause appended
+  // (Phase 11) is the longest message in this switch: fixed text (112) + longest gold roll
+  // "999" (3) + longest sponsor name "System Uptime Guarantee (tm)" (29) + null = 145,
+  // rounded up with headroom so a future sponsor/item name addition doesn't silently
+  // truncate mid-punchline.
+  char msgBuf[160];
 
   switch (type) {
     case game::ItemType::Potion:
       if (item.subtype == 0) {  // Healing
-        uint16_t heal = p.maxHp / 3;
+        uint16_t heal = game::effectiveMaxHp(p) / 3;
         if (heal < 5) heal = 5;
-        p.hp = std::min(static_cast<uint16_t>(p.hp + heal), p.maxHp);
+        p.hp = std::min(static_cast<uint16_t>(p.hp + heal), game::effectiveMaxHp(p));
         snprintf(msgBuf, sizeof(msgBuf), "You feel better! (HP +%u)", heal);
         consumed = true;
       } else if (item.subtype == 1) {  // Mana
@@ -416,13 +419,13 @@ void GameMenuActivity::useInventoryItem(int index) {
       // exists to counter, and the escapability guarantee that depends on this being turn-free.
       if (item.subtype == 0) {  // Rations
         uint16_t heal = 5;
-        p.hp = std::min(static_cast<uint16_t>(p.hp + heal), p.maxHp);
+        p.hp = std::min(static_cast<uint16_t>(p.hp + heal), game::effectiveMaxHp(p));
         p.hunger = 0;
         snprintf(msgBuf, sizeof(msgBuf), "That hit the spot. (HP +%u, hunger sated)", heal);
         consumed = true;
       } else if (item.subtype == 1) {  // Nutrient Bar
-        uint16_t heal = p.maxHp / 2;
-        p.hp = std::min(static_cast<uint16_t>(p.hp + heal), p.maxHp);
+        uint16_t heal = game::effectiveMaxHp(p) / 2;
+        p.hp = std::min(static_cast<uint16_t>(p.hp + heal), game::effectiveMaxHp(p));
         uint16_t mana = p.maxMp / 2;
         p.mp = std::min(static_cast<uint16_t>(p.mp + mana), p.maxMp);
         p.hunger = 0;
@@ -468,12 +471,25 @@ void GameMenuActivity::useInventoryItem(int index) {
       // When sponsors land as their own work item, this narration takes the sponsor name from
       // that system instead of hardcoding "SPONSORED CONTENT" -- not building a second string
       // table now, per parent's explicit call.
+      // Sponsor courtesy clause (Phase 11): extends the already-signed string above,
+      // never edits it. Only appended when a real sponsor is active -- SPONSOR_NONE
+      // (index 0, e.g. between floor loads) gets no clause at all.
+      const char* sponsorName = game::SPONSOR_DEFS[p.activeSponsorId].name;
+      bool hasSponsor = p.activeSponsorId != game::SPONSOR_NONE;
+
       if (reward.type == static_cast<uint8_t>(game::ItemType::Gold)) {
         uint16_t amount = static_cast<uint16_t>(GAME_STATE.rollRangeInclusive(1, 10 + p.dungeonDepth * 5));
         p.gold += amount;
-        snprintf(msgBuf, sizeof(msgBuf),
-                 "SPONSORED CONTENT: Congratulations! You've won %u gold! (Terms apply. Terms are unfavourable.)",
-                 amount);
+        if (hasSponsor) {
+          snprintf(msgBuf, sizeof(msgBuf),
+                   "SPONSORED CONTENT: Congratulations! You've won %u gold! (Terms apply. Terms are "
+                   "unfavourable.) Brought to you by %s.",
+                   amount, sponsorName);
+        } else {
+          snprintf(msgBuf, sizeof(msgBuf),
+                   "SPONSORED CONTENT: Congratulations! You've won %u gold! (Terms apply. Terms are unfavourable.)",
+                   amount);
+        }
         consumed = true;  // reward went to the purse, not a slot -- box just disappears
       } else {
         item.type = reward.type;
@@ -481,7 +497,12 @@ void GameMenuActivity::useInventoryItem(int index) {
         item.count = 1;
         item.enchantment = 0;
         item.flags = 0;
-        snprintf(msgBuf, sizeof(msgBuf), "SPONSORED CONTENT: Congratulations! You've won... %s!", reward.name);
+        if (hasSponsor) {
+          snprintf(msgBuf, sizeof(msgBuf), "SPONSORED CONTENT: Congratulations! You've won... %s! Brought to you by %s.",
+                   reward.name, sponsorName);
+        } else {
+          snprintf(msgBuf, sizeof(msgBuf), "SPONSORED CONTENT: Congratulations! You've won... %s!", reward.name);
+        }
         // consumed stays false: the crate transforms into its prize in place rather than being
         // removed-then-reinserted, so opening a crate can never fail on a full inventory (it
         // already held the slot a moment ago).
@@ -689,7 +710,7 @@ void GameMenuActivity::renderCharacter() {
   renderer.drawText(UI_10_FONT_ID, x, y, buf, true, EpdFontFamily::BOLD);
   y += lineH;
 
-  snprintf(buf, sizeof(buf), "HP: %u / %u", p.hp, p.maxHp);
+  snprintf(buf, sizeof(buf), "HP: %u / %u", p.hp, game::effectiveMaxHp(p));
   renderer.drawText(UI_10_FONT_ID, x, y, buf);
   y += lineH;
 

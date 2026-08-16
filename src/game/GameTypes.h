@@ -148,38 +148,39 @@ struct ItemDef {
   uint16_t value;  // Base gold value
   int8_t attack;   // Bonus if weapon/armor
   int8_t defense;  // Bonus if armor/shield
+  bool throwable;  // Can be thrown at a monster from the inventory screen
 };
 
 inline constexpr ItemDef ITEM_DEFS[] = {
     // Weapons
-    {"Dagger", '/', static_cast<uint8_t>(ItemType::Weapon), 0, 5, 2, 0},
-    {"Short Sword", '/', static_cast<uint8_t>(ItemType::Weapon), 1, 15, 4, 0},
-    {"Long Sword", '/', static_cast<uint8_t>(ItemType::Weapon), 2, 30, 6, 0},
-    {"Battle Axe", '/', static_cast<uint8_t>(ItemType::Weapon), 3, 50, 8, 0},
-    {"Nanoweave Blade", '/', static_cast<uint8_t>(ItemType::Weapon), 4, 200, 12, 0},
+    {"Dagger", '/', static_cast<uint8_t>(ItemType::Weapon), 0, 5, 2, 0, true},
+    {"Short Sword", '/', static_cast<uint8_t>(ItemType::Weapon), 1, 15, 4, 0, true},
+    {"Long Sword", '/', static_cast<uint8_t>(ItemType::Weapon), 2, 30, 6, 0, true},
+    {"Battle Axe", '/', static_cast<uint8_t>(ItemType::Weapon), 3, 50, 8, 0, true},
+    {"Nanoweave Blade", '/', static_cast<uint8_t>(ItemType::Weapon), 4, 200, 12, 0, true},
     // Armor
-    {"Leather Armor", '[', static_cast<uint8_t>(ItemType::Armor), 0, 10, 0, 2},
-    {"Chain Mail", '[', static_cast<uint8_t>(ItemType::Armor), 1, 30, 0, 4},
-    {"Plate Mail", '[', static_cast<uint8_t>(ItemType::Armor), 2, 60, 0, 6},
-    {"Nanoweave Coat", '[', static_cast<uint8_t>(ItemType::Armor), 3, 300, 0, 10},
+    {"Leather Armor", '[', static_cast<uint8_t>(ItemType::Armor), 0, 10, 0, 2, false},
+    {"Chain Mail", '[', static_cast<uint8_t>(ItemType::Armor), 1, 30, 0, 4, false},
+    {"Plate Mail", '[', static_cast<uint8_t>(ItemType::Armor), 2, 60, 0, 6, false},
+    {"Nanoweave Coat", '[', static_cast<uint8_t>(ItemType::Armor), 3, 300, 0, 10, false},
     // Shields
-    {"Wooden Shield", ')', static_cast<uint8_t>(ItemType::Shield), 0, 8, 0, 1},
-    {"Iron Shield", ')', static_cast<uint8_t>(ItemType::Shield), 1, 25, 0, 3},
+    {"Wooden Shield", ')', static_cast<uint8_t>(ItemType::Shield), 0, 8, 0, 1, false},
+    {"Iron Shield", ')', static_cast<uint8_t>(ItemType::Shield), 1, 25, 0, 3, false},
     // Potions
-    {"Potion of Healing", '!', static_cast<uint8_t>(ItemType::Potion), 0, 20, 0, 0},
-    {"Potion of Mana", '!', static_cast<uint8_t>(ItemType::Potion), 1, 25, 0, 0},
-    {"Potion of Strength", '!', static_cast<uint8_t>(ItemType::Potion), 2, 50, 0, 0},
+    {"Potion of Healing", '!', static_cast<uint8_t>(ItemType::Potion), 0, 20, 0, 0, true},
+    {"Potion of Mana", '!', static_cast<uint8_t>(ItemType::Potion), 1, 25, 0, 0, true},
+    {"Potion of Strength", '!', static_cast<uint8_t>(ItemType::Potion), 2, 50, 0, 0, true},
     // Scrolls
-    {"Scroll of Identify", '?', static_cast<uint8_t>(ItemType::Scroll), 0, 15, 0, 0},
-    {"Scroll of Teleport", '?', static_cast<uint8_t>(ItemType::Scroll), 1, 30, 0, 0},
-    {"Scroll of Mapping", '?', static_cast<uint8_t>(ItemType::Scroll), 2, 40, 0, 0},
+    {"Scroll of Identify", '?', static_cast<uint8_t>(ItemType::Scroll), 0, 15, 0, 0, false},
+    {"Scroll of Teleport", '?', static_cast<uint8_t>(ItemType::Scroll), 1, 30, 0, 0, false},
+    {"Scroll of Mapping", '?', static_cast<uint8_t>(ItemType::Scroll), 2, 40, 0, 0, false},
     // Food
-    {"Rations", '%', static_cast<uint8_t>(ItemType::Food), 0, 5, 0, 0},
-    {"Nutrient Bar", '%', static_cast<uint8_t>(ItemType::Food), 1, 30, 0, 0},
+    {"Rations", '%', static_cast<uint8_t>(ItemType::Food), 0, 5, 0, 0, false},
+    {"Nutrient Bar", '%', static_cast<uint8_t>(ItemType::Food), 1, 30, 0, 0, false},
     // Gold
-    {"Gold Coins", '$', static_cast<uint8_t>(ItemType::Gold), 0, 1, 0, 0},
+    {"Gold Coins", '$', static_cast<uint8_t>(ItemType::Gold), 0, 1, 0, 0, false},
     // Quest item — dropped by The Adjudicator
-    {"Ring of Power", '=', static_cast<uint8_t>(ItemType::Ring), 0, 999, 0, 0},
+    {"Ring of Power", '=', static_cast<uint8_t>(ItemType::Ring), 0, 999, 0, 0, false},
 };
 inline constexpr int ITEM_DEF_COUNT = sizeof(ITEM_DEFS) / sizeof(ITEM_DEFS[0]);
 inline constexpr int RING_OF_POWER_DEF = ITEM_DEF_COUNT - 1;  // Index of Ring of Power

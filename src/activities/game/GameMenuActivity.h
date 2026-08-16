@@ -10,7 +10,7 @@
 // GameActivity can react (no std::function callback members).
 class GameMenuActivity final : public Activity {
  public:
-  enum class MenuAction { RESUME, SAVE_QUIT, ABANDON };
+  enum class MenuAction { RESUME, SAVE_QUIT, ABANDON, THROW };
 
   explicit GameMenuActivity(GfxRenderer& renderer, MappedInputManager& mappedInput)
       : Activity("GameMenu", renderer, mappedInput) {}
@@ -20,7 +20,7 @@ class GameMenuActivity final : public Activity {
   void render(RenderLock&&) override;
 
  private:
-  enum class Screen { Menu, Inventory, Character, Achievements };
+  enum class Screen { Menu, Inventory, Character, Achievements, ThrowTarget };
 
   void useInventoryItem(int index);
 
@@ -28,6 +28,7 @@ class GameMenuActivity final : public Activity {
   void renderInventory();
   void renderCharacter();
   void renderAchievements();
+  void renderThrowTarget();
 
   // Touch support for the Screen::Menu row list (Resume/Inventory/Character/Save &
   // Quit/Abandon Run), additive alongside the existing physical-button navigation.
@@ -46,4 +47,14 @@ class GameMenuActivity final : public Activity {
   Screen currentScreen = Screen::Menu;
   int selectedIndex = 0;
   ButtonNavigator buttonNavigator;
+
+  // Screen::Inventory's Confirm button is overloaded: a short press uses/equips the
+  // hovered item, a long press on a throwable item instead enters Screen::ThrowTarget.
+  // longPressFired latches once the hold threshold trips so the eventual release doesn't
+  // also fire the short-press action (same pattern as RecentBooksActivity.cpp).
+  bool longPressFired = false;
+
+  // Inventory index of the item being thrown, captured when entering Screen::ThrowTarget
+  // so the later direction press can report it back to GameActivity via MenuResult.
+  int throwItemIndex = -1;
 };

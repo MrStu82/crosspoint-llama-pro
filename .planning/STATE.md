@@ -3,10 +3,10 @@ gsd_state_version: '1.0'
 status: in_progress
 progress:
   total_phases: 12
-  completed_phases: 8
+  completed_phases: 9
   total_plans: 4
   completed_plans: 4
-  percent: 67
+  percent: 75
 ---
 
 # Project State
@@ -16,13 +16,14 @@ progress:
 See: .planning/PROJECT.md (updated 2026-08-15)
 
 **Core value:** Every screen renders correctly and fully on-panel on the X4 Pro, with no clipped/overflowing content and no touch targets crowded against the bezel.
-**Current focus:** Milestone 3 (Phases 7-12, World Dungeon). Phases 7 (Correctness) and 8 (Reclaim the frame / dirty-rect rendering) are closed. Phase 9 ("Voice — make it Dungeon Crawler Carl") is in progress on branch `phase-7-world-dungeon-correctness`. **Delivery plan changed 2026-08-15 (parent msg 3650, direct from Stuart): no interim on-glass flashes — build straight through Phases 9, 10, 11 with host-only machine-verified gates per phase, ship parent exactly one final image when Phase 12 closes.** Milestone 1 (Phases 1-4) and Milestone 2 (Phases 5-6, Tamagotchi overhaul) are prior, separately-shipped work — see their sections below for history, not current activity.
+**Current focus:** Milestone 3 (Phases 7-12, World Dungeon). Phases 7 (Correctness), 8 (Reclaim the frame / dirty-rect rendering), and 9 (Voice — DCC flavour/achievements) are closed. Phase 10 (throw mechanic + Percussive Maintenance achievement) is opening on branch `phase-7-world-dungeon-correctness`, dispatched directly by parent (msgs 3748/3750/3752, 2026-08-15) with standing authorization to proceed through implementation without further check-in. **Delivery plan (parent msg 3650, direct from Stuart): no interim on-glass flashes — build straight through Phases 9, 10, 11 with host-only machine-verified gates per phase, ship parent exactly one final image when Phase 12 closes.** Milestone 1 (Phases 1-4) and Milestone 2 (Phases 5-6, Tamagotchi overhaul) are prior, separately-shipped work — see their sections below for history, not current activity.
 
 ## Current Position
 
-Phase: 9 of 12 — in progress (Milestone 3)
-Plan: none written formally — working item-by-item off parent's dispatched Phase 9 spec (msg 3652) directly
-Status: Phase 9 work item 1 (rename `MONSTER_DEFS`/`ITEM_DEFS` off Tolkien nouns into a DCC register) is done — requirement 1's word-boundary grep re-runs clean. Work item 2 (System flavour tables, `src/game/FlavorText.h`/`.cpp`) is done — 12 categories, 3 variants each, non-repeat-consecutive, drawn off the persistent combat RNG stream, wired into all 7 message call sites in `GameActivity.cpp` (kill/hit/damaged/death/level-up/floor-entry/boss-arrival). Work items 3-5 (boxed notifications, achievements screen, new achievements/event) not yet started. No build/gate run yet this phase — requirements 2/3 (variant-coverage simulation, allocation trace) deferred to the host-gate pass (Task #7) once all work items land.
+Phase: 10 of 12 — opening (Milestone 3)
+Plan: no formal 10-01 plan doc yet, but Phase 10's goal/work-items/requirements/gate are now drafted in ROADMAP.md (2026-08-15) off Explore-agent codebase reconnaissance (input dispatch in `GameActivity.cpp`, `AchievementBus`/`GameEventType` event system, `Item`/`ItemFlag` inventory model, melee damage-calc precedent — confirmed no existing projectile/ranged/thrown system anywhere in the codebase). 5 work items: `bool throwable` field on `ItemDef` (corrected 2026-08-15 from an earlier `ItemFlag::Throwable` bit-flag idea — throwability is a property of an item's definition/type, not a per-instance runtime flag, so it belongs on `ItemDef`), directional throw-target input reusing the existing 4-dir input (no new cursor system, matches turn-based model), dexterity-based throw damage formula distinct from melee's strength-based one, new `GameEventType::ItemThrown`, new `AchievementId::PercussiveMaintenance` (index 8, bumps Count to 9) firing on thrown-kill. Rendering stays impact-only, no flight animation — codebase has no animation loop and adding one is out of scope.
+Status: **Phase 9 is fully closed** — work items 1-5 all landed (`c0d1525`, `6964d1f`, `a1d8f6e`, `259c556`), host gate evidence package delivered and PROJECT.md closure recorded in `071e65b`. This file (STATE.md) had drifted stale relative to that closure (still showing work items 3-5 as "not yet started") — corrected 2026-08-15 per the standing lesson below (line 97) after a git-log cross-check confirmed full completion, not by assumption.
+Also landed this session, off the game_title_render cert-line fix thread (not a Phase 9/10 work item, but same branch/session): `9eb56a0` (cert-line UI_10 fix, both wordmark-border and tick-ring collisions resolved, parent + Pixel signed off) and `4718cab` (host-render-harness README, build recipe verified from a genuine clean-room rebuild, catching 3 real recipe bugs before documenting).
 
 ### Milestone 1/2 history (prior, not current focus)
 

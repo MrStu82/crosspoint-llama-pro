@@ -175,11 +175,34 @@ Plans:
   5. Achievements screen lists every defined achievement; unlock state survives a reload; a locked one is never named.
   6. Each new achievement proven to fire AND proven not to fire — both directions, matching the Phase 7 fire/no-fire proof pattern.
 **Gate**: HOST ONLY — grep proof, variant coverage, unlock/no-unlock matrix, allocation trace showing no per-turn heap churn. No glass gate this phase — per the revised delivery plan (2026-08-15), Stuart flashes once at the very end of the whole World Dungeon milestone, not per-phase.
-**Status**: In progress, opened 2026-08-15 (work item 1 done, requirement 1's grep proof re-runs clean).
+**Status**: Closed 2026-08-15. All 5 work items landed (`c0d1525`, `6964d1f`, `a1d8f6e`, `259c556`), host gate evidence delivered and recorded in `.planning/evidence/phase9-gate.md`, closure committed in `071e65b`.
+**Plans**: n/a — worked item-by-item off the dispatched spec (parent msg 3652), no formal plan doc written.
+
+Plans:
+- [x] 09-01: All 5 work items — closed, see evidence/phase9-gate.md.
+
+### Phase 10: World Dungeon — Decisions (throw mechanic)
+**Goal**: Throw mechanic for items, with the `Percussive Maintenance` achievement wired in during the build (not bolted on afterward) — per parent's explicit instruction (msgs 3748/3750/3752).
+**Depends on**: Phase 9
+**Reconnaissance** (2026-08-15, via Explore agent, no existing projectile/ranged/thrown system anywhere in the codebase — confirmed by grep): input dispatch is `GameActivity::loop()` (GameActivity.cpp:126-202) → `handleAction()` (354-508); melee damage formula is `max(1, strength + weaponBonus - defense ± variance)` (GameActivity.cpp:279-282); item-use lives in `GameMenuActivity::useInventoryItem()` (GameMenuActivity.cpp:300-400, potions/food/scrolls consume, weapons/armor toggle `ItemFlag::Equipped`); `ItemFlag` (GameTypes.h:48-53) has bit 3 free; `GameEventType`/`AchievementId` (Achievements.h:7-62) are event-driven via `AchievementBus::emit()` (AchievementBus.cpp:73-140), `ItemUsed` exists as an unused-for-achievements placeholder to model a new `ItemThrown` event on. Rendering is strictly turn-based with no animation loop (GameRenderer.h/.cpp) — no flight animation, impact-only visual, consistent with the project's YAGNI convention (Phase 9's flavour-table scope, cert-line font reuse).
+**Work items**:
+  1. `bool throwable` field on `ItemDef` (`GameTypes.h`) — corrected 2026-08-15 from the original `ItemFlag::Throwable` bit-flag idea: throwability is a property of an item's *definition/type* (all Daggers, all Potions of Healing), not a per-instance runtime flag on `Item`, so it belongs on `ItemDef`, not `ItemFlag`. Weapon and Potion `ITEM_DEFS` entries set `true`; Armor/Shield/Scroll/Food/Gold/Ring stay `false` (equipped-gear and non-physical items excluded).
+  2. Throw-target input: from the inventory menu, a "Throw" action on a throwable item enters directional-targeting (reuse the existing 4-direction input, no new cursor system — matches the turn-based model, avoids inventing targeting UI this phase), confirms to throw in that direction, resolves against the nearest monster in line.
+  3. Thrown-item damage formula, dexterity-based (distinct curve from melee's strength-based formula) plus item enchantment, reusing the existing `rollRangeInclusive` variance pattern. Thrown item is consumed — inventory count decrements, item removed at 0, same removal pattern as potion/food consumption.
+  4. New `GameEventType::ItemThrown` (hit/miss, monster id/maxHp on hit) emitted from the throw-resolution call site, mirroring `MonsterKilled`'s emit-from-attack-site pattern.
+  5. New `AchievementId::PercussiveMaintenance` (index 8, bumps `Count` to 9) — unlocks on a monster kill via `ItemThrown`, wired in `AchievementBus::emit()`'s `ItemThrown` case, same call-site pattern as `EscalationOfForce`.
+**Requirements** (each proven, not asserted):
+  1. Every throwable `ITEM_DEFS` subtype can be thrown from inventory; non-throwable items (equipped gear, quest item) cannot — grep/simulation proof, not eyeballed.
+  2. Thrown-item damage formula proven via simulation to follow a dexterity-based curve distinct from melee's strength-based curve (not the same formula with different inputs by accident).
+  3. Thrown item is consumed on throw — inventory count decrements correctly and the item is removed at 0, proven via inventory-count assertions across N throws (stacked and single-count cases).
+  4. `PercussiveMaintenance` fires exactly once on the first thrown-item kill and never fires on a thrown miss, a thrown non-kill hit, or a melee kill — proven fire/no-fire both directions, matching the Phase 7/9 proof pattern.
+  5. Throw resolution stays inside the existing turn-based dirty-rect render model — no new animation loop, no full-flash regression — proven via the Phase 8 `FrameDirtyPlanner` instrument, same technique as Phase 9 requirement 4.
+**Gate**: HOST ONLY — grep proof, damage-curve simulation, inventory-count assertions, unlock/no-unlock matrix, dirty-rect instrument report. No glass gate this phase, per the standing delivery-plan.
+**Status**: Opening 2026-08-15. Plan doc not yet written — drafting 10-01 next.
 **Plans**: TBD
 
 Plans:
-- [ ] 09-01: TBD
+- [ ] 10-01: TBD
 
-### Phases 10-12: World Dungeon — Decisions / The Show / The Co-star
+### Phases 11-12: World Dungeon — The Show / The Co-star
 Requirements TBD, pulled from the plan doc as each phase opens. **Flash cadence (revised 2026-08-15, supersedes the old 9+10/11+12 pairing): no interim images at all — one final flash to Stuart when Phase 12 closes.** Every phase gate stays host-machine-verified evidence to parent, same rigor as before; there is no glass gate again until the very last phase closes.

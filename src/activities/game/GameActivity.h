@@ -64,6 +64,10 @@ class GameActivity final : public Activity {
   void computeVisibility();
   void handleMove(int dx, int dy);
   void handleAction();
+  // Resolves a throw committed from GameMenuActivity's Screen::ThrowTarget: consumes
+  // inventoryIndex's item, finds the nearest monster in line along dir, applies
+  // dexterity-based damage, and emits GameEventType::ItemThrown.
+  void handleThrow(game::Direction dir, int inventoryIndex);
   // Returns true if the player died during this batch of monster turns (caller
   // should stop processing further turns/input once that happens).
   bool processMonsterTurns();

@@ -17,6 +17,24 @@
 #include "game/GameTypes.h"
 #include "activities/ActivityResult.h"
 
+namespace {
+// Hold threshold for the long-press "throw item" action on Screen::Inventory (firmware
+// convention, matches RecentBooksActivity.cpp's long-press-to-remove threshold).
+constexpr unsigned long LONG_PRESS_MS = 1000;
+
+// Looks up the ItemDef backing a live inventory Item by (type, subtype), the same match
+// renderInventory()'s name/category lookups already use inline. Returns nullptr if the
+// item's type/subtype somehow doesn't match any table entry (should not happen in practice).
+const game::ItemDef* findItemDef(const game::Item& item) {
+  for (int d = 0; d < game::ITEM_DEF_COUNT; d++) {
+    if (game::ITEM_DEFS[d].type == item.type && game::ITEM_DEFS[d].subtype == item.subtype) {
+      return &game::ITEM_DEFS[d];
+    }
+  }
+  return nullptr;
+}
+}  // namespace
+
 // --- Lifecycle ---
 
 void GameMenuActivity::onEnter() {
@@ -120,6 +138,31 @@ void GameMenuActivity::loop() {
         requestUpdate();
       });
 
+      // After a long-press has fired, swallow input until Confirm is physically released
+      // (so the release doesn't also use/equip the item; same idiom as RecentBooksActivity.cpp).
+      if (longPressFired) {
+        if (!mappedInput.isPressed(Button::Confirm)) {
+          longPressFired = false;
+        }
+        break;
+      }
+
+      // Long-press Confirm on a throwable item: enter Screen::ThrowTarget instead of
+      // using/equipping it. Non-throwable items (armor, scrolls, food, etc.) ignore the
+      // hold entirely and fall through to the ordinary short-press handling below.
+      {
+        const auto& hovered = GAME_STATE.inventory[selectedIndex];
+        const auto* def = findItemDef(hovered);
+        if (def != nullptr && def->throwable && mappedInput.isPressed(Button::Confirm) &&
+            mappedInput.getHeldTime() >= LONG_PRESS_MS) {
+          longPressFired = true;
+          throwItemIndex = selectedIndex;
+          currentScreen = Screen::ThrowTarget;
+          requestUpdate();
+          break;
+        }
+      }
+
       if (mappedInput.wasReleased(Button::Confirm)) {
         useInventoryItem(selectedIndex);
         requestUpdate();
@@ -134,6 +177,43 @@ void GameMenuActivity::loop() {
       // Touch: same dual-phase idiom as handleMenuTouch() -- touch-down previews the
       // highlighted row, a tap selects and immediately activates it (mirrors Confirm).
       if (handleInventoryTouch()) {
+        return;
+      }
+      break;
+    }
+
+    case Screen::ThrowTarget: {
+      // Any of the four directions commits the throw; Back cancels without spending
+      // a turn. Reported back via MenuResult (orientation = Direction, pageTurnOption =
+      // inventory index) so GameActivity can resolve the throw itself -- this activity
+      // owns UI only, not throw resolution/combat math.
+      if (mappedInput.wasReleased(Button::Back)) {
+        currentScreen = Screen::Inventory;
+        throwItemIndex = -1;
+        requestUpdate();
+        break;
+      }
+
+      auto commitThrow = [this](game::Direction dir) {
+        setResult(MenuResult{static_cast<int>(MenuAction::THROW), static_cast<uint8_t>(dir),
+                             static_cast<uint8_t>(throwItemIndex)});
+        finish();
+      };
+
+      if (mappedInput.wasReleased(Button::Up)) {
+        commitThrow(game::Direction::North);
+        return;
+      }
+      if (mappedInput.wasReleased(Button::Down)) {
+        commitThrow(game::Direction::South);
+        return;
+      }
+      if (mappedInput.wasReleased(Button::Left)) {
+        commitThrow(game::Direction::West);
+        return;
+      }
+      if (mappedInput.wasReleased(Button::Right)) {
+        commitThrow(game::Direction::East);
         return;
       }
       break;
@@ -415,6 +495,9 @@ void GameMenuActivity::render(RenderLock&&) {
     case Screen::Achievements:
       renderAchievements();
       break;
+    case Screen::ThrowTarget:
+      renderThrowTarget();
+      break;
   }
 }
 
@@ -518,7 +601,19 @@ void GameMenuActivity::renderInventory() {
   }
 
   const char* confirmLabel = invCount > 0 ? tr(STR_DM_USE_EQUIP) : "";
-  const auto labels = mappedInput.mapLabels(tr(STR_BACK), confirmLabel, "", "");
+
+  // Surface the hold-to-throw hint only when the hovered item is actually throwable --
+  // otherwise the fourth hint slot stays blank, matching every other screen's convention
+  // of not showing a hint for an action that isn't currently available.
+  const char* holdThrowLabel = "";
+  if (invCount > 0) {
+    const auto* def = findItemDef(GAME_STATE.inventory[selectedIndex]);
+    if (def != nullptr && def->throwable) {
+      holdThrowLabel = tr(STR_DM_HINT_HOLD_THROW);
+    }
+  }
+
+  const auto labels = mappedInput.mapLabels(tr(STR_BACK), confirmLabel, "", holdThrowLabel);
   GUI.drawButtonHints(renderer, labels.btn1, labels.btn2, labels.btn3, labels.btn4);
 
   renderer.displayBuffer();
@@ -658,6 +753,37 @@ void GameMenuActivity::renderAchievements() {
   }
 
   const auto labels = mappedInput.mapLabels(tr(STR_BACK), "", "", "");
+  GUI.drawButtonHints(renderer, labels.btn1, labels.btn2, labels.btn3, labels.btn4);
+
+  renderer.displayBuffer();
+}
+
+void GameMenuActivity::renderThrowTarget() {
+  renderer.clearScreen();
+
+  const auto pageWidth = renderer.getScreenWidth();
+  auto metrics = UITheme::getInstance().getMetrics();
+
+  GUI.drawHeader(renderer, Rect(0, metrics.topPadding, pageWidth, metrics.headerHeight), tr(STR_DM_THROW));
+
+  const int x = metrics.contentSidePadding;
+  int y = metrics.topPadding + metrics.headerHeight + metrics.verticalSpacing + 10;
+  constexpr int lineH = 28;
+
+  // Name the item actually in flight -- throwItemIndex was captured on long-press,
+  // not re-derived from selectedIndex (which Screen::Inventory keeps mutating).
+  if (throwItemIndex >= 0 && throwItemIndex < GAME_STATE.inventoryCount) {
+    const auto* def = findItemDef(GAME_STATE.inventory[throwItemIndex]);
+    if (def != nullptr) {
+      renderer.drawText(UI_10_FONT_ID, x, y, def->name, true, EpdFontFamily::BOLD);
+      y += lineH;
+    }
+  }
+
+  renderer.drawText(UI_10_FONT_ID, x, y, tr(STR_DM_THROW_PROMPT));
+
+  const auto labels = mappedInput.mapDirectionalLabels(tr(STR_BACK), "", tr(STR_DM_HINT_LEFT), tr(STR_DM_HINT_RIGHT),
+                                                        tr(STR_DM_HINT_UP), tr(STR_DM_HINT_DOWN));
   GUI.drawButtonHints(renderer, labels.btn1, labels.btn2, labels.btn3, labels.btn4);
 
   renderer.displayBuffer();

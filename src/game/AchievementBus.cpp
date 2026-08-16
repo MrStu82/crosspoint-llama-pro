@@ -136,5 +136,11 @@ void AchievementBus::emit(const game::GameEvent& event) {
         unlock(AchievementId::PackRat, "Achievement: Pack Rat (Your pack is bursting. The System charges storage fees.)");
       }
       break;
+
+    case GameEventType::ItemThrown:
+      if (event.killedMonster) {
+        unlock(AchievementId::PercussiveMaintenance, "Achievement: Percussive Maintenance (You fixed it. By throwing something else at it.)");
+      }
+      break;
   }
 }

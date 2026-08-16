@@ -13,7 +13,8 @@ enum class AchievementId : uint8_t {
   SpeedRunner = 5,
   DeepDiver = 6,
   MaxedOut = 7,
-  Count = 8,
+  PercussiveMaintenance = 8,
+  Count = 9,
 };
 
 // Short display name for the end-of-run screen (Phase 7 req 2/3). Kept separate
@@ -29,6 +30,7 @@ inline const char* achievementShortName(AchievementId id) {
     case AchievementId::SpeedRunner: return "Speed Runner";
     case AchievementId::DeepDiver: return "Deep Diver";
     case AchievementId::MaxedOut: return "Maxed Out";
+    case AchievementId::PercussiveMaintenance: return "Percussive Maintenance";
     default: return "";
   }
 }
@@ -47,6 +49,7 @@ inline const char* achievementHint(AchievementId id) {
     case AchievementId::SpeedRunner: return "Move fast.";
     case AchievementId::DeepDiver: return "Go deep.";
     case AchievementId::MaxedOut: return "Reach your peak.";
+    case AchievementId::PercussiveMaintenance: return "Solve a problem with a thrown object.";
     default: return "";
   }
 }
@@ -59,6 +62,7 @@ enum class GameEventType : uint8_t {
   ItemUsed,
   ItemPickedUp,
   LevelUp,
+  ItemThrown,
 };
 
 struct GameEvent {
@@ -69,6 +73,7 @@ struct GameEvent {
   uint16_t hpAfter = 0;       // PlayerDamaged: player's hp after the hit.
   uint16_t maxHp = 0;         // PlayerDamaged: player's maxHp at the time.
   uint8_t newLevel = 0;       // LevelUp: new character level.
+  bool killedMonster = false; // ItemThrown: true if the thrown item's hit killed its target.
 };
 
 }  // namespace game

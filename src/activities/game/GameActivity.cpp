@@ -235,6 +235,11 @@ void GameActivity::onGameMenuResult(const ActivityResult& result) {
       GAME_STATE.deleteSaveFile();
       onGoHome();
       return;
+
+    case GameMenuActivity::MenuAction::THROW:
+      handleThrow(static_cast<game::Direction>(menuResult->orientation),
+                  static_cast<int>(menuResult->pageTurnOption));
+      return;
   }
 }
 
@@ -504,6 +509,138 @@ void GameActivity::handleAction() {
   }
 
   GAME_STATE.addMessage("Nothing to do here.");
+  requestUpdate();
+}
+
+// --- Throw ---
+
+void GameActivity::handleThrow(game::Direction dir, int inventoryIndex) {
+  auto& p = GAME_STATE.player;
+
+  if (p.hp == 0) return;
+  if (inventoryIndex < 0 || inventoryIndex >= GAME_STATE.inventoryCount) return;
+
+  const auto& item = GAME_STATE.inventory[inventoryIndex];
+  const game::ItemDef* def = nullptr;
+  for (int d = 0; d < game::ITEM_DEF_COUNT; d++) {
+    if (game::ITEM_DEFS[d].type == item.type && game::ITEM_DEFS[d].subtype == item.subtype) {
+      def = &game::ITEM_DEFS[d];
+      break;
+    }
+  }
+  if (def == nullptr || !def->throwable) return;
+
+  int dx = 0, dy = 0;
+  switch (dir) {
+    case game::Direction::North: dy = -1; break;
+    case game::Direction::South: dy = 1; break;
+    case game::Direction::East:  dx = 1; break;
+    case game::Direction::West:  dx = -1; break;
+  }
+
+  // Walk the line from the player outward, stopping at the first wall or the first
+  // monster encountered -- "nearest monster in line" (Phase 10 work item 2), not a
+  // full-line AoE.
+  int targetIdx = -1;
+  int cx = p.x + dx;
+  int cy = p.y + dy;
+  while (cx >= 0 && cx < game::MAP_WIDTH && cy >= 0 && cy < game::MAP_HEIGHT) {
+    if (tiles[cy * game::MAP_WIDTH + cx] == game::Tile::Wall) break;
+    for (uint8_t i = 0; i < monsterCount; i++) {
+      if (monsters[i].hp > 0 && monsters[i].x == cx && monsters[i].y == cy) {
+        targetIdx = i;
+        break;
+      }
+    }
+    if (targetIdx != -1) break;
+    cx += dx;
+    cy += dy;
+  }
+
+  // Consume the thrown item regardless of hit/miss -- it's gone once it leaves your
+  // hand, same as the item disappearing off a monster's death drop. Stacked items
+  // (count > 1) lose one from the stack; a single-count item is removed outright,
+  // same shift-removal idiom useInventoryItem() uses for consumables.
+  bool killedMonster = false;
+  char msgBuf[96];
+
+  if (targetIdx == -1) {
+    snprintf(msgBuf, sizeof(msgBuf), "You throw the %s. It clatters away.", def->name);
+    GAME_STATE.addMessage(msgBuf);
+  } else {
+    auto& mon = monsters[targetIdx];
+    const auto& monDef = game::MONSTER_DEFS[mon.type];
+
+    // Dexterity-based curve, deliberately distinct from melee's strength-based one
+    // (Phase 10 requirement 2): half dexterity (a thrown weapon leans on precision,
+    // not raw power) plus the item's own attack/enchantment values, minus monster
+    // defense, with wider (+-33%) variance than melee's +-25% -- a thrown item is
+    // less consistent than a wielded one.
+    int atkPower = static_cast<int>(p.dexterity) / 2 + def->attack + item.enchantment;
+    int damage = std::max(1, atkPower - static_cast<int>(monDef.defense));
+    damage = std::max(1, damage + GAME_STATE.rollRangeInclusive(-damage / 3, damage / 3));
+
+    mon.hp = (damage >= mon.hp) ? 0 : mon.hp - damage;
+    killedMonster = (mon.hp == 0);
+
+    if (killedMonster) {
+      const char* flavor = FLAVOR_TEXT.pick(game::FlavorCategory::MonsterKilled);
+      snprintf(msgBuf, sizeof(msgBuf), "Your thrown %s slays the %s! (+%uXP) %s", def->name, monDef.name,
+               monDef.expValue, flavor);
+      GAME_STATE.addMessage(msgBuf);
+      p.experience += monDef.expValue;
+      p.kills++;
+      checkLevelUp();
+
+      // Boss drops the Ring of Power -- same parity as a melee boss kill (see the
+      // handleMove() kill branch above); a thrown kill must not be able to softlock
+      // progression by skipping the drop.
+      if (mon.type == game::BOSS_MONSTER_TYPE && itemCount < game::MAX_ITEMS_PER_LEVEL) {
+        auto& ring = levelItems[itemCount];
+        ring.x = mon.x;
+        ring.y = mon.y;
+        ring.type = game::ITEM_DEFS[game::RING_OF_POWER_DEF].type;
+        ring.subtype = game::ITEM_DEFS[game::RING_OF_POWER_DEF].subtype;
+        ring.count = 1;
+        ring.enchantment = 0;
+        ring.flags = 0;
+        itemCount++;
+        GAME_STATE.addMessage("Something glints on the ground...");
+      }
+    } else {
+      auto band = game::hitBandForDamage(static_cast<uint16_t>(damage), monDef.baseHp);
+      const char* flavor = FLAVOR_TEXT.pick(band);
+      snprintf(msgBuf, sizeof(msgBuf), "Your thrown %s hits the %s for %d. %s", def->name, monDef.name, damage,
+               flavor);
+      GAME_STATE.addMessage(msgBuf);
+    }
+
+    mon.state = static_cast<uint8_t>(game::MonsterState::Hostile);
+  }
+
+  if (item.count > 1) {
+    GAME_STATE.inventory[inventoryIndex].count--;
+  } else {
+    for (int i = inventoryIndex; i < GAME_STATE.inventoryCount - 1; i++) {
+      GAME_STATE.inventory[i] = GAME_STATE.inventory[i + 1];
+    }
+    GAME_STATE.inventoryCount--;
+  }
+
+  game::GameEvent throwEvent{};
+  throwEvent.type = game::GameEventType::ItemThrown;
+  throwEvent.killedMonster = killedMonster;
+  ACHIEVEMENTS.emit(throwEvent);
+  if (ACHIEVEMENTS.hasNewUnlock()) {
+    gameRenderer.showNotification(NotificationKind::Achievement, ACHIEVEMENTS.consumeNewUnlockFlavor());
+  }
+
+  p.turnCount++;
+  if (processMonsterTurns()) {
+    handlePlayerDeath();
+    return;
+  }
+  computeVisibility();
   requestUpdate();
 }
 

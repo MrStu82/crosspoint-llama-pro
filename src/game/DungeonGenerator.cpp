@@ -332,10 +332,36 @@ static_assert(game::RING_OF_POWER_DEF == game::ITEM_DEF_COUNT - 1,
 static_assert(game::MASTER_KEY_DEF == game::ITEM_DEF_COUNT - 2,
               "placeItems() assumes the Master Key is the second-to-last ITEM_DEFS entry so both "
               "quest items are excluded together via ITEM_DEF_COUNT - 2");
+static_assert(static_cast<game::ItemType>(game::ITEM_DEFS[game::RATIONS_DEF].type) == game::ItemType::Food,
+              "placeItems() forces one guaranteed Food item per floor via RATIONS_DEF -- if ITEM_DEFS "
+              "is ever reordered, RATIONS_DEF must still point at a Food entry or the hunger clock "
+              "stops being provably escapable");
 
 uint8_t placeItems(Tile* tiles, Item* items, Rng& rng, uint8_t depth) {
   int count = std::min(2 + static_cast<int>(depth), static_cast<int>(game::MAX_ITEMS_PER_LEVEL));
   uint8_t placed = 0;
+
+  // Guarantee at least one Food item per floor, placed BEFORE and OUTSIDE the
+  // random item roll below -- forced, not probabilistic. Phase 11 work item 5
+  // follow-up (parent ruling, 2026-08-16): hunger escapability depends on the
+  // player holding food, and food was previously reachable only via the
+  // uniform random roll below, so an unlucky seed could generate a floor (or
+  // a full run) with zero Food items before hunger reached HUNGER_MAX -- an
+  // inescapable clock the player never agreed to. Proven per-depth across a
+  // seed sweep in test/hunger_clock/GuaranteedFoodHarness.cpp.
+  int16_t foodX, foodY;
+  if (findRandomFloor(tiles, rng, foodX, foodY) && placed < game::MAX_ITEMS_PER_LEVEL) {
+    const auto& foodDef = game::ITEM_DEFS[game::RATIONS_DEF];
+    Item& food = items[placed];
+    food.x = foodX;
+    food.y = foodY;
+    food.type = foodDef.type;
+    food.subtype = foodDef.subtype;
+    food.count = 1;
+    food.enchantment = 0;
+    food.flags = 0;
+    placed++;
+  }
 
   for (int i = 0; i < count && placed < game::MAX_ITEMS_PER_LEVEL; i++) {
     int16_t ix, iy;

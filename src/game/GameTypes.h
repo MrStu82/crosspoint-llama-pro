@@ -204,6 +204,10 @@ inline constexpr ItemDef ITEM_DEFS[] = {
 inline constexpr int ITEM_DEF_COUNT = sizeof(ITEM_DEFS) / sizeof(ITEM_DEFS[0]);
 inline constexpr int RING_OF_POWER_DEF = ITEM_DEF_COUNT - 1;  // Index of Ring of Power
 inline constexpr int MASTER_KEY_DEF = RING_OF_POWER_DEF - 1;  // Index of Master Key
+// Index of Rations -- forced onto every floor by placeItems() (DungeonGenerator.cpp)
+// outside the random roll, guaranteeing hunger is always escapable. See the
+// static_assert next to placeItems() that keeps this index pinned to a Food entry.
+inline constexpr int RATIONS_DEF = 17;
 
 // --- Glyph lookup helpers ---
 

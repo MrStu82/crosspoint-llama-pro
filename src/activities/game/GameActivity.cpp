@@ -243,6 +243,20 @@ void GameActivity::onGameMenuResult(const ActivityResult& result) {
   }
 }
 
+void GameActivity::showPendingAchievementNotifications() {
+  if (!ACHIEVEMENTS.hasNewUnlock()) return;
+
+  char combined[192] = "";
+  bool first = true;
+  while (ACHIEVEMENTS.hasNewUnlock()) {
+    const char* flavor = ACHIEVEMENTS.consumeNewUnlockFlavor();
+    size_t len = strlen(combined);
+    snprintf(combined + len, sizeof(combined) - len, "%s%s", first ? "" : " / ", flavor);
+    first = false;
+  }
+  gameRenderer.showNotification(NotificationKind::Achievement, combined);
+}
+
 // --- Movement ---
 
 void GameActivity::handleMove(int dx, int dy) {
@@ -301,9 +315,7 @@ void GameActivity::handleMove(int dx, int dy) {
         killEvent.damage = static_cast<uint16_t>(damage);
         killEvent.monsterMaxHp = def.baseHp;
         ACHIEVEMENTS.emit(killEvent);
-        if (ACHIEVEMENTS.hasNewUnlock()) {
-          gameRenderer.showNotification(NotificationKind::Achievement, ACHIEVEMENTS.consumeNewUnlockFlavor());
-        }
+        showPendingAchievementNotifications();
 
         checkLevelUp();
 
@@ -383,9 +395,7 @@ void GameActivity::handleAction() {
     game::GameEvent floorEvent{};
     floorEvent.type = game::GameEventType::FloorChanged;
     ACHIEVEMENTS.emit(floorEvent);
-    if (ACHIEVEMENTS.hasNewUnlock()) {
-      gameRenderer.showNotification(NotificationKind::Achievement, ACHIEVEMENTS.consumeNewUnlockFlavor());
-    }
+    showPendingAchievementNotifications();
 
     {
       char msgBuf[96];
@@ -489,9 +499,7 @@ void GameActivity::handleAction() {
         game::GameEvent pickupEvent{};
         pickupEvent.type = game::GameEventType::ItemPickedUp;
         ACHIEVEMENTS.emit(pickupEvent);
-        if (ACHIEVEMENTS.hasNewUnlock()) {
-          gameRenderer.showNotification(NotificationKind::Achievement, ACHIEVEMENTS.consumeNewUnlockFlavor());
-        }
+        showPendingAchievementNotifications();
       }
 
       // Remove from level by swapping with last
@@ -592,6 +600,15 @@ void GameActivity::handleThrow(game::Direction dir, int inventoryIndex) {
       p.kills++;
       checkLevelUp();
 
+      // Overkill is overkill regardless of what left your hand -- a thrown weapon
+      // doing 3x the monster's max HP earns EscalationOfForce the same as a melee
+      // kill does (see the handleMove() kill branch above, which this mirrors).
+      game::GameEvent killEvent{};
+      killEvent.type = game::GameEventType::MonsterKilled;
+      killEvent.damage = static_cast<uint16_t>(damage);
+      killEvent.monsterMaxHp = monDef.baseHp;
+      ACHIEVEMENTS.emit(killEvent);
+
       // Boss drops the Ring of Power -- same parity as a melee boss kill (see the
       // handleMove() kill branch above); a thrown kill must not be able to softlock
       // progression by skipping the drop.
@@ -631,9 +648,10 @@ void GameActivity::handleThrow(game::Direction dir, int inventoryIndex) {
   throwEvent.type = game::GameEventType::ItemThrown;
   throwEvent.killedMonster = killedMonster;
   ACHIEVEMENTS.emit(throwEvent);
-  if (ACHIEVEMENTS.hasNewUnlock()) {
-    gameRenderer.showNotification(NotificationKind::Achievement, ACHIEVEMENTS.consumeNewUnlockFlavor());
-  }
+  // One combined notification: a thrown boss overkill can queue both
+  // PercussiveMaintenance (from ItemThrown above) and EscalationOfForce (from
+  // MonsterKilled above) in the same turn.
+  showPendingAchievementNotifications();
 
   p.turnCount++;
   if (processMonsterTurns()) {
@@ -795,9 +813,7 @@ void GameActivity::monsterAttackPlayer(game::Monster& m) {
     deathEvent.monsterMaxHp = def.baseHp;
     deathEvent.monsterAttack = def.attack;
     ACHIEVEMENTS.emit(deathEvent);
-    if (ACHIEVEMENTS.hasNewUnlock()) {
-      gameRenderer.showNotification(NotificationKind::Achievement, ACHIEVEMENTS.consumeNewUnlockFlavor());
-    }
+    showPendingAchievementNotifications();
   } else {
     auto band = game::damagedBandForDamage(static_cast<uint16_t>(damage), p.maxHp);
     const char* flavor = FLAVOR_TEXT.pick(band);
@@ -825,9 +841,7 @@ void GameActivity::checkLevelUp() {
     levelEvent.type = game::GameEventType::LevelUp;
     levelEvent.newLevel = p.charLevel;
     ACHIEVEMENTS.emit(levelEvent);
-    if (ACHIEVEMENTS.hasNewUnlock()) {
-      gameRenderer.showNotification(NotificationKind::Achievement, ACHIEVEMENTS.consumeNewUnlockFlavor());
-    }
+    showPendingAchievementNotifications();
 
     // Stat gains
     uint16_t hpGain = 4 + p.constitution / 4;

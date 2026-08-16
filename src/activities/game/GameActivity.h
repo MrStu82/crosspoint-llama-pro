@@ -64,6 +64,15 @@ class GameActivity final : public Activity {
   void computeVisibility();
   void handleMove(int dx, int dy);
   void handleAction();
+  // Single choke point for draining ACHIEVEMENTS' pending-unlock queue and
+  // surfacing it as exactly one boxed notification. A single game event can
+  // unlock more than one achievement at once (e.g. FloorChanged's triple
+  // check, or a thrown boss-overkill unlocking both PercussiveMaintenance
+  // and EscalationOfForce) -- showNotification() only has room for one body
+  // at a time, so multiple pending flavors are joined into one message
+  // rather than the second silently overwriting the first before either
+  // renders. No-op if nothing is pending.
+  void showPendingAchievementNotifications();
   // Resolves a throw committed from GameMenuActivity's Screen::ThrowTarget: consumes
   // inventoryIndex's item, finds the nearest monster in line along dir, applies
   // dexterity-based damage, and emits GameEventType::ItemThrown.

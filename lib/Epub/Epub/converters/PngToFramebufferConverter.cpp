@@ -38,6 +38,7 @@ struct PngContext {
   bool caching{false};
 
   uint8_t* grayLineBuffer{nullptr};
+  uint32_t lastYieldMs{0};
 };
 
 // File I/O callbacks use pFile->fHandle to access the HalFile*,
@@ -205,6 +206,7 @@ void convertLineToGray(const uint8_t* pPixels, uint8_t* grayLine, int width, int
 int pngDrawCallback(PNGDRAW* pDraw) {
   PngContext* ctx = reinterpret_cast<PngContext*>(pDraw->pUser);
   if (!ctx || !ctx->config || !ctx->renderer || !ctx->grayLineBuffer) return 0;
+  ImageToFramebufferDecoder::yieldDuringDecode(ctx->lastYieldMs);
 
   int srcY = pDraw->y;
   int srcWidth = ctx->srcWidth;
@@ -316,10 +318,7 @@ bool PngToFramebufferConverter::getDimensionsStatic(const std::string& imagePath
     return false;
   }
 
-  out.width = png->getWidth();
-  out.height = png->getHeight();
-
-  return true;
+  return validateAndStoreDimensions(png->getWidth(), png->getHeight(), out, "PNG");
 }
 
 bool PngToFramebufferConverter::decodeToFramebuffer(const std::string& imagePath, GfxRenderer& renderer,
@@ -353,13 +352,12 @@ bool PngToFramebufferConverter::decodeToFramebuffer(const std::string& imagePath
     return false;
   }
 
-  if (!validateImageDimensions(png->getWidth(), png->getHeight(), "PNG")) {
-    return false;
-  }
+  ImageDimensions sourceDimensions;
+  if (!validateAndStoreDimensions(png->getWidth(), png->getHeight(), sourceDimensions, "PNG")) return false;
 
   // Calculate output dimensions
-  ctx.srcWidth = png->getWidth();
-  ctx.srcHeight = png->getHeight();
+  ctx.srcWidth = sourceDimensions.width;
+  ctx.srcHeight = sourceDimensions.height;
 
   if (config.useExactDimensions && config.maxWidth > 0 && config.maxHeight > 0) {
     // Use exact dimensions as specified (avoids rounding mismatches with pre-calculated sizes)

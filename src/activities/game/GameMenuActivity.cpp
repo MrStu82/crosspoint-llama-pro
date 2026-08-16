@@ -15,6 +15,7 @@
 #include "game/GameState.h"
 #include "game/GameTheme.h"
 #include "game/GameTypes.h"
+#include "game/HungerClock.h"
 #include "activities/ActivityResult.h"
 
 namespace {
@@ -420,7 +421,7 @@ void GameMenuActivity::useInventoryItem(int index) {
       if (item.subtype == 0) {  // Rations
         uint16_t heal = 5;
         p.hp = std::min(static_cast<uint16_t>(p.hp + heal), game::effectiveMaxHp(p));
-        p.hunger = 0;
+        game::eatAndResetHunger(p.hunger);
         snprintf(msgBuf, sizeof(msgBuf), "That hit the spot. (HP +%u, hunger sated)", heal);
         consumed = true;
       } else if (item.subtype == 1) {  // Nutrient Bar
@@ -428,7 +429,7 @@ void GameMenuActivity::useInventoryItem(int index) {
         p.hp = std::min(static_cast<uint16_t>(p.hp + heal), game::effectiveMaxHp(p));
         uint16_t mana = p.maxMp / 2;
         p.mp = std::min(static_cast<uint16_t>(p.mp + mana), p.maxMp);
-        p.hunger = 0;
+        game::eatAndResetHunger(p.hunger);
         snprintf(msgBuf, sizeof(msgBuf), "The System ration restores you!");
         consumed = true;
       }

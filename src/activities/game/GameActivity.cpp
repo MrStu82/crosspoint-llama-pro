@@ -11,6 +11,7 @@
 #include "game/AchievementBus.h"
 #include "game/FlavorText.h"
 #include "game/GameSave.h"
+#include "game/HungerClock.h"
 
 // --- FOV ---
 
@@ -827,19 +828,25 @@ bool GameActivity::processMonsterTurns() {
   // Hunger clock (Phase 11): ticks every turn, fully relieved by eating (see
   // GameMenuActivity's Food case) -- eating never costs a turn, so a player
   // holding any food item can always zero this out before it kills them, even
-  // from the worst reachable state (max hunger, 1 hp).
-  if (p.hunger < game::HUNGER_MAX) {
-    p.hunger++;
-    if (p.hunger == game::HUNGER_HUNGRY_THRESHOLD) {
+  // from the worst reachable state (max hunger, 1 hp). State transition lives
+  // in game::tickHunger() (HungerClock.h) so it's host-harness-linkable;
+  // message text stays here since it's rendering-adjacent.
+  switch (game::tickHunger(p.hunger, p.hp)) {
+    case game::HungerTickOutcome::HitHungryThreshold:
       GAME_STATE.addMessage("Your stomach growls. The System suggests a snack (sold separately).");
-    } else if (p.hunger == game::HUNGER_STARVING_THRESHOLD) {
+      break;
+    case game::HungerTickOutcome::HitStarvingThreshold:
       GAME_STATE.addMessage("You're starving. Find food, or the System will recoup its losses.");
-    }
-  } else if (p.hp > 0) {
-    uint16_t dmg = game::HUNGER_STARVE_DAMAGE;
-    p.hp = (dmg >= p.hp) ? 0 : static_cast<uint16_t>(p.hp - dmg);
-    GAME_STATE.addMessage("Hunger gnaws at you. Dead air doesn't rate well, but neither do you.");
-    if (p.hp == 0) return true;
+      break;
+    case game::HungerTickOutcome::TookStarveDamage:
+      GAME_STATE.addMessage("Hunger gnaws at you. Dead air doesn't rate well, but neither do you.");
+      break;
+    case game::HungerTickOutcome::Died:
+      GAME_STATE.addMessage("Hunger gnaws at you. Dead air doesn't rate well, but neither do you.");
+      return true;
+    case game::HungerTickOutcome::Ticked:
+    case game::HungerTickOutcome::NoOp:
+      break;
   }
 
   return false;

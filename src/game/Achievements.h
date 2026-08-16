@@ -14,7 +14,8 @@ enum class AchievementId : uint8_t {
   DeepDiver = 6,
   MaxedOut = 7,
   PercussiveMaintenance = 8,
-  Count = 9,
+  SponsoredContent = 9,
+  Count = 10,
 };
 
 // Short display name for the end-of-run screen (Phase 7 req 2/3). Kept separate
@@ -31,6 +32,7 @@ inline const char* achievementShortName(AchievementId id) {
     case AchievementId::DeepDiver: return "Deep Diver";
     case AchievementId::MaxedOut: return "Maxed Out";
     case AchievementId::PercussiveMaintenance: return "Percussive Maintenance";
+    case AchievementId::SponsoredContent: return "Sponsored Content";
     default: return "";
   }
 }
@@ -50,6 +52,7 @@ inline const char* achievementHint(AchievementId id) {
     case AchievementId::DeepDiver: return "Go deep.";
     case AchievementId::MaxedOut: return "Reach your peak.";
     case AchievementId::PercussiveMaintenance: return "Solve a problem with a thrown object.";
+    case AchievementId::SponsoredContent: return "Open something you shouldn't trust.";
     default: return "";
   }
 }
@@ -63,6 +66,7 @@ enum class GameEventType : uint8_t {
   ItemPickedUp,
   LevelUp,
   ItemThrown,
+  LootBoxOpened,
 };
 
 struct GameEvent {

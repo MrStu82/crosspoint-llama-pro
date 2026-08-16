@@ -348,7 +348,7 @@ uint8_t placeItems(Tile* tiles, Item* items, Rng& rng, uint8_t depth) {
   // uniform random roll below, so an unlucky seed could generate a floor (or
   // a full run) with zero Food items before hunger reached HUNGER_MAX -- an
   // inescapable clock the player never agreed to. Proven per-depth across a
-  // seed sweep in test/hunger_clock/GuaranteedFoodHarness.cpp.
+  // seed sweep in test/dungeon_generator/GuaranteedFoodHarness.cpp.
   int16_t foodX, foodY;
   if (findRandomFloor(tiles, rng, foodX, foodY) && placed < game::MAX_ITEMS_PER_LEVEL) {
     const auto& foodDef = game::ITEM_DEFS[game::RATIONS_DEF];

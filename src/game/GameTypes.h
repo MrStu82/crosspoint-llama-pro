@@ -55,6 +55,7 @@ enum class ItemType : uint8_t {
   Gold,
   Ring,
   Amulet,
+  LootBox,
   ItemTypeCount
 };
 
@@ -196,6 +197,13 @@ inline constexpr ItemDef ITEM_DEFS[] = {
     {"Nutrient Bar", '%', static_cast<uint8_t>(ItemType::Food), 1, 30, 0, 0, false},
     // Gold
     {"Gold Coins", '$', static_cast<uint8_t>(ItemType::Gold), 0, 1, 0, 0, false},
+    // Sponsor Crate (Phase 11 loot boxes) -- spawns via the same unmodified random floor-item
+    // roll as everything above it; opening one (GameMenuActivity::useInventoryItem) rolls its
+    // prize from this same table, uniformly (no depth bias -- that's the joke, see parent's
+    // ruling), excluding quest items and itself. Inserted here (after Gold, before Master Key)
+    // so it stays outside RING_OF_POWER_DEF/MASTER_KEY_DEF's roll exclusion without disturbing
+    // RATIONS_DEF's hardcoded index above.
+    {"Sponsor Crate", '&', static_cast<uint8_t>(ItemType::LootBox), 0, 0, 0, 0, false},
     // Quest item — dropped by The Adjudicator on floor 26 (Phase 11 work item 4)
     {"Master Key", '"', static_cast<uint8_t>(ItemType::Amulet), 0, 500, 0, 0, false},
     // Quest item — dropped by The Adjudicator
@@ -208,6 +216,13 @@ inline constexpr int MASTER_KEY_DEF = RING_OF_POWER_DEF - 1;  // Index of Master
 // outside the random roll, guaranteeing hunger is always escapable. See the
 // static_assert next to placeItems() that keeps this index pinned to a Food entry.
 inline constexpr int RATIONS_DEF = 17;
+// Index of Sponsor Crate -- excluded from its own reward roll in
+// GameMenuActivity::useInventoryItem() so opening one can't hand back another
+// unopened crate. See the static_assert below pinning this to a LootBox entry.
+inline constexpr int LOOT_BOX_DEF = 20;
+static_assert(static_cast<ItemType>(ITEM_DEFS[LOOT_BOX_DEF].type) == ItemType::LootBox,
+              "LOOT_BOX_DEF must point at the Sponsor Crate entry -- if ITEM_DEFS is ever "
+              "reordered, update this index or the reward roll's self-exclusion breaks");
 
 // --- Glyph lookup helpers ---
 

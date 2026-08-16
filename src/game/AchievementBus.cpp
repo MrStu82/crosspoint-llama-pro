@@ -160,5 +160,9 @@ void AchievementBus::emit(const game::GameEvent& event) {
         unlock(AchievementId::PercussiveMaintenance, "Achievement: Percussive Maintenance (You fixed it. By throwing something else at it.)");
       }
       break;
+
+    case GameEventType::LootBoxOpened:
+      unlock(AchievementId::SponsoredContent, "Achievement: Sponsored Content (You opened it. Somewhere, a marketing department is applauding.)");
+      break;
   }
 }

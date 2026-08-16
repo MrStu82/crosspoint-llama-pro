@@ -385,7 +385,9 @@ void GameMenuActivity::useInventoryItem(int index) {
   auto type = static_cast<game::ItemType>(item.type);
 
   bool consumed = false;
-  char msgBuf[64];
+  // 128, not 64 -- the loot box copy below (parent-approved verbatim) is longer than every
+  // other message in this switch.
+  char msgBuf[128];
 
   switch (type) {
     case game::ItemType::Potion:
@@ -446,6 +448,50 @@ void GameMenuActivity::useInventoryItem(int index) {
         consumed = true;
       }
       break;
+
+    case game::ItemType::LootBox: {
+      // Sponsor Crate (Phase 11 loot boxes). Reuses ITEM_DEFS -- no second table. Uniform
+      // draw over the eligible pool, deliberately NOT depth-biased (parent's explicit ruling,
+      // 2026-08-16: a loot box that skews high with depth is just a good item with extra
+      // steps -- the joke only lands if a deep floor can still hand back rations). Excludes
+      // Ring of Power / Master Key (positional, same technique placeItems() uses in
+      // DungeonGenerator.cpp) and the crate itself (LOOT_BOX_DEF, GameTypes.h) so opening one
+      // can't just hand back another unopened crate.
+      uint8_t eligible[game::ITEM_DEF_COUNT];
+      uint8_t eligibleCount = 0;
+      for (uint8_t d = 0; d < game::ITEM_DEF_COUNT - 2; d++) {
+        if (d == game::LOOT_BOX_DEF) continue;
+        eligible[eligibleCount++] = d;
+      }
+      const auto& reward = game::ITEM_DEFS[eligible[GAME_STATE.rollRange(eligibleCount)]];
+
+      // When sponsors land as their own work item, this narration takes the sponsor name from
+      // that system instead of hardcoding "SPONSORED CONTENT" -- not building a second string
+      // table now, per parent's explicit call.
+      if (reward.type == static_cast<uint8_t>(game::ItemType::Gold)) {
+        uint16_t amount = static_cast<uint16_t>(GAME_STATE.rollRangeInclusive(1, 10 + p.dungeonDepth * 5));
+        p.gold += amount;
+        snprintf(msgBuf, sizeof(msgBuf),
+                 "SPONSORED CONTENT: Congratulations! You've won %u gold! (Terms apply. Terms are unfavourable.)",
+                 amount);
+        consumed = true;  // reward went to the purse, not a slot -- box just disappears
+      } else {
+        item.type = reward.type;
+        item.subtype = reward.subtype;
+        item.count = 1;
+        item.enchantment = 0;
+        item.flags = 0;
+        snprintf(msgBuf, sizeof(msgBuf), "SPONSORED CONTENT: Congratulations! You've won... %s!", reward.name);
+        // consumed stays false: the crate transforms into its prize in place rather than being
+        // removed-then-reinserted, so opening a crate can never fail on a full inventory (it
+        // already held the slot a moment ago).
+      }
+
+      game::GameEvent boxEvent{};
+      boxEvent.type = game::GameEventType::LootBoxOpened;
+      ACHIEVEMENTS.emit(boxEvent);
+      break;
+    }
 
     default:
       // Weapons, armor, etc. — toggle equip

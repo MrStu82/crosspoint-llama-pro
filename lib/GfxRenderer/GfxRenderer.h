@@ -261,14 +261,17 @@ class GfxRenderer {
   // Text
   int getTextWidth(int fontId, const char* text, EpdFontFamily::Style style = EpdFontFamily::REGULAR,
                    BidiUtils::BidiBaseDir baseDir = BidiUtils::BidiBaseDir::AUTO) const;
-  // boxX/boxWidth default to (0, getScreenWidth()) -- full-screen centering is a
+  // boxX/boxWidth default to (0, full screen width) -- full-screen centering is a
   // deliberate choice spelled out at the signature, not the absence of one. Callers
   // with an actual bounded box (a modal, a button, a banner) must pass it so the
-  // text can never be centered or drawn outside it.
+  // text can never be centered or drawn outside it. boxWidth's default is the
+  // sentinel -1 (not a direct getScreenWidth() call -- default arguments have no
+  // implicit `this` and can't call a non-static member function); the real screen
+  // width is resolved inside the function body instead.
   void drawCenteredText(int fontId, int y, const char* text, bool black = true,
                         EpdFontFamily::Style style = EpdFontFamily::REGULAR,
                         BidiUtils::BidiBaseDir baseDir = BidiUtils::BidiBaseDir::AUTO,
-                        int boxX = 0, int boxWidth = getScreenWidth()) const;
+                        int boxX = 0, int boxWidth = -1) const;
   void drawText(int fontId, int x, int y, const char* text, bool black = true,
                 EpdFontFamily::Style style = EpdFontFamily::REGULAR,
                 BidiUtils::BidiBaseDir baseDir = BidiUtils::BidiBaseDir::AUTO) const;

@@ -549,8 +549,11 @@ int GfxRenderer::getTextWidth(const int fontId, const char* text, const EpdFontF
 void GfxRenderer::drawCenteredText(const int fontId, const int y, const char* text, const bool black,
                                    const EpdFontFamily::Style style, const BidiUtils::BidiBaseDir baseDir,
                                    const int boxX, const int boxWidth) const {
+  // -1 is the "no box given" sentinel (see the header) -- resolve it to the real
+  // screen width here, where a `this` is actually available to call getScreenWidth().
+  const int resolvedBoxWidth = (boxWidth < 0) ? getScreenWidth() : boxWidth;
   const int textWidth = getTextWidth(fontId, text, style, baseDir);
-  int x = boxX + (boxWidth - textWidth) / 2;
+  int x = boxX + (resolvedBoxWidth - textWidth) / 2;
   // Never let centering push the draw outside the declared box -- a box that's too
   // narrow for the text clamps to the box's left edge rather than overflowing it.
   if (x < boxX) {

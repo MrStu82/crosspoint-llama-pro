@@ -346,10 +346,17 @@ void GameActivity::handleMove(int dx, int dy) {
       // Melee attack (strength + weapon bonus vs monster defense)
       const auto& def = game::MONSTER_DEFS[monsters[i].type];
       int atkPower = static_cast<int>(p.strength) + equippedAttackBonus();
-      int damage = std::max(1, atkPower - static_cast<int>(def.defense));
+      int baseDamage = std::max(1, atkPower - static_cast<int>(def.defense));
       // Add some variance
-      damage = std::max(1, damage + GAME_STATE.rollRangeInclusive(-damage / 4, damage / 4));
+      int variance = baseDamage / 4;
+      int damage = std::max(1, baseDamage + GAME_STATE.rollRangeInclusive(-variance, variance));
+      // Critical Thinking: "landed a lucky hit" -- the variance roll landed at the very top
+      // of its band (the best possible roll this swing could have gotten). variance==0 (tiny
+      // hits) can never crit under this definition, which is fine -- there's nothing lucky
+      // about a fixed-1-damage tap.
+      bool wasCriticalHit = variance > 0 && (damage - baseDamage) >= variance;
 
+      uint16_t hpBeforeHit = monsters[i].hp;  // captured before the kill assignment, for Overkill
       monsters[i].hp = (damage >= monsters[i].hp) ? 0 : monsters[i].hp - damage;
 
       char msgBuf[96];
@@ -364,8 +371,26 @@ void GameActivity::handleMove(int dx, int dy) {
         killEvent.type = game::GameEventType::MonsterKilled;
         killEvent.damage = static_cast<uint16_t>(damage);
         killEvent.monsterMaxHp = def.baseHp;
+        killEvent.hpBeforeHit = hpBeforeHit;
+        killEvent.wasCriticalHit = wasCriticalHit;
         ACHIEVEMENTS.emit(killEvent);
         showPendingAchievementNotifications();
+
+        // Clean Sweep: this kill cleared the last living monster on the floor.
+        bool anyOtherAlive = false;
+        for (uint8_t j = 0; j < monsterCount; j++) {
+          if (j != i && monsters[j].hp > 0) {
+            anyOtherAlive = true;
+            break;
+          }
+        }
+        if (!anyOtherAlive) {
+          game::GameEvent sweepEvent{};
+          sweepEvent.type = game::GameEventType::MonsterKilled;
+          sweepEvent.cleanSweep = true;
+          ACHIEVEMENTS.emit(sweepEvent);
+          showPendingAchievementNotifications();
+        }
 
         checkLevelUp();
 
@@ -420,6 +445,7 @@ void GameActivity::handleMove(int dx, int dy) {
   p.x = static_cast<int16_t>(newX);
   p.y = static_cast<int16_t>(newY);
   p.turnCount++;
+  ACHIEVEMENTS.addTilesWalked(1);  // Wanderer / Pathfinder (lifetime, all runs)
 
   if (processMonsterTurns()) {
     handlePlayerDeath();
@@ -453,10 +479,35 @@ void GameActivity::handleAction() {
       return;
     }
     saveCurrentLevel();
+
+    // Cartographer / Thorough / Obsessive / Dead End: percentage of the floor just left
+    // that was ever marked explored. Computed here, before p.dungeonDepth++ and
+    // loadOrGenerateLevel() overwrite tiles[]/fogOfWar[] with the new floor's data --
+    // this is the only point where the outgoing floor's fog state is still valid.
+    uint32_t walkableTiles = 0;
+    uint32_t exploredWalkableTiles = 0;
+    for (int y = 0; y < game::MAP_HEIGHT; y++) {
+      for (int x = 0; x < game::MAP_WIDTH; x++) {
+        if (!isWalkable(tiles[y * game::MAP_WIDTH + x])) continue;
+        walkableTiles++;
+        if (game::fogIsExplored(fogOfWar, x, y)) exploredWalkableTiles++;
+      }
+    }
+    uint8_t exploredPct = walkableTiles > 0
+                              ? static_cast<uint8_t>((exploredWalkableTiles * 100u) / walkableTiles)
+                              : 0;
+
+    // Homebody: the floor about to be entered already has a save file on disk, i.e. the
+    // player has been here before this run (checked against the depth we're ABOUT to be
+    // on, before dungeonDepth++ so the check below reads naturally).
+    bool revisiting = GameSave::hasLevel(p.dungeonDepth + 1);
+
     p.dungeonDepth++;
 
     game::GameEvent floorEvent{};
     floorEvent.type = game::GameEventType::FloorChanged;
+    floorEvent.exploredPctOfFloorLeft = exploredPct;
+    floorEvent.revisitedPriorFloor = revisiting;
     ACHIEVEMENTS.emit(floorEvent);
     showPendingAchievementNotifications();
 
@@ -656,9 +707,12 @@ void GameActivity::handleThrow(game::Direction dir, int inventoryIndex) {
     // defense, with wider (+-33%) variance than melee's +-25% -- a thrown item is
     // less consistent than a wielded one.
     int atkPower = static_cast<int>(p.dexterity) / 2 + def->attack + item.enchantment;
-    int damage = std::max(1, atkPower - static_cast<int>(monDef.defense));
-    damage = std::max(1, damage + GAME_STATE.rollRangeInclusive(-damage / 3, damage / 3));
+    int baseDamage = std::max(1, atkPower - static_cast<int>(monDef.defense));
+    int variance = baseDamage / 3;
+    int damage = std::max(1, baseDamage + GAME_STATE.rollRangeInclusive(-variance, variance));
+    bool wasCriticalHit = variance > 0 && (damage - baseDamage) >= variance;  // Critical Thinking
 
+    uint16_t hpBeforeHit = mon.hp;  // captured before the kill assignment, for Overkill
     mon.hp = (damage >= mon.hp) ? 0 : mon.hp - damage;
     killedMonster = (mon.hp == 0);
 
@@ -678,7 +732,24 @@ void GameActivity::handleThrow(game::Direction dir, int inventoryIndex) {
       killEvent.type = game::GameEventType::MonsterKilled;
       killEvent.damage = static_cast<uint16_t>(damage);
       killEvent.monsterMaxHp = monDef.baseHp;
+      killEvent.hpBeforeHit = hpBeforeHit;
+      killEvent.wasCriticalHit = wasCriticalHit;
       ACHIEVEMENTS.emit(killEvent);
+
+      // Clean Sweep: this kill cleared the last living monster on the floor.
+      bool anyOtherAlive = false;
+      for (uint8_t j = 0; j < monsterCount; j++) {
+        if (static_cast<int>(j) != targetIdx && monsters[j].hp > 0) {
+          anyOtherAlive = true;
+          break;
+        }
+      }
+      if (!anyOtherAlive) {
+        game::GameEvent sweepEvent{};
+        sweepEvent.type = game::GameEventType::MonsterKilled;
+        sweepEvent.cleanSweep = true;
+        ACHIEVEMENTS.emit(sweepEvent);
+      }
 
       // Boss drops the Ring of Power -- same parity as a melee boss kill (see the
       // handleMove() kill branch above); a thrown kill must not be able to softlock
@@ -901,6 +972,20 @@ void GameActivity::monsterAttackPlayer(game::Monster& m) {
   auto& p = GAME_STATE.player;
   const auto& def = game::MONSTER_DEFS[m.type];
 
+  // Surrounded: count hostile, living monsters adjacent to the player right now
+  // (including the one attacking). Computed fresh on every hit rather than cached,
+  // since monsters can wake/move between turns.
+  uint8_t adjacentHostileCount = 0;
+  for (uint8_t i = 0; i < monsterCount; i++) {
+    if (monsters[i].hp == 0) continue;
+    if (static_cast<game::MonsterState>(monsters[i].state) != game::MonsterState::Hostile) continue;
+    int adx = static_cast<int>(p.x) - monsters[i].x;
+    int ady = static_cast<int>(p.y) - monsters[i].y;
+    if (abs(adx) <= 1 && abs(ady) <= 1 && (adx * adx + ady * ady) <= 2) {
+      adjacentHostileCount++;
+    }
+  }
+
   // Monster attack vs player dexterity + armor bonus. Sponsor modifiers (e.g. the
   // Adjudicator's Legal Team) can drive this negative -- clamp to zero so a bad
   // sponsor roll can never flip into a damage multiplier via the subtraction below.
@@ -909,8 +994,19 @@ void GameActivity::monsterAttackPlayer(game::Monster& m) {
   int damage = std::max(1, static_cast<int>(def.attack) - playerDef);
   damage = std::max(1, damage + GAME_STATE.rollRangeInclusive(-damage / 4, damage / 4));
 
+  // The Lucky: "survived an attack that should have killed you". hpBeforeAttack is the
+  // player's hp immediately before this hit resolves. A hit "should have killed you" if
+  // it landed within the combat roll's own +-25% variance band of being lethal -- i.e. a
+  // damage roll of at least 90% of hpBeforeAttack was one bad roll away from zeroing the
+  // player out. Evaluated against the post-hit hp so it only ever fires on a genuine
+  // survival, never on the death path itself (p.hp==0 there, see the death branch below).
+  uint16_t hpBeforeAttack = p.hp;
+
   // Apply damage
   p.hp = (static_cast<uint16_t>(damage) >= p.hp) ? 0 : p.hp - static_cast<uint16_t>(damage);
+
+  bool survivedNearLethalHit = p.hp > 0 && hpBeforeAttack > 0 &&
+                                static_cast<uint32_t>(damage) * 10 >= static_cast<uint32_t>(hpBeforeAttack) * 9;
 
   char msgBuf[96];
   if (p.hp == 0) {
@@ -938,6 +1034,8 @@ void GameActivity::monsterAttackPlayer(game::Monster& m) {
   damageEvent.damage = static_cast<uint16_t>(damage);
   damageEvent.hpAfter = p.hp;
   damageEvent.maxHp = game::effectiveMaxHp(p);
+  damageEvent.nearLethalSurvival = survivedNearLethalHit;
+  damageEvent.adjacentHostileCount = adjacentHostileCount;
   ACHIEVEMENTS.emit(damageEvent);
 }
 

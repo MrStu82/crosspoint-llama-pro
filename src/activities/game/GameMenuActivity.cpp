@@ -244,6 +244,7 @@ void GameMenuActivity::loop() {
         currentScreen = Screen::Menu;
         selectedIndex = 3;
         requestUpdate();
+        break;
       }
 
       // Touch: view-only screen, same back-out-on-any-tap idiom as Screen::Character.
@@ -254,6 +255,27 @@ void GameMenuActivity::loop() {
         requestUpdate();
         return;
       }
+
+      int unlockedCount = 0;
+      for (uint8_t i = 0; i < static_cast<uint8_t>(game::AchievementId::Count); i++) {
+        if (ACHIEVEMENTS.isUnlocked(static_cast<game::AchievementId>(i))) {
+          unlockedCount++;
+        }
+      }
+      if (unlockedCount == 0) {
+        break;
+      }
+
+      buttonNavigator.onNextRelease([this, unlockedCount] {
+        selectedIndex = ButtonNavigator::nextIndex(selectedIndex, unlockedCount);
+        requestUpdate();
+      });
+
+      buttonNavigator.onPreviousRelease([this, unlockedCount] {
+        selectedIndex = ButtonNavigator::previousIndex(selectedIndex, unlockedCount);
+        requestUpdate();
+      });
+
       break;
     }
   }
@@ -795,32 +817,64 @@ void GameMenuActivity::renderAchievements() {
   renderer.clearScreen();
 
   const auto pageWidth = renderer.getScreenWidth();
+  const auto pageHeight = renderer.getScreenHeight();
   auto metrics = UITheme::getInstance().getMetrics();
 
   GUI.drawHeader(renderer, Rect(0, metrics.topPadding, pageWidth, metrics.headerHeight),
                  tr(STR_DM_ACHIEVEMENTS_TITLE));
 
-  const int x = metrics.contentSidePadding;
-  int y = metrics.topPadding + metrics.headerHeight + metrics.verticalSpacing + 10;
-  constexpr int lineH = 28;
+  const int contentTop = metrics.topPadding + metrics.headerHeight + metrics.verticalSpacing;
+  const int contentHeight = pageHeight - contentTop - metrics.buttonHintsHeight - metrics.verticalSpacing;
 
-  // Lifetime unlock state (not per-run) -- this is an account-wide trophy
-  // case, unlike the this-run-only list on the death/victory screen. A
-  // locked achievement's real name is never shown here (Phase 9 req 5) --
-  // only the placeholder + a vague category hint (work item 4).
-  char rowBuf[80];
+  // Lifetime unlock state (not per-run) -- this is an account-wide trophy case, unlike the
+  // this-run-only list on the death/victory screen. Per Stuart's explicit call (2026-08-17):
+  // locked achievements are never shown at all, not even redacted -- only unlocked ones
+  // appear, each with its name, description, and reward effect spelled out.
+  uint8_t unlockedIds[static_cast<uint8_t>(game::AchievementId::Count)];
+  int unlockedCount = 0;
   for (uint8_t i = 0; i < static_cast<uint8_t>(game::AchievementId::Count); i++) {
-    auto id = static_cast<game::AchievementId>(i);
-    bool unlocked = ACHIEVEMENTS.isUnlocked(id);
-    const char* text;
-    if (unlocked) {
-      text = game::achievementShortName(id);
-    } else {
-      snprintf(rowBuf, sizeof(rowBuf), "%s -- %s", tr(STR_DM_ACHIEVEMENT_LOCKED), game::achievementHint(id));
-      text = rowBuf;
+    if (ACHIEVEMENTS.isUnlocked(static_cast<game::AchievementId>(i))) {
+      unlockedIds[unlockedCount++] = i;
     }
-    renderer.drawText(UI_10_FONT_ID, x, y, text, true, unlocked ? EpdFontFamily::REGULAR : EpdFontFamily::ITALIC);
-    y += lineH;
+  }
+
+  char countBuf[32];
+  snprintf(countBuf, sizeof(countBuf), "%d / %d discovered", unlockedCount,
+           static_cast<int>(game::AchievementId::Count));
+
+  if (unlockedCount == 0) {
+    renderer.drawText(UI_10_FONT_ID, metrics.contentSidePadding, contentTop + 20, countBuf);
+  } else {
+    renderer.drawText(UI_10_FONT_ID, metrics.contentSidePadding, contentTop, countBuf);
+
+    constexpr int countLineH = 24;
+    const int listTop = contentTop + countLineH;
+    const int listHeight = contentHeight - countLineH;
+
+    GUI.drawList(
+        renderer, Rect(0, listTop, pageWidth, listHeight), unlockedCount, selectedIndex,
+        [&unlockedIds](int index) { return std::string(game::ACHIEVEMENT_DEFS[unlockedIds[index]].name); },
+        [&unlockedIds](int index) {
+          const auto& def = game::ACHIEVEMENT_DEFS[unlockedIds[index]];
+          std::string subtitle = def.description;
+          switch (def.reward) {
+            case game::AchievementReward::None:
+              break;
+            case game::AchievementReward::Title:
+              subtitle += " -- Unlocks title: ";
+              subtitle += game::TITLE_STRINGS[def.rewardValue];
+              break;
+            case game::AchievementReward::SponsorUnlock:
+              subtitle += " -- Unlocks sponsor: ";
+              subtitle += game::SPONSOR_DEFS[def.rewardValue].name;
+              break;
+            case game::AchievementReward::LoreUnlock:
+              subtitle += " -- Unlocks a lore entry";
+              break;
+          }
+          return subtitle;
+        },
+        nullptr, nullptr);
   }
 
   const auto labels = mappedInput.mapLabels(tr(STR_BACK), "", "", "");

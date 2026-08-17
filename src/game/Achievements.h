@@ -119,64 +119,6 @@ inline const char* achievementShortName(AchievementId id) {
   }
 }
 
-// Vague category teaser for a still-locked achievement (Phase 9 work item 4 --
-// "locked redacted with a hint"). Never gives away the exact trigger condition,
-// only the rough flavor of it -- the real name/flavorText stays hidden until
-// AchievementBus::unlock() actually fires (see req 5: a locked one is never named).
-inline const char* achievementHint(AchievementId id) {
-  switch (id) {
-    case AchievementId::Ding: return "Grow stronger.";
-    case AchievementId::ThatllBuffOut: return "Survive the unsurvivable.";
-    case AchievementId::AudienceParticipation: return "Die to something weak.";
-    case AchievementId::EscalationOfForce: return "Overkill a monster.";
-    case AchievementId::PackRat: return "Fill your pockets.";
-    case AchievementId::SpeedRunner: return "Move fast.";
-    case AchievementId::DeepDiver: return "Go deep.";
-    case AchievementId::MaxedOut: return "Reach your peak.";
-    case AchievementId::PercussiveMaintenance: return "Solve a problem with a thrown object.";
-    case AchievementId::SponsoredContent: return "Open something you shouldn't trust.";
-    case AchievementId::FirstSteps: return "Begin the descent.";
-    case AchievementId::DownWeGo: return "Go a little deeper.";
-    case AchievementId::GettingComfortable: return "Settle into the depths.";
-    case AchievementId::DeepDelver: return "Keep going down.";
-    case AchievementId::PressureTolerance: return "The dungeon gets heavier.";
-    case AchievementId::AbyssWalker: return "Walk where few return from.";
-    case AchievementId::StructurallyUnsound: return "The floor gets less trustworthy.";
-    case AchievementId::ExpressDescent: return "Move with urgency.";
-    case AchievementId::DungeonSovereign: return "Reach the very bottom.";
-    case AchievementId::FirstBlood: return "Draw first blood.";
-    case AchievementId::Ratcatcher: return "Thin the herd.";
-    case AchievementId::Exterminator: return "Thin it further.";
-    case AchievementId::Beastbane: return "Become a legend to monsters.";
-    case AchievementId::Overkill: return "Deal a killing blow with room to spare.";
-    case AchievementId::GiantKiller: return "Punch well above your weight.";
-    case AchievementId::CleanSweep: return "Leave nothing breathing on a floor.";
-    case AchievementId::Untouched: return "Clear a floor unscathed.";
-    case AchievementId::PacifistRun: return "Descend without violence.";
-    case AchievementId::OneHitPoint: return "Live on the edge, briefly.";
-    case AchievementId::TheUnkilled: return "Grow strong without dying.";
-    case AchievementId::Veteran: return "Gain some experience.";
-    case AchievementId::Seasoned: return "Gain more experience.";
-    case AchievementId::LongHaul: return "Endure a long run.";
-    case AchievementId::Attrition: return "Endure a very long run.";
-    case AchievementId::BackFromTheBrink: return "Claw your way back from near death.";
-    case AchievementId::DiedAnyway: return "Meet your end.";
-    case AchievementId::Cartographer: return "Leave no tile unseen.";
-    case AchievementId::Thorough: return "Do that again, a few times.";
-    case AchievementId::Obsessive: return "Do that a lot of times.";
-    case AchievementId::Shortcut: return "Find the way out, fast.";
-    case AchievementId::ScenicRoute: return "Take your time on a floor.";
-    case AchievementId::Wanderer: return "Cover some ground.";
-    case AchievementId::Pathfinder: return "Cover a lot of ground.";
-    case AchievementId::FindersKeepers: return "Pick something up.";
-    case AchievementId::Magpie: return "Pick up a lot of things.";
-    case AchievementId::TheWealthy: return "Accumulate wealth.";
-    case AchievementId::ObsceneWealth: return "Accumulate a lot of wealth.";
-    case AchievementId::Completionist: return "Unlock almost everything else.";
-    default: return "";
-  }
-}
-
 enum class GameEventType : uint8_t {
   MonsterKilled,
   PlayerDamaged,

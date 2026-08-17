@@ -15,6 +15,39 @@
 RTC_NOINIT_ATTR char panicMessage[256];
 RTC_NOINIT_ATTR HalSystem::StackFrame panicStack[MAX_PANIC_STACK_DEPTH];
 
+namespace {
+std::string resetReasonToString(esp_reset_reason_t reason) {
+  switch (reason) {
+    case ESP_RST_UNKNOWN:
+      return "Unknown";
+    case ESP_RST_POWERON:
+      return "Power-on";
+    case ESP_RST_EXT:
+      return "External pin";
+    case ESP_RST_SW:
+      return "Software (esp_restart)";
+    case ESP_RST_PANIC:
+      return "Panic (exception/abort)";
+    case ESP_RST_INT_WDT:
+      return "Interrupt watchdog";
+    case ESP_RST_TASK_WDT:
+      return "Task watchdog";
+    case ESP_RST_WDT:
+      return "Other watchdog";
+    case ESP_RST_DEEPSLEEP:
+      return "Deep sleep wake";
+    case ESP_RST_BROWNOUT:
+      return "Brownout";
+    case ESP_RST_SDIO:
+      return "SDIO";
+    case ESP_RST_CPU_LOCKUP:
+      return "CPU lockup";
+    default:
+      return "Reset reason " + std::to_string(static_cast<int>(reason));
+  }
+}
+}  // namespace
+
 extern "C" {
 
 void __real_panic_abort(const char* message);
@@ -122,6 +155,7 @@ std::string getPanicInfo(bool full) {
     std::string info;
 
     info += "CrossPoint version: " CROSSPOINT_VERSION;
+    info += "\n\nReset reason: " + resetReasonToString(esp_reset_reason());
     info += "\n\nPanic reason: " + std::string(panicMessage);
     info += "\n\nLast logs:\n" + getLastLogs();
     info += "\n\nStack memory:\n";
@@ -148,7 +182,12 @@ std::string getPanicInfo(bool full) {
 
 bool isRebootFromPanic() {
   const auto resetReason = esp_reset_reason();
-  return resetReason == ESP_RST_PANIC || resetReason == ESP_RST_CPU_LOCKUP;
+  // Watchdog resets (interrupt/task/other) are crash-like events too: the system never ran
+  // esp_restart()/a clean shutdown, so they deserve the same crash_report.txt treatment as an
+  // explicit panic/lockup, even though __wrap_panic_abort never ran and panicMessage may be empty.
+  // resetReasonToString() in getPanicInfo() distinguishes which case actually happened.
+  return resetReason == ESP_RST_PANIC || resetReason == ESP_RST_CPU_LOCKUP || resetReason == ESP_RST_INT_WDT ||
+         resetReason == ESP_RST_TASK_WDT || resetReason == ESP_RST_WDT;
 }
 
 }  // namespace HalSystem

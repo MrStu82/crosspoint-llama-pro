@@ -241,18 +241,31 @@ void HomeActivity::loop() {
 
   int tx = 0;
   int ty = 0;
+
+  // Cover row can show more than one recent-book tile side by side (e.g. Lyra3CoversTheme's
+  // 3-up row), so a touch must be mapped to the tile it actually landed on rather than always
+  // selecting index 0. Mirrors the tileX/tileWidth math the cover-row themes use to draw them.
+  const auto tileIndexForX = [&](int x) {
+    const int tileCount = std::max(1, metrics.homeRecentBooksCount);
+    const int tileWidth = (renderer.getScreenWidth() - 2 * metrics.contentSidePadding) / tileCount;
+    if (tileWidth <= 0) return 0;
+    const int tile = (x - metrics.contentSidePadding) / tileWidth;
+    return std::max(0, std::min(tile, static_cast<int>(recentBooks.size()) - 1));
+  };
+
   if (!recentBooks.empty() && mappedInput.wasScreenTouchDown(tx, ty) && tx >= 0 && tx < renderer.getScreenWidth() &&
       ty >= metrics.homeTopPadding && ty < metrics.homeTopPadding + metrics.homeCoverTileHeight) {
-    if (selectorIndex != 0) {
-      selectorIndex = 0;
+    const int tappedTile = tileIndexForX(tx);
+    if (selectorIndex != tappedTile) {
+      selectorIndex = tappedTile;
       requestUpdate();
     }
     return;
   }
 
-  if (!recentBooks.empty() &&
-      mappedInput.wasTapInRect(0, metrics.homeTopPadding, renderer.getScreenWidth(), metrics.homeCoverTileHeight)) {
-    selectorIndex = 0;
+  if (!recentBooks.empty() && mappedInput.wasScreenTapped(tx, ty) && tx >= 0 && tx < renderer.getScreenWidth() &&
+      ty >= metrics.homeTopPadding && ty < metrics.homeTopPadding + metrics.homeCoverTileHeight) {
+    selectorIndex = tileIndexForX(tx);
     activateSelection();
     return;
   }

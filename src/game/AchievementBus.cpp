@@ -217,8 +217,8 @@ void AchievementBus::emit(const game::GameEvent& event) {
       if (GAME_STATE.player.dungeonDepth >= 25) {
         unlock(AchievementId::AbyssWalker, "Achievement: Abyss-Walker (Reached dungeon level 25.)");
       }
-      if (GAME_STATE.player.dungeonDepth >= 30) {
-        unlock(AchievementId::StructurallyUnsound, "Achievement: Structurally Unsound (Reached dungeon level 30.)");
+      if (GAME_STATE.player.dungeonDepth >= 22) {
+        unlock(AchievementId::StructurallyUnsound, "Achievement: Structurally Unsound (Reached dungeon level 22.)");
       }
       if (GAME_STATE.player.dungeonDepth >= game::MAX_DEPTH) {
         unlock(AchievementId::DungeonSovereign, "Achievement: Dungeon Sovereign (Reached the deepest level the dungeon has.)");
@@ -299,8 +299,8 @@ void AchievementBus::emit(const game::GameEvent& event) {
       if (event.hpBeforeHit > 0 && event.damage > event.hpBeforeHit) {
         unlock(AchievementId::Overkill, "Achievement: Overkill (Dealt more damage in one blow than the target had left.)");
       }
-      if (event.monsterMinDepth >= GAME_STATE.player.dungeonDepth + 5) {
-        unlock(AchievementId::GiantKiller, "Achievement: Giant-Killer (Killed a monster at least five levels above you.)");
+      if (event.monsterMaxHp > game::effectiveMaxHp(GAME_STATE.player)) {
+        unlock(AchievementId::GiantKiller, "Achievement: Giant-Killer (Killed something with more life in it than you.)");
       }
       if (GAME_STATE.player.kills >= 10) {
         unlock(AchievementId::Ratcatcher, "Achievement: Ratcatcher (Killed 10 monsters.)");

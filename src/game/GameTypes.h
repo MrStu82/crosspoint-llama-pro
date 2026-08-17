@@ -489,7 +489,7 @@ inline constexpr AchievementDef ACHIEVEMENT_DEFS[] = {
     {"Deep Delver", "Reached dungeon level 15.", AchievementReward::Title, 3},
     {"Pressure Tolerance", "Reached dungeon level 20.", AchievementReward::LoreUnlock, 0},
     {"Abyss-Walker", "Reached dungeon level 25.", AchievementReward::Title, 4},
-    {"Structurally Unsound", "Reached dungeon level 30.", AchievementReward::SponsorUnlock, 1},
+    {"Structurally Unsound", "Reached dungeon level 22.", AchievementReward::SponsorUnlock, 1},
     {"Express Descent", "Descended three levels in under 200 turns.", AchievementReward::None, 0},
     {"Dungeon Sovereign", "Reached the deepest level the dungeon has.", AchievementReward::Title, 19},
     // -- Combat --
@@ -498,7 +498,7 @@ inline constexpr AchievementDef ACHIEVEMENT_DEFS[] = {
     {"Exterminator", "Killed 50 monsters.", AchievementReward::None, 0},
     {"Beastbane", "Killed 250 monsters.", AchievementReward::Title, 12},
     {"Overkill", "Dealt more damage in one blow than the target had left.", AchievementReward::None, 0},
-    {"Giant-Killer", "Killed a monster at least five levels above you.", AchievementReward::Title, 17},
+    {"Giant-Killer", "Killed something with more life in it than you.", AchievementReward::Title, 17},
     {"Clean Sweep", "Cleared an entire floor of monsters.", AchievementReward::None, 0},
     {"Untouched", "Cleared a floor without taking a single point of damage.", AchievementReward::Title, 18},
     {"Pacifist Run", "Descended a full floor without killing anything.", AchievementReward::Title, 11},

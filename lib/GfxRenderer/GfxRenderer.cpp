@@ -547,8 +547,15 @@ int GfxRenderer::getTextWidth(const int fontId, const char* text, const EpdFontF
 }
 
 void GfxRenderer::drawCenteredText(const int fontId, const int y, const char* text, const bool black,
-                                   const EpdFontFamily::Style style, const BidiUtils::BidiBaseDir baseDir) const {
-  const int x = (getScreenWidth() - getTextWidth(fontId, text, style, baseDir)) / 2;
+                                   const EpdFontFamily::Style style, const BidiUtils::BidiBaseDir baseDir,
+                                   const int boxX, const int boxWidth) const {
+  const int textWidth = getTextWidth(fontId, text, style, baseDir);
+  int x = boxX + (boxWidth - textWidth) / 2;
+  // Never let centering push the draw outside the declared box -- a box that's too
+  // narrow for the text clamps to the box's left edge rather than overflowing it.
+  if (x < boxX) {
+    x = boxX;
+  }
   drawText(fontId, x, y, text, black, style, baseDir);
 }
 

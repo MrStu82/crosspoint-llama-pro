@@ -5,6 +5,7 @@
 #include <Logging.h>
 
 #include <cstdio>
+#include <cstring>
 #include <string>
 
 #include "CrossPointSettings.h"
@@ -13,12 +14,16 @@
 #include "components/UITheme.h"
 #include "fontIds.h"
 
-void GameRenderer::computeLayout(int screenWidth, int screenHeight) {
+void GameRenderer::computeLayout(int screenWidth, int screenHeight, int messageLineHeightIn) {
   screenW = screenWidth;
   screenH = screenHeight;
+  messageLineHeight = messageLineHeightIn;
+  messageH = MESSAGE_LINE_COUNT * messageLineHeight + MESSAGE_PADDING_V;
 
-  // Compute viewport dimensions
-  viewportEndY = screenH - MESSAGE_H - CONTROLS_H;
+  // Compute viewport dimensions. Banner sits between the map and the
+  // console -- always reserved, not a floating overlay -- so it comes out of
+  // the map's share of the screen, same as the console and controls do.
+  viewportEndY = screenH - BANNER_H - messageH - CONTROLS_H;
   viewportH = viewportEndY - VIEWPORT_Y;
   viewportW = screenW;
 
@@ -28,15 +33,22 @@ void GameRenderer::computeLayout(int screenWidth, int screenHeight) {
   // Center the grid horizontally if there's leftover space
   gridOffsetX = (viewportW - viewCols * CELL_W) / 2;
 
-  messageY = viewportEndY;
+  bannerY = viewportEndY;
+  messageY = bannerY + BANNER_H;
   controlsY = screenH - CONTROLS_H;
 }
 
 void GameRenderer::init(GfxRenderer& renderer) {
-  computeLayout(renderer.getScreenWidth(), renderer.getScreenHeight());
+  computeLayout(renderer.getScreenWidth(), renderer.getScreenHeight(), renderer.getLineHeight(UI_10_FONT_ID));
 }
 
-void GameRenderer::initForTest(int screenWidth, int screenHeight) { computeLayout(screenWidth, screenHeight); }
+void GameRenderer::initForTest(int screenWidth, int screenHeight) {
+  // No live GfxRenderer/font table in a host harness -- stand in with
+  // UI_10_FONT_ID's real advanceY (24px, confirmed via the on-device build;
+  // see drawMessages()/init()) rather than inventing a guessed number.
+  constexpr int kTestMessageLineHeight = 24;
+  computeLayout(screenWidth, screenHeight, kTestMessageLineHeight);
+}
 
 void GameRenderer::draw(GfxRenderer& renderer, const game::Tile* tiles, const uint8_t* fogOfWar,
                         const game::Monster* monsters, uint8_t monsterCount, const game::Item* items, uint8_t itemCount,
@@ -169,7 +181,13 @@ FramePlan GameRenderer::planFrame(const game::Tile* tiles, const uint8_t* fogOfW
   // GameRenderer::draw()'s fullClear branch).
   if (notificationDirty_) {
     notificationDirty_ = false;
-    if (!plan.fullClear && plan.windowCount < 4) {
+    // No ceiling check here: FramePlan::windows is sized for exactly the
+    // windows the two owners (FrameDirtyPlanner::planFrame + this
+    // notification append) can produce between them -- viewport, status bar,
+    // messages, plus this one. A silent drop here was the same "draws
+    // outside what it declared" bug class as Q1/Q2/Q3, just inverted: it
+    // wouldn't draw outside a rect, it'd fail to register one it needed.
+    if (!plan.fullClear) {
       plan.windows[plan.windowCount++] = notificationRect();
     }
   }
@@ -192,7 +210,7 @@ game::PlannerLayout GameRenderer::buildPlannerLayout() const {
   layout.screenW = screenW;
   layout.statusH = STATUS_H;
   layout.messageY = messageY;
-  layout.messageH = MESSAGE_H;
+  layout.messageH = messageH;
   return layout;
 }
 
@@ -364,20 +382,46 @@ void GameRenderer::drawMessages(GfxRenderer& renderer) const {
   constexpr int fontId = UI_10_FONT_ID;
   constexpr int marginX = 4;
   const int maxWidth = screenW - 2 * marginX;
+  // Longest line this function will ever hand to getTextWidth()/drawText() --
+  // generous enough for any real wrapped line (which is itself bounded by
+  // maxWidth) and for the pathological single-overlong-word case below.
+  // Stack-only, never heap: this replaces what used to be a std::string
+  // built via substr() on every word/line.
+  constexpr size_t kLineBufLen = 256;
 
-  std::string visibleLines[MESSAGE_LINE_COUNT];
+  // Line references back into GAME_STATE's own message buffers -- no copy of
+  // the text itself, just which message and which [pos, pos+len) slice of it.
+  // Replaces the old std::string visibleLines[] (which meant a substr()
+  // heap allocation per visible line) with plain offsets/lengths.
+  struct LineRef {
+    int recency;
+    size_t pos;
+    size_t len;
+  };
+  LineRef visibleLines[MESSAGE_LINE_COUNT];
   int visibleCount = 0;
 
-  auto pushLine = [&](const std::string& line) {
+  auto pushLine = [&](int recency, size_t pos, size_t len) {
     if (visibleCount < MESSAGE_LINE_COUNT) {
-      visibleLines[visibleCount++] = line;
+      visibleLines[visibleCount++] = {recency, pos, len};
     } else {
       // Console is full -- drop the oldest visible line to make room for the
       // newer one, same "oldest falls off" behavior as the message ring
       // buffer itself.
       for (int i = 1; i < MESSAGE_LINE_COUNT; i++) visibleLines[i - 1] = visibleLines[i];
-      visibleLines[MESSAGE_LINE_COUNT - 1] = line;
+      visibleLines[MESSAGE_LINE_COUNT - 1] = {recency, pos, len};
     }
+  };
+
+  // Stack buffer reused for every width-check candidate and every drawn line
+  // -- copies at most kLineBufLen-1 bytes from the message's own storage, no
+  // heap allocation.
+  char lineBuf[kLineBufLen];
+  auto measureWidth = [&](const char* data, size_t pos, size_t len) -> int {
+    size_t n = len < kLineBufLen - 1 ? len : kLineBufLen - 1;
+    memcpy(lineBuf, data + pos, n);
+    lineBuf[n] = '\0';
+    return renderer.getTextWidth(fontId, lineBuf);
   };
 
   // Walk oldest -> newest so the final visible window always ends on the
@@ -386,6 +430,7 @@ void GameRenderer::drawMessages(GfxRenderer& renderer) const {
   for (int recency = static_cast<int>(GAME_STATE.messageCount) - 1; recency >= 0; recency--) {
     const std::string& msg = GAME_STATE.getMessage(recency);
     if (msg.empty()) continue;
+    const char* data = msg.data();
 
     size_t pos = 0;
     while (pos < msg.size()) {
@@ -394,8 +439,7 @@ void GameRenderer::drawMessages(GfxRenderer& renderer) const {
       while (next < msg.size()) {
         size_t spacePos = msg.find(' ', next);
         size_t wordEnd = (spacePos == std::string::npos) ? msg.size() : spacePos;
-        std::string candidate = msg.substr(pos, wordEnd - pos);
-        if (renderer.getTextWidth(fontId, candidate.c_str()) > maxWidth) {
+        if (measureWidth(data, pos, wordEnd - pos) > maxWidth) {
           if (lineEnd == pos) {
             // Even the first word alone overflows maxWidth -- never split
             // mid-word, so let it overflow rather than loop forever.
@@ -407,7 +451,7 @@ void GameRenderer::drawMessages(GfxRenderer& renderer) const {
         if (spacePos == std::string::npos) break;
         next = spacePos + 1;
       }
-      pushLine(msg.substr(pos, lineEnd - pos));
+      pushLine(recency, pos, lineEnd - pos);
       pos = lineEnd;
       while (pos < msg.size() && msg[pos] == ' ') pos++;
     }
@@ -415,7 +459,12 @@ void GameRenderer::drawMessages(GfxRenderer& renderer) const {
 
   int lineHeight = renderer.getLineHeight(fontId);
   for (int i = 0; i < visibleCount; i++) {
-    renderer.drawText(fontId, marginX, messageY + 1 + i * lineHeight, visibleLines[i].c_str());
+    const LineRef& ref = visibleLines[i];
+    const std::string& msg = GAME_STATE.getMessage(ref.recency);
+    size_t n = ref.len < kLineBufLen - 1 ? ref.len : kLineBufLen - 1;
+    memcpy(lineBuf, msg.data() + ref.pos, n);
+    lineBuf[n] = '\0';
+    renderer.drawText(fontId, marginX, messageY + 1 + i * lineHeight, lineBuf);
   }
 }
 
@@ -556,45 +605,55 @@ void GameRenderer::drawEndScreen(GfxRenderer& renderer, bool isVictory, const En
   renderer.drawRoundedRect(boxX, boxY, boxW, boxH, 2, 8, true);
 
   int y = boxY + 30;
-  renderer.drawCenteredText(NOTOSANS_18_FONT_ID, y, isVictory ? tr(STR_DM_VICTORY) : tr(STR_DM_YOU_DIED), true);
+  renderer.drawCenteredText(NOTOSANS_18_FONT_ID, y, isVictory ? tr(STR_DM_VICTORY) : tr(STR_DM_YOU_DIED), true,
+                            EpdFontFamily::REGULAR, BidiUtils::BidiBaseDir::AUTO, boxX, boxW);
   y += 34;
 
   char line[64];
   if (!isVictory) {
     snprintf(line, sizeof(line), "%s %s", tr(STR_DM_DEATH_CAUSE), data.cause);
-    renderer.drawCenteredText(UI_12_FONT_ID, y, line, true);
+    renderer.drawCenteredText(UI_12_FONT_ID, y, line, true, EpdFontFamily::REGULAR, BidiUtils::BidiBaseDir::AUTO,
+                              boxX, boxW);
     y += 26;
   }
 
   snprintf(line, sizeof(line), "%s %u", tr(STR_DM_STAT_FLOOR), data.floor);
-  renderer.drawCenteredText(UI_12_FONT_ID, y, line, true);
+  renderer.drawCenteredText(UI_12_FONT_ID, y, line, true, EpdFontFamily::REGULAR, BidiUtils::BidiBaseDir::AUTO, boxX,
+                            boxW);
   y += 22;
 
   snprintf(line, sizeof(line), "%s %u", tr(STR_DM_STAT_TURNS), data.turns);
-  renderer.drawCenteredText(UI_12_FONT_ID, y, line, true);
+  renderer.drawCenteredText(UI_12_FONT_ID, y, line, true, EpdFontFamily::REGULAR, BidiUtils::BidiBaseDir::AUTO, boxX,
+                            boxW);
   y += 22;
 
   snprintf(line, sizeof(line), "%s %u", tr(STR_DM_STAT_KILLS), data.kills);
-  renderer.drawCenteredText(UI_12_FONT_ID, y, line, true);
+  renderer.drawCenteredText(UI_12_FONT_ID, y, line, true, EpdFontFamily::REGULAR, BidiUtils::BidiBaseDir::AUTO, boxX,
+                            boxW);
   y += 22;
 
   snprintf(line, sizeof(line), "%s %u", tr(STR_DM_STAT_LEVEL), data.level);
-  renderer.drawCenteredText(UI_12_FONT_ID, y, line, true);
+  renderer.drawCenteredText(UI_12_FONT_ID, y, line, true, EpdFontFamily::REGULAR, BidiUtils::BidiBaseDir::AUTO, boxX,
+                            boxW);
   y += 30;
 
-  renderer.drawCenteredText(UI_12_FONT_ID, y, tr(STR_DM_ACHIEVEMENTS), true);
+  renderer.drawCenteredText(UI_12_FONT_ID, y, tr(STR_DM_ACHIEVEMENTS), true, EpdFontFamily::REGULAR,
+                            BidiUtils::BidiBaseDir::AUTO, boxX, boxW);
   y += 22;
 
   if (data.unlockedCount == 0) {
-    renderer.drawCenteredText(UI_10_FONT_ID, y, tr(STR_DM_NO_ACHIEVEMENTS), true);
+    renderer.drawCenteredText(UI_10_FONT_ID, y, tr(STR_DM_NO_ACHIEVEMENTS), true, EpdFontFamily::REGULAR,
+                              BidiUtils::BidiBaseDir::AUTO, boxX, boxW);
   } else {
     for (uint8_t i = 0; i < data.unlockedCount; i++) {
-      renderer.drawCenteredText(UI_10_FONT_ID, y, game::achievementShortName(data.unlockedIds[i]), true);
+      renderer.drawCenteredText(UI_10_FONT_ID, y, game::achievementShortName(data.unlockedIds[i]), true,
+                                EpdFontFamily::REGULAR, BidiUtils::BidiBaseDir::AUTO, boxX, boxW);
       y += 18;
     }
   }
 
-  renderer.drawCenteredText(UI_10_FONT_ID, boxY + boxH - 24, tr(STR_DM_TAP_TO_CONTINUE), true);
+  renderer.drawCenteredText(UI_10_FONT_ID, boxY + boxH - 24, tr(STR_DM_TAP_TO_CONTINUE), true,
+                            EpdFontFamily::REGULAR, BidiUtils::BidiBaseDir::AUTO, boxX, boxW);
 
   // One-shot full-refresh: new high-contrast content over a stale buffer
   // needs a clean waveform, not the periodic ghost-guard cadence draw() uses.
@@ -686,7 +745,8 @@ void GameRenderer::drawCorruptSaveNotice(GfxRenderer& renderer, bool wholeRun, u
   // Baseline offset matches the old option row's Pixel-measured -15 (descenders
   // clear the fill bar).
   renderer.drawCenteredText(UI_12_FONT_ID, continueRect.y + continueRect.height / 2 - 15,
-                            tr(STR_DM_CORRUPT_NOTICE_CONTINUE), /*black=*/false);
+                            tr(STR_DM_CORRUPT_NOTICE_CONTINUE), /*black=*/false, EpdFontFamily::REGULAR,
+                            BidiUtils::BidiBaseDir::AUTO, continueRect.x, continueRect.width);
 
   // One-shot full-refresh: same reasoning as drawEndScreen() -- new
   // high-contrast content over a stale buffer needs a clean waveform.
@@ -719,17 +779,17 @@ void GameRenderer::dismissNotification() {
 }
 
 DirtyWindow GameRenderer::notificationRect() const {
-  // Fixed position near the top of the viewport, full-width minus a side
-  // margin -- depends only on screen layout (computeLayout() output), never
-  // on notification content, so draw()'s partial path and planFrame()'s
-  // FramePlan-building code always agree on the same rect without sharing
-  // any extra state.
+  // Fixed position in the reserved banner band (see BANNER_H/bannerY),
+  // full-width minus a side margin -- depends only on screen layout
+  // (computeLayout() output), never on notification content, so draw()'s
+  // partial path and planFrame()'s FramePlan-building code always agree on
+  // the same rect without sharing any extra state.
   DirtyWindow w;
   w.kind = DirtyWindow::Kind::Notification;
   w.x = NOTIFICATION_MARGIN_X;
-  w.y = VIEWPORT_Y + 8;
+  w.y = bannerY;
   w.w = screenW - 2 * NOTIFICATION_MARGIN_X;
-  w.h = NOTIFICATION_H;
+  w.h = BANNER_H;
   return w;
 }
 
@@ -744,7 +804,13 @@ void GameRenderer::drawNotification(GfxRenderer& renderer) const {
   // for, reusing the same primitives drawEndScreen() already proved out.
   renderer.fillRect(rect.x, rect.y, rect.w, NOTIFICATION_TITLE_H, true);
   const char* title = I18n::getInstance().get(kNotificationTitleId[static_cast<uint8_t>(notificationKind_)]);
-  renderer.drawCenteredText(UI_12_FONT_ID, rect.y + 6, title, false);
+  renderer.drawCenteredText(UI_12_FONT_ID, rect.y + 6, title, false, EpdFontFamily::REGULAR,
+                            BidiUtils::BidiBaseDir::AUTO, rect.x, rect.w);
 
-  renderer.drawCenteredText(UI_10_FONT_ID, rect.y + NOTIFICATION_TITLE_H + 12, notificationBody_, true);
+  // Body sits directly under the title bar inside the fixed BANNER_H band --
+  // title (NOTIFICATION_TITLE_H) + this gap + one body line must fit inside
+  // BANNER_H, same box-clamp discipline as every other drawCenteredText call
+  // site now follows (rect.x/rect.w clamp already applied below).
+  renderer.drawCenteredText(UI_10_FONT_ID, rect.y + NOTIFICATION_TITLE_H + 4, notificationBody_, true,
+                            EpdFontFamily::REGULAR, BidiUtils::BidiBaseDir::AUTO, rect.x, rect.w);
 }

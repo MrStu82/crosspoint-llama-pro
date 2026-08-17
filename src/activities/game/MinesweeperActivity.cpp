@@ -309,8 +309,10 @@ void MinesweeperActivity::render(RenderLock&&) {
     renderer.fillRoundedRect(boxX, boxY, boxW, boxH, 8, Color::White);
     renderer.drawRoundedRect(boxX, boxY, boxW, boxH, 2, 8, true);
     renderer.drawCenteredText(UI_12_FONT_ID, boxY + 24,
-                              state == GameState::Won ? tr(STR_MINESWEEPER_WON) : tr(STR_MINESWEEPER_LOST), true);
-    renderer.drawCenteredText(UI_10_FONT_ID, boxY + 56, tr(STR_MINESWEEPER_TAP_NEW_GAME), true);
+                              state == GameState::Won ? tr(STR_MINESWEEPER_WON) : tr(STR_MINESWEEPER_LOST), true,
+                              EpdFontFamily::REGULAR, BidiUtils::BidiBaseDir::AUTO, boxX, boxW);
+    renderer.drawCenteredText(UI_10_FONT_ID, boxY + 56, tr(STR_MINESWEEPER_TAP_NEW_GAME), true,
+                              EpdFontFamily::REGULAR, BidiUtils::BidiBaseDir::AUTO, boxX, boxW);
   }
 
   const auto labels = mappedInput.mapLabels(tr(STR_BACK), tr(STR_MINESWEEPER_NEW_GAME), "", "");

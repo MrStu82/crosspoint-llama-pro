@@ -54,16 +54,28 @@ class GameRenderer {
   static constexpr int CELL_W = 14;
   static constexpr int CELL_H = 20;
 
-  // Screen layout (portrait 480x800)
+  // Screen layout (portrait 480x800). Vertical stack, top to bottom:
+  // Status(28) + Map(220, 11 rows) + Banner(56, reserved notification band) +
+  // Console(328, 8 lines) + Controls(168) == 800 (screenH), by construction --
+  // see computeLayout(). Re-derived layout, agreed with parent 2026-08-17.
   static constexpr int STATUS_Y = 2;
   static constexpr int STATUS_H = 26;
   static constexpr int VIEWPORT_Y = STATUS_H + 2;
-  // Fix 5 (parent-agreed cause 5): console grown from a hardcoded 2 lines to
-  // 5, at UI_10_FONT_ID (the next size up from SMALL_FONT_ID, always
-  // registered regardless of OMIT_FONTS -- see drawMessages()).
-  static constexpr int MESSAGE_LINE_COUNT = 5;
-  static constexpr int MESSAGE_LINE_H = 22;
-  static constexpr int MESSAGE_H = MESSAGE_LINE_COUNT * MESSAGE_LINE_H;
+  // Reserved band for the boxed system notification (see notificationRect()),
+  // sitting between the map and the console -- always reserved layout space,
+  // not a floating overlay, so the map/console never have to guess whether a
+  // notification might be showing over them.
+  static constexpr int BANNER_H = 56;
+  // Console grown from 5 lines to 8 (re-derived layout). Line count and the
+  // vertical padding around them are real layout decisions (explicit
+  // constants); the pitch between lines is NOT -- that comes from the font's
+  // own metrics at runtime (see messageLineHeight, set in init()) so it can
+  // never drift out of sync with what drawMessages() actually draws.
+  static constexpr int MESSAGE_LINE_COUNT = 8;
+  // 328px console total - 8 lines * 24px real advanceY = 136px of padding
+  // (header/margin room), per the re-derived layout table. Not font-derived,
+  // so a literal here is correct, not a rule violation.
+  static constexpr int MESSAGE_PADDING_V = 136;
   // Control area: 3 rows of the same 56px touch-target row height used by the old
   // hints bar ("comfortably above the 44x44 minimum recommended touch target"),
   // stacked to fit a 3-row-tall d-pad cross alongside two bordered action buttons.
@@ -86,11 +98,18 @@ class GameRenderer {
   int viewCols = 0;    // Grid columns
   int viewRows = 0;    // Grid rows
   int viewportEndY = 0;
+  int bannerY = 0;
   int messageY = 0;
   int controlsY = 0;
   int screenW = 0;
   int screenH = 0;
   int gridOffsetX = 0; // Left padding to center grid
+  // Real font advanceY for the console/notification body font (UI_10_FONT_ID),
+  // read from the live GfxRenderer in init() -- see MESSAGE_LINE_H's removal.
+  // initForTest() has no renderer to read from, so it stands in a fixed,
+  // documented value matching that font's real metric (see initForTest()).
+  int messageLineHeight = 0;
+  int messageH = 0; // MESSAGE_LINE_COUNT * messageLineHeight + MESSAGE_PADDING_V
 
   // Active sprite theme, re-read from CrossPointSettings once per draw() call
   // (never inside the per-cell loop) and held for the duration of that render
@@ -174,7 +193,7 @@ class GameRenderer {
   bool notificationActive() const { return notificationActive_; }
 
  private:
-  void computeLayout(int screenWidth, int screenHeight);
+  void computeLayout(int screenWidth, int screenHeight, int messageLineHeightIn);
 
   void drawStatusBar(GfxRenderer& renderer) const;
   void drawViewport(GfxRenderer& renderer, const game::Tile* tiles, const uint8_t* fogOfWar,
@@ -205,10 +224,11 @@ class GameRenderer {
   // to do, so this is only ever called on show, never on dismiss.
   void drawNotification(GfxRenderer& renderer) const;
 
-  // Fixed-position box near the top of the viewport, full-width minus a
-  // margin. Doesn't depend on notification content, only on screen layout,
-  // so both draw()'s partial path and the FramePlan-building code in
-  // planFrame() can compute the identical rect independently.
+  // Fixed-position box in the reserved banner band between the map and the
+  // console (see BANNER_H), full-width minus a margin. Doesn't depend on
+  // notification content, only on screen layout, so both draw()'s partial
+  // path and the FramePlan-building code in planFrame() can compute the
+  // identical rect independently.
   DirtyWindow notificationRect() const;
 
   // Player-centered viewport top-left in map coordinates, clamped so the
@@ -239,9 +259,11 @@ class GameRenderer {
   game::FrameDirtyPlanner planner_;
 
   // --- Boxed System notification state (Phase 9 work item 3) ---
+  // Height is BANNER_H (the reserved layout band, see above) -- not its own
+  // constant, so there's exactly one place that can go out of sync with what
+  // computeLayout() actually reserves.
   static constexpr int NOTIFICATION_MARGIN_X = 20;
   static constexpr int NOTIFICATION_TITLE_H = 26;
-  static constexpr int NOTIFICATION_H = 96;
   static constexpr size_t NOTIFICATION_BODY_LEN = 96;
 
   bool notificationActive_ = false;

@@ -98,8 +98,9 @@ int failures = 0;
   } while (0)
 
 // Layout constants copied from GameRenderer.h (CELL_W=14, CELL_H=20, STATUS_H=26,
-// VIEWPORT_Y=STATUS_H+2, MESSAGE_H=MESSAGE_LINE_COUNT(5)*MESSAGE_LINE_H(22)=110 as of
-// Fix 5's message-console word-wrap, CONTROLS_H=CONTROL_ROW_H*3) computed for the real
+// VIEWPORT_Y=STATUS_H+2, BANNER_H=56 reserved band, MESSAGE_H=MESSAGE_LINE_COUNT(8)*
+// messageLineHeight(24, real UI_10_FONT_ID advanceY)+MESSAGE_PADDING_V(136)=328 as of
+// the 2026-08-17 re-derived layout, CONTROLS_H=CONTROL_ROW_H*3) computed for the real
 // x4pro screen (480x800, confirmed via test/corrupt_notice_hittest's existing
 // initForTest(480, 800) usage) -- reproducing GameRenderer::computeLayout()'s numbers
 // without needing GfxRenderer at all, since PlannerLayout is plain data.
@@ -110,13 +111,14 @@ game::PlannerLayout makeX4ProLayout() {
   constexpr int kCellH = 20;
   constexpr int kStatusH = 26;
   constexpr int kViewportY = kStatusH + 2;
-  constexpr int kMessageH = 110;
+  constexpr int kBannerH = 56;
+  constexpr int kMessageH = 8 * 24 + 136;
   constexpr int kControlsH = 56 * 3;  // CONTROL_ROW_H not exposed publicly; matches GameRenderer.h intent closely
                                        // enough for viewport sizing -- exact control row height doesn't affect
                                        // whether planFrame() indexes out of bounds, only how much viewport it grants.
 
   game::PlannerLayout layout;
-  int viewportEndY = kScreenH - kMessageH - kControlsH;
+  int viewportEndY = kScreenH - kBannerH - kMessageH - kControlsH;
   int viewportH = viewportEndY - kViewportY;
   int viewportW = kScreenW;
   layout.viewCols = viewportW / kCellW;
@@ -127,7 +129,7 @@ game::PlannerLayout makeX4ProLayout() {
   layout.cellH = kCellH;
   layout.screenW = kScreenW;
   layout.statusH = kStatusH;
-  layout.messageY = viewportEndY;
+  layout.messageY = viewportEndY + kBannerH;
   layout.messageH = kMessageH;
   return layout;
 }

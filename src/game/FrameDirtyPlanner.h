@@ -34,7 +34,13 @@ struct DirtyWindow {
 // full-screen rect through the same code as a small partial update.
 struct FramePlan {
   bool fullClear = false;
-  DirtyWindow windows[4];  // at most: viewport bbox, status bar, message log, notification box
+  // Sized for 5, not 4: viewport bbox, status bar, message log are appended
+  // here in FrameDirtyPlanner; the notification box is appended separately by
+  // GameRenderer::planFrame() (this struct has zero dependency on
+  // notification state, by design -- see file header). The two call sites
+  // must stay in sync on this count by hand; if you add a window kind to
+  // either one, bump this size to match.
+  DirtyWindow windows[5];
   int windowCount = 0;
 
   int64_t totalDirtyArea() const {

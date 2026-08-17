@@ -643,6 +643,12 @@ void BaseTheme::drawRecentBookCover(GfxRenderer& renderer, Rect rect, const std:
                                      ? std::string{}
                                      : renderer.truncatedText(UI_10_FONT_ID, lastBookAuthor.c_str(), bookWidth - 40);
 
+    // Text always draws inside the book card's own footprint -- defaults to the
+    // card bounds, narrowed to the tighter title/author box below when a cover
+    // image gave one an actual drawn rect to clamp to.
+    int textBoxX = bookX;
+    int textBoxWidth = bookWidth;
+
     // If cover image was rendered, draw box behind title and author
     if (coverRendered) {
       constexpr int boxPadding = 8;
@@ -670,16 +676,21 @@ void BaseTheme::drawRecentBookCover(GfxRenderer& renderer, Rect rect, const std:
       renderer.fillRect(boxX, boxY, boxWidth, boxHeight, bookSelected);
       // Draw border around the box (inverted when selected: white border instead of black)
       renderer.drawRect(boxX, boxY, boxWidth, boxHeight, !bookSelected);
+
+      textBoxX = boxX;
+      textBoxWidth = boxWidth;
     }
 
     for (const auto& line : lines) {
-      renderer.drawCenteredText(UI_12_FONT_ID, titleYStart, line.c_str(), !bookSelected);
+      renderer.drawCenteredText(UI_12_FONT_ID, titleYStart, line.c_str(), !bookSelected, EpdFontFamily::REGULAR,
+                                BidiUtils::BidiBaseDir::AUTO, textBoxX, textBoxWidth);
       titleYStart += renderer.getLineHeight(UI_12_FONT_ID);
     }
 
     if (!truncatedAuthor.empty()) {
       titleYStart += renderer.getLineHeight(UI_10_FONT_ID) / 2;
-      renderer.drawCenteredText(UI_10_FONT_ID, titleYStart, truncatedAuthor.c_str(), !bookSelected);
+      renderer.drawCenteredText(UI_10_FONT_ID, titleYStart, truncatedAuthor.c_str(), !bookSelected,
+                                EpdFontFamily::REGULAR, BidiUtils::BidiBaseDir::AUTO, textBoxX, textBoxWidth);
     }
 
     // "Continue Reading" label at the bottom
@@ -695,7 +706,8 @@ void BaseTheme::drawRecentBookCover(GfxRenderer& renderer, Rect rect, const std:
       const int continueBoxY = continueY - continuePadding / 2;
       renderer.fillRect(continueBoxX, continueBoxY, continueBoxWidth, continueBoxHeight, bookSelected);
       renderer.drawRect(continueBoxX, continueBoxY, continueBoxWidth, continueBoxHeight, !bookSelected);
-      renderer.drawCenteredText(UI_10_FONT_ID, continueY, continueText, !bookSelected);
+      renderer.drawCenteredText(UI_10_FONT_ID, continueY, continueText, !bookSelected, EpdFontFamily::REGULAR,
+                                BidiUtils::BidiBaseDir::AUTO, continueBoxX, continueBoxWidth);
     } else {
       renderer.drawCenteredText(UI_10_FONT_ID, continueY, tr(STR_CONTINUE_READING), !bookSelected);
     }
@@ -1034,7 +1046,8 @@ void BaseTheme::drawOptionPopup(const GfxRenderer& renderer, const char* title, 
 
   int y = dialogY + innerPadding;
 
-  renderer.drawCenteredText(UI_12_FONT_ID, y, title, true, EpdFontFamily::BOLD);
+  renderer.drawCenteredText(UI_12_FONT_ID, y, title, true, EpdFontFamily::BOLD, BidiUtils::BidiBaseDir::AUTO,
+                            dialogX, dialogW);
   y += titleLineHeight;
 
   if (metrics.optionPopupTitleSeparator) {

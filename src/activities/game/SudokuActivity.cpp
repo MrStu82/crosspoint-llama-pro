@@ -526,8 +526,10 @@ void SudokuActivity::render(RenderLock&&) {
     const int boxY = contentTop + (contentHeight - boxH) / 2;
     renderer.fillRoundedRect(boxX, boxY, boxW, boxH, 8, Color::White);
     renderer.drawRoundedRect(boxX, boxY, boxW, boxH, 2, 8, true);
-    renderer.drawCenteredText(UI_12_FONT_ID, boxY + 24, tr(STR_SUDOKU_WON), true);
-    renderer.drawCenteredText(UI_10_FONT_ID, boxY + 56, tr(STR_SUDOKU_TAP_NEW_GAME), true);
+    renderer.drawCenteredText(UI_12_FONT_ID, boxY + 24, tr(STR_SUDOKU_WON), true, EpdFontFamily::REGULAR,
+                              BidiUtils::BidiBaseDir::AUTO, boxX, boxW);
+    renderer.drawCenteredText(UI_10_FONT_ID, boxY + 56, tr(STR_SUDOKU_TAP_NEW_GAME), true, EpdFontFamily::REGULAR,
+                              BidiUtils::BidiBaseDir::AUTO, boxX, boxW);
   }
 
   const auto labels = mappedInput.mapLabels(tr(STR_BACK), tr(STR_SUDOKU_MENU), "", "");

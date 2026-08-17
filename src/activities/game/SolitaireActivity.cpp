@@ -637,8 +637,10 @@ void SolitaireActivity::render(RenderLock&&) {
     const int boxY = contentTop + (contentHeight - boxH) / 2;
     renderer.fillRoundedRect(boxX, boxY, boxW, boxH, 8, Color::White);
     renderer.drawRoundedRect(boxX, boxY, boxW, boxH, 2, 8, true);
-    renderer.drawCenteredText(UI_12_FONT_ID, boxY + 24, tr(STR_SOLITAIRE_WON), true);
-    renderer.drawCenteredText(UI_10_FONT_ID, boxY + 56, tr(STR_SOLITAIRE_TAP_NEW_GAME), true);
+    renderer.drawCenteredText(UI_12_FONT_ID, boxY + 24, tr(STR_SOLITAIRE_WON), true, EpdFontFamily::REGULAR,
+                              BidiUtils::BidiBaseDir::AUTO, boxX, boxW);
+    renderer.drawCenteredText(UI_10_FONT_ID, boxY + 56, tr(STR_SOLITAIRE_TAP_NEW_GAME), true, EpdFontFamily::REGULAR,
+                              BidiUtils::BidiBaseDir::AUTO, boxX, boxW);
   }
 
   if (menuOpen) {
@@ -658,11 +660,14 @@ void SolitaireActivity::render(RenderLock&&) {
     menuExitRect = Rect(boxX + 10, boxY + 10 + rowH * 2, boxW - 20, rowH - 8);
 
     renderer.drawCenteredText(UI_12_FONT_ID, menuResumeRect.y + (menuResumeRect.height / 2) - 8,
-                               tr(STR_RESUME), true);
+                               tr(STR_RESUME), true, EpdFontFamily::REGULAR, BidiUtils::BidiBaseDir::AUTO,
+                               menuResumeRect.x, menuResumeRect.width);
     renderer.drawCenteredText(UI_12_FONT_ID, menuNewGameRect.y + (menuNewGameRect.height / 2) - 8,
-                               tr(STR_SOLITAIRE_NEW_GAME), true);
+                               tr(STR_SOLITAIRE_NEW_GAME), true, EpdFontFamily::REGULAR, BidiUtils::BidiBaseDir::AUTO,
+                               menuNewGameRect.x, menuNewGameRect.width);
     renderer.drawCenteredText(UI_12_FONT_ID, menuExitRect.y + (menuExitRect.height / 2) - 8,
-                               tr(STR_EXIT), true);
+                               tr(STR_EXIT), true, EpdFontFamily::REGULAR, BidiUtils::BidiBaseDir::AUTO,
+                               menuExitRect.x, menuExitRect.width);
     renderer.drawRect(menuResumeRect.x, menuResumeRect.y, menuResumeRect.width, menuResumeRect.height, true);
     renderer.drawRect(menuNewGameRect.x, menuNewGameRect.y, menuNewGameRect.width, menuNewGameRect.height, true);
     renderer.drawRect(menuExitRect.x, menuExitRect.y, menuExitRect.width, menuExitRect.height, true);

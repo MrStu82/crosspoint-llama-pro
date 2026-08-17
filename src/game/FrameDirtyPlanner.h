@@ -154,7 +154,8 @@ class FrameDirtyPlanner {
 
     // viewCols/viewRows come from GameRenderer::computeLayout(), always well
     // within MAX_TRACK_COLS/ROWS (40x32) on any screen this renderer targets.
-    CellVisual cells[MAX_TRACK_COLS * MAX_TRACK_ROWS];
+    // cells_/dirty_ are member storage (not locals) -- see class declaration --
+    // so this frame's stack cost doesn't include their combined ~7.5KB.
     for (int row = 0; row < layout.viewRows; row++) {
       int mapY = viewY + row;
       for (int col = 0; col < layout.viewCols; col++) {
@@ -164,13 +165,12 @@ class FrameDirtyPlanner {
           cv = computeCellVisual(mapX, mapY, tiles, fogOfWar, monsters, monsterCount, items, itemCount, visible,
                                  playerX, playerY);
         }
-        cells[row * layout.viewCols + col] = cv;
+        cells_[row * layout.viewCols + col] = cv;
       }
     }
 
-    DirtyCell dirty[MAX_DIRTY_CELLS];
     int dirtyCount = 0;
-    tracker_.diffViewport(cells, layout.viewCols, layout.viewRows, dirty, MAX_DIRTY_CELLS, &dirtyCount);
+    tracker_.diffViewport(cells_, layout.viewCols, layout.viewRows, dirty_, MAX_DIRTY_CELLS, &dirtyCount);
 
     bool statusChanged = tracker_.statusBarChanged(hpBuf, mpBuf, depthBuf, lvlBuf);
     bool messagesChangedFlag = tracker_.messagesChanged(msg0, msg1);
@@ -190,10 +190,10 @@ class FrameDirtyPlanner {
       int colMax = -1;
       int cappedCount = dirtyCount < MAX_DIRTY_CELLS ? dirtyCount : MAX_DIRTY_CELLS;
       for (int i = 0; i < cappedCount; i++) {
-        if (dirty[i].row < rowMin) rowMin = dirty[i].row;
-        if (dirty[i].row > rowMax) rowMax = dirty[i].row;
-        if (dirty[i].col < colMin) colMin = dirty[i].col;
-        if (dirty[i].col > colMax) colMax = dirty[i].col;
+        if (dirty_[i].row < rowMin) rowMin = dirty_[i].row;
+        if (dirty_[i].row > rowMax) rowMax = dirty_[i].row;
+        if (dirty_[i].col < colMin) colMin = dirty_[i].col;
+        if (dirty_[i].col > colMax) colMax = dirty_[i].col;
       }
       DirtyWindow w;
       w.kind = DirtyWindow::Kind::Viewport;
@@ -222,6 +222,14 @@ class FrameDirtyPlanner {
   int lastViewX_ = -1;
   int lastViewY_ = -1;
   const TileTheme* lastTheme_ = nullptr;
+  // Formerly locals in planFrame() (~2.5KB + ~5KB) -- the ActivityManagerRender
+  // task's stack is a fixed 8192 bytes, and that combined 7.5KB left razor-thin
+  // headroom for the rest of the render call chain, tripping ESP-IDF's stack
+  // guard mid-way through dirty_'s zero-init loop. FrameDirtyPlanner is always a
+  // heap-resident sub-object (see GameRenderer::planner_), so member storage
+  // here is heap, not stack.
+  CellVisual cells_[MAX_TRACK_COLS * MAX_TRACK_ROWS];
+  DirtyCell dirty_[MAX_DIRTY_CELLS];
 };
 
 }  // namespace game

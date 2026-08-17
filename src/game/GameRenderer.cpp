@@ -354,15 +354,68 @@ void GameRenderer::drawCell(GfxRenderer& renderer, int screenX, int screenY, cha
 // --- Message Log ---
 
 void GameRenderer::drawMessages(GfxRenderer& renderer) const {
-  // Show 2 most recent messages
-  const auto& msg0 = GAME_STATE.getMessage(0);
-  const auto& msg1 = GAME_STATE.getMessage(1);
+  // Fix 5 (parent-agreed cause 5): word-wrap the message log across up to
+  // MESSAGE_LINE_COUNT lines, instead of two hardcoded drawText() calls with
+  // no wrap/truncation and no width bound -- long messages used to just run
+  // off the right edge of the screen. Wraps only on spaces, never mid-word;
+  // overflow continues onto the next line; once wrapped lines exceed the
+  // visible window, the oldest lines fall off the top -- the newest message
+  // is always fully visible at the bottom.
+  constexpr int fontId = UI_10_FONT_ID;
+  constexpr int marginX = 4;
+  const int maxWidth = screenW - 2 * marginX;
 
-  if (!msg1.empty()) {
-    renderer.drawText(SMALL_FONT_ID, 4, messageY + 1, msg1.c_str());
+  std::string visibleLines[MESSAGE_LINE_COUNT];
+  int visibleCount = 0;
+
+  auto pushLine = [&](const std::string& line) {
+    if (visibleCount < MESSAGE_LINE_COUNT) {
+      visibleLines[visibleCount++] = line;
+    } else {
+      // Console is full -- drop the oldest visible line to make room for the
+      // newer one, same "oldest falls off" behavior as the message ring
+      // buffer itself.
+      for (int i = 1; i < MESSAGE_LINE_COUNT; i++) visibleLines[i - 1] = visibleLines[i];
+      visibleLines[MESSAGE_LINE_COUNT - 1] = line;
+    }
+  };
+
+  // Walk oldest -> newest so the final visible window always ends on the
+  // newest message, with pushLine()'s overflow trim discarding old lines
+  // first.
+  for (int recency = static_cast<int>(GAME_STATE.messageCount) - 1; recency >= 0; recency--) {
+    const std::string& msg = GAME_STATE.getMessage(recency);
+    if (msg.empty()) continue;
+
+    size_t pos = 0;
+    while (pos < msg.size()) {
+      size_t next = pos;
+      size_t lineEnd = pos;
+      while (next < msg.size()) {
+        size_t spacePos = msg.find(' ', next);
+        size_t wordEnd = (spacePos == std::string::npos) ? msg.size() : spacePos;
+        std::string candidate = msg.substr(pos, wordEnd - pos);
+        if (renderer.getTextWidth(fontId, candidate.c_str()) > maxWidth) {
+          if (lineEnd == pos) {
+            // Even the first word alone overflows maxWidth -- never split
+            // mid-word, so let it overflow rather than loop forever.
+            lineEnd = wordEnd;
+          }
+          break;
+        }
+        lineEnd = wordEnd;
+        if (spacePos == std::string::npos) break;
+        next = spacePos + 1;
+      }
+      pushLine(msg.substr(pos, lineEnd - pos));
+      pos = lineEnd;
+      while (pos < msg.size() && msg[pos] == ' ') pos++;
+    }
   }
-  if (!msg0.empty()) {
-    renderer.drawText(SMALL_FONT_ID, 4, messageY + 19, msg0.c_str());
+
+  int lineHeight = renderer.getLineHeight(fontId);
+  for (int i = 0; i < visibleCount; i++) {
+    renderer.drawText(fontId, marginX, messageY + 1 + i * lineHeight, visibleLines[i].c_str());
   }
 }
 

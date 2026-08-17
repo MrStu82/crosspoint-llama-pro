@@ -58,7 +58,12 @@ class GameRenderer {
   static constexpr int STATUS_Y = 2;
   static constexpr int STATUS_H = 26;
   static constexpr int VIEWPORT_Y = STATUS_H + 2;
-  static constexpr int MESSAGE_H = 38;
+  // Fix 5 (parent-agreed cause 5): console grown from a hardcoded 2 lines to
+  // 5, at UI_10_FONT_ID (the next size up from SMALL_FONT_ID, always
+  // registered regardless of OMIT_FONTS -- see drawMessages()).
+  static constexpr int MESSAGE_LINE_COUNT = 5;
+  static constexpr int MESSAGE_LINE_H = 22;
+  static constexpr int MESSAGE_H = MESSAGE_LINE_COUNT * MESSAGE_LINE_H;
   // Control area: 3 rows of the same 56px touch-target row height used by the old
   // hints bar ("comfortably above the 44x44 minimum recommended touch target"),
   // stacked to fit a 3-row-tall d-pad cross alongside two bordered action buttons.

@@ -52,6 +52,15 @@ void ActivityManager::renderTaskTrampoline(void* param) {
 }
 
 void ActivityManager::renderTaskLoop() {
+  // Regression gate for the render task's fixed 8192B stack (see
+  // FrameDirtyPlanner's cells_/dirty_ member-promotion fix): a periodic
+  // high-water-mark log is the on-glass proof the fix bought back headroom,
+  // and the assert is the standing trip-wire against the next oversized
+  // local reintroducing the same margin problem before it panics for real.
+  constexpr UBaseType_t kStackWatermarkLogEveryFrames = 64;
+  constexpr UBaseType_t kStackWatermarkMinWords = 256;  // ~1KB on Xtensa/32-bit words
+  static UBaseType_t renderFrameCount = 0;
+
   while (true) {
     ulTaskNotifyTake(pdTRUE, portMAX_DELAY);
     // Acquire the lock before reading currentActivity to avoid a TOCTOU race
@@ -61,6 +70,14 @@ void ActivityManager::renderTaskLoop() {
       HalPowerManager::Lock powerLock;  // Ensure we don't go into low-power mode while rendering
       currentActivity->render(std::move(lock));
     }
+
+    UBaseType_t stackWordsFree = uxTaskGetStackHighWaterMark(nullptr);
+    renderFrameCount++;
+    if (renderFrameCount % kStackWatermarkLogEveryFrames == 0) {
+      LOG_DBG("ACT", "render task stack high-water mark: %u words free", static_cast<unsigned>(stackWordsFree));
+    }
+    assert(stackWordsFree >= kStackWatermarkMinWords && "Render task stack margin critically low");
+
     // Notify any task blocked in requestUpdateAndWait() that the render is done.
     TaskHandle_t waiter = nullptr;
     taskENTER_CRITICAL(&activityManagerSpinlock);

@@ -270,6 +270,12 @@ void GameActivity::onGameMenuResult(const ActivityResult& result) {
 
   switch (action) {
     case GameMenuActivity::MenuAction::RESUME:
+      // GameMenuActivity draws directly to the shared GfxRenderer, bypassing
+      // FrameDirtyPlanner's dirty-rect tracking entirely. Without this, the
+      // next planFrame() diffs live game state against a snapshot that still
+      // matches (nothing changed while the menu was open), computes zero
+      // dirty cells, and never repaints over the menu's leftover pixels.
+      gameRenderer.invalidateFrameCache();
       requestUpdate();
       return;
 

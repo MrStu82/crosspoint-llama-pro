@@ -63,16 +63,43 @@ struct PlannerLayout {
 
 class FrameDirtyPlanner {
  public:
+  // Fix 1 dead-zone margin (parent's call, message 3992): the view holds
+  // still until the player comes within this many cells of whichever edge
+  // they're approaching.
+  static constexpr int kScrollMarginCols = 4;
+  static constexpr int kScrollMarginRows = 4;
+
   // Forces the next planFrame() call to report fullClear=true (first draw,
   // floor change, or anything else that invalidates the cache beyond what
   // planFrame() detects on its own).
   void invalidate() { tracker_.invalidate(); }
 
-  // Player-centered viewport top-left in map coordinates, clamped so the
-  // viewport never runs off the map edge.
+  // Dead-zone viewport top-left in map coordinates (Fix 1, parent-agreed cause
+  // 1: a fully player-centered viewport reset viewOriginChanged on nearly
+  // every step, forcing planFrame() to report fullClear=true almost every
+  // frame). The view holds still while the player is at least
+  // kScrollMarginCols/Rows away from whichever edge they're approaching, and
+  // shifts by exactly the amount needed to restore that margin the moment
+  // they'd cross it -- not a smooth per-step follow. Falls back to centering
+  // the player when there's no previous view yet (first frame, lastViewX_/
+  // lastViewY_ still -1). Clamped so the viewport never runs off the map
+  // edge, same as before.
   void computeViewOrigin(int playerX, int playerY, const PlannerLayout& layout, int* outViewX, int* outViewY) const {
-    int viewX = playerX - layout.viewCols / 2;
-    int viewY = playerY - layout.viewRows / 2;
+    int viewX = lastViewX_ >= 0 ? lastViewX_ : (playerX - layout.viewCols / 2);
+    int viewY = lastViewY_ >= 0 ? lastViewY_ : (playerY - layout.viewRows / 2);
+
+    if (playerX - viewX < kScrollMarginCols) {
+      viewX = playerX - kScrollMarginCols;
+    } else if (viewX + layout.viewCols - playerX - 1 < kScrollMarginCols) {
+      viewX = playerX - layout.viewCols + 1 + kScrollMarginCols;
+    }
+
+    if (playerY - viewY < kScrollMarginRows) {
+      viewY = playerY - kScrollMarginRows;
+    } else if (viewY + layout.viewRows - playerY - 1 < kScrollMarginRows) {
+      viewY = playerY - layout.viewRows + 1 + kScrollMarginRows;
+    }
+
     viewX = viewX < 0 ? 0 : (viewX > MAP_WIDTH - layout.viewCols ? MAP_WIDTH - layout.viewCols : viewX);
     viewY = viewY < 0 ? 0 : (viewY > MAP_HEIGHT - layout.viewRows ? MAP_HEIGHT - layout.viewRows : viewY);
     *outViewX = viewX;

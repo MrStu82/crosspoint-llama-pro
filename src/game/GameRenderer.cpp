@@ -1,6 +1,8 @@
 #include "GameRenderer.h"
 
+#include <Arduino.h>
 #include <I18n.h>
+#include <Logging.h>
 
 #include <cstdio>
 #include <string>
@@ -74,6 +76,16 @@ void GameRenderer::draw(GfxRenderer& renderer, const game::Tile* tiles, const ui
   int viewY = 0;
   computeViewOrigin(p.x, p.y, &viewX, &viewY);
 
+  // Fix 1b (parent-agreed, batched with Fix 1/1c): erase+redraw every dirty
+  // window into the backbuffer first, but issue exactly ONE displayWindow()
+  // refresh per frame -- a union of all the windows' rects -- instead of one
+  // refresh per window. Up to 4 separate e-ink refreshes per frame was the
+  // other half of the movement-lag report even on frames that stayed on the
+  // partial (non-fullClear) path.
+  unsigned long partialStartMs = millis();
+  int unionX = 0, unionY = 0, unionW = 0, unionH = 0;
+  bool haveUnion = false;
+
   for (int i = 0; i < plan.windowCount; i++) {
     const DirtyWindow& w = plan.windows[i];
     renderer.fillRect(w.x, w.y, w.w, w.h, false);  // erase to white before redraw
@@ -107,7 +119,25 @@ void GameRenderer::draw(GfxRenderer& renderer, const game::Tile* tiles, const ui
         break;
     }
 
-    renderer.displayWindow(w.x, w.y, w.w, w.h);
+    if (!haveUnion) {
+      unionX = w.x;
+      unionY = w.y;
+      unionW = w.w;
+      unionH = w.h;
+      haveUnion = true;
+    } else {
+      int right = unionX + unionW > w.x + w.w ? unionX + unionW : w.x + w.w;
+      int bottom = unionY + unionH > w.y + w.h ? unionY + unionH : w.y + w.h;
+      unionX = unionX < w.x ? unionX : w.x;
+      unionY = unionY < w.y ? unionY : w.y;
+      unionW = right - unionX;
+      unionH = bottom - unionY;
+    }
+  }
+
+  if (haveUnion) {
+    renderer.displayWindow(unionX, unionY, unionW, unionH);
+    LOG_DBG("GAME", "Time = %lu ms for partial refresh, window = %dx%d", millis() - partialStartMs, unionW, unionH);
   }
 }
 

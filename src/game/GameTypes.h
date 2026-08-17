@@ -344,125 +344,6 @@ inline constexpr ThemeDef THEME_DEFS[] = {
 inline constexpr int THEME_DEF_COUNT = sizeof(THEME_DEFS) / sizeof(THEME_DEFS[0]);
 // themeForDepth() is defined further below, after Rng and levelSeed().
 
-// --- Achievements (Phase 12, 60-entry replacement of the original 10) ---
-// Content authored by Skippy (parent), Aug 17 2026. See Achievements.h for
-// the AchievementId enum (index == this array's index == persisted unlock
-// bitmask position -- append-only, never reorder/delete an entry) and
-// AchievementBus.cpp for the 60 unlock conditions.
-
-enum class AchievementReward : uint8_t { None, Title, SponsorUnlock, LoreUnlock };
-
-struct AchievementDef {
-  const char* name;
-  const char* description;  // Condition text, shown only after unlock (see
-                             // achievementHint() in Achievements.h for the
-                             // locked/teaser text).
-  AchievementReward reward;
-  int8_t rewardValue;  // Title: index into TITLE_STRINGS. SponsorUnlock:
-                        // index into SPONSOR_DEFS. LoreUnlock/None: unused (0).
-};
-
-// Titles awarded by AchievementReward::Title. Index = rewardValue.
-inline constexpr const char* TITLE_STRINGS[] = {
-    "the Unproven",      // 0
-    "Ratcatcher",        // 1
-    "Delver",            // 2
-    "Deep Delver",       // 3
-    "Abyss-Walker",      // 4
-    "the Unkilled",      // 5
-    "the Thorough",      // 6
-    "the Wealthy",       // 7
-    "the Frugal",        // 8
-    "Blademaster",       // 9
-    "the Reckless",      // 10
-    "the Cautious",      // 11
-    "Beastbane",         // 12
-    "the Curious",       // 13
-    "the Lucky",         // 14
-    "Archivist",         // 15
-    "the Patient",       // 16
-    "Giant-Killer",      // 17
-    "the Untouchable",   // 18
-    "Dungeon Sovereign", // 19
-};
-inline constexpr int TITLE_STRING_COUNT = sizeof(TITLE_STRINGS) / sizeof(TITLE_STRINGS[0]);
-
-inline constexpr AchievementDef ACHIEVEMENT_DEFS[] = {
-    // ---- Depth (0-9) ----
-    {"First Steps", "Entered the dungeon at all. The bar was on the floor.", AchievementReward::None, 0},
-    {"Down We Go", "Reached dungeon level 2.", AchievementReward::None, 0},
-    {"Getting Comfortable", "Reached dungeon level 5.", AchievementReward::Title, 2},
-    {"No Daylight", "Reached dungeon level 10.", AchievementReward::None, 0},
-    {"Deep Delver", "Reached dungeon level 15.", AchievementReward::Title, 3},
-    {"Pressure Tolerance", "Reached dungeon level 20.", AchievementReward::LoreUnlock, 0},
-    {"Abyss-Walker", "Reached dungeon level 25.", AchievementReward::Title, 4},
-    {"Structurally Unsound", "Reached dungeon level 30.", AchievementReward::SponsorUnlock, 0},
-    {"Express Descent", "Descended three levels in under 200 turns.", AchievementReward::None, 0},
-    {"Dungeon Sovereign", "Reached the deepest level the dungeon has.", AchievementReward::Title, 19},
-
-    // ---- Combat (10-21) ----
-    {"First Blood", "Killed something. It started it.", AchievementReward::None, 0},
-    {"Ratcatcher", "Killed 10 monsters.", AchievementReward::Title, 1},
-    {"Exterminator", "Killed 50 monsters.", AchievementReward::None, 0},
-    {"Beastbane", "Killed 250 monsters.", AchievementReward::Title, 12},
-    {"Overkill", "Dealt more damage in one blow than the target had left.", AchievementReward::None, 0},
-    {"Giant-Killer", "Killed a monster at least five levels above you.", AchievementReward::Title, 17},
-    {"Clean Sweep", "Cleared an entire floor of monsters.", AchievementReward::None, 0},
-    {"Untouched", "Cleared a floor without taking a single point of damage.", AchievementReward::Title, 18},
-    {"Double Tap", "Killed two monsters in consecutive turns.", AchievementReward::None, 0},
-    {"Surrounded", "Survived a turn with three or more monsters adjacent.", AchievementReward::None, 0},
-    {"Critical Thinking", "Landed a critical hit for the first time.", AchievementReward::None, 0},
-    {"Pacifist Run", "Descended a full floor without killing anything.", AchievementReward::Title, 11},
-
-    // ---- Survival (22-31) ----
-    {"One Hit Point", "Survived a turn at exactly 1 HP.", AchievementReward::None, 0},
-    {"Close Shave", "Dropped below 10% health and lived to the next floor.", AchievementReward::None, 0},
-    {"The Unkilled", "Reached character level 10 without dying.", AchievementReward::Title, 5},
-    {"Veteran", "Reached character level 5.", AchievementReward::None, 0},
-    {"Seasoned", "Reached character level 10.", AchievementReward::None, 0},
-    {"Ascendant", "Reached character level 20.", AchievementReward::LoreUnlock, 0},
-    {"Long Haul", "Survived 1000 turns in a single run.", AchievementReward::Title, 16},
-    {"Attrition", "Survived 5000 turns in a single run.", AchievementReward::None, 0},
-    {"Back From The Brink", "Healed from below 10% to full in one run.", AchievementReward::None, 0},
-    {"Died Anyway", "Died. The System is not surprised.", AchievementReward::None, 0},
-
-    // ---- Exploration (32-41) ----
-    {"Cartographer", "Fully explored a floor.", AchievementReward::Title, 6},
-    {"Thorough", "Fully explored five floors.", AchievementReward::None, 0},
-    {"Obsessive", "Fully explored twenty floors.", AchievementReward::LoreUnlock, 0},
-    {"Dead End", "Explored a room with only one exit and nothing in it.", AchievementReward::None, 0},
-    {"Shortcut", "Found the stairs within 30 turns of arriving.", AchievementReward::None, 0},
-    {"Scenic Route", "Took over 500 turns on a single floor.", AchievementReward::None, 0},
-    {"Homebody", "Returned to a floor you had already cleared.", AchievementReward::None, 0},
-    {"Cornered", "Explored every tile of a floor before killing anything on it.", AchievementReward::None, 0},
-    {"Wanderer", "Walked 2000 tiles across all runs.", AchievementReward::None, 0},
-    {"Pathfinder", "Walked 10000 tiles across all runs.", AchievementReward::None, 0},
-
-    // ---- Loot and economy (42-51) ----
-    {"Finders Keepers", "Picked up your first item.", AchievementReward::None, 0},
-    {"Magpie", "Picked up 50 items.", AchievementReward::None, 0},
-    {"Hoarder", "Filled your inventory completely.", AchievementReward::None, 0},
-    {"The Wealthy", "Accumulated 1000 gold.", AchievementReward::Title, 7},
-    {"Obscene Wealth", "Accumulated 10000 gold.", AchievementReward::SponsorUnlock, 0},
-    {"The Frugal", "Reached dungeon level 10 without spending a coin.", AchievementReward::Title, 8},
-    {"Blademaster", "Equipped a weapon of the highest tier you have seen.", AchievementReward::Title, 9},
-    {"Well Dressed", "Equipped a full set of armour at once.", AchievementReward::None, 0},
-    {"Travelling Light", "Reached dungeon level 5 carrying nothing but a weapon.", AchievementReward::Title, 10},
-    {"Waste Not", "Used a consumable on the same turn you picked it up.", AchievementReward::None, 0},
-
-    // ---- Curiosities and secrets (52-59) ----
-    {"Read The Manual", "Opened the help screen. Nobody does.", AchievementReward::None, 0},
-    {"Talking To Yourself", "Filled the message log to overflowing in one turn.", AchievementReward::None, 0},
-    {"Archivist", "Unlocked five pieces of lore.", AchievementReward::Title, 15},
-    {"The Curious", "Examined a monster before attacking it.", AchievementReward::Title, 13},
-    {"The Lucky", "Survived an attack that should have killed you.", AchievementReward::Title, 14},
-    {"Sponsored Content", "Attracted your first sponsor.", AchievementReward::LoreUnlock, 0},
-    {"Brand Loyalty", "Kept the same sponsor for ten floors.", AchievementReward::SponsorUnlock, 0},
-    {"Completionist", "Unlocked fifty other achievements. This one was inevitable.", AchievementReward::LoreUnlock, 0},
-};
-inline constexpr int ACHIEVEMENT_DEF_COUNT = sizeof(ACHIEVEMENT_DEFS) / sizeof(ACHIEVEMENT_DEFS[0]);
-static_assert(ACHIEVEMENT_DEF_COUNT == 60, "ACHIEVEMENT_DEFS must have exactly 60 entries -- append-only, see comment above");
-
 // --- Glyph lookup helpers ---
 
 inline char tileGlyph(Tile tile) {
@@ -554,5 +435,100 @@ inline uint8_t themeForDepth(uint32_t gameSeed, uint8_t depth) {
   Rng rng(levelSeed(gameSeed, depth) ^ 0x5AC38A2Du);
   return static_cast<uint8_t>(rng.nextRange(THEME_DEF_COUNT));
 }
+
+// --- Achievement definitions ---
+
+enum class AchievementReward : uint8_t { None, Title, SponsorUnlock, LoreUnlock };
+
+struct AchievementDef {
+  const char* name;
+  const char* description;
+  AchievementReward reward;
+  uint8_t rewardValue;
+};
+
+// Titles unlocked via AchievementReward::Title, indexed by AchievementDef::rewardValue.
+inline constexpr const char* TITLE_STRINGS[] = {
+    "the Unproven",       // 0
+    "Ratcatcher",         // 1
+    "Delver",             // 2
+    "Deep Delver",        // 3
+    "Abyss-Walker",       // 4
+    "the Unkilled",       // 5
+    "the Thorough",       // 6
+    "the Wealthy",        // 7
+    "the Frugal",         // 8
+    "Blademaster",        // 9
+    "the Reckless",       // 10
+    "the Cautious",       // 11
+    "Beastbane",          // 12
+    "the Curious",        // 13
+    "the Lucky",          // 14
+    "Archivist",          // 15
+    "the Patient",        // 16
+    "Giant-Killer",       // 17
+    "the Untouchable",    // 18
+    "Dungeon Sovereign",  // 19
+};
+
+inline constexpr AchievementDef ACHIEVEMENT_DEFS[] = {
+    {"Ding!", "Leveled up. Groundbreaking.", AchievementReward::None, 0},
+    {"That'll Buff Out", "Survived a floor at critical health.", AchievementReward::None, 0},
+    {"Audience Participation", "Died to something weak.", AchievementReward::None, 0},
+    {"Escalation of Force", "Overkilled a monster.", AchievementReward::None, 0},
+    {"Pack Rat", "Filled the inventory.", AchievementReward::None, 0},
+    {"Speed Runner", "Reached floor 5 in under 150 turns.", AchievementReward::None, 0},
+    {"Deep Diver", "Reached floor 10.", AchievementReward::None, 0},
+    {"Maxed Out", "Reached character level 20.", AchievementReward::None, 0},
+    {"Percussive Maintenance", "Killed a monster with a thrown item.", AchievementReward::None, 0},
+    {"Sponsored Content", "Opened a loot box.", AchievementReward::None, 0},
+    // -- Depth --
+    {"First Steps", "Entered the dungeon at all. The bar was on the floor.", AchievementReward::None, 0},
+    {"Down We Go", "Reached dungeon level 2.", AchievementReward::None, 0},
+    {"Getting Comfortable", "Reached dungeon level 5.", AchievementReward::Title, 2},
+    {"Deep Delver", "Reached dungeon level 15.", AchievementReward::Title, 3},
+    {"Pressure Tolerance", "Reached dungeon level 20.", AchievementReward::LoreUnlock, 0},
+    {"Abyss-Walker", "Reached dungeon level 25.", AchievementReward::Title, 4},
+    {"Structurally Unsound", "Reached dungeon level 30.", AchievementReward::SponsorUnlock, 1},
+    {"Express Descent", "Descended three levels in under 200 turns.", AchievementReward::None, 0},
+    {"Dungeon Sovereign", "Reached the deepest level the dungeon has.", AchievementReward::Title, 19},
+    // -- Combat --
+    {"First Blood", "Killed something. It started it.", AchievementReward::None, 0},
+    {"Ratcatcher", "Killed 10 monsters.", AchievementReward::Title, 1},
+    {"Exterminator", "Killed 50 monsters.", AchievementReward::None, 0},
+    {"Beastbane", "Killed 250 monsters.", AchievementReward::Title, 12},
+    {"Overkill", "Dealt more damage in one blow than the target had left.", AchievementReward::None, 0},
+    {"Giant-Killer", "Killed a monster at least five levels above you.", AchievementReward::Title, 17},
+    {"Clean Sweep", "Cleared an entire floor of monsters.", AchievementReward::None, 0},
+    {"Untouched", "Cleared a floor without taking a single point of damage.", AchievementReward::Title, 18},
+    {"Pacifist Run", "Descended a full floor without killing anything.", AchievementReward::Title, 11},
+    // -- Survival --
+    {"One Hit Point", "Survived a turn at exactly 1 HP.", AchievementReward::None, 0},
+    {"The Unkilled", "Reached character level 10 without dying.", AchievementReward::Title, 5},
+    {"Veteran", "Reached character level 5.", AchievementReward::None, 0},
+    {"Seasoned", "Reached character level 10.", AchievementReward::None, 0},
+    {"Long Haul", "Survived 1000 turns in a single run.", AchievementReward::Title, 16},
+    {"Attrition", "Survived 5000 turns in a single run.", AchievementReward::None, 0},
+    {"Back From The Brink", "Healed from below 10% to full in one run.", AchievementReward::None, 0},
+    {"Died Anyway", "Died. The System is not surprised.", AchievementReward::None, 0},
+    // -- Exploration --
+    {"Cartographer", "Fully explored a floor.", AchievementReward::Title, 6},
+    {"Thorough", "Fully explored five floors.", AchievementReward::None, 0},
+    {"Obsessive", "Fully explored twenty floors.", AchievementReward::LoreUnlock, 0},
+    {"Shortcut", "Found the stairs within 30 turns of arriving.", AchievementReward::None, 0},
+    {"Scenic Route", "Took over 500 turns on a single floor.", AchievementReward::None, 0},
+    {"Wanderer", "Walked 2000 tiles across all runs.", AchievementReward::None, 0},
+    {"Pathfinder", "Walked 10000 tiles across all runs.", AchievementReward::None, 0},
+    // -- Loot --
+    {"Finders Keepers", "Picked up your first item.", AchievementReward::None, 0},
+    {"Magpie", "Picked up 50 items.", AchievementReward::None, 0},
+    {"The Wealthy", "Accumulated 1000 gold.", AchievementReward::Title, 7},
+    {"Obscene Wealth", "Accumulated 10000 gold.", AchievementReward::SponsorUnlock, 2},
+    // -- Secrets --
+    {"Completionist", "Unlocked forty other achievements. This one was inevitable.", AchievementReward::LoreUnlock, 0},
+};
+
+inline constexpr int ACHIEVEMENT_DEF_COUNT = sizeof(ACHIEVEMENT_DEFS) / sizeof(ACHIEVEMENT_DEFS[0]);
+static_assert(ACHIEVEMENT_DEF_COUNT == 48, "ACHIEVEMENT_DEFS must have exactly 48 entries");
 
 }  // namespace game

@@ -10,40 +10,35 @@ class AchievementBus {
   // death/victory screen shows what this run accomplished, not the account's
   // full lifetime unlock history). Reset by resetRun(), never persisted.
   bool unlockedThisRun[static_cast<uint8_t>(game::AchievementId::Count)] = {};
+
+  // -- Per-floor transient state, reset on FloorChanged --
   bool wasCriticalThisFloor = false;
+  bool tookDamageThisFloor = false;
+  bool killedAnythingThisFloor = false;
+  // Turn count at the moment the CURRENT floor was entered -- per-floor timer
+  // for Shortcut/Scenic Route. Distinct from the Express Descent window below.
+  uint32_t turnAtCurrentFloorStart = 0;
 
-  // ---- Per-floor transient state (Phase 12, reset every FloorChanged and on
-  // resetRun() -- never persisted, this-run/this-floor only) ----
-  bool tookDamageThisFloor = false;   // Untouched
-  bool killedAnythingThisFloor = false;  // Pacifist Run
-  bool exploredBeforeKillThisFloor = true;  // Cornered -- set false the moment a kill
-                                             // happens before the floor's fully explored
-  uint32_t turnAtFloorEntry = 0;      // Shortcut / Scenic Route
-  uint32_t depthAtRecentFloorStart = 0;  // Express Descent's 3-floors-in-200-turns window
+  // -- Per-run transient state, reset by resetRun() --
+  // Express Descent's rolling 3-floor window: turn count and depth captured
+  // at the start of the window, floor-transition count within it.
+  uint32_t turnAtFloorEntry = 0;
+  uint32_t depthAtRecentFloorStart = 0;
   uint8_t floorsClearedThisWindow = 0;
+  // True once the player has died in this run -- guards The Unkilled against
+  // a stale LevelUp-implies-alive assumption (a LevelUp event can only ever
+  // fire while the player is alive, but this flag makes that explicit rather
+  // than relying on event ordering).
+  bool hasDiedThisRun = false;
+  // Set on any PlayerDamaged event that drops hp below 10% of maxHp; cleared
+  // once Back From The Brink fires. Approximates "healed to full" via the
+  // next LevelUp (which fully heals) since no dedicated heal event exists.
+  bool wasCriticalThisRun = false;
 
-  // Double Tap: turn number of the most recent kill vs the current turn on
-  // the next kill.
-  uint32_t lastKillTurn = 0xFFFFFFFFu;
-
-  // Waste Not: turn a single most-recently-picked-up item entered the
-  // inventory, and whether it's still sitting there unused. Only needs to
-  // track the single latest pickup -- "used on the same turn you picked it
-  // up" can, by definition, only ever refer to the most recent one.
-  uint32_t lastPickupTurn = 0xFFFFFFFFu;
-
-  // ---- Cross-run lifetime counters (Phase 12, persisted in achievements.bin
-  // v2 -- explicit version-gated fields, save.bin/Player untouched) ----
-  uint32_t lifetimeTilesWalked = 0;      // Wanderer / Pathfinder
-  uint16_t highestWeaponAttackSeen = 0;  // Blademaster -- max ItemDef::attack ever seen
-                                         // on an equipped weapon, across all runs
-  uint8_t floorsExploredFully = 0;       // Thorough / Obsessive (lifetime count, not per-run)
-  uint8_t lifetimeLoreUnlocks = 0;       // Archivist -- count of AchievementReward::LoreUnlock
-                                         // achievements earned so far (self-referential by
-                                         // design: an unlock() that grants LoreUnlock bumps
-                                         // this counter, checked on the NEXT emit())
-  uint8_t sameSponsorStreak = 0;         // Brand Loyalty
-  uint8_t lastSponsorSeen = 0xFFu;       // 0xFF = "no floor seen yet this account"
+  // -- Lifetime counters, persisted across runs (achievements.bin v2) --
+  uint32_t lifetimeTilesWalked = 0;    // Wanderer / Pathfinder.
+  uint8_t floorsExploredFully = 0;     // Cartographer / Thorough / Obsessive. Capped at 255 (Obsessive only needs 20).
+  uint32_t magpiePickupCount = 0;      // Magpie: real lifetime item-pickup count, not derived/faked.
 
   // Queue of pending new-unlock (lifetime, not just this-run) flavor texts --
   // lets GameActivity drive a boxed System notification (Phase 9 work item 3)
@@ -52,10 +47,9 @@ class AchievementBus {
   // FloorChanged's multi-check), so this is a small bounded queue rather
   // than a single flag+pointer -- otherwise a second unlock in the same
   // emit() silently overwrites the first before either is ever consumed.
-  // Bumped 3->8 for Phase 12 (FloorChanged alone can now fire up to 6-7
-  // checks in the worst case). Consumed one at a time via
-  // consumeNewUnlockFlavor() so a caller that never checks just leaves the
-  // queue populated, no crash risk.
+  // Sized generously above the current worst case for headroom. Consumed one
+  // at a time via consumeNewUnlockFlavor() so a caller that never checks just
+  // leaves the queue populated, no crash risk.
   static constexpr uint8_t MAX_PENDING_UNLOCKS = 8;
   char pendingFlavors_[MAX_PENDING_UNLOCKS][96] = {};
   uint8_t pendingCount_ = 0;
@@ -70,9 +64,8 @@ class AchievementBus {
   // Load unlock state from achievements.bin. Absent file == nothing unlocked.
   void load();
 
-  // Clears the run-scoped unlock set and per-floor transient state. Call once
-  // per new run (GameState::newGame()), not on save-reload of an in-progress
-  // run.
+  // Clears the run-scoped unlock set. Call once per new run (GameState::newGame()),
+  // not on save-reload of an in-progress run.
   void resetRun();
 
   // Game logic calls this and knows nothing about achievement identities.
@@ -92,11 +85,12 @@ class AchievementBus {
   // empty rather than crashing.
   const char* consumeNewUnlockFlavor();
 
-  // Lifetime tile-walk counter (Wanderer/Pathfinder) -- incremented by
-  // GameActivity on every successful player move, one call site, since it's
-  // a plain counter with no other trigger semantics worth routing through
-  // the GameEvent bus.
-  void addTilesWalked(uint32_t n) { lifetimeTilesWalked += n; }
+  // Called by GameActivity's move handling so lifetime tile-walk tracking
+  // (Wanderer/Pathfinder) stays decoupled from the event-switch pattern used
+  // for everything else -- a per-tile counter bump isn't a discrete "event".
+  // Checks the Wanderer/Pathfinder thresholds itself since there is no
+  // GameEvent wrapping a single footstep.
+  void addTilesWalked(uint32_t n);
 
  private:
   void unlock(game::AchievementId id, const char* flavorText);

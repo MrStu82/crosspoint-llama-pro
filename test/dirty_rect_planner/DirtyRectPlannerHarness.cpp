@@ -45,14 +45,22 @@ int failures = 0;
     }                                         \
   } while (0)
 
-// Synthetic 80x50 map: all floor, walled border. Good enough to exercise
-// glyph diffing -- the planner doesn't care about map semantics, only
-// per-cell visual identity.
+// Synthetic 80x50 map: walled border, alternating Floor/Wall interior
+// columns (a uniform-floor interior would make step 5's origin-shift case
+// degenerate -- see step 5's comment below -- since a viewport that
+// re-centers together with the player leaves the player's own screen
+// position unchanged frame-to-frame, and every other on-screen cell would
+// show the same floor glyph before and after the shift regardless of which
+// map columns actually moved into/out of view). Column-alternating Wall/
+// Floor gives each interior column a visually distinct glyph ('#' vs '.'),
+// so shifting the viewport by one column genuinely changes what's rendered
+// at most on-screen positions, exercising the diff the way a real dungeon
+// (never uniform) would.
 void buildMap(Tile tiles[MAP_SIZE]) {
   for (int y = 0; y < MAP_HEIGHT; y++) {
     for (int x = 0; x < MAP_WIDTH; x++) {
       bool border = (x == 0 || y == 0 || x == MAP_WIDTH - 1 || y == MAP_HEIGHT - 1);
-      tiles[y * MAP_WIDTH + x] = border ? Tile::Wall : Tile::Floor;
+      tiles[y * MAP_WIDTH + x] = border ? Tile::Wall : ((x % 2 == 0) ? Tile::Floor : Tile::Wall);
     }
   }
 }
@@ -193,25 +201,82 @@ int main() {
 
   std::printf("Step 5: interior move, no invalidate -- (40,25)->(41,25), unclamped viewport re-centers\n");
   std::printf("  (uses a SEPARATE planner instance -- this is an isolated demo, not part of the corner walk's\n");
-  std::printf("   cache lineage; step 6 below resumes the corner-walk planner from step 3/4's state.)\n");
+  std::printf("   cache lineage; step 8 below resumes the corner-walk planner from step 3/4's state.)\n");
+  std::printf("  Restored true centering (parent msg 4148): an origin change no longer forces fullClear -- it\n");
+  std::printf("  re-diffs against the stale previous-origin cache and goes through the same bounded partial\n");
+  std::printf("  displayWindow() path as any other frame, just with a larger (near-full-viewport) dirty rect.\n");
   FrameDirtyPlanner interiorPlanner;
   StepResult s5a = runStep(interiorPlanner, layout, 40, 25, tiles, fog, &kThemeDefault);
   std::printf("  (seed frame at 40,25) fullClear=%d\n", s5a.fullClear);
   StepResult s5b = runStep(interiorPlanner, layout, 41, 25, tiles, fog, &kThemeDefault);
   std::printf("  fullClear=%d windowCount=%d totalArea=%lld\n", s5b.fullClear, s5b.windowCount,
               (long long)s5b.totalArea);
-  CHECK(s5b.fullClear,
-        "step 5 (single-cell move in the map interior) re-centers the viewport every step by design and MUST "
-        "full-clear -- this is the expected, not a bug\n");
+  CHECK(!s5b.fullClear,
+        "step 5 (single-cell move in the map interior) must NOT full-clear -- restored centering routes an "
+        "origin change through the bounded partial path instead\n");
+  CHECK(s5b.windowCount >= 1, "step 5 (interior re-center) should still produce at least one displayWindow(), got %d\n",
+        s5b.windowCount);
+  int64_t fullScreenArea = static_cast<int64_t>(layout.screenW) * 800;
+  int64_t viewportArea =
+      static_cast<int64_t>(layout.viewCols) * layout.cellW * layout.viewRows * layout.cellH;
+  CHECK(s5b.totalArea > 0 && s5b.totalArea <= viewportArea,
+        "step 5 dirty area should be bounded by the viewport, not the full screen, got %lld (viewport=%lld, "
+        "screen=%lld)\n",
+        (long long)s5b.totalArea, (long long)viewportArea, (long long)fullScreenArea);
+  CHECK(viewportArea < fullScreenArea,
+        "sanity: viewport area must be meaningfully smaller than full screen for this fix to matter, got "
+        "viewport=%lld screen=%lld\n",
+        (long long)viewportArea, (long long)fullScreenArea);
 
-  std::printf("\nStep 6: repeat step 4's frame with fully unchanged state -- no-op frame\n");
+  std::printf("\nStep 7: computeViewOrigin pins true centering, no dead-zone lag, edge-clamped\n");
+  {
+    FrameDirtyPlanner pinPlanner;
+    int vx = 0, vy = 0;
+
+    // Interior position, far from every edge: origin must be exactly
+    // centered on the player -- a pure function of position, no held/lagged
+    // state from a prior call.
+    pinPlanner.computeViewOrigin(40, 25, layout, &vx, &vy);
+    CHECK(vx == 40 - layout.viewCols / 2, "interior computeViewOrigin viewX should be exactly centered, got %d\n",
+          vx);
+    CHECK(vy == 25 - layout.viewRows / 2, "interior computeViewOrigin viewY should be exactly centered, got %d\n",
+          vy);
+
+    // One step over: with the old dead-zone this would NOT move the
+    // viewport (still inside the margin); true centering must track the
+    // player 1:1, every step, no lag.
+    int vx2 = 0, vy2 = 0;
+    pinPlanner.computeViewOrigin(41, 25, layout, &vx2, &vy2);
+    CHECK(vx2 == vx + 1, "computeViewOrigin must track the player 1:1 with no dead-zone hold, got delta %d\n",
+          vx2 - vx);
+    CHECK(vy2 == vy, "computeViewOrigin viewY should not move on a pure X step, got %d\n", vy2);
+
+    // Top-left corner: clamp kicks in, origin pins at (0,0) instead of going
+    // negative -- player goes off-centre at the map edge, never shows void.
+    int vx3 = 0, vy3 = 0;
+    pinPlanner.computeViewOrigin(0, 0, layout, &vx3, &vy3);
+    CHECK(vx3 == 0, "computeViewOrigin should clamp viewX to 0 at the top-left corner, got %d\n", vx3);
+    CHECK(vy3 == 0, "computeViewOrigin should clamp viewY to 0 at the top-left corner, got %d\n", vy3);
+
+    // Bottom-right corner: clamp pins at MAP_WIDTH/HEIGHT - view size.
+    int vx4 = 0, vy4 = 0;
+    pinPlanner.computeViewOrigin(MAP_WIDTH - 1, MAP_HEIGHT - 1, layout, &vx4, &vy4);
+    CHECK(vx4 == MAP_WIDTH - layout.viewCols,
+          "computeViewOrigin should clamp viewX at the bottom-right corner, got %d (want %d)\n", vx4,
+          MAP_WIDTH - layout.viewCols);
+    CHECK(vy4 == MAP_HEIGHT - layout.viewRows,
+          "computeViewOrigin should clamp viewY at the bottom-right corner, got %d (want %d)\n", vy4,
+          MAP_HEIGHT - layout.viewRows);
+  }
+
+  std::printf("\nStep 8: repeat step 4's frame with fully unchanged state -- no-op frame\n");
   StepResult s6 = runStep(planner, layout, px, py, tiles, fog, &kThemeDefault);
   std::printf("  fullClear=%d windowCount=%d totalArea=%lld\n", s6.fullClear, s6.windowCount,
               (long long)s6.totalArea);
-  CHECK(!s6.fullClear, "step 6 (nothing changed) should not be a full clear\n");
-  CHECK(s6.windowCount == 0, "step 6 (nothing changed) should produce zero displayWindow calls, got %d\n",
+  CHECK(!s6.fullClear, "step 8 (nothing changed) should not be a full clear\n");
+  CHECK(s6.windowCount == 0, "step 8 (nothing changed) should produce zero displayWindow calls, got %d\n",
         s6.windowCount);
-  CHECK(s6.totalArea == 0, "step 6 (nothing changed) should have zero dirty area, got %lld\n",
+  CHECK(s6.totalArea == 0, "step 8 (nothing changed) should have zero dirty area, got %lld\n",
         (long long)s6.totalArea);
 
   std::printf("\n=== %s (%d failure%s) ===\n", failures == 0 ? "PASS" : "FAIL", failures, failures == 1 ? "" : "s");

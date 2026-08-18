@@ -29,7 +29,9 @@ struct DirtyWindow {
 };
 
 // What draw() would refresh for a given frame. `fullClear` means "the whole
-// screen" (first draw / floor change / viewport re-center / theme change) --
+// screen" (first draw / floor change / theme change) -- a viewport re-center
+// no longer forces this (see computeViewOrigin()/planFrame() below); it's
+// just another cell diff against the (now stale) previous-origin cache --
 // draw() takes the clearScreen() path for that case instead of unioning a
 // full-screen rect through the same code as a small partial update.
 struct FramePlan {
@@ -69,42 +71,28 @@ struct PlannerLayout {
 
 class FrameDirtyPlanner {
  public:
-  // Fix 1 dead-zone margin (parent's call, message 3992): the view holds
-  // still until the player comes within this many cells of whichever edge
-  // they're approaching.
-  static constexpr int kScrollMarginCols = 4;
-  static constexpr int kScrollMarginRows = 4;
-
   // Forces the next planFrame() call to report fullClear=true (first draw,
   // floor change, or anything else that invalidates the cache beyond what
   // planFrame() detects on its own).
   void invalidate() { tracker_.invalidate(); }
 
-  // Dead-zone viewport top-left in map coordinates (Fix 1, parent-agreed cause
-  // 1: a fully player-centered viewport reset viewOriginChanged on nearly
-  // every step, forcing planFrame() to report fullClear=true almost every
-  // frame). The view holds still while the player is at least
-  // kScrollMarginCols/Rows away from whichever edge they're approaching, and
-  // shifts by exactly the amount needed to restore that margin the moment
-  // they'd cross it -- not a smooth per-step follow. Falls back to centering
-  // the player when there's no previous view yet (first frame, lastViewX_/
-  // lastViewY_ still -1). Clamped so the viewport never runs off the map
-  // edge, same as before.
+  // True player-centered viewport, clamped so it never runs off the map
+  // edge. Restored (parent msg 4148) now that the viewport itself is much
+  // smaller than when the Fix 1 dead-zone (message 3992) was added -- back
+  // then EVERY viewOriginChanged forced planFrame() into a full-screen
+  // fullClear (clearScreen() + displayBufferGhostGuard(), periodically
+  // escalating to a 1720ms HALF_REFRESH). That cost is gone: planFrame()
+  // below no longer treats an origin change as fullClear-worthy on its own
+  // -- it re-diffs the viewport against the (now stale, previous-origin)
+  // cache like any other frame, which naturally yields a single bounded
+  // Viewport DirtyWindow pushed through the existing partial/union
+  // displayWindow() path (Fix 1b) instead of a full-screen redraw. A pure
+  // function of playerX/playerY/layout -- no dependency on the previous
+  // origin, so there's no "holding" or "catching up" behavior left to reason
+  // about.
   void computeViewOrigin(int playerX, int playerY, const PlannerLayout& layout, int* outViewX, int* outViewY) const {
-    int viewX = lastViewX_ >= 0 ? lastViewX_ : (playerX - layout.viewCols / 2);
-    int viewY = lastViewY_ >= 0 ? lastViewY_ : (playerY - layout.viewRows / 2);
-
-    if (playerX - viewX < kScrollMarginCols) {
-      viewX = playerX - kScrollMarginCols;
-    } else if (viewX + layout.viewCols - playerX - 1 < kScrollMarginCols) {
-      viewX = playerX - layout.viewCols + 1 + kScrollMarginCols;
-    }
-
-    if (playerY - viewY < kScrollMarginRows) {
-      viewY = playerY - kScrollMarginRows;
-    } else if (viewY + layout.viewRows - playerY - 1 < kScrollMarginRows) {
-      viewY = playerY - layout.viewRows + 1 + kScrollMarginRows;
-    }
+    int viewX = playerX - layout.viewCols / 2;
+    int viewY = playerY - layout.viewRows / 2;
 
     viewX = viewX < 0 ? 0 : (viewX > MAP_WIDTH - layout.viewCols ? MAP_WIDTH - layout.viewCols : viewX);
     viewY = viewY < 0 ? 0 : (viewY > MAP_HEIGHT - layout.viewRows ? MAP_HEIGHT - layout.viewRows : viewY);
@@ -178,12 +166,9 @@ class FrameDirtyPlanner {
     int viewY = 0;
     computeViewOrigin(playerX, playerY, layout, &viewX, &viewY);
 
-    const bool viewOriginChanged = (viewX != lastViewX_ || viewY != lastViewY_);
     const bool themeChanged = (activeTheme != lastTheme_);
-    const bool needFullClear = !tracker_.hasSnapshot() || viewOriginChanged || themeChanged;
+    const bool needFullClear = !tracker_.hasSnapshot() || themeChanged;
 
-    lastViewX_ = viewX;
-    lastViewY_ = viewY;
     lastTheme_ = activeTheme;
 
     // viewCols/viewRows come from GameRenderer::computeLayout(), always well
@@ -253,8 +238,6 @@ class FrameDirtyPlanner {
 
  private:
   DirtyRectTracker tracker_;
-  int lastViewX_ = -1;
-  int lastViewY_ = -1;
   const TileTheme* lastTheme_ = nullptr;
   // Formerly locals in planFrame() (~2.5KB + ~5KB) -- the ActivityManagerRender
   // task's stack is a fixed 8192 bytes, and that combined 7.5KB left razor-thin

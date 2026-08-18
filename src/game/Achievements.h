@@ -286,7 +286,26 @@ enum class AchievementId : uint8_t {
   StrangeConvergence = 232,
   EerieCoincidence = 233,
   HiddenDepths = 234,
-  Count = 235,
+  // -- Pet & Companion (bucket 7, 15 entries) --
+  // Authored inert: no CONDITIONS[] rows exist for these ids, so they can
+  // never be unlocked until a pet system lands and starts calling unlock()
+  // for them directly. See .planning/ACHIEVEMENT_POOL.md.
+  FirstFriend = 235,
+  InseparableBond = 236,
+  MenagerieKeeper = 237,
+  FullStable = 238,
+  WellFed = 239,
+  NeverHungry = 240,
+  LoyalToTheEnd = 241,
+  OldFriend = 242,
+  RaisedFromAnEgg = 243,
+  TamerOfBeasts = 244,
+  WhispererOfTheDeep = 245,
+  TwoAgainstTheDungeon = 246,
+  GuardianAtMySide = 247,
+  ShareTheSpoils = 248,
+  BeastAndDelver = 249,
+  Count = 250,
 };
 
 // Bounds-safe lookup: AchievementId now runs past ACHIEVEMENT_DEF_COUNT (the
@@ -542,6 +561,21 @@ inline const char* achievementShortName(AchievementId id) {
     case AchievementId::StrangeConvergence: return "Strange Convergence";
     case AchievementId::EerieCoincidence: return "Eerie Coincidence";
     case AchievementId::HiddenDepths: return "Hidden Depths";
+    case AchievementId::FirstFriend: return "First Friend";
+    case AchievementId::InseparableBond: return "Inseparable Bond";
+    case AchievementId::MenagerieKeeper: return "Menagerie Keeper";
+    case AchievementId::FullStable: return "Full Stable";
+    case AchievementId::WellFed: return "Well Fed";
+    case AchievementId::NeverHungry: return "Never Hungry";
+    case AchievementId::LoyalToTheEnd: return "Loyal to the End";
+    case AchievementId::OldFriend: return "Old Friend";
+    case AchievementId::RaisedFromAnEgg: return "Raised from an Egg";
+    case AchievementId::TamerOfBeasts: return "Tamer of Beasts";
+    case AchievementId::WhispererOfTheDeep: return "Whisperer of the Deep";
+    case AchievementId::TwoAgainstTheDungeon: return "Two Against the Dungeon";
+    case AchievementId::GuardianAtMySide: return "Guardian at My Side";
+    case AchievementId::ShareTheSpoils: return "Share the Spoils";
+    case AchievementId::BeastAndDelver: return "Beast and Delver";
     default: return "";
   }
 }

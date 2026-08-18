@@ -619,6 +619,8 @@ inline constexpr const char* TITLE_STRINGS[] = {
     "the Uncanny",        // 22
     "the Abstinent",      // 23
     "the Unfathomable",   // 24
+    "Beastfriend",        // 25
+    "the Bonded",         // 26
 };
 
 inline constexpr AchievementDef ACHIEVEMENT_DEFS[] = {
@@ -879,10 +881,32 @@ inline constexpr AchievementDef ACHIEVEMENT_DEFS[] = {
     {"Strange Convergence", "Killed a monstrously huge creature at a suspiciously shallow depth.", AchievementReward::LoreUnlock, 0},
     {"Eerie Coincidence", "Finished a run having neither killed anything nor used a single item. Did you even play?", AchievementReward::Skill, 7},
     {"Hidden Depths", "Reached depth 18 in almost suspiciously good health.", AchievementReward::Title, 24},
+
+    // -- Pet & Companion bucket (Milestone 3, ids 235-249): authored inert.
+    // No AchievementConditions.h rows exist for these ids and nothing in the
+    // legacy AchievementBus::emit() switch references them either, so they
+    // are permanently un-unlockable until a real pet system exists and calls
+    // unlock() for them directly -- zero mechanical cost, zero runtime risk.
+    // See Achievements.h and .planning/ACHIEVEMENT_POOL.md. --
+    {"First Friend", "Tamed your first companion.", AchievementReward::None, 0},
+    {"Inseparable Bond", "Kept the same companion for an entire run.", AchievementReward::Buff, 2},
+    {"Menagerie Keeper", "Tamed five different companions across your travels.", AchievementReward::Skill, 3},
+    {"Full Stable", "Had three companions active at once.", AchievementReward::Buff, 5},
+    {"Well Fed", "Fed your companion ten times.", AchievementReward::None, 0},
+    {"Never Hungry", "Kept your companion fed for an entire run.", AchievementReward::Buff, 3},
+    {"Loyal to the End", "Your companion stood by you until the very last floor.", AchievementReward::Title, 25},
+    {"Old Friend", "Kept the same companion across ten runs.", AchievementReward::Skill, 6},
+    {"Raised from an Egg", "Hatched a companion from an egg.", AchievementReward::None, 0},
+    {"Tamer of Beasts", "Tamed a monster twice your own depth.", AchievementReward::Skill, 4},
+    {"Whisperer of the Deep", "Tamed a creature from the deepest floors.", AchievementReward::LoreUnlock, 0},
+    {"Two Against the Dungeon", "Cleared a floor with your companion at your side.", AchievementReward::None, 0},
+    {"Guardian at My Side", "Your companion saved you from a killing blow.", AchievementReward::Buff, 6},
+    {"Share the Spoils", "Let your companion carry loot for you.", AchievementReward::None, 0},
+    {"Beast and Delver", "Reached the bottom of the dungeon with a companion still alive.", AchievementReward::Title, 26},
 };
 
 inline constexpr int ACHIEVEMENT_DEF_COUNT = sizeof(ACHIEVEMENT_DEFS) / sizeof(ACHIEVEMENT_DEFS[0]);
-static_assert(ACHIEVEMENT_DEF_COUNT == 235, "ACHIEVEMENT_DEFS must have exactly 235 entries");
+static_assert(ACHIEVEMENT_DEF_COUNT == 250, "ACHIEVEMENT_DEFS must have exactly 250 entries");
 
 // Bounds-safe achievementDef(AchievementId) lookup lives in Achievements.h,
 // not here -- AchievementId is declared there (which already includes this

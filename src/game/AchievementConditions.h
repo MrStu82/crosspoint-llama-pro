@@ -379,6 +379,79 @@ constexpr AchievementCondition CONDITIONS[] = {
      CompareOp::GreaterEqual, 6, GameEventType::ItemUsed, EventField::Damage, ItemType::Potion},   // index 87
     {AchievementId::AlchemicalOverkill, ConditionType::ItemSpecific, CounterField::Depth,
      CompareOp::GreaterEqual, 20, GameEventType::ItemUsed, EventField::Damage, ItemType::Potion},  // index 88
+
+    // -- Exploration bucket (Milestone 2, ids 150-174). Row index below == position
+    // in this array (89 onward). Avoids the legacy exploration group's exact
+    // thresholds (Cartographer=1 floor, Thorough=5, Obsessive=20, Shortcut=<=30
+    // turns, Scenic Route=>=500 turns, Wanderer=2000/Pathfinder=10000 lifetime
+    // tiles) and the Depth bucket's WandererOfFourteen (500 tiles at depth 14). --
+
+    // Group A: per-run tiles-walked tiers (CounterCompare / TilesWalked).
+    {AchievementId::FirstFootprints, ConditionType::CounterCompare, CounterField::TilesWalked,
+     CompareOp::GreaterEqual, 100},   // index 89
+    {AchievementId::WornPath, ConditionType::CounterCompare, CounterField::TilesWalked,
+     CompareOp::GreaterEqual, 250},   // index 90
+    {AchievementId::BeatenTrack, ConditionType::CounterCompare, CounterField::TilesWalked,
+     CompareOp::GreaterEqual, 450},   // index 91
+    {AchievementId::LongWalk, ConditionType::CounterCompare, CounterField::TilesWalked,
+     CompareOp::GreaterEqual, 800},   // index 92
+    {AchievementId::GrandTour, ConditionType::CounterCompare, CounterField::TilesWalked,
+     CompareOp::GreaterEqual, 1200},  // index 93
+    {AchievementId::Wayfarer, ConditionType::CounterCompare, CounterField::TilesWalked,
+     CompareOp::GreaterEqual, 1800},  // index 94
+    {AchievementId::EndlessTrek, ConditionType::CounterCompare, CounterField::TilesWalked,
+     CompareOp::GreaterEqual, 2500},  // index 95
+    {AchievementId::HorizonChaser, ConditionType::CounterCompare, CounterField::TilesWalked,
+     CompareOp::GreaterEqual, 3500},  // index 96
+
+    // Group B: per-run full-floor-clear tiers (CounterCompare / FloorsFullyExplored).
+    {AchievementId::SecondSweep, ConditionType::CounterCompare, CounterField::FloorsFullyExplored,
+     CompareOp::GreaterEqual, 2},   // index 97
+    {AchievementId::TripleCheck, ConditionType::CounterCompare, CounterField::FloorsFullyExplored,
+     CompareOp::GreaterEqual, 3},   // index 98
+    {AchievementId::QuadCleared, ConditionType::CounterCompare, CounterField::FloorsFullyExplored,
+     CompareOp::GreaterEqual, 4},   // index 99
+    {AchievementId::EightFloorSweep, ConditionType::CounterCompare, CounterField::FloorsFullyExplored,
+     CompareOp::GreaterEqual, 8},   // index 100
+    {AchievementId::DozenCleared, ConditionType::CounterCompare, CounterField::FloorsFullyExplored,
+     CompareOp::GreaterEqual, 12},  // index 101
+    {AchievementId::SixteenSwept, ConditionType::CounterCompare, CounterField::FloorsFullyExplored,
+     CompareOp::GreaterEqual, 16},  // index 102
+    {AchievementId::EighteenExhausted, ConditionType::CounterCompare, CounterField::FloorsFullyExplored,
+     CompareOp::GreaterEqual, 18},  // index 103
+
+    // Group C: depth reached + exploration-progress compounds (Depth row AND
+    // a Group A/B row above, by CONDITIONS[] array index).
+    {AchievementId::GroundedAtFour, ConditionType::Compound, CounterField::Depth,
+     CompareOp::GreaterEqual, 0, GameEventType::MonsterKilled, EventField::Damage,
+     ItemType::ItemTypeCount, NoEventWindow::Run, 13, 89},   // Depth4(13) AND FirstFootprints(89), index 104
+    {AchievementId::MappedAtSeven, ConditionType::Compound, CounterField::Depth,
+     CompareOp::GreaterEqual, 0, GameEventType::MonsterKilled, EventField::Damage,
+     ItemType::ItemTypeCount, NoEventWindow::Run, 15, 97},   // Depth7(15) AND SecondSweep(97), index 105
+    {AchievementId::WellTroddenAtNine, ConditionType::Compound, CounterField::Depth,
+     CompareOp::GreaterEqual, 0, GameEventType::MonsterKilled, EventField::Damage,
+     ItemType::ItemTypeCount, NoEventWindow::Run, 17, 91},   // Depth9(17) AND BeatenTrack(91), index 106
+    {AchievementId::ChartedAtTwelve, ConditionType::Compound, CounterField::Depth,
+     CompareOp::GreaterEqual, 0, GameEventType::MonsterKilled, EventField::Damage,
+     ItemType::ItemTypeCount, NoEventWindow::Run, 19, 98},   // Depth12(19) AND TripleCheck(98), index 107
+    {AchievementId::LongRoadAtFourteen, ConditionType::Compound, CounterField::Depth,
+     CompareOp::GreaterEqual, 0, GameEventType::MonsterKilled, EventField::Damage,
+     ItemType::ItemTypeCount, NoEventWindow::Run, 21, 92},   // Depth14(21) AND LongWalk(92), index 108
+    {AchievementId::SurveyedAtSixteen, ConditionType::Compound, CounterField::Depth,
+     CompareOp::GreaterEqual, 0, GameEventType::MonsterKilled, EventField::Damage,
+     ItemType::ItemTypeCount, NoEventWindow::Run, 22, 99},   // Depth16(22) AND QuadCleared(99), index 109
+    {AchievementId::GrandTouristAtEighteen, ConditionType::Compound, CounterField::Depth,
+     CompareOp::GreaterEqual, 0, GameEventType::MonsterKilled, EventField::Damage,
+     ItemType::ItemTypeCount, NoEventWindow::Run, 24, 93},   // Depth18(24) AND GrandTour(93), index 110
+    {AchievementId::MeticulousAtNineteen, ConditionType::Compound, CounterField::Depth,
+     CompareOp::GreaterEqual, 0, GameEventType::MonsterKilled, EventField::Damage,
+     ItemType::ItemTypeCount, NoEventWindow::Run, 25, 100},  // Depth19(25) AND EightFloorSweep(100), index 111
+    {AchievementId::WayfarerOfTwentyOne, ConditionType::Compound, CounterField::Depth,
+     CompareOp::GreaterEqual, 0, GameEventType::MonsterKilled, EventField::Damage,
+     ItemType::ItemTypeCount, NoEventWindow::Run, 26, 94},   // Depth21(26) AND Wayfarer(94), index 112
+    {AchievementId::CartographersPeakAtTwentyFour, ConditionType::Compound, CounterField::Depth,
+     CompareOp::GreaterEqual, 0, GameEventType::MonsterKilled, EventField::Damage,
+     ItemType::ItemTypeCount, NoEventWindow::Run, 28, 101},  // Depth24(28) AND DozenCleared(101), index 113
 };
 
 constexpr uint8_t CONDITION_COUNT = sizeof(CONDITIONS) / sizeof(CONDITIONS[0]);

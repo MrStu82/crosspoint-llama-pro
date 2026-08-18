@@ -184,7 +184,38 @@ enum class AchievementId : uint8_t {
   SipAndSee = 147,
   SteadyDosage = 148,
   AlchemicalOverkill = 149,
-  Count = 150,
+
+  // -- Exploration bucket (Milestone 2, ids 150-174): tiles-walked tiers,
+  // full-floor-clear tiers, and depth+exploration compounds. Avoids the
+  // legacy exploration group's exact thresholds (Cartographer=1 floor,
+  // Thorough=5, Obsessive=20, Wanderer=2000/Pathfinder=10000 lifetime
+  // tiles, Wanderer of Fourteen=500 tiles at depth 14). --
+  FirstFootprints = 150,
+  WornPath = 151,
+  BeatenTrack = 152,
+  LongWalk = 153,
+  GrandTour = 154,
+  Wayfarer = 155,
+  EndlessTrek = 156,
+  HorizonChaser = 157,
+  SecondSweep = 158,
+  TripleCheck = 159,
+  QuadCleared = 160,
+  EightFloorSweep = 161,
+  DozenCleared = 162,
+  SixteenSwept = 163,
+  EighteenExhausted = 164,
+  GroundedAtFour = 165,
+  MappedAtSeven = 166,
+  WellTroddenAtNine = 167,
+  ChartedAtTwelve = 168,
+  LongRoadAtFourteen = 169,
+  SurveyedAtSixteen = 170,
+  GrandTouristAtEighteen = 171,
+  MeticulousAtNineteen = 172,
+  WayfarerOfTwentyOne = 173,
+  CartographersPeakAtTwentyFour = 174,
+  Count = 175,
 };
 
 // Bounds-safe lookup: AchievementId now runs past ACHIEVEMENT_DEF_COUNT (the
@@ -355,6 +386,31 @@ inline const char* achievementShortName(AchievementId id) {
     case AchievementId::SipAndSee: return "Sip and See";
     case AchievementId::SteadyDosage: return "Steady Dosage";
     case AchievementId::AlchemicalOverkill: return "Alchemical Overkill";
+    case AchievementId::FirstFootprints: return "First Footprints";
+    case AchievementId::WornPath: return "Worn Path";
+    case AchievementId::BeatenTrack: return "Beaten Track";
+    case AchievementId::LongWalk: return "Long Walk";
+    case AchievementId::GrandTour: return "Grand Tour";
+    case AchievementId::Wayfarer: return "Wayfarer";
+    case AchievementId::EndlessTrek: return "Endless Trek";
+    case AchievementId::HorizonChaser: return "Horizon Chaser";
+    case AchievementId::SecondSweep: return "Second Sweep";
+    case AchievementId::TripleCheck: return "Triple Check";
+    case AchievementId::QuadCleared: return "Quad Cleared";
+    case AchievementId::EightFloorSweep: return "Eight-Floor Sweep";
+    case AchievementId::DozenCleared: return "Dozen Cleared";
+    case AchievementId::SixteenSwept: return "Sixteen Swept";
+    case AchievementId::EighteenExhausted: return "Eighteen Exhausted";
+    case AchievementId::GroundedAtFour: return "Grounded at Four";
+    case AchievementId::MappedAtSeven: return "Mapped at Seven";
+    case AchievementId::WellTroddenAtNine: return "Well-Trodden at Nine";
+    case AchievementId::ChartedAtTwelve: return "Charted at Twelve";
+    case AchievementId::LongRoadAtFourteen: return "Long Road at Fourteen";
+    case AchievementId::SurveyedAtSixteen: return "Surveyed at Sixteen";
+    case AchievementId::GrandTouristAtEighteen: return "Grand Tourist at Eighteen";
+    case AchievementId::MeticulousAtNineteen: return "Meticulous at Nineteen";
+    case AchievementId::WayfarerOfTwentyOne: return "Wayfarer of Twenty-One";
+    case AchievementId::CartographersPeakAtTwentyFour: return "Cartographer's Peak at Twenty-Four";
     default: return "";
   }
 }

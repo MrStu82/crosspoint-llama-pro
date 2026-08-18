@@ -781,10 +781,37 @@ inline constexpr AchievementDef ACHIEVEMENT_DEFS[] = {
     {"Sip and See", "Drank 3 potions in a single run.", AchievementReward::None, 0},
     {"Steady Dosage", "Drank 6 potions in a single run.", AchievementReward::Buff, 7},
     {"Alchemical Overkill", "Drank 20 potions in a single run.", AchievementReward::Skill, 1},
+
+    // -- Exploration bucket (Milestone 2, ids 150-174) --
+    {"First Footprints", "Walked 100 tiles in a single run.", AchievementReward::None, 0},
+    {"Worn Path", "Walked 250 tiles in a single run.", AchievementReward::Buff, 1},
+    {"Beaten Track", "Walked 450 tiles in a single run.", AchievementReward::Buff, 5},
+    {"Long Walk", "Walked 800 tiles in a single run.", AchievementReward::Buff, 9},
+    {"Grand Tour", "Walked 1200 tiles in a single run.", AchievementReward::Skill, 2},
+    {"Wayfarer", "Walked 1800 tiles in a single run.", AchievementReward::Skill, 5},
+    {"Endless Trek", "Walked 2500 tiles in a single run.", AchievementReward::Skill, 7},
+    {"Horizon Chaser", "Walked 3500 tiles in a single run.", AchievementReward::Title, 13},
+    {"Second Sweep", "Fully explored 2 floors in a single run.", AchievementReward::None, 0},
+    {"Triple Check", "Fully explored 3 floors in a single run.", AchievementReward::Buff, 2},
+    {"Quad Cleared", "Fully explored 4 floors in a single run.", AchievementReward::Buff, 6},
+    {"Eight-Floor Sweep", "Fully explored 8 floors in a single run.", AchievementReward::Buff, 10},
+    {"Dozen Cleared", "Fully explored 12 floors in a single run.", AchievementReward::Skill, 3},
+    {"Sixteen Swept", "Fully explored 16 floors in a single run.", AchievementReward::Skill, 4},
+    {"Eighteen Exhausted", "Fully explored 18 floors in a single run.", AchievementReward::Skill, 6},
+    {"Grounded at Four", "Reached depth 4 having already walked 100 tiles this run.", AchievementReward::Buff, 1},
+    {"Mapped at Seven", "Reached depth 7 having fully explored 2 floors this run.", AchievementReward::Buff, 4},
+    {"Well-Trodden at Nine", "Reached depth 9 having walked 450 tiles this run.", AchievementReward::Buff, 8},
+    {"Charted at Twelve", "Reached depth 12 having fully explored 3 floors this run.", AchievementReward::Skill, 2},
+    {"Long Road at Fourteen", "Reached depth 14 having walked 800 tiles this run.", AchievementReward::Buff, 11},
+    {"Surveyed at Sixteen", "Reached depth 16 having fully explored 4 floors this run.", AchievementReward::Skill, 5},
+    {"Grand Tourist at Eighteen", "Reached depth 18 having walked 1200 tiles this run.", AchievementReward::Skill, 1},
+    {"Meticulous at Nineteen", "Reached depth 19 having fully explored 8 floors this run.", AchievementReward::Skill, 7},
+    {"Wayfarer of Twenty-One", "Reached depth 21 having walked 1800 tiles this run.", AchievementReward::Title, 15},
+    {"Cartographer's Peak at Twenty-Four", "Reached depth 24 having fully explored 12 floors this run.", AchievementReward::Title, 6},
 };
 
 inline constexpr int ACHIEVEMENT_DEF_COUNT = sizeof(ACHIEVEMENT_DEFS) / sizeof(ACHIEVEMENT_DEFS[0]);
-static_assert(ACHIEVEMENT_DEF_COUNT == 150, "ACHIEVEMENT_DEFS must have exactly 150 entries");
+static_assert(ACHIEVEMENT_DEF_COUNT == 175, "ACHIEVEMENT_DEFS must have exactly 175 entries");
 
 // Bounds-safe achievementDef(AchievementId) lookup lives in Achievements.h,
 // not here -- AchievementId is declared there (which already includes this

@@ -48,43 +48,9 @@ bool hasLineOfSight(const game::Tile* tiles, int x0, int y0, int x1, int y1) {
   return true;
 }
 
-// Calculate total attack bonus from equipped weapons
-int equippedAttackBonus() {
-  int bonus = 0;
-  for (uint8_t i = 0; i < GAME_STATE.inventoryCount; i++) {
-    const auto& item = GAME_STATE.inventory[i];
-    if (item.flags & static_cast<uint8_t>(game::ItemFlag::Equipped)) {
-      for (int d = 0; d < game::ITEM_DEF_COUNT; d++) {
-        if (game::ITEM_DEFS[d].type == item.type && game::ITEM_DEFS[d].subtype == item.subtype) {
-          bonus += game::ITEM_DEFS[d].attack + item.enchantment;
-          break;
-        }
-      }
-    }
-  }
-  // Sponsors (Phase 11): applied at point of use, never written into base stats.
-  bonus += game::sponsorAttackModifier(GAME_STATE.player.activeSponsorId);
-  return bonus;
-}
-
-// Calculate total defense bonus from equipped armor/shields
-int equippedDefenseBonus() {
-  int bonus = 0;
-  for (uint8_t i = 0; i < GAME_STATE.inventoryCount; i++) {
-    const auto& item = GAME_STATE.inventory[i];
-    if (item.flags & static_cast<uint8_t>(game::ItemFlag::Equipped)) {
-      for (int d = 0; d < game::ITEM_DEF_COUNT; d++) {
-        if (game::ITEM_DEFS[d].type == item.type && game::ITEM_DEFS[d].subtype == item.subtype) {
-          bonus += game::ITEM_DEFS[d].defense + item.enchantment;
-          break;
-        }
-      }
-    }
-  }
-  // Sponsors (Phase 11): applied at point of use, never written into base stats.
-  bonus += game::sponsorDefenseModifier(GAME_STATE.player.activeSponsorId);
-  return bonus;
-}
+// equippedAttackBonus()/equippedDefenseBonus() now live in game/GameState.h --
+// shared with the character/inventory screens' gear-effect displays, see the
+// comment there.
 
 // Check if a tile is walkable for monsters
 bool isWalkable(game::Tile tile) {
@@ -190,6 +156,27 @@ void GameActivity::loop() {
     }
     if (dismissed) {
       onGoHome();
+    }
+    return;
+  }
+
+  updateNotificationAutoDismiss();
+
+  if (gameRenderer.notificationActive()) {
+    // Dismiss-on-input, reusing the death/victory blocking-screen dismiss
+    // pattern above: any button release or screen tap dismisses the banner
+    // and is consumed by the dismiss -- it does not also trigger the
+    // underlying move/action/menu, same as a tap-dismiss on the end screen
+    // doesn't also re-trigger whatever was tapped.
+    bool dismissed = mappedInput.wasReleased(Button::Up) || mappedInput.wasReleased(Button::Down) ||
+                     mappedInput.wasReleased(Button::Left) || mappedInput.wasReleased(Button::Right) ||
+                     mappedInput.wasReleased(Button::Confirm) || mappedInput.wasReleased(Button::Back);
+    if (!dismissed) {
+      int tx, ty;
+      dismissed = mappedInput.wasScreenTapped(tx, ty);
+    }
+    if (dismissed) {
+      gameRenderer.dismissNotification();
     }
     return;
   }
@@ -300,17 +287,26 @@ void GameActivity::onGameMenuResult(const ActivityResult& result) {
 }
 
 void GameActivity::showPendingAchievementNotifications() {
+  // One achievement banner at a time -- AchievementBus now queues ids instead
+  // of pre-joined flavor text (kills the " / " concatenation at the source),
+  // so a multi-unlock emit() drains one id per call instead of one combined
+  // banner. Don't clobber a banner that's still showing; the next queued id
+  // surfaces on the next poll after the current one dismisses (turn-count or
+  // input, see updateNotificationDismiss()).
+  if (gameRenderer.notificationActive()) return;
   if (!ACHIEVEMENTS.hasNewUnlock()) return;
+  gameRenderer.showAchievementNotification(ACHIEVEMENTS.consumeNewUnlockId());
+  notificationShownAtTurn_ = GAME_STATE.player.turnCount;
+}
 
-  char combined[192] = "";
-  bool first = true;
-  while (ACHIEVEMENTS.hasNewUnlock()) {
-    const char* flavor = ACHIEVEMENTS.consumeNewUnlockFlavor();
-    size_t len = strlen(combined);
-    snprintf(combined + len, sizeof(combined) - len, "%s%s", first ? "" : " / ", flavor);
-    first = false;
+void GameActivity::updateNotificationAutoDismiss() {
+  // Auto-dismiss after 3 game turns (parent's msg 4062: snapshot-turn-count
+  // over hooking all five p.turnCount++ sites) -- dismiss-on-input is wired
+  // separately in loop(), reusing the death/victory dismiss pattern.
+  if (!gameRenderer.notificationActive()) return;
+  if (GAME_STATE.player.turnCount - notificationShownAtTurn_ >= 3) {
+    gameRenderer.dismissNotification();
   }
-  gameRenderer.showNotification(NotificationKind::Achievement, combined);
 }
 
 // --- Movement ---
@@ -351,7 +347,7 @@ void GameActivity::handleMove(int dx, int dy) {
     if (monsters[i].x == newX && monsters[i].y == newY && monsters[i].hp > 0) {
       // Melee attack (strength + weapon bonus vs monster defense)
       const auto& def = game::MONSTER_DEFS[monsters[i].type];
-      int atkPower = static_cast<int>(p.strength) + equippedAttackBonus();
+      int atkPower = static_cast<int>(p.strength) + game::equippedAttackBonus();
       int damage = std::max(1, atkPower - static_cast<int>(def.defense));
       // Add some variance
       damage = std::max(1, damage + GAME_STATE.rollRangeInclusive(-damage / 4, damage / 4));
@@ -971,7 +967,7 @@ void GameActivity::monsterAttackPlayer(game::Monster& m) {
   // Monster attack vs player dexterity + armor bonus. Sponsor modifiers (e.g. the
   // Adjudicator's Legal Team) can drive this negative -- clamp to zero so a bad
   // sponsor roll can never flip into a damage multiplier via the subtraction below.
-  int playerDef = static_cast<int>(p.dexterity / 3) + equippedDefenseBonus();
+  int playerDef = static_cast<int>(p.dexterity / 3) + game::equippedDefenseBonus();
   if (playerDef < 0) playerDef = 0;
   int damage = std::max(1, static_cast<int>(def.attack) - playerDef);
   damage = std::max(1, damage + GAME_STATE.rollRangeInclusive(-damage / 4, damage / 4));

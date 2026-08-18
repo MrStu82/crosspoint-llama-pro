@@ -551,14 +551,19 @@ void GfxRenderer::drawCenteredText(const int fontId, const int y, const char* te
   // -1 is the "no box given" sentinel (see the header) -- resolve it to the real
   // screen width here, where a `this` is actually available to call getScreenWidth().
   const int resolvedBoxWidth = (boxWidth < 0) ? getScreenWidth() : boxWidth;
-  const int textWidth = getTextWidth(fontId, text, style, baseDir);
+  // Truncate before measuring/centering so textWidth can never exceed the box --
+  // this guards the right edge structurally (the geometry is made safe, not just
+  // the paint), matching the left-edge clamp below rather than leaving only one
+  // side protected.
+  const std::string truncated = truncatedText(fontId, text, resolvedBoxWidth, style);
+  const int textWidth = getTextWidth(fontId, truncated.c_str(), style, baseDir);
   int x = boxX + (resolvedBoxWidth - textWidth) / 2;
   // Never let centering push the draw outside the declared box -- a box that's too
   // narrow for the text clamps to the box's left edge rather than overflowing it.
   if (x < boxX) {
     x = boxX;
   }
-  drawText(fontId, x, y, text, black, style, baseDir);
+  drawText(fontId, x, y, truncated.c_str(), black, style, baseDir);
 }
 
 void GfxRenderer::drawText(const int fontId, const int x, const int y, const char* text, const bool black,

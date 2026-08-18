@@ -525,8 +525,14 @@ void GameRenderer::drawControls(GfxRenderer& renderer) const {
 
   // Right side: Action (top) / Menu (bottom) bordered buttons, stacked, spanning the
   // remaining width. Each is CONTROL_ROW_H tall with a visible border rectangle.
-  const int buttonX = DPAD_W;
-  const int buttonW = screenW - DPAD_W;
+  // A fixed gap separates the buttons from the d-pad (previously butted flush
+  // against it with no visual separation), and the border is drawn at the same
+  // 2px weight used elsewhere for bordered buttons (GameTitleActivity.cpp:195,
+  // ScreenshotUtil.cpp:96) instead of the 1px default. hitTestControls()'s
+  // `x < DPAD_W` split is deliberately left untouched -- the gap band still
+  // hit-tests as part of the Action/Menu region.
+  const int buttonX = DPAD_W + CONTROL_BUTTON_GAP;
+  const int buttonW = screenW - buttonX;
   const int buttonH = (CONTROLS_H) / ACTION_MENU_BUTTON_COUNT;
 
   static constexpr StrId kButtonLabelIds[ACTION_MENU_BUTTON_COUNT] = {
@@ -536,7 +542,7 @@ void GameRenderer::drawControls(GfxRenderer& renderer) const {
 
   for (int i = 0; i < ACTION_MENU_BUTTON_COUNT; i++) {
     const int buttonY = controlsY + i * buttonH;
-    renderer.drawRect(buttonX, buttonY, buttonW, buttonH);
+    renderer.drawRect(buttonX, buttonY, buttonW, buttonH, 2, true);
 
     const char* label = I18n::getInstance().get(kButtonLabelIds[i]);
     const int textW = renderer.getTextWidth(SMALL_FONT_ID, label);
@@ -772,6 +778,15 @@ void GameRenderer::showNotification(NotificationKind kind, const char* body) {
   notificationDirty_ = true;
 }
 
+void GameRenderer::showAchievementNotification(game::AchievementId id) {
+  notificationActive_ = true;
+  notificationKind_ = NotificationKind::Achievement;
+  snprintf(notificationBody_, NOTIFICATION_BODY_LEN, "%s", game::achievementShortName(id));
+  const game::AchievementDef& def = game::ACHIEVEMENT_DEFS[static_cast<uint8_t>(id)];
+  game::achievementRewardText(def, notificationRewardBody_, NOTIFICATION_BODY_LEN);
+  notificationDirty_ = true;
+}
+
 void GameRenderer::dismissNotification() {
   if (!notificationActive_) return;
   notificationActive_ = false;
@@ -811,6 +826,28 @@ void GameRenderer::drawNotification(GfxRenderer& renderer) const {
   // title (NOTIFICATION_TITLE_H) + this gap + one body line must fit inside
   // BANNER_H, same box-clamp discipline as every other drawCenteredText call
   // site now follows (rect.x/rect.w clamp already applied below).
-  renderer.drawCenteredText(UI_10_FONT_ID, rect.y + NOTIFICATION_TITLE_H + 4, notificationBody_, true,
+  const int bodyTop = rect.y + NOTIFICATION_TITLE_H + 4;
+  if (notificationKind_ == NotificationKind::Achievement) {
+    // Banner content redesign (Pixel's spec, ratified msg 4062): exactly two
+    // fields -- Name (bold) then Reward (regular) below it. Reward is omitted
+    // for the 30/48 achievements with AchievementReward::None, and the Name
+    // line is vertically centered in the body band instead, rather than
+    // sitting pinned to the top with a dead second line beneath it.
+    if (notificationRewardBody_[0] != '\0') {
+      renderer.drawCenteredText(UI_10_FONT_ID, bodyTop, notificationBody_, true, EpdFontFamily::BOLD,
+                                BidiUtils::BidiBaseDir::AUTO, rect.x, rect.w);
+      const int lineH = renderer.getLineHeight(UI_10_FONT_ID);
+      renderer.drawCenteredText(UI_10_FONT_ID, bodyTop + lineH, notificationRewardBody_, true,
+                                EpdFontFamily::REGULAR, BidiUtils::BidiBaseDir::AUTO, rect.x, rect.w);
+    } else {
+      const int bodyBandH = rect.h - NOTIFICATION_TITLE_H;
+      const int lineH = renderer.getLineHeight(UI_10_FONT_ID);
+      const int centeredY = rect.y + NOTIFICATION_TITLE_H + (bodyBandH - lineH) / 2;
+      renderer.drawCenteredText(UI_10_FONT_ID, centeredY, notificationBody_, true, EpdFontFamily::BOLD,
+                                BidiUtils::BidiBaseDir::AUTO, rect.x, rect.w);
+    }
+    return;
+  }
+  renderer.drawCenteredText(UI_10_FONT_ID, bodyTop, notificationBody_, true,
                             EpdFontFamily::REGULAR, BidiUtils::BidiBaseDir::AUTO, rect.x, rect.w);
 }

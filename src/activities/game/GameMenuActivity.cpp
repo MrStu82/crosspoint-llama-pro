@@ -690,7 +690,27 @@ void GameMenuActivity::renderInventory() {
               return std::string("");
           }
         },
-        nullptr, nullptr);
+        nullptr,
+        [](int index) {
+          const auto& item = GAME_STATE.inventory[index];
+          for (int d = 0; d < game::ITEM_DEF_COUNT; d++) {
+            if (game::ITEM_DEFS[d].type == item.type && game::ITEM_DEFS[d].subtype == item.subtype) {
+              int atk = game::ITEM_DEFS[d].attack + item.enchantment;
+              int def = game::ITEM_DEFS[d].defense + item.enchantment;
+              if (atk > 0) {
+                return "+" + std::to_string(atk) + " ATK";
+              }
+              if (def > 0) {
+                return "+" + std::to_string(def) + " DEF";
+              }
+              if (item.count > 1) {
+                return "x" + std::to_string(item.count);
+              }
+              return std::string("");
+            }
+          }
+          return std::string("");
+        });
   }
 
   const char* confirmLabel = invCount > 0 ? tr(STR_DM_USE_EQUIP) : "";
@@ -759,6 +779,24 @@ void GameMenuActivity::renderCharacter() {
 
   y += 10;  // spacer
 
+  // What the gear is actually doing (Stuart's ask): the real combat formulas,
+  // base stat + equipped bonus (weapons/armor/shields + active sponsor -- see
+  // game::equippedAttackBonus()/equippedDefenseBonus() in GameState.h), not a
+  // rewrite of the base stat itself.
+  int atkBonus = game::equippedAttackBonus();
+  int atkPower = static_cast<int>(p.strength) + atkBonus;
+  snprintf(buf, sizeof(buf), "Attack Power: %d (%u %+d)", atkPower, p.strength, atkBonus);
+  renderer.drawText(UI_10_FONT_ID, x, y, buf);
+  y += lineH;
+
+  int defBonus = game::equippedDefenseBonus();
+  int playerDef = static_cast<int>(p.dexterity / 3) + defBonus;
+  snprintf(buf, sizeof(buf), "Defense: %d (%u %+d)", playerDef, static_cast<unsigned>(p.dexterity / 3), defBonus);
+  renderer.drawText(UI_10_FONT_ID, x, y, buf);
+  y += lineH;
+
+  y += 10;  // spacer
+
   snprintf(buf, sizeof(buf), "Experience: %lu", static_cast<unsigned long>(p.experience));
   renderer.drawText(UI_10_FONT_ID, x, y, buf);
   y += lineH;
@@ -794,6 +832,13 @@ void GameMenuActivity::renderCharacter() {
           std::string name = game::ITEM_DEFS[d].name;
           if (item.enchantment > 0) {
             name += " +" + std::to_string(item.enchantment);
+          }
+          int atk = game::ITEM_DEFS[d].attack + item.enchantment;
+          int def = game::ITEM_DEFS[d].defense + item.enchantment;
+          if (atk > 0) {
+            name += "  +" + std::to_string(atk) + " ATK";
+          } else if (def > 0) {
+            name += "  +" + std::to_string(def) + " DEF";
           }
           renderer.drawText(UI_10_FONT_ID, x + 10, y, name.c_str());
           y += lineH;
@@ -857,20 +902,11 @@ void GameMenuActivity::renderAchievements() {
         [&unlockedIds](int index) {
           const auto& def = game::ACHIEVEMENT_DEFS[unlockedIds[index]];
           std::string subtitle = def.description;
-          switch (def.reward) {
-            case game::AchievementReward::None:
-              break;
-            case game::AchievementReward::Title:
-              subtitle += " -- Unlocks title: ";
-              subtitle += game::TITLE_STRINGS[def.rewardValue];
-              break;
-            case game::AchievementReward::SponsorUnlock:
-              subtitle += " -- Unlocks sponsor: ";
-              subtitle += game::SPONSOR_DEFS[def.rewardValue].name;
-              break;
-            case game::AchievementReward::LoreUnlock:
-              subtitle += " -- Unlocks a lore entry";
-              break;
+          char rewardBuf[64];
+          game::achievementRewardText(def, rewardBuf, sizeof(rewardBuf));
+          if (rewardBuf[0] != '\0') {
+            subtitle += " -- ";
+            subtitle += rewardBuf;
           }
           return subtitle;
         },

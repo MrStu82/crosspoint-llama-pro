@@ -40,7 +40,7 @@ class AchievementBus {
   uint8_t floorsExploredFully = 0;     // Cartographer / Thorough / Obsessive. Capped at 255 (Obsessive only needs 20).
   uint32_t magpiePickupCount = 0;      // Magpie: real lifetime item-pickup count, not derived/faked.
 
-  // Queue of pending new-unlock (lifetime, not just this-run) flavor texts --
+  // Queue of pending new-unlock (lifetime, not just this-run) achievement ids --
   // lets GameActivity drive a boxed System notification (Phase 9 work item 3)
   // without this class knowing anything about GameRenderer/UI. A single
   // emit() call can unlock more than one achievement at once (e.g.
@@ -48,15 +48,14 @@ class AchievementBus {
   // than a single flag+pointer -- otherwise a second unlock in the same
   // emit() silently overwrites the first before either is ever consumed.
   // Sized generously above the current worst case for headroom. Consumed one
-  // at a time via consumeNewUnlockFlavor() so a caller that never checks just
-  // leaves the queue populated, no crash risk.
+  // at a time via consumeNewUnlockId() so a caller that never checks just
+  // leaves the queue populated, no crash risk. Stores the id rather than a
+  // pre-joined flavor string so the banner can resolve Name/Reward straight
+  // from ACHIEVEMENT_DEFS -- kills the " / " concatenation that used to
+  // happen at drain time.
   static constexpr uint8_t MAX_PENDING_UNLOCKS = 8;
-  char pendingFlavors_[MAX_PENDING_UNLOCKS][96] = {};
+  game::AchievementId pendingIds_[MAX_PENDING_UNLOCKS] = {};
   uint8_t pendingCount_ = 0;
-  // Scratch return buffer for consumeNewUnlockFlavor() -- callers get a
-  // stable const char* back, not a reference into the queue storage that
-  // shifts on pop.
-  char lastUnlockFlavor_[96] = "";
 
  public:
   static AchievementBus& getInstance() { return instance; }
@@ -79,11 +78,10 @@ class AchievementBus {
   // showPendingAchievementNotifications()) to drain everything queued by
   // the most recent emit() call.
   bool hasNewUnlock() const { return pendingCount_ > 0; }
-  // Pops and returns the flavor text for the oldest pending new unlock
-  // (flash-resident literal passed to unlock(), copied into a fixed buffer
-  // -- no heap). Call hasNewUnlock() first; returns "" if the queue is
-  // empty rather than crashing.
-  const char* consumeNewUnlockFlavor();
+  // Pops and returns the id of the oldest pending new unlock. Call
+  // hasNewUnlock() first; returns AchievementId::Count (an out-of-range
+  // sentinel, never a real id) if the queue is empty rather than crashing.
+  game::AchievementId consumeNewUnlockId();
 
   // Called by GameActivity's move handling so lifetime tile-walk tracking
   // (Wanderer/Pathfinder) stays decoupled from the event-switch pattern used

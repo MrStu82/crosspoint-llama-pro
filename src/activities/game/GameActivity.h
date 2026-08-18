@@ -87,14 +87,26 @@ class GameActivity final : public Activity {
   void handleMove(int dx, int dy);
   void handleAction();
   // Single choke point for draining ACHIEVEMENTS' pending-unlock queue and
-  // surfacing it as exactly one boxed notification. A single game event can
-  // unlock more than one achievement at once (e.g. FloorChanged's triple
-  // check, or a thrown boss-overkill unlocking both PercussiveMaintenance
-  // and EscalationOfForce) -- showNotification() only has room for one body
-  // at a time, so multiple pending flavors are joined into one message
-  // rather than the second silently overwriting the first before either
-  // renders. No-op if nothing is pending.
+  // surfacing it as a boxed notification, one achievement at a time. A single
+  // game event can unlock more than one achievement at once (e.g.
+  // FloorChanged's triple check, or a thrown boss-overkill unlocking both
+  // PercussiveMaintenance and EscalationOfForce) -- rather than joining them
+  // into one message, this shows the oldest pending id and leaves the rest
+  // queued; it's a no-op while a notification is already active, so the next
+  // one surfaces on the next poll after the current banner auto-dismisses.
   void showPendingAchievementNotifications();
+  // Auto-dismisses the active notification banner after 3 game turns (a
+  // snapshot of p.turnCount taken at show time vs. the live count -- no
+  // timer, no animation) or immediately on the player's next input,
+  // whichever lands first. Called once per loop() iteration; no-op if no
+  // notification is active. Reuses gameRenderer.dismissNotification(), which
+  // until this change had never once been called from anywhere.
+  void updateNotificationAutoDismiss();
+  // Turn count at the moment the current notification was shown (see
+  // showAchievementNotification()/showNotification() call sites) -- compared
+  // against the live turn count by updateNotificationAutoDismiss(). Only
+  // meaningful while gameRenderer.notificationActive() is true.
+  uint32_t notificationShownAtTurn_ = 0;
   // Resolves a throw committed from GameMenuActivity's Screen::ThrowTarget: consumes
   // inventoryIndex's item, finds the nearest monster in line along dir, applies
   // dexterity-based damage, and emits GameEventType::ItemThrown.

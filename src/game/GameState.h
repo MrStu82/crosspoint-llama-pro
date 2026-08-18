@@ -52,3 +52,46 @@ class GameState {
 };
 
 #define GAME_STATE GameState::getInstance()
+
+namespace game {
+
+// Total attack/defense bonus from equipped weapons/armor/shields plus the
+// active sponsor modifier. Shared by GameActivity's combat math and the
+// character/inventory screens' gear-effect displays -- one computation, read
+// everywhere it's needed, never mutated into a base stat (see the sponsor
+// comment on Player::activeSponsorId in GameTypes.h).
+inline int equippedAttackBonus() {
+  int bonus = 0;
+  for (uint8_t i = 0; i < GAME_STATE.inventoryCount; i++) {
+    const auto& item = GAME_STATE.inventory[i];
+    if (item.flags & static_cast<uint8_t>(ItemFlag::Equipped)) {
+      for (int d = 0; d < ITEM_DEF_COUNT; d++) {
+        if (ITEM_DEFS[d].type == item.type && ITEM_DEFS[d].subtype == item.subtype) {
+          bonus += ITEM_DEFS[d].attack + item.enchantment;
+          break;
+        }
+      }
+    }
+  }
+  bonus += sponsorAttackModifier(GAME_STATE.player.activeSponsorId);
+  return bonus;
+}
+
+inline int equippedDefenseBonus() {
+  int bonus = 0;
+  for (uint8_t i = 0; i < GAME_STATE.inventoryCount; i++) {
+    const auto& item = GAME_STATE.inventory[i];
+    if (item.flags & static_cast<uint8_t>(ItemFlag::Equipped)) {
+      for (int d = 0; d < ITEM_DEF_COUNT; d++) {
+        if (ITEM_DEFS[d].type == item.type && ITEM_DEFS[d].subtype == item.subtype) {
+          bonus += ITEM_DEFS[d].defense + item.enchantment;
+          break;
+        }
+      }
+    }
+  }
+  bonus += sponsorDefenseModifier(GAME_STATE.player.activeSponsorId);
+  return bonus;
+}
+
+}  // namespace game

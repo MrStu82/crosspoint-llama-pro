@@ -91,6 +91,9 @@ class GameRenderer {
   // Action/Menu bordered buttons occupy the right half of the control area, stacked
   // vertically (Action on top, Menu below), each spanning the remaining width.
   static constexpr int ACTION_MENU_BUTTON_COUNT = 2;
+  // Visual gap between the d-pad region and the Action/Menu buttons -- they
+  // previously butted flush against each other with no separation.
+  static constexpr int CONTROL_BUTTON_GAP = 20;
 
   // Computed at init
   int viewportW = 0;   // Pixels
@@ -185,6 +188,16 @@ class GameRenderer {
   // partial-refresh path (never FULL_REFRESH -- req 4).
   void showNotification(NotificationKind kind, const char* body);
 
+  // Shows the boxed System notification for an achievement unlock (Phase 9
+  // work item 3, banner content redesign). Resolves Name (via
+  // game::achievementShortName()) and Reward (via game::achievementRewardText(),
+  // empty for AchievementReward::None) itself -- callers only need the id, not
+  // the resolved text. Reuses showNotification()'s state/dirty machinery;
+  // drawNotification() branches on NotificationKind::Achievement to lay the
+  // two fields out as Name-bold-line-1/Reward-line-2, or Name alone vertically
+  // centered when there's no reward.
+  void showAchievementNotification(game::AchievementId id);
+
   // Clears the active notification. Marks the region dirty so the next
   // planFrame()/draw() call erases it back to white via a partial refresh.
   // No-op (no dirty window queued) if nothing is currently showing.
@@ -269,6 +282,11 @@ class GameRenderer {
   bool notificationActive_ = false;
   NotificationKind notificationKind_ = NotificationKind::LevelUp;
   char notificationBody_[NOTIFICATION_BODY_LEN] = "";
+  // Achievement-only second line (the resolved Reward phrase). Empty for every
+  // other NotificationKind and for AchievementReward::None -- drawNotification()
+  // treats an empty string as "omit this line, center the Name instead" (see
+  // showAchievementNotification()).
+  char notificationRewardBody_[NOTIFICATION_BODY_LEN] = "";
   // Set by showNotification()/dismissNotification(), consumed (and cleared)
   // the next time planFrame() builds a FramePlan -- exactly one Notification
   // DirtyWindow is queued per state change, not one per frame.

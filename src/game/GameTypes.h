@@ -1,6 +1,7 @@
 #pragma once
 
 #include <cstdint>
+#include <cstdio>
 
 namespace game {
 
@@ -530,5 +531,27 @@ inline constexpr AchievementDef ACHIEVEMENT_DEFS[] = {
 
 inline constexpr int ACHIEVEMENT_DEF_COUNT = sizeof(ACHIEVEMENT_DEFS) / sizeof(ACHIEVEMENT_DEFS[0]);
 static_assert(ACHIEVEMENT_DEF_COUNT == 48, "ACHIEVEMENT_DEFS must have exactly 48 entries");
+
+// Resolves an achievement's reward through TITLE_STRINGS/SPONSOR_DEFS into a
+// short display phrase, e.g. "Unlocks title: the Reckless". Writes an empty
+// string for AchievementReward::None. Shared by the achievement list's
+// subtitle line (GameMenuActivity) and the unlock banner's reward line
+// (GameRenderer) so the resolution logic exists in exactly one place.
+inline void achievementRewardText(const AchievementDef& def, char* out, size_t outSize) {
+  switch (def.reward) {
+    case AchievementReward::None:
+      if (outSize > 0) out[0] = '\0';
+      break;
+    case AchievementReward::Title:
+      snprintf(out, outSize, "Unlocks title: %s", TITLE_STRINGS[def.rewardValue]);
+      break;
+    case AchievementReward::SponsorUnlock:
+      snprintf(out, outSize, "Unlocks sponsor: %s", SPONSOR_DEFS[def.rewardValue].name);
+      break;
+    case AchievementReward::LoreUnlock:
+      snprintf(out, outSize, "Unlocks a lore entry");
+      break;
+  }
+}
 
 }  // namespace game

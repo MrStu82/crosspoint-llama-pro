@@ -108,7 +108,7 @@ void AchievementBus::unlock(game::AchievementId id, const char* flavorText) {
   if (pendingCount_ >= MAX_PENDING_UNLOCKS) {
     LOG_ERR("ACH", "pending-unlock queue full, dropping notification for: %s", flavorText);
   } else {
-    snprintf(pendingFlavors_[pendingCount_], sizeof(pendingFlavors_[pendingCount_]), "%s", flavorText);
+    pendingIds_[pendingCount_] = id;
     pendingCount_++;
   }
 
@@ -124,22 +124,18 @@ void AchievementBus::unlock(game::AchievementId id, const char* flavorText) {
   }
 }
 
-const char* AchievementBus::consumeNewUnlockFlavor() {
+game::AchievementId AchievementBus::consumeNewUnlockId() {
   if (pendingCount_ == 0) {
-    lastUnlockFlavor_[0] = '\0';
-    return lastUnlockFlavor_;
+    return game::AchievementId::Count;
   }
-  snprintf(lastUnlockFlavor_, sizeof(lastUnlockFlavor_), "%s", pendingFlavors_[0]);
+  game::AchievementId id = pendingIds_[0];
   // Shift remaining entries down -- pendingCount_ is bounded at
-  // MAX_PENDING_UNLOCKS (8), so this is a handful of byte copies at most.
-  // memmove (not snprintf) since the two rows are adjacent same-typed array
-  // elements -- avoids a spurious -Wrestrict warning from a %s copy where the
-  // compiler can't statically prove non-overlap between rows of the same array.
+  // MAX_PENDING_UNLOCKS (8), so this is a handful of element copies at most.
   for (uint8_t i = 1; i < pendingCount_; i++) {
-    memmove(pendingFlavors_[i - 1], pendingFlavors_[i], sizeof(pendingFlavors_[i - 1]));
+    pendingIds_[i - 1] = pendingIds_[i];
   }
   pendingCount_--;
-  return lastUnlockFlavor_;
+  return id;
 }
 
 void AchievementBus::addTilesWalked(uint32_t n) {

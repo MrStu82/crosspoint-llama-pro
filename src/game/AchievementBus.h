@@ -1,6 +1,7 @@
 #pragma once
 
 #include "Achievements.h"
+#include "AchievementConditions.h"
 
 class AchievementBus {
   static AchievementBus instance;
@@ -56,6 +57,37 @@ class AchievementBus {
   static constexpr uint8_t MAX_PENDING_UNLOCKS = 8;
   game::AchievementId pendingIds_[MAX_PENDING_UNLOCKS] = {};
   uint8_t pendingCount_ = 0;
+
+  // -- Data-driven condition table (AchievementConditions.h), additive to the
+  // hand-coded switch in emit() above. Only covers ids from IronStomach (48)
+  // onward -- the original 48 stay hand-coded and unconditionally unlockable,
+  // exactly as before. --
+
+  // First id in the drawable pool. Ids below this are the legacy hand-coded
+  // set and are never subject to the per-run draw guard.
+  static constexpr uint8_t FIRST_DRAWABLE_ID = 48;
+
+  // Random per-run subset of the drawable pool (parent's amendment: "the
+  // guard is the load-bearing piece"). An id at/above FIRST_DRAWABLE_ID that
+  // isn't in this set cannot fire, no matter what its condition row says.
+  // Drawn fresh by resetRun() from GAME_STATE's combat RNG stream, so it's
+  // deterministic per run seed like everything else in a run. Sized to the
+  // eventual 50-per-run design target; today's table (12 rows) draws all of
+  // itself since 12 < 50, which is a trivial but real exercise of the same
+  // code path the eventual 200-300-entry pool will use.
+  static constexpr uint8_t DRAWN_POOL_SIZE = 50;
+  game::AchievementId drawnThisRun_[DRAWN_POOL_SIZE] = {};
+  uint8_t drawnCount_ = 0;
+
+  // Per-row runtime state, indexed by position in game::CONDITIONS (not by
+  // AchievementId) -- reset every run. Doubles as the EventCount counter and
+  // the ItemSpecific match counter (the two condition types never share a
+  // row index), and as the NoEventInWindow "was this window broken" flag.
+  uint16_t conditionEventCounts_[game::CONDITION_COUNT] = {};
+  bool conditionWindowBroken_[game::CONDITION_COUNT] = {};
+
+  bool isDrawnThisRun(game::AchievementId id) const;
+  void evaluateConditions(const game::GameEvent& event);
 
  public:
   static AchievementBus& getInstance() { return instance; }

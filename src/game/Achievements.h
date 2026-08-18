@@ -2,6 +2,8 @@
 
 #include <cstdint>
 
+#include "GameTypes.h"
+
 namespace game {
 
 enum class AchievementId : uint8_t {
@@ -59,7 +61,26 @@ enum class AchievementId : uint8_t {
   ObsceneWealth = 46,
   // -- Secrets --
   Completionist = 47,
-  Count = 48,
+  // -- Demo set: proves each condition-table type before the real pool is authored --
+  // CounterCompare
+  IronStomach = 48,       // Hunger >= threshold sustained (silly counter demo)
+  StepCounter = 49,       // TilesWalked >= threshold (already-real-field counter demo)
+  // EventFieldMatch
+  OneShot = 50,           // MonsterKilled with damage >= huge single-hit value
+  NickOfTime = 51,        // PlayerDamaged with hpAfter == 1 field match
+  // EventCount
+  SerialKiller = 52,      // MonsterKilled count >= N within a run
+  Klepto = 53,            // ItemPickedUp count >= N within a run
+  // NoEventInWindow
+  Ghost = 54,             // no PlayerDamaged event for whole run
+  Untroubled = 55,        // no PlayerDamaged event for a single floor
+  // ItemSpecific
+  PotionChugger = 56,     // ItemUsed with itemType == Potion, count threshold
+  ScrollHoarder = 57,     // ItemPickedUp with itemType == Scroll, count threshold
+  // Compound (AND of two condition rows)
+  GreedyAndFast = 58,     // TheWealthy-style AND SpeedRunner-style combo
+  DeepAndDeadly = 59,     // DeepDiver-style AND Exterminator-style combo
+  Count = 60,
 };
 
 // Short display name for the end-of-run screen (Phase 7 req 2/3). Kept separate
@@ -115,6 +136,18 @@ inline const char* achievementShortName(AchievementId id) {
     case AchievementId::TheWealthy: return "The Wealthy";
     case AchievementId::ObsceneWealth: return "Obscene Wealth";
     case AchievementId::Completionist: return "Completionist";
+    case AchievementId::IronStomach: return "Iron Stomach";
+    case AchievementId::StepCounter: return "Step Counter";
+    case AchievementId::OneShot: return "One Shot";
+    case AchievementId::NickOfTime: return "Nick of Time";
+    case AchievementId::SerialKiller: return "Serial Killer";
+    case AchievementId::Klepto: return "Klepto";
+    case AchievementId::Ghost: return "Ghost";
+    case AchievementId::Untroubled: return "Untroubled";
+    case AchievementId::PotionChugger: return "Potion Chugger";
+    case AchievementId::ScrollHoarder: return "Scroll Hoarder";
+    case AchievementId::GreedyAndFast: return "Greedy and Fast";
+    case AchievementId::DeepAndDeadly: return "Deep and Deadly";
     default: return "";
   }
 }
@@ -144,6 +177,7 @@ struct GameEvent {
   bool cleanSweep = false;    // MonsterKilled (synthetic follow-up event): true if that kill cleared the floor.
   bool floorFullyExplored = false; // FloorChanged: true if every walkable tile on the departed floor was seen.
   uint8_t monsterMinDepth = 0; // MonsterKilled: killed monster's MonsterDef::minDepth (for Giant-Killer).
+  ItemType itemType = ItemType::ItemTypeCount; // ItemUsed/ItemPickedUp/ItemThrown: type of the item involved (ItemTypeCount = none).
 };
 
 }  // namespace game

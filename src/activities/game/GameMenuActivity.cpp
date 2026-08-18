@@ -896,11 +896,19 @@ void GameMenuActivity::renderAchievements() {
     const int listTop = contentTop + countLineH;
     const int listHeight = contentHeight - countLineH;
 
+    // achievementDef() is bounds-safe past ACHIEVEMENT_DEF_COUNT (the
+    // data-driven pool from IronStomach/48 onward has no def entry yet); its
+    // name field is empty for those ids, so fall back to achievementShortName
+    // for display rather than showing a blank row.
     GUI.drawList(
         renderer, Rect(0, listTop, pageWidth, listHeight), unlockedCount, selectedIndex,
-        [&unlockedIds](int index) { return std::string(game::ACHIEVEMENT_DEFS[unlockedIds[index]].name); },
         [&unlockedIds](int index) {
-          const auto& def = game::ACHIEVEMENT_DEFS[unlockedIds[index]];
+          auto id = static_cast<game::AchievementId>(unlockedIds[index]);
+          const auto& def = game::achievementDef(id);
+          return std::string(def.name[0] != '\0' ? def.name : game::achievementShortName(id));
+        },
+        [&unlockedIds](int index) {
+          const auto& def = game::achievementDef(static_cast<game::AchievementId>(unlockedIds[index]));
           std::string subtitle = def.description;
           char rewardBuf[64];
           game::achievementRewardText(def, rewardBuf, sizeof(rewardBuf));

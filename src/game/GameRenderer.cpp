@@ -837,7 +837,7 @@ void GameRenderer::showAchievementNotification(game::AchievementId id) {
   notificationActive_ = true;
   notificationKind_ = NotificationKind::Achievement;
   snprintf(notificationBody_, NOTIFICATION_BODY_LEN, "%s", game::achievementShortName(id));
-  const game::AchievementDef& def = game::ACHIEVEMENT_DEFS[static_cast<uint8_t>(id)];
+  const game::AchievementDef& def = game::achievementDef(id);
   game::achievementRewardText(def, notificationRewardBody_, NOTIFICATION_BODY_LEN);
   notificationDirty_ = true;
 }

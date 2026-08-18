@@ -88,6 +88,32 @@ void AchievementBus::resetRun() {
   floorsClearedThisWindow = 0;
   hasDiedThisRun = false;
   wasCriticalThisRun = false;
+
+  for (auto& c : conditionEventCounts_) c = 0;
+  for (auto& b : conditionWindowBroken_) b = false;
+
+  // Draw this run's random subset of the drawable pool via a partial
+  // Fisher-Yates shuffle over game::CONDITIONS, using the same combat RNG
+  // stream every other run-scoped roll uses so the draw is deterministic per
+  // game seed.
+  game::AchievementId pool[game::CONDITION_COUNT];
+  for (uint8_t i = 0; i < game::CONDITION_COUNT; i++) pool[i] = game::CONDITIONS[i].id;
+  uint8_t drawSize = game::CONDITION_COUNT < DRAWN_POOL_SIZE ? game::CONDITION_COUNT : DRAWN_POOL_SIZE;
+  for (uint8_t i = 0; i < drawSize; i++) {
+    uint32_t j = i + GAME_STATE.rollRange(game::CONDITION_COUNT - i);
+    game::AchievementId tmp = pool[i];
+    pool[i] = pool[j];
+    pool[j] = tmp;
+    drawnThisRun_[i] = pool[i];
+  }
+  drawnCount_ = drawSize;
+}
+
+bool AchievementBus::isDrawnThisRun(game::AchievementId id) const {
+  for (uint8_t i = 0; i < drawnCount_; i++) {
+    if (drawnThisRun_[i] == id) return true;
+  }
+  return false;
 }
 
 bool AchievementBus::isUnlocked(game::AchievementId id) const {
@@ -100,6 +126,13 @@ bool AchievementBus::isUnlockedThisRun(game::AchievementId id) const {
 
 void AchievementBus::unlock(game::AchievementId id, const char* flavorText) {
   uint8_t idx = static_cast<uint8_t>(id);
+  // The draw guard: an id from the data-driven pool that wasn't dealt to this
+  // run cannot fire, no matter what its condition row says. Legacy hand-coded
+  // ids (below FIRST_DRAWABLE_ID) are unaffected -- unconditionally unlockable
+  // exactly as before.
+  if (idx >= FIRST_DRAWABLE_ID && !isDrawnThisRun(id)) {
+    return;
+  }
   unlockedThisRun[idx] = true;
   if (unlocked[idx]) return;
   unlocked[idx] = true;
@@ -347,5 +380,125 @@ void AchievementBus::emit(const game::GameEvent& event) {
         unlock(AchievementId::ObsceneWealth, "Achievement: Obscene Wealth (Accumulated 10000 gold.)");
       }
       break;
+  }
+
+  // Data-driven pool (IronStomach onward) runs additively alongside the
+  // hand-coded switch above -- never replaces it.
+  evaluateConditions(event);
+}
+
+namespace {
+
+int32_t readCounterField(game::CounterField field, uint32_t lifetimeTilesWalked,
+                          uint8_t floorsExploredFully) {
+  switch (field) {
+    case game::CounterField::Depth: return GAME_STATE.player.dungeonDepth;
+    case game::CounterField::Kills: return GAME_STATE.player.kills;
+    case game::CounterField::Gold: return GAME_STATE.player.gold;
+    case game::CounterField::TurnCount: return static_cast<int32_t>(GAME_STATE.player.turnCount);
+    case game::CounterField::Hunger: return GAME_STATE.player.hunger;
+    case game::CounterField::Hp: return GAME_STATE.player.hp;
+    case game::CounterField::TilesWalked: return static_cast<int32_t>(lifetimeTilesWalked);
+    case game::CounterField::FloorsFullyExplored: return floorsExploredFully;
+  }
+  return 0;
+}
+
+int32_t readEventField(game::EventField field, const game::GameEvent& event) {
+  switch (field) {
+    case game::EventField::Damage: return event.damage;
+    case game::EventField::HpAfter: return event.hpAfter;
+    case game::EventField::MonsterMaxHp: return event.monsterMaxHp;
+    case game::EventField::MonsterMinDepth: return event.monsterMinDepth;
+    case game::EventField::NewLevel: return event.newLevel;
+  }
+  return 0;
+}
+
+bool compare(game::CompareOp op, int32_t lhs, int32_t rhs) {
+  switch (op) {
+    case game::CompareOp::GreaterEqual: return lhs >= rhs;
+    case game::CompareOp::LessEqual: return lhs <= rhs;
+    case game::CompareOp::Equal: return lhs == rhs;
+  }
+  return false;
+}
+
+}  // namespace
+
+void AchievementBus::evaluateConditions(const game::GameEvent& event) {
+  using game::ConditionType;
+
+  for (uint8_t i = 0; i < game::CONDITION_COUNT; i++) {
+    const game::AchievementCondition& c = game::CONDITIONS[i];
+    if (isUnlocked(c.id)) continue;  // lifetime-unlocked already, nothing left to evaluate
+
+    switch (c.type) {
+      case ConditionType::CounterCompare: {
+        int32_t lhs = readCounterField(c.field, lifetimeTilesWalked, floorsExploredFully);
+        if (compare(c.op, lhs, c.value)) {
+          unlock(c.id, game::achievementShortName(c.id));
+        }
+        break;
+      }
+
+      case ConditionType::EventFieldMatch: {
+        if (event.type != c.eventType) break;
+        int32_t lhs = readEventField(c.eventField, event);
+        if (compare(c.op, lhs, c.value)) {
+          unlock(c.id, game::achievementShortName(c.id));
+        }
+        break;
+      }
+
+      case ConditionType::EventCount: {
+        if (event.type != c.eventType) break;
+        conditionEventCounts_[i]++;
+        if (conditionEventCounts_[i] >= c.value) {
+          unlock(c.id, game::achievementShortName(c.id));
+        }
+        break;
+      }
+
+      case ConditionType::NoEventInWindow: {
+        // Any occurrence of the watched event type breaks the window,
+        // regardless of which row's window (Run vs Floor) it belongs to --
+        // the window-scoped check below decides when to actually fire.
+        if (event.type == c.eventType) {
+          conditionWindowBroken_[i] = true;
+        }
+        if (c.window == game::NoEventWindow::Floor && event.type == game::GameEventType::FloorChanged) {
+          if (!conditionWindowBroken_[i]) {
+            unlock(c.id, game::achievementShortName(c.id));
+          }
+          conditionWindowBroken_[i] = false;  // new floor, new window
+        } else if (c.window == game::NoEventWindow::Run && event.type == game::GameEventType::PlayerDied) {
+          if (!conditionWindowBroken_[i]) {
+            unlock(c.id, game::achievementShortName(c.id));
+          }
+        }
+        break;
+      }
+
+      case ConditionType::ItemSpecific: {
+        if (event.type != c.eventType) break;
+        if (event.itemType != c.itemType) break;
+        conditionEventCounts_[i]++;
+        if (conditionEventCounts_[i] >= c.value) {
+          unlock(c.id, game::achievementShortName(c.id));
+        }
+        break;
+      }
+
+      case ConditionType::Compound: {
+        if (c.compoundA < 0 || c.compoundB < 0) break;
+        bool a = isUnlockedThisRun(game::CONDITIONS[c.compoundA].id);
+        bool b = isUnlockedThisRun(game::CONDITIONS[c.compoundB].id);
+        if (a && b) {
+          unlock(c.id, game::achievementShortName(c.id));
+        }
+        break;
+      }
+    }
   }
 }

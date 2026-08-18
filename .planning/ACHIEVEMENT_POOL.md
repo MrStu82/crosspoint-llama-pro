@@ -35,13 +35,13 @@ first before touching `ACHIEVEMENT_DEFS` again.
 |---|-----------|--------|---------|--------|
 | 1 | 1 | Depth | 30 + 12 demo | **DONE** — `7253047` |
 | 2 | 2 | Combat | 35 | **DONE** — `6eab6be` |
-| 3 | 2 | Survival | 25 | not started |
+| 3 | 2 | Survival | 25 | **DONE** — `62057f4` |
 | 4 | 2 | Exploration | 25 | not started |
 | 5 | 3 | Loot & Economy | 35 | not started |
 | 6 | 3 | Curiosities & Secrets | 25 | not started |
 | 7 | 3 | Pet & Companion | 15 | not started (inert until pet system exists) |
 
-**Running total: 125 / 250.**
+**Running total: 150 / 250.**
 
 ## Bucket scope notes
 
@@ -59,6 +59,6 @@ first before touching `ACHIEVEMENT_DEFS` again.
 ## Milestone map
 
 - **Milestone 1** — Depth bucket. 90/250. DONE.
-- **Milestone 2** — Combat + Survival + Exploration. 90 → 175/250. Combat DONE (125/250).
+- **Milestone 2** — Combat + Survival + Exploration. 90 → 175/250. Combat DONE (125/250), Survival DONE (150/250).
 - **Milestone 3** — Loot & Economy + Curiosities & Secrets + Pet & Companion.
   175 → 250/250. Full pool green.

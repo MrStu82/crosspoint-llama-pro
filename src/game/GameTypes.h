@@ -267,6 +267,126 @@ inline uint8_t selectLootBoxReward(uint32_t (*rollFn)(uint32_t)) {
   return eligible[rollFn(eligibleCount)];
 }
 
+// --- Buffs and Skills (achievement reward work) ---
+// Lifetime, stacking achievement rewards. Same point-of-use pattern as
+// Sponsors below (never mutate base stats directly -- sum modifiers where a
+// stat is actually consumed) but additive/stacking rather than a single
+// active slot, and lifetime-persistent rather than rerolled per floor.
+// Skills are the same mechanism at bigger magnitude, gated to
+// deeper/harder achievements -- there is no separate active-use/trigger
+// subsystem; "Skill" here means "big passive", not "ability you invoke".
+
+enum class BuffStat : uint8_t { None, Attack, Defense, MaxHp, GoldPercent };
+
+struct BuffDef {
+  const char* name;
+  BuffStat stat;
+  int8_t amount;
+};
+
+inline constexpr BuffDef BUFF_DEFS[] = {
+    {"None", BuffStat::None, 0},
+    {"Steady Grip", BuffStat::Attack, 1},
+    {"Worn Leather Wraps", BuffStat::Defense, 1},
+    {"Deep Breather", BuffStat::MaxHp, 2},
+    {"Prospector's Eye", BuffStat::GoldPercent, 5},
+    {"Sharpened Edge", BuffStat::Attack, 2},
+    {"Reinforced Plating", BuffStat::Defense, 2},
+    {"Hardy Constitution", BuffStat::MaxHp, 4},
+    {"Silver Tongue", BuffStat::GoldPercent, 10},
+    {"Killer Instinct", BuffStat::Attack, 3},
+    {"Iron Skin", BuffStat::Defense, 3},
+    {"Vital Surge", BuffStat::MaxHp, 6},
+    {"Treasure Sense", BuffStat::GoldPercent, 15},
+    {"Practiced Strike", BuffStat::Attack, 4},
+    {"Bulwark Stance", BuffStat::Defense, 4},
+};
+inline constexpr int BUFF_DEF_COUNT = sizeof(BUFF_DEFS) / sizeof(BUFF_DEFS[0]);
+inline constexpr uint8_t BUFF_NONE = 0;
+
+inline constexpr BuffDef SKILL_DEFS[] = {
+    {"None", BuffStat::None, 0},
+    {"Adrenaline Mastery", BuffStat::Attack, 6},
+    {"Veteran's Guard", BuffStat::Defense, 6},
+    {"Deep Lungs", BuffStat::MaxHp, 8},
+    {"Gilded Instinct", BuffStat::GoldPercent, 25},
+    {"Executioner's Form", BuffStat::Attack, 8},
+    {"Fortress Body", BuffStat::Defense, 8},
+    {"Bottomless Reserve", BuffStat::MaxHp, 10},
+};
+inline constexpr int SKILL_DEF_COUNT = sizeof(SKILL_DEFS) / sizeof(SKILL_DEFS[0]);
+inline constexpr uint8_t SKILL_NONE = 0;
+
+inline void grantBuff(Player& p, uint8_t buffId) {
+  if (buffId == BUFF_NONE || buffId >= BUFF_DEF_COUNT) return;
+  for (uint8_t i = 0; i < p.activeBuffCount; i++) {
+    if (p.activeBuffIds[i] == buffId) return;
+  }
+  if (p.activeBuffCount >= MAX_ACTIVE_BUFFS) return;
+  p.activeBuffIds[p.activeBuffCount++] = buffId;
+}
+
+inline void grantSkill(Player& p, uint8_t skillId) {
+  if (skillId == SKILL_NONE || skillId >= SKILL_DEF_COUNT) return;
+  for (uint8_t i = 0; i < p.activeSkillCount; i++) {
+    if (p.activeSkillIds[i] == skillId) return;
+  }
+  if (p.activeSkillCount >= MAX_ACTIVE_SKILLS) return;
+  p.activeSkillIds[p.activeSkillCount++] = skillId;
+}
+
+inline int buffAttackModifier(const Player& p) {
+  int total = 0;
+  for (uint8_t i = 0; i < p.activeBuffCount; i++) {
+    const BuffDef& b = BUFF_DEFS[p.activeBuffIds[i]];
+    if (b.stat == BuffStat::Attack) total += b.amount;
+  }
+  for (uint8_t i = 0; i < p.activeSkillCount; i++) {
+    const BuffDef& s = SKILL_DEFS[p.activeSkillIds[i]];
+    if (s.stat == BuffStat::Attack) total += s.amount;
+  }
+  return total;
+}
+
+inline int buffDefenseModifier(const Player& p) {
+  int total = 0;
+  for (uint8_t i = 0; i < p.activeBuffCount; i++) {
+    const BuffDef& b = BUFF_DEFS[p.activeBuffIds[i]];
+    if (b.stat == BuffStat::Defense) total += b.amount;
+  }
+  for (uint8_t i = 0; i < p.activeSkillCount; i++) {
+    const BuffDef& s = SKILL_DEFS[p.activeSkillIds[i]];
+    if (s.stat == BuffStat::Defense) total += s.amount;
+  }
+  return total;
+}
+
+inline int buffMaxHpModifier(const Player& p) {
+  int total = 0;
+  for (uint8_t i = 0; i < p.activeBuffCount; i++) {
+    const BuffDef& b = BUFF_DEFS[p.activeBuffIds[i]];
+    if (b.stat == BuffStat::MaxHp) total += b.amount;
+  }
+  for (uint8_t i = 0; i < p.activeSkillCount; i++) {
+    const BuffDef& s = SKILL_DEFS[p.activeSkillIds[i]];
+    if (s.stat == BuffStat::MaxHp) total += s.amount;
+  }
+  return total;
+}
+
+inline int buffGoldPercentModifier(const Player& p) {
+  int total = 0;
+  for (uint8_t i = 0; i < p.activeBuffCount; i++) {
+    const BuffDef& b = BUFF_DEFS[p.activeBuffIds[i]];
+    if (b.stat == BuffStat::GoldPercent) total += b.amount;
+  }
+  for (uint8_t i = 0; i < p.activeSkillCount; i++) {
+    const BuffDef& s = SKILL_DEFS[p.activeSkillIds[i]];
+    if (s.stat == BuffStat::GoldPercent) total += s.amount;
+  }
+  return total;
+}
+
 // --- Sponsors (Phase 11) ---
 // Per-floor, personal cosmetic-with-teeth modifier. Rolled fresh every floor
 // load (GameActivity::loadOrGenerateLevel(), true RNG stream via

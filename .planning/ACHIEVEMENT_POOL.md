@@ -55,11 +55,11 @@ first before touching `ACHIEVEMENT_DEFS` again.
 | 2 | 2 | Combat | 35 | **DONE** — `6eab6be` |
 | 3 | 2 | Survival | 25 | **DONE** — `62057f4` |
 | 4 | 2 | Exploration | 25 | **DONE** — `79e4f30` |
-| 5 | 3 | Loot & Economy | 35 | not started |
+| 5 | 3 | Loot & Economy | 35 | **DONE** — `95b883f` |
 | 6 | 3 | Curiosities & Secrets | 25 | not started |
 | 7 | 3 | Pet & Companion | 15 | not started (inert until pet system exists) |
 
-**Running total: 175 / 250.**
+**Running total: 210 / 250.**
 
 ## Bucket scope notes
 
@@ -69,7 +69,15 @@ first before touching `ACHIEVEMENT_DEFS` again.
   endurance, character-level milestones, deaths.
 - **Exploration (25)** — full-floor clears, tiles walked, stairs-rush vs.
   scenic-route, dead ends, revisits.
-- **Loot & Economy (35)** — TBD detail, Milestone 3.
+- **Loot & Economy (35)** — gold-accumulation tiers (7), item-pickup-count
+  tiers by type: ring/amulet/armor/shield/food/weapon/lootbox (7),
+  item-usage tiers restricted to scroll/food (4, avoids the saturated
+  legacy potion thresholds), loot-box-opened tiers (4), depth+gold
+  "efficient looter" compounds (5), ascetic no-item-pickup achievements —
+  per-floor, per-run, and a depth-gated compound (3), high-tier
+  ring/amulet pickup + full-loadout/well-equipped/grand-bazaar compounds
+  (5). Compound rows needed `compoundA`/`compoundB` widened from `int8_t`
+  to `int16_t` (pool now exceeds 127 rows).
 - **Curiosities & Secrets (25)** — TBD detail, Milestone 3.
 - **Pet & Companion (15)** — TBD detail, Milestone 3. Authored inert — draws
   as locked, no mechanical dependency on the pet system existing yet.
@@ -79,4 +87,5 @@ first before touching `ACHIEVEMENT_DEFS` again.
 - **Milestone 1** — Depth bucket. 90/250. DONE.
 - **Milestone 2** — Combat + Survival + Exploration. 90 → 175/250. Combat DONE (125/250), Survival DONE (150/250), Exploration DONE (175/250). **Milestone 2 complete.**
 - **Milestone 3** — Loot & Economy + Curiosities & Secrets + Pet & Companion.
-  175 → 250/250. Full pool green.
+  175 → 250/250. Loot & Economy DONE (210/250). Full pool green pending
+  the remaining two buckets.

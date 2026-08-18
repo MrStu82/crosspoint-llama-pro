@@ -532,18 +532,9 @@ inline constexpr AchievementDef ACHIEVEMENT_DEFS[] = {
 inline constexpr int ACHIEVEMENT_DEF_COUNT = sizeof(ACHIEVEMENT_DEFS) / sizeof(ACHIEVEMENT_DEFS[0]);
 static_assert(ACHIEVEMENT_DEF_COUNT == 48, "ACHIEVEMENT_DEFS must have exactly 48 entries");
 
-// Bounds-safe lookup: AchievementId now runs past ACHIEVEMENT_DEF_COUNT (the
-// data-driven pool from IronStomach/48 onward has no ACHIEVEMENT_DEFS entry
-// yet -- that table lands with the real reward work, amendment 2). Indexing
-// ACHIEVEMENT_DEFS directly by id would read out of bounds for any of those
-// ids the moment one actually unlocks. Callers that need a def for a
-// possibly-undefined id should go through this instead of the raw array.
-inline const AchievementDef& achievementDef(AchievementId id) {
-  static constexpr AchievementDef kFallback{"", "", AchievementReward::None, 0};
-  uint8_t idx = static_cast<uint8_t>(id);
-  if (idx >= ACHIEVEMENT_DEF_COUNT) return kFallback;
-  return ACHIEVEMENT_DEFS[idx];
-}
+// Bounds-safe achievementDef(AchievementId) lookup lives in Achievements.h,
+// not here -- AchievementId is declared there (which already includes this
+// header), and GameTypes.h can't reference it without a circular include.
 
 // Resolves an achievement's reward through TITLE_STRINGS/SPONSOR_DEFS into a
 // short display phrase, e.g. "Unlocks title: the Reckless". Writes an empty

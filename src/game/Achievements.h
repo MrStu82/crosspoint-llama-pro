@@ -83,6 +83,19 @@ enum class AchievementId : uint8_t {
   Count = 60,
 };
 
+// Bounds-safe lookup: AchievementId now runs past ACHIEVEMENT_DEF_COUNT (the
+// data-driven pool from IronStomach/48 onward has no ACHIEVEMENT_DEFS entry
+// yet -- that table lands with the real reward work, amendment 2). Indexing
+// ACHIEVEMENT_DEFS directly by id would read out of bounds for any of those
+// ids the moment one actually unlocks. Callers that need a def for a
+// possibly-undefined id should go through this instead of the raw array.
+inline const AchievementDef& achievementDef(AchievementId id) {
+  static constexpr AchievementDef kFallback{"", "", AchievementReward::None, 0};
+  uint8_t idx = static_cast<uint8_t>(id);
+  if (idx >= ACHIEVEMENT_DEF_COUNT) return kFallback;
+  return ACHIEVEMENT_DEFS[idx];
+}
+
 // Short display name for the end-of-run screen (Phase 7 req 2/3). Kept separate
 // from the flavor-text unlock messages in AchievementBus::emit(), which are
 // chat-log lines, not a fixed-width UI label.

@@ -29,6 +29,24 @@ first before touching `ACHIEVEMENT_DEFS` again.
 - Every status ping to Skippy carries: bucket name, entry count, running
   total against 250.
 
+## Technical notes (discovered building the itemType-fix test harness, `77d5bfa`)
+
+- **The per-run draw guard applies to every achievement id, including the
+  legacy hand-coded ones.** `AchievementBus::resetRun()` does a partial
+  Fisher-Yates shuffle over the *entire* `AchievementId` space (id 0 through
+  `ACHIEVEMENT_DEF_COUNT`), drawing `DRAWN_POOL_SIZE` (50) ids into
+  `drawnThisRun_[]`. `unlock(id)` checks `isDrawnThisRun(id)` for any
+  `id >= FIRST_DRAWABLE_ID` (`FIRST_DRAWABLE_ID = 0`) and silently no-ops if
+  the id wasn't drawn this run — a fully-satisfied condition still won't
+  fire unless its id happened to land in that run's 50-slot draw. This is
+  **not limited to the newer data-driven `CONDITIONS[]` entries (id 48+)** —
+  it applies identically to the original hand-coded achievements (id 0-47ish)
+  emitted from `AchievementBus::emit()`'s switch. Any test or manual repro
+  against a low/legacy id must loop across simulated `resetRun()` draws (or
+  force the id into the pool) or it will falsely read as "never unlocks."
+  This was never written down anywhere before it cost a test-harness debug
+  cycle to rediscover — don't let it go undocumented again.
+
 ## Buckets
 
 | # | Milestone | Bucket | Entries | Status |

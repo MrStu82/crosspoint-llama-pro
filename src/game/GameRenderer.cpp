@@ -546,7 +546,11 @@ void GameRenderer::drawControls(GfxRenderer& renderer) const {
   const int y0 = controlsY;
   const int y1 = controlsY + CONTROL_ROW_H;
   const int y2 = controlsY + CONTROL_ROW_H * 2;
-  const int y3 = controlsY + CONTROL_ROW_H * 3;
+  // One pixel short of controlsY + CONTROL_ROW_H * 3: that sum lands exactly
+  // on screenH, and drawPixel() silently drops anything at/past panelHeight
+  // -- the bottom arm of the cross would render open. Pulling this in by one
+  // row keeps it inside the panel and is invisible to the eye.
+  const int y3 = controlsY + CONTROL_ROW_H * 3 - 1;
 
   strokeHLine(renderer, x1, x2, y0);
   strokeVLine(renderer, x2, y0, y1);

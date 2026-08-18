@@ -213,6 +213,101 @@ constexpr AchievementCondition CONDITIONS[] = {
     {AchievementId::LoremasterOfTwentyThree, ConditionType::Compound, CounterField::Depth,
      CompareOp::GreaterEqual, 0, GameEventType::MonsterKilled, EventField::Damage,
      ItemType::ItemTypeCount, NoEventWindow::Run, 27, 9},   // Depth23(27) AND ScrollHoarder(9)
+
+    // -- Combat bucket (Milestone 2, ids 90-124). Row index below == position
+    // in this array (29 onward), which is also what Group E's Compound rows
+    // reference (compoundA reuses the existing Depth rows above; compoundB
+    // references Bloodless at index 59). --
+
+    // Group A: kill-count tiers (EventCount / MonsterKilled).
+    {AchievementId::Bloodletter, ConditionType::EventCount, CounterField::Depth,
+     CompareOp::GreaterEqual, 5, GameEventType::MonsterKilled},    // index 29
+    {AchievementId::Cutthroat, ConditionType::EventCount, CounterField::Depth,
+     CompareOp::GreaterEqual, 15, GameEventType::MonsterKilled},   // index 30
+    {AchievementId::HuntersTally, ConditionType::EventCount, CounterField::Depth,
+     CompareOp::GreaterEqual, 35, GameEventType::MonsterKilled},   // index 31
+    {AchievementId::BodyCount, ConditionType::EventCount, CounterField::Depth,
+     CompareOp::GreaterEqual, 60, GameEventType::MonsterKilled},   // index 32
+    {AchievementId::Warpath, ConditionType::EventCount, CounterField::Depth,
+     CompareOp::GreaterEqual, 90, GameEventType::MonsterKilled},   // index 33
+    {AchievementId::Slaughterhouse, ConditionType::EventCount, CounterField::Depth,
+     CompareOp::GreaterEqual, 130, GameEventType::MonsterKilled},  // index 34
+    {AchievementId::KillStreak, ConditionType::EventCount, CounterField::Depth,
+     CompareOp::GreaterEqual, 180, GameEventType::MonsterKilled},  // index 35
+    {AchievementId::Merciless, ConditionType::EventCount, CounterField::Depth,
+     CompareOp::GreaterEqual, 250, GameEventType::MonsterKilled},  // index 36
+    {AchievementId::GenocideRun, ConditionType::EventCount, CounterField::Depth,
+     CompareOp::GreaterEqual, 350, GameEventType::MonsterKilled},  // index 37
+    {AchievementId::ApexPredator, ConditionType::EventCount, CounterField::Depth,
+     CompareOp::GreaterEqual, 500, GameEventType::MonsterKilled},  // index 38
+
+    // Group B: single-hit damage tiers (EventFieldMatch / MonsterKilled / Damage).
+    {AchievementId::FirstCut, ConditionType::EventFieldMatch, CounterField::Depth,
+     CompareOp::GreaterEqual, 12, GameEventType::MonsterKilled, EventField::Damage},   // index 39
+    {AchievementId::HeavyHand, ConditionType::EventFieldMatch, CounterField::Depth,
+     CompareOp::GreaterEqual, 20, GameEventType::MonsterKilled, EventField::Damage},   // index 40
+    {AchievementId::BoneBreaker, ConditionType::EventFieldMatch, CounterField::Depth,
+     CompareOp::GreaterEqual, 30, GameEventType::MonsterKilled, EventField::Damage},   // index 41
+    {AchievementId::CrushingBlow, ConditionType::EventFieldMatch, CounterField::Depth,
+     CompareOp::GreaterEqual, 45, GameEventType::MonsterKilled, EventField::Damage},   // index 42
+    {AchievementId::Devastator, ConditionType::EventFieldMatch, CounterField::Depth,
+     CompareOp::GreaterEqual, 65, GameEventType::MonsterKilled, EventField::Damage},   // index 43
+    {AchievementId::AnnihilatingStrike, ConditionType::EventFieldMatch, CounterField::Depth,
+     CompareOp::GreaterEqual, 90, GameEventType::MonsterKilled, EventField::Damage},   // index 44
+    {AchievementId::WorldEnder, ConditionType::EventFieldMatch, CounterField::Depth,
+     CompareOp::GreaterEqual, 120, GameEventType::MonsterKilled, EventField::Damage},  // index 45
+    {AchievementId::Cataclysm, ConditionType::EventFieldMatch, CounterField::Depth,
+     CompareOp::GreaterEqual, 160, GameEventType::MonsterKilled, EventField::Damage},  // index 46
+
+    // Group C: hits-survived tiers (EventCount / PlayerDamaged).
+    {AchievementId::BruisedNotBroken, ConditionType::EventCount, CounterField::Depth,
+     CompareOp::GreaterEqual, 10, GameEventType::PlayerDamaged},  // index 47
+    {AchievementId::PunchingBag, ConditionType::EventCount, CounterField::Depth,
+     CompareOp::GreaterEqual, 20, GameEventType::PlayerDamaged},  // index 48
+    {AchievementId::GluttonForPunishment, ConditionType::EventCount, CounterField::Depth,
+     CompareOp::GreaterEqual, 35, GameEventType::PlayerDamaged},  // index 49
+    {AchievementId::Besieged, ConditionType::EventCount, CounterField::Depth,
+     CompareOp::GreaterEqual, 50, GameEventType::PlayerDamaged},  // index 50
+    {AchievementId::LastOneStanding, ConditionType::EventCount, CounterField::Depth,
+     CompareOp::GreaterEqual, 75, GameEventType::PlayerDamaged},  // index 51
+
+    // Group D: out-levelled-kill tiers (EventFieldMatch / MonsterKilled / MonsterMinDepth).
+    {AchievementId::Overmatched, ConditionType::EventFieldMatch, CounterField::Depth,
+     CompareOp::GreaterEqual, 10, GameEventType::MonsterKilled, EventField::MonsterMinDepth},  // index 52
+    {AchievementId::Outgunned, ConditionType::EventFieldMatch, CounterField::Depth,
+     CompareOp::GreaterEqual, 14, GameEventType::MonsterKilled, EventField::MonsterMinDepth},  // index 53
+    {AchievementId::InOverYourHead, ConditionType::EventFieldMatch, CounterField::Depth,
+     CompareOp::GreaterEqual, 18, GameEventType::MonsterKilled, EventField::MonsterMinDepth},  // index 54
+    {AchievementId::DavidAndGoliath, ConditionType::EventFieldMatch, CounterField::Depth,
+     CompareOp::GreaterEqual, 22, GameEventType::MonsterKilled, EventField::MonsterMinDepth},  // index 55
+
+    // Group F: thrown-weapon tiers (ItemSpecific / ItemThrown / Weapon).
+    {AchievementId::QuickDraw, ConditionType::ItemSpecific, CounterField::Depth,
+     CompareOp::GreaterEqual, 5, GameEventType::ItemThrown, EventField::Damage, ItemType::Weapon},   // index 56
+    {AchievementId::RangedSpecialist, ConditionType::ItemSpecific, CounterField::Depth,
+     CompareOp::GreaterEqual, 15, GameEventType::ItemThrown, EventField::Damage, ItemType::Weapon},  // index 57
+    {AchievementId::MasterMarksman, ConditionType::ItemSpecific, CounterField::Depth,
+     CompareOp::GreaterEqual, 30, GameEventType::ItemThrown, EventField::Damage, ItemType::Weapon},  // index 58
+
+    // Group E: pacifist descent. Bloodless is the standalone NoEventInWindow
+    // row; the remaining four are Compound rows AND-ing an existing Depth row
+    // (from the Depth bucket above) with Bloodless (index 59).
+    {AchievementId::Bloodless, ConditionType::NoEventInWindow, CounterField::Depth,
+     CompareOp::GreaterEqual, 0, GameEventType::MonsterKilled, EventField::Damage,
+     ItemType::ItemTypeCount, NoEventWindow::Run},  // index 59
+
+    {AchievementId::PacifistToSix, ConditionType::Compound, CounterField::Depth,
+     CompareOp::GreaterEqual, 0, GameEventType::MonsterKilled, EventField::Damage,
+     ItemType::ItemTypeCount, NoEventWindow::Run, 14, 59},   // Depth6(14) AND Bloodless(59), index 60
+    {AchievementId::PacifistToEleven, ConditionType::Compound, CounterField::Depth,
+     CompareOp::GreaterEqual, 0, GameEventType::MonsterKilled, EventField::Damage,
+     ItemType::ItemTypeCount, NoEventWindow::Run, 18, 59},   // Depth11(18) AND Bloodless(59), index 61
+    {AchievementId::PacifistToSixteen, ConditionType::Compound, CounterField::Depth,
+     CompareOp::GreaterEqual, 0, GameEventType::MonsterKilled, EventField::Damage,
+     ItemType::ItemTypeCount, NoEventWindow::Run, 22, 59},   // Depth16(22) AND Bloodless(59), index 62
+    {AchievementId::PeacefulSovereign, ConditionType::Compound, CounterField::Depth,
+     CompareOp::GreaterEqual, 0, GameEventType::MonsterKilled, EventField::Damage,
+     ItemType::ItemTypeCount, NoEventWindow::Run, 26, 59},   // Depth21(26) AND Bloodless(59), index 63
 };
 
 constexpr uint8_t CONDITION_COUNT = sizeof(CONDITIONS) / sizeof(CONDITIONS[0]);

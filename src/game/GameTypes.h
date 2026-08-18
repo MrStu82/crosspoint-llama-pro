@@ -719,10 +719,46 @@ inline constexpr AchievementDef ACHIEVEMENT_DEFS[] = {
     {"Unbroken Nineteen", "Reached level 19 unscathed on the current floor.", AchievementReward::Buff, 14},
     {"Brewmaster of Twenty-One", "Reached level 21 having chugged 10 potions along the way.", AchievementReward::Skill, 6},
     {"Loremaster of Twenty-Three", "Reached level 23 having hoarded 5 scrolls.", AchievementReward::Skill, 4},
+    // -- Combat bucket (Milestone 2, ids 90-124) --
+    {"Bloodletter", "Killed 5 monsters in a single run.", AchievementReward::Buff, 1},
+    {"Cutthroat", "Killed 15 monsters in a single run.", AchievementReward::Buff, 2},
+    {"Hunter's Tally", "Killed 35 monsters in a single run.", AchievementReward::Buff, 5},
+    {"Body Count", "Killed 60 monsters in a single run.", AchievementReward::Buff, 9},
+    {"Warpath", "Killed 90 monsters in a single run.", AchievementReward::Skill, 1},
+    {"Slaughterhouse", "Killed 130 monsters in a single run.", AchievementReward::Skill, 5},
+    {"Kill Streak", "Killed 180 monsters in a single run.", AchievementReward::Skill, 1},
+    {"Merciless", "Killed 250 monsters in a single run.", AchievementReward::Skill, 5},
+    {"Genocide Run", "Killed 350 monsters in a single run.", AchievementReward::Skill, 7},
+    {"Apex Predator", "Killed 500 monsters in a single run.", AchievementReward::Title, 10},
+    {"First Cut", "Landed a hit for 12 or more damage.", AchievementReward::None, 0},
+    {"Heavy Hand", "Landed a hit for 20 or more damage.", AchievementReward::Buff, 3},
+    {"Bone Breaker", "Landed a hit for 30 or more damage.", AchievementReward::Buff, 6},
+    {"Crushing Blow", "Landed a hit for 45 or more damage.", AchievementReward::Buff, 10},
+    {"Devastator", "Landed a hit for 65 or more damage.", AchievementReward::Skill, 2},
+    {"Annihilating Strike", "Landed a hit for 90 or more damage.", AchievementReward::Skill, 6},
+    {"World Ender", "Landed a hit for 120 or more damage.", AchievementReward::Skill, 3},
+    {"Cataclysm", "Landed a hit for 160 or more damage.", AchievementReward::Skill, 4},
+    {"Bruised Not Broken", "Survived 10 hits in a single run.", AchievementReward::None, 0},
+    {"Punching Bag", "Survived 20 hits in a single run.", AchievementReward::Buff, 2},
+    {"Glutton for Punishment", "Survived 35 hits in a single run.", AchievementReward::Buff, 7},
+    {"Besieged", "Survived 50 hits in a single run.", AchievementReward::Skill, 2},
+    {"Last One Standing", "Survived 75 hits in a single run.", AchievementReward::Skill, 7},
+    {"Overmatched", "Killed a monster from 10 or more floors below your own depth.", AchievementReward::Buff, 9},
+    {"Outgunned", "Killed a monster from 14 or more floors below your own depth.", AchievementReward::Buff, 13},
+    {"In Over Your Head", "Killed a monster from 18 or more floors below your own depth.", AchievementReward::Skill, 5},
+    {"David and Goliath", "Killed a monster from 22 or more floors below your own depth.", AchievementReward::Skill, 1},
+    {"Quick Draw", "Threw 5 weapons in a single run.", AchievementReward::None, 0},
+    {"Ranged Specialist", "Threw 15 weapons in a single run.", AchievementReward::Buff, 1},
+    {"Master Marksman", "Threw 30 weapons in a single run.", AchievementReward::Skill, 1},
+    {"Bloodless", "Died without ever landing a kill.", AchievementReward::Buff, 4},
+    {"Pacifist to Six", "Reached depth 6 without landing a kill.", AchievementReward::Buff, 8},
+    {"Pacifist to Eleven", "Reached depth 11 without landing a kill.", AchievementReward::Buff, 12},
+    {"Pacifist to Sixteen", "Reached depth 16 without landing a kill.", AchievementReward::Skill, 4},
+    {"Peaceful Sovereign", "Reached depth 21 without landing a kill.", AchievementReward::Title, 14},
 };
 
 inline constexpr int ACHIEVEMENT_DEF_COUNT = sizeof(ACHIEVEMENT_DEFS) / sizeof(ACHIEVEMENT_DEFS[0]);
-static_assert(ACHIEVEMENT_DEF_COUNT == 90, "ACHIEVEMENT_DEFS must have exactly 90 entries");
+static_assert(ACHIEVEMENT_DEF_COUNT == 125, "ACHIEVEMENT_DEFS must have exactly 125 entries");
 
 // Bounds-safe achievementDef(AchievementId) lookup lives in Achievements.h,
 // not here -- AchievementId is declared there (which already includes this

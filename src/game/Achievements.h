@@ -114,7 +114,46 @@ enum class AchievementId : uint8_t {
   UnbrokenNineteen = 87,     // Depth19 AND Untroubled
   BrewmasterOfTwentyOne = 88, // Depth21 AND PotionChugger
   LoremasterOfTwentyThree = 89, // Depth23 AND ScrollHoarder
-  Count = 90,
+  // -- Combat bucket (Milestone 2, ids 90-124): kill-count tiers, single-hit
+  // damage tiers, hits-survived tiers, out-levelled-kill tiers, thrown-weapon
+  // tiers, and pacifist-descent compounds. See AchievementConditions.h for
+  // the condition rows (29-63). --
+  Bloodletter = 90,
+  Cutthroat = 91,
+  HuntersTally = 92,
+  BodyCount = 93,
+  Warpath = 94,
+  Slaughterhouse = 95,
+  KillStreak = 96,
+  Merciless = 97,
+  GenocideRun = 98,
+  ApexPredator = 99,
+  FirstCut = 100,
+  HeavyHand = 101,
+  BoneBreaker = 102,
+  CrushingBlow = 103,
+  Devastator = 104,
+  AnnihilatingStrike = 105,
+  WorldEnder = 106,
+  Cataclysm = 107,
+  BruisedNotBroken = 108,
+  PunchingBag = 109,
+  GluttonForPunishment = 110,
+  Besieged = 111,
+  LastOneStanding = 112,
+  Overmatched = 113,
+  Outgunned = 114,
+  InOverYourHead = 115,
+  DavidAndGoliath = 116,
+  QuickDraw = 117,
+  RangedSpecialist = 118,
+  MasterMarksman = 119,
+  Bloodless = 120,
+  PacifistToSix = 121,
+  PacifistToEleven = 122,
+  PacifistToSixteen = 123,
+  PeacefulSovereign = 124,
+  Count = 125,
 };
 
 // Bounds-safe lookup: AchievementId now runs past ACHIEVEMENT_DEF_COUNT (the
@@ -225,6 +264,41 @@ inline const char* achievementShortName(AchievementId id) {
     case AchievementId::UnbrokenNineteen: return "Unbroken Nineteen";
     case AchievementId::BrewmasterOfTwentyOne: return "Brewmaster of Twenty-One";
     case AchievementId::LoremasterOfTwentyThree: return "Loremaster of Twenty-Three";
+    case AchievementId::Bloodletter: return "Bloodletter";
+    case AchievementId::Cutthroat: return "Cutthroat";
+    case AchievementId::HuntersTally: return "Hunter's Tally";
+    case AchievementId::BodyCount: return "Body Count";
+    case AchievementId::Warpath: return "Warpath";
+    case AchievementId::Slaughterhouse: return "Slaughterhouse";
+    case AchievementId::KillStreak: return "Kill Streak";
+    case AchievementId::Merciless: return "Merciless";
+    case AchievementId::GenocideRun: return "Genocide Run";
+    case AchievementId::ApexPredator: return "Apex Predator";
+    case AchievementId::FirstCut: return "First Cut";
+    case AchievementId::HeavyHand: return "Heavy Hand";
+    case AchievementId::BoneBreaker: return "Bone Breaker";
+    case AchievementId::CrushingBlow: return "Crushing Blow";
+    case AchievementId::Devastator: return "Devastator";
+    case AchievementId::AnnihilatingStrike: return "Annihilating Strike";
+    case AchievementId::WorldEnder: return "World Ender";
+    case AchievementId::Cataclysm: return "Cataclysm";
+    case AchievementId::BruisedNotBroken: return "Bruised Not Broken";
+    case AchievementId::PunchingBag: return "Punching Bag";
+    case AchievementId::GluttonForPunishment: return "Glutton for Punishment";
+    case AchievementId::Besieged: return "Besieged";
+    case AchievementId::LastOneStanding: return "Last One Standing";
+    case AchievementId::Overmatched: return "Overmatched";
+    case AchievementId::Outgunned: return "Outgunned";
+    case AchievementId::InOverYourHead: return "In Over Your Head";
+    case AchievementId::DavidAndGoliath: return "David and Goliath";
+    case AchievementId::QuickDraw: return "Quick Draw";
+    case AchievementId::RangedSpecialist: return "Ranged Specialist";
+    case AchievementId::MasterMarksman: return "Master Marksman";
+    case AchievementId::Bloodless: return "Bloodless";
+    case AchievementId::PacifistToSix: return "Pacifist to Six";
+    case AchievementId::PacifistToEleven: return "Pacifist to Eleven";
+    case AchievementId::PacifistToSixteen: return "Pacifist to Sixteen";
+    case AchievementId::PeacefulSovereign: return "Peaceful Sovereign";
     default: return "";
   }
 }

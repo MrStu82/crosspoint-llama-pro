@@ -59,22 +59,31 @@ class AchievementBus {
   uint8_t pendingCount_ = 0;
 
   // -- Data-driven condition table (AchievementConditions.h), additive to the
-  // hand-coded switch in emit() above. Only covers ids from IronStomach (48)
-  // onward -- the original 48 stay hand-coded and unconditionally unlockable,
-  // exactly as before. --
+  // hand-coded switch in emit() above. Covers ids from IronStomach (48)
+  // onward; the original 48 stay hand-coded in emit(), but are NOT exempt
+  // from the per-run draw -- see FIRST_DRAWABLE_ID below. --
 
-  // First id in the drawable pool. Ids below this are the legacy hand-coded
-  // set and are never subject to the per-run draw guard.
-  static constexpr uint8_t FIRST_DRAWABLE_ID = 48;
+  // First id subject to the per-run draw guard. Parent's correction
+  // (2026-08-18): the original 48 fold into the draw pool and take their
+  // chances like everything else -- "only 50 randomly available in any
+  // single playthrough" meant the WHOLE table, not 50-plus-48-guaranteed.
+  // They keep their ids and stay append-only; they just stop being special.
+  // Kept as a named constant (rather than deleted) so the guard's intent
+  // reads the same regardless of its value.
+  static constexpr uint8_t FIRST_DRAWABLE_ID = 0;
 
-  // Random per-run subset of the drawable pool (parent's amendment: "the
-  // guard is the load-bearing piece"). An id at/above FIRST_DRAWABLE_ID that
-  // isn't in this set cannot fire, no matter what its condition row says.
-  // Drawn fresh by resetRun() from GAME_STATE's combat RNG stream, so it's
-  // deterministic per run seed like everything else in a run. Sized to the
-  // eventual 50-per-run design target; today's table (12 rows) draws all of
-  // itself since 12 < 50, which is a trivial but real exercise of the same
-  // code path the eventual 200-300-entry pool will use.
+  // Random per-run subset of the ENTIRE achievement id space (parent's
+  // amendment: "the guard is the load-bearing piece"). An id not in this set
+  // cannot fire this run, no matter what its condition row (or emit()'s
+  // hand-coded switch) says. Drawn fresh by resetRun() from GAME_STATE's
+  // combat RNG stream, so it's deterministic per run seed like everything
+  // else in a run. Sized to the eventual 50-per-run design target; today's
+  // full id space (60: 48 legacy + 12 demo rows) draws 50 of itself, which is
+  // a real exercise of the same code path the eventual ~300-entry pool will
+  // use. NOTE: once the pool grows toward 300, the draw's stack-local
+  // AchievementId[COUNT] scratch array in resetRun() will approach the
+  // project's <256B stack-variable guideline -- revisit with a static/member
+  // scratch buffer when the real entries are authored, not before.
   static constexpr uint8_t DRAWN_POOL_SIZE = 50;
   game::AchievementId drawnThisRun_[DRAWN_POOL_SIZE] = {};
   uint8_t drawnCount_ = 0;

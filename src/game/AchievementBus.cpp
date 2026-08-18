@@ -92,15 +92,18 @@ void AchievementBus::resetRun() {
   for (auto& c : conditionEventCounts_) c = 0;
   for (auto& b : conditionWindowBroken_) b = false;
 
-  // Draw this run's random subset of the drawable pool via a partial
-  // Fisher-Yates shuffle over game::CONDITIONS, using the same combat RNG
+  // Draw this run's random subset of the WHOLE achievement id space (the
+  // original 48 hand-coded ids included -- parent's correction 2026-08-18:
+  // they fold into the pool and take their chances like everything else, so
+  // this draws from ids [0, COUNT), not just game::CONDITIONS' data-driven
+  // rows) via a partial Fisher-Yates shuffle, using the same combat RNG
   // stream every other run-scoped roll uses so the draw is deterministic per
   // game seed.
-  game::AchievementId pool[game::CONDITION_COUNT];
-  for (uint8_t i = 0; i < game::CONDITION_COUNT; i++) pool[i] = game::CONDITIONS[i].id;
-  uint8_t drawSize = game::CONDITION_COUNT < DRAWN_POOL_SIZE ? game::CONDITION_COUNT : DRAWN_POOL_SIZE;
+  game::AchievementId pool[COUNT];
+  for (uint8_t i = 0; i < COUNT; i++) pool[i] = static_cast<game::AchievementId>(i);
+  uint8_t drawSize = COUNT < DRAWN_POOL_SIZE ? COUNT : DRAWN_POOL_SIZE;
   for (uint8_t i = 0; i < drawSize; i++) {
-    uint32_t j = i + GAME_STATE.rollRange(game::CONDITION_COUNT - i);
+    uint32_t j = i + GAME_STATE.rollRange(COUNT - i);
     game::AchievementId tmp = pool[i];
     pool[i] = pool[j];
     pool[j] = tmp;
@@ -126,10 +129,11 @@ bool AchievementBus::isUnlockedThisRun(game::AchievementId id) const {
 
 void AchievementBus::unlock(game::AchievementId id, const char* flavorText) {
   uint8_t idx = static_cast<uint8_t>(id);
-  // The draw guard: an id from the data-driven pool that wasn't dealt to this
-  // run cannot fire, no matter what its condition row says. Legacy hand-coded
-  // ids (below FIRST_DRAWABLE_ID) are unaffected -- unconditionally unlockable
-  // exactly as before.
+  // The draw guard: an id that wasn't dealt into this run's 50-slot draw
+  // cannot fire, no matter what its condition row (or emit()'s hand-coded
+  // switch, for the legacy 48) says. FIRST_DRAWABLE_ID is 0 -- every id,
+  // legacy and data-driven alike, is equally subject to this (parent's
+  // correction 2026-08-18: "they just stop being special").
   if (idx >= FIRST_DRAWABLE_ID && !isDrawnThisRun(id)) {
     return;
   }

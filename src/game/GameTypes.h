@@ -16,6 +16,11 @@ constexpr int MAX_ITEMS_PER_LEVEL = 40;
 constexpr int MAX_INVENTORY = 20;
 constexpr int MAX_MESSAGES = 10;
 constexpr int MAX_DEPTH = 26;
+// Headroom for stacked run-scoped achievement rewards (Buff/Skill, see the
+// "Buffs and Skills" section below) -- sized well above what the first bucket
+// actually grants so later buckets don't need a Player layout change.
+constexpr int MAX_ACTIVE_BUFFS = 24;
+constexpr int MAX_ACTIVE_SKILLS = 12;
 
 // --- Hunger clock (Phase 11) ---
 // Increments by 1 every player turn (see processMonsterTurns()). Fully relieved
@@ -105,6 +110,16 @@ struct Player {
   // (equippedAttackBonus(), equippedDefenseBonus(), effectiveMaxHp()), so
   // there is nothing to clear, leak, or clamp on FloorChanged.
   uint8_t activeSponsorId = 0;
+  // Buff/Skill rewards (achievement reward work, save v5). Same point-of-use
+  // pattern as Sponsors above: these are index lists into BUFF_DEFS/SKILL_DEFS
+  // (below), never a mutation of maxHp/strength/etc. Lifetime-persistent
+  // (survive across runs, unlike the per-floor sponsor) since they represent
+  // a permanent account-level reward, not a roll. Append-only, deduped by
+  // grantBuff()/grantSkill() -- an already-held reward is never granted twice.
+  uint8_t activeBuffIds[MAX_ACTIVE_BUFFS] = {};
+  uint8_t activeBuffCount = 0;
+  uint8_t activeSkillIds[MAX_ACTIVE_SKILLS] = {};
+  uint8_t activeSkillCount = 0;
 };
 
 struct Monster {
@@ -311,10 +326,12 @@ inline int sponsorGoldPercentModifier(uint8_t sponsorId) {
 // so a hypothetical negative-maxHp sponsor could never produce a 0/negative
 // cap.
 inline uint16_t effectiveMaxHp(const Player& p) {
-  if (p.activeSponsorId >= SPONSOR_DEF_COUNT) return p.maxHp;
-  const SponsorDef& s = SPONSOR_DEFS[p.activeSponsorId];
-  if (s.stat != SponsorStat::MaxHp) return p.maxHp;
-  int v = static_cast<int>(p.maxHp) + s.amount;
+  int v = static_cast<int>(p.maxHp);
+  if (p.activeSponsorId < SPONSOR_DEF_COUNT) {
+    const SponsorDef& s = SPONSOR_DEFS[p.activeSponsorId];
+    if (s.stat == SponsorStat::MaxHp) v += s.amount;
+  }
+  v += buffMaxHpModifier(p);
   return v < 1 ? 1 : static_cast<uint16_t>(v);
 }
 
@@ -439,7 +456,10 @@ inline uint8_t themeForDepth(uint32_t gameSeed, uint8_t depth) {
 
 // --- Achievement definitions ---
 
-enum class AchievementReward : uint8_t { None, Title, SponsorUnlock, LoreUnlock };
+// Buff/Skill rewardValue indexes into BUFF_DEFS/SKILL_DEFS respectively (the
+// same array-index convention Title/SponsorUnlock already use against
+// TITLE_STRINGS/SPONSOR_DEFS).
+enum class AchievementReward : uint8_t { None, Title, SponsorUnlock, LoreUnlock, Buff, Skill };
 
 struct AchievementDef {
   const char* name;
@@ -527,10 +547,58 @@ inline constexpr AchievementDef ACHIEVEMENT_DEFS[] = {
     {"Obscene Wealth", "Accumulated 10000 gold.", AchievementReward::SponsorUnlock, 2},
     // -- Secrets --
     {"Completionist", "Unlocked forty other achievements. This one was inevitable.", AchievementReward::LoreUnlock, 0},
+    // -- Demo set (48-59): condition-table type proof, ids IronStomach..DeepAndDeadly --
+    {"Iron Stomach", "Let hunger climb absurdly high and lived to complain about it.", AchievementReward::None, 0},
+    {"Step Counter", "Walked 500 tiles in a single run.", AchievementReward::None, 0},
+    {"One Shot", "Landed a single hit hard enough to erase most anything.", AchievementReward::None, 0},
+    {"Nick of Time", "Survived a hit that left you at exactly 1 HP.", AchievementReward::None, 0},
+    {"Serial Killer", "Killed 25 monsters in a single run.", AchievementReward::None, 0},
+    {"Klepto", "Picked up 100 items in a single run. There's a hoarding problem here.", AchievementReward::None, 0},
+    {"Ghost", "Finished a run without ever being hit.", AchievementReward::Title, 18},
+    {"Untroubled", "Cleared a single floor without ever being hit.", AchievementReward::None, 0},
+    {"Potion Chugger", "Drank 10 potions in a single run.", AchievementReward::None, 0},
+    {"Scroll Hoarder", "Picked up 5 scrolls in a single run.", AchievementReward::None, 0},
+    {"Greedy and Fast", "Walked far and killed fast in the same run.", AchievementReward::None, 0},
+    {"Deep and Deadly", "Ate constantly and looted relentlessly in the same run.", AchievementReward::None, 0},
+    // -- Depth bucket (60-89): every remaining single-floor threshold, plus
+    // depth-gated compounds against the demo pool's normal (non-silly)
+    // condition rows. Reward tier climbs with depth: shallow = None/small
+    // Buff, deep singles = Skill, compounds mix Buff/Skill depending on how
+    // hard the paired condition is to also satisfy at that depth. --
+    {"Footing", "Reached dungeon level 3.", AchievementReward::None, 0},
+    {"Four Floors Down", "Reached dungeon level 4.", AchievementReward::Buff, 1},
+    {"Sixth Sense", "Reached dungeon level 6.", AchievementReward::None, 0},
+    {"Lucky Seven", "Reached dungeon level 7.", AchievementReward::Buff, 2},
+    {"Eight Below", "Reached dungeon level 8.", AchievementReward::Buff, 3},
+    {"Ninth Circle", "Reached dungeon level 9.", AchievementReward::None, 0},
+    {"Eleven and Counting", "Reached dungeon level 11.", AchievementReward::Buff, 4},
+    {"Dozen Deep", "Reached dungeon level 12.", AchievementReward::Buff, 5},
+    {"Unlucky Thirteen", "Reached dungeon level 13.", AchievementReward::None, 0},
+    {"Fourteen Fathoms", "Reached dungeon level 14.", AchievementReward::Buff, 6},
+    {"Sixteen Strides", "Reached dungeon level 16.", AchievementReward::Skill, 1},
+    {"Seventeen Sunken", "Reached dungeon level 17.", AchievementReward::Skill, 2},
+    {"Eighteen Echoes", "Reached dungeon level 18.", AchievementReward::Buff, 7},
+    {"Nineteen Nadir", "Reached dungeon level 19.", AchievementReward::Skill, 3},
+    {"Twenty-One Undertow", "Reached dungeon level 21.", AchievementReward::Skill, 4},
+    {"Twenty-Three Threshold", "Reached dungeon level 23.", AchievementReward::Skill, 5},
+    {"Twenty-Four Frontier", "Reached dungeon level 24.", AchievementReward::Skill, 6},
+    {"Treader of Shallows", "Reached level 3 while covering serious ground on the way.", AchievementReward::None, 0},
+    {"Butcher of Six", "Reached level 6 having already killed 25 things this run.", AchievementReward::Buff, 8},
+    {"Unscathed Eighth", "Reached level 8 without taking a single hit all run.", AchievementReward::Buff, 9},
+    {"Serene Ninth", "Reached level 9 without a scratch on the current floor.", AchievementReward::None, 0},
+    {"Alchemist of Eleven", "Reached level 11 after chugging 10 potions along the way.", AchievementReward::Buff, 10},
+    {"Scribe of Twelve", "Reached level 12 having hoarded 5 scrolls.", AchievementReward::Buff, 11},
+    {"Hoarder of Thirteen", "Reached level 13 with 100 items picked up this run.", AchievementReward::None, 0},
+    {"Wanderer of Fourteen", "Reached level 14 having walked 500 tiles this run.", AchievementReward::Buff, 12},
+    {"Reaper of Sixteen", "Reached level 16 with 25 kills already banked this run.", AchievementReward::Skill, 7},
+    {"Phantom of Seventeen", "Reached level 17 without ever being hit.", AchievementReward::Buff, 13},
+    {"Unbroken Nineteen", "Reached level 19 unscathed on the current floor.", AchievementReward::Buff, 14},
+    {"Brewmaster of Twenty-One", "Reached level 21 having chugged 10 potions along the way.", AchievementReward::Skill, 6},
+    {"Loremaster of Twenty-Three", "Reached level 23 having hoarded 5 scrolls.", AchievementReward::Skill, 4},
 };
 
 inline constexpr int ACHIEVEMENT_DEF_COUNT = sizeof(ACHIEVEMENT_DEFS) / sizeof(ACHIEVEMENT_DEFS[0]);
-static_assert(ACHIEVEMENT_DEF_COUNT == 48, "ACHIEVEMENT_DEFS must have exactly 48 entries");
+static_assert(ACHIEVEMENT_DEF_COUNT == 90, "ACHIEVEMENT_DEFS must have exactly 90 entries");
 
 // Bounds-safe achievementDef(AchievementId) lookup lives in Achievements.h,
 // not here -- AchievementId is declared there (which already includes this
@@ -554,6 +622,12 @@ inline void achievementRewardText(const AchievementDef& def, char* out, size_t o
       break;
     case AchievementReward::LoreUnlock:
       snprintf(out, outSize, "Unlocks a lore entry");
+      break;
+    case AchievementReward::Buff:
+      snprintf(out, outSize, "Grants buff: %s", BUFF_DEFS[def.rewardValue].name);
+      break;
+    case AchievementReward::Skill:
+      snprintf(out, outSize, "Grants skill: %s", SKILL_DEFS[def.rewardValue].name);
       break;
   }
 }

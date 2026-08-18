@@ -11,10 +11,74 @@
 #include "FlavorText.h"
 
 namespace {
-constexpr uint8_t SAVE_FILE_VERSION = 4;  // v2: turnCount widened to uint32_t, added kills +
+constexpr uint8_t SAVE_FILE_VERSION = 5;  // v2: turnCount widened to uint32_t, added kills +
                                           // combatRngState to Player (Phase 7, one bump for all three)
                                           // v3: added hunger to Player (Phase 11)
                                           // v4: added activeSponsorId to Player (Phase 11 sponsors)
+                                          // v5: added activeBuffIds/activeBuffCount/activeSkillIds/
+                                          // activeSkillCount to Player (achievement reward work).
+                                          // Migrated, not invalidated -- see PlayerV4/readPlayerField
+                                          // below: a v4 file loads its existing fields as-is and gets
+                                          // the new buff/skill lists defaulted empty, so an in-progress
+                                          // run on a player's device is never silently wiped by this bump.
+
+// Mirrors Player's exact v4 on-disk layout (everything up to and including
+// activeSponsorId, before activeBuffIds/activeBuffCount/activeSkillIds/
+// activeSkillCount were added). Field-by-field copy into a real
+// game::Player{} on load rather than a raw reinterpret -- keeps this legacy
+// shape decoupled from the live struct so a future version bump can't
+// accidentally corrupt both.
+struct PlayerV4 {
+  int16_t x = 0;
+  int16_t y = 0;
+  uint16_t hp = 20;
+  uint16_t maxHp = 20;
+  uint16_t mp = 5;
+  uint16_t maxMp = 5;
+  uint16_t strength = 10;
+  uint16_t dexterity = 10;
+  uint16_t constitution = 10;
+  uint16_t intelligence = 10;
+  uint16_t charLevel = 1;
+  uint32_t experience = 0;
+  uint16_t gold = 0;
+  uint8_t dungeonDepth = 1;
+  uint32_t gameSeed = 0;
+  uint32_t turnCount = 0;
+  uint16_t kills = 0;
+  uint32_t combatRngState = 1;
+  uint16_t hunger = 0;
+  uint8_t activeSponsorId = 0;
+};
+
+game::Player playerFromV4(const PlayerV4& v4) {
+  game::Player p{};
+  p.x = v4.x;
+  p.y = v4.y;
+  p.hp = v4.hp;
+  p.maxHp = v4.maxHp;
+  p.mp = v4.mp;
+  p.maxMp = v4.maxMp;
+  p.strength = v4.strength;
+  p.dexterity = v4.dexterity;
+  p.constitution = v4.constitution;
+  p.intelligence = v4.intelligence;
+  p.charLevel = v4.charLevel;
+  p.experience = v4.experience;
+  p.gold = v4.gold;
+  p.dungeonDepth = v4.dungeonDepth;
+  p.gameSeed = v4.gameSeed;
+  p.turnCount = v4.turnCount;
+  p.kills = v4.kills;
+  p.combatRngState = v4.combatRngState;
+  p.hunger = v4.hunger;
+  p.activeSponsorId = v4.activeSponsorId;
+  // activeBuffIds/activeBuffCount/activeSkillIds/activeSkillCount stay at
+  // their game::Player{} defaults (empty) -- a pre-existing run simply has no
+  // achievement-granted buffs/skills yet, which is exactly correct: it never
+  // had this reward system before.
+  return p;
+}
 constexpr char SAVE_DIR[] = "/.crosspoint/game";
 constexpr char SAVE_FILE[] = "/.crosspoint/game/save.bin";
 
@@ -74,7 +138,10 @@ SaveValidity parseSaveFile(HalFile& file, StagedSave& out) {
     result.reason = "truncated";
     return result;
   }
-  if (version != SAVE_FILE_VERSION) {
+  // v4 is the one prior layout this build still knows how to migrate (see
+  // PlayerV4/playerFromV4 above) -- anything older or newer than that is
+  // genuinely unsafe to reinterpret and gets rejected, same as before.
+  if (version != SAVE_FILE_VERSION && version != 4) {
     // Player is written as raw POD -- any layout change (this file's
     // version history widened turnCount and added fields over time) makes an
     // older file's bytes unsafe to reinterpret as the new struct. Reject
@@ -84,10 +151,20 @@ SaveValidity parseSaveFile(HalFile& file, StagedSave& out) {
     return result;
   }
 
-  if (!readPodChecked(file, out.player)) {
-    result.status = SaveValidity::Status::Invalid;
-    result.reason = "truncated";
-    return result;
+  if (version == 4) {
+    PlayerV4 legacy;
+    if (!readPodChecked(file, legacy)) {
+      result.status = SaveValidity::Status::Invalid;
+      result.reason = "truncated";
+      return result;
+    }
+    out.player = playerFromV4(legacy);
+  } else {
+    if (!readPodChecked(file, out.player)) {
+      result.status = SaveValidity::Status::Invalid;
+      result.reason = "truncated";
+      return result;
+    }
   }
 
   // Inventory

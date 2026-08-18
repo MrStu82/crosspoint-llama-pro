@@ -74,6 +74,7 @@ inline int equippedAttackBonus() {
     }
   }
   bonus += sponsorAttackModifier(GAME_STATE.player.activeSponsorId);
+  bonus += buffAttackModifier(GAME_STATE.player);
   return bonus;
 }
 
@@ -91,6 +92,7 @@ inline int equippedDefenseBonus() {
     }
   }
   bonus += sponsorDefenseModifier(GAME_STATE.player.activeSponsorId);
+  bonus += buffDefenseModifier(GAME_STATE.player);
   return bonus;
 }
 

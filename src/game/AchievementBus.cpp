@@ -140,6 +140,20 @@ void AchievementBus::unlock(game::AchievementId id, const char* flavorText) {
   unlockedThisRun[idx] = true;
   if (unlocked[idx]) return;
   unlocked[idx] = true;
+
+  // Mechanical reward: a Buff/Skill achievement grants a real, lifetime,
+  // point-of-use stat modifier (same pattern as Sponsors -- never mutates a
+  // base stat directly), not just a flavor-text notification. See
+  // GameTypes.h's Buffs and Skills section and Player::activeBuffIds/
+  // activeSkillIds. Persisted below via GameState::saveToFile(), same as any
+  // other Player field.
+  const game::AchievementDef& def = game::achievementDef(id);
+  if (def.reward == game::AchievementReward::Buff) {
+    game::grantBuff(GAME_STATE.player, def.rewardValue);
+  } else if (def.reward == game::AchievementReward::Skill) {
+    game::grantSkill(GAME_STATE.player, def.rewardValue);
+  }
+
   save();
   GAME_STATE.addMessage(flavorText);
   if (pendingCount_ >= MAX_PENDING_UNLOCKS) {

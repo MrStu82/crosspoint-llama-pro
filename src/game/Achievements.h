@@ -80,7 +80,41 @@ enum class AchievementId : uint8_t {
   // Compound (AND of two condition rows)
   GreedyAndFast = 58,     // TheWealthy-style AND SpeedRunner-style combo
   DeepAndDeadly = 59,     // DeepDiver-style AND Exterminator-style combo
-  Count = 60,
+  // -- Depth bucket (Milestone 1): every remaining single-floor depth
+  // threshold (60-76), then depth-gated compounds against the demo pool's
+  // normal condition rows (77-89). CounterCompare + Compound only -- see
+  // AchievementConditions.h for the condition rows themselves. --
+  Depth3 = 60,
+  Depth4 = 61,
+  Depth6 = 62,
+  Depth7 = 63,
+  Depth8 = 64,
+  Depth9 = 65,
+  Depth11 = 66,
+  Depth12 = 67,
+  Depth13 = 68,
+  Depth14 = 69,
+  Depth16 = 70,
+  Depth17 = 71,
+  Depth18 = 72,
+  Depth19 = 73,
+  Depth21 = 74,
+  Depth23 = 75,
+  Depth24 = 76,
+  TreaderOfShallows = 77,    // Depth3 AND StepCounter
+  ButcherOfSix = 78,         // Depth6 AND SerialKiller
+  UnscathedEighth = 79,      // Depth8 AND Ghost
+  SereneNinth = 80,          // Depth9 AND Untroubled
+  AlchemistOfEleven = 81,    // Depth11 AND PotionChugger
+  ScribeOfTwelve = 82,       // Depth12 AND ScrollHoarder
+  HoarderOfThirteen = 83,    // Depth13 AND Klepto
+  WandererOfFourteen = 84,   // Depth14 AND StepCounter
+  ReaperOfSixteen = 85,      // Depth16 AND SerialKiller
+  PhantomOfSeventeen = 86,   // Depth17 AND Ghost
+  UnbrokenNineteen = 87,     // Depth19 AND Untroubled
+  BrewmasterOfTwentyOne = 88, // Depth21 AND PotionChugger
+  LoremasterOfTwentyThree = 89, // Depth23 AND ScrollHoarder
+  Count = 90,
 };
 
 // Bounds-safe lookup: AchievementId now runs past ACHIEVEMENT_DEF_COUNT (the
@@ -161,6 +195,36 @@ inline const char* achievementShortName(AchievementId id) {
     case AchievementId::ScrollHoarder: return "Scroll Hoarder";
     case AchievementId::GreedyAndFast: return "Greedy and Fast";
     case AchievementId::DeepAndDeadly: return "Deep and Deadly";
+    case AchievementId::Depth3: return "Footing";
+    case AchievementId::Depth4: return "Four Floors Down";
+    case AchievementId::Depth6: return "Sixth Sense";
+    case AchievementId::Depth7: return "Lucky Seven";
+    case AchievementId::Depth8: return "Eight Below";
+    case AchievementId::Depth9: return "Ninth Circle";
+    case AchievementId::Depth11: return "Eleven and Counting";
+    case AchievementId::Depth12: return "Dozen Deep";
+    case AchievementId::Depth13: return "Unlucky Thirteen";
+    case AchievementId::Depth14: return "Fourteen Fathoms";
+    case AchievementId::Depth16: return "Sixteen Strides";
+    case AchievementId::Depth17: return "Seventeen Sunken";
+    case AchievementId::Depth18: return "Eighteen Echoes";
+    case AchievementId::Depth19: return "Nineteen Nadir";
+    case AchievementId::Depth21: return "Twenty-One Undertow";
+    case AchievementId::Depth23: return "Twenty-Three Threshold";
+    case AchievementId::Depth24: return "Twenty-Four Frontier";
+    case AchievementId::TreaderOfShallows: return "Treader of Shallows";
+    case AchievementId::ButcherOfSix: return "Butcher of Six";
+    case AchievementId::UnscathedEighth: return "Unscathed Eighth";
+    case AchievementId::SereneNinth: return "Serene Ninth";
+    case AchievementId::AlchemistOfEleven: return "Alchemist of Eleven";
+    case AchievementId::ScribeOfTwelve: return "Scribe of Twelve";
+    case AchievementId::HoarderOfThirteen: return "Hoarder of Thirteen";
+    case AchievementId::WandererOfFourteen: return "Wanderer of Fourteen";
+    case AchievementId::ReaperOfSixteen: return "Reaper of Sixteen";
+    case AchievementId::PhantomOfSeventeen: return "Phantom of Seventeen";
+    case AchievementId::UnbrokenNineteen: return "Unbroken Nineteen";
+    case AchievementId::BrewmasterOfTwentyOne: return "Brewmaster of Twenty-One";
+    case AchievementId::LoremasterOfTwentyThree: return "Loremaster of Twenty-Three";
     default: return "";
   }
 }

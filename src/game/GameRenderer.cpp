@@ -863,8 +863,64 @@ DirtyWindow GameRenderer::notificationRect() const {
   return w;
 }
 
+// Descending-size candidate list for drawAchievementBanner()'s largest-fit
+// search (Stuart's "just big text" call, msg 4082) -- ordered largest-first
+// so the first candidate that fits IS the largest that fits, no second pass
+// needed to confirm it. NOTOSANS_18 tops the list since it's the biggest
+// font this codebase has (see fontIds.h); SMALL_FONT_ID anchors the bottom
+// as the last-resort fallback -- realistic achievement names fit well before
+// reaching it, but if every candidate somehow failed to fit, the loop below
+// still leaves fontId on SMALL_FONT_ID (the smallest, hence most-likely-to-
+// fit) rather than an earlier, worse-fitting candidate.
+static constexpr int kAchievementFontCandidates[] = {
+    NOTOSANS_18_FONT_ID, NOTOSERIF_18_FONT_ID, NOTOSANS_16_FONT_ID, NOTOSERIF_16_FONT_ID,
+    NOTOSANS_14_FONT_ID, NOTOSERIF_14_FONT_ID, UI_12_FONT_ID,       NOTOSANS_12_FONT_ID,
+    NOTOSERIF_12_FONT_ID, UI_10_FONT_ID,        SMALL_FONT_ID,
+};
+
+void GameRenderer::drawAchievementBanner(GfxRenderer& renderer, const DirtyWindow& rect) const {
+  // Same horizontal box drawCenteredText's own clamp already assumes
+  // (rect.x/rect.w passed straight through as boxX/boxWidth below) -- no
+  // separate margin math here, so there's exactly one source of "how wide is
+  // available" for both the fit search and the draw.
+  constexpr EpdFontFamily::Style kStyle = EpdFontFamily::BOLD;
+  int fontId = kAchievementFontCandidates[0];
+  int lineH = renderer.getLineHeight(fontId);
+  for (int candidate : kAchievementFontCandidates) {
+    fontId = candidate;
+    lineH = renderer.getLineHeight(fontId);
+    // The SAME getTextWidth() call drawCenteredText() itself uses internally
+    // to center -- deliberate (parent msg 4082: "whatever measures the text
+    // before centring it must be the same call that draws it"). Picking a
+    // font here that this exact call reports as fitting means
+    // drawCenteredText()'s own internal truncatedText() safety clamp can
+    // never actually trigger for a real achievement name. The lineH <= rect.h
+    // check is the vertical half of the same guarantee -- without it, a tall
+    // candidate could still be "picked" on width alone and then centeredY
+    // below could land outside the rect (and, since rect.y/rect.h are
+    // themselves proven inside the panel by notificationRect()'s layout
+    // invariant, outside the rect is the only way this text could ever
+    // reach panelHeight and get silently dropped by drawPixel).
+    if (renderer.getTextWidth(fontId, notificationBody_, kStyle, BidiUtils::BidiBaseDir::AUTO) <= rect.w &&
+        lineH <= rect.h) {
+      break;
+    }
+  }
+
+  const int centeredY = rect.y + (rect.h - lineH) / 2;
+  renderer.drawCenteredText(fontId, centeredY, notificationBody_, true, kStyle, BidiUtils::BidiBaseDir::AUTO, rect.x,
+                            rect.w);
+}
+
 void GameRenderer::drawNotification(GfxRenderer& renderer) const {
   const DirtyWindow rect = notificationRect();
+
+  // Achievement unlocks render as bare centered text on the existing band --
+  // no box, no title bar, nothing else in this function applies to them.
+  if (notificationKind_ == NotificationKind::Achievement) {
+    drawAchievementBanner(renderer, rect);
+    return;
+  }
 
   renderer.fillRoundedRect(rect.x, rect.y, rect.w, rect.h, 6, Color::White);
   renderer.drawRoundedRect(rect.x, rect.y, rect.w, rect.h, 2, 6, true);
@@ -882,27 +938,6 @@ void GameRenderer::drawNotification(GfxRenderer& renderer) const {
   // BANNER_H, same box-clamp discipline as every other drawCenteredText call
   // site now follows (rect.x/rect.w clamp already applied below).
   const int bodyTop = rect.y + NOTIFICATION_TITLE_H + 4;
-  if (notificationKind_ == NotificationKind::Achievement) {
-    // Banner content redesign (Pixel's spec, ratified msg 4062): exactly two
-    // fields -- Name (bold) then Reward (regular) below it. Reward is omitted
-    // for the 30/48 achievements with AchievementReward::None, and the Name
-    // line is vertically centered in the body band instead, rather than
-    // sitting pinned to the top with a dead second line beneath it.
-    if (notificationRewardBody_[0] != '\0') {
-      renderer.drawCenteredText(UI_10_FONT_ID, bodyTop, notificationBody_, true, EpdFontFamily::BOLD,
-                                BidiUtils::BidiBaseDir::AUTO, rect.x, rect.w);
-      const int lineH = renderer.getLineHeight(UI_10_FONT_ID);
-      renderer.drawCenteredText(UI_10_FONT_ID, bodyTop + lineH, notificationRewardBody_, true,
-                                EpdFontFamily::REGULAR, BidiUtils::BidiBaseDir::AUTO, rect.x, rect.w);
-    } else {
-      const int bodyBandH = rect.h - NOTIFICATION_TITLE_H;
-      const int lineH = renderer.getLineHeight(UI_10_FONT_ID);
-      const int centeredY = rect.y + NOTIFICATION_TITLE_H + (bodyBandH - lineH) / 2;
-      renderer.drawCenteredText(UI_10_FONT_ID, centeredY, notificationBody_, true, EpdFontFamily::BOLD,
-                                BidiUtils::BidiBaseDir::AUTO, rect.x, rect.w);
-    }
-    return;
-  }
   renderer.drawCenteredText(UI_10_FONT_ID, bodyTop, notificationBody_, true,
                             EpdFontFamily::REGULAR, BidiUtils::BidiBaseDir::AUTO, rect.x, rect.w);
 }

@@ -236,6 +236,15 @@ class GameRenderer {
   // rect to white via fillRect() before the switch and there's nothing more
   // to do, so this is only ever called on show, never on dismiss.
   void drawNotification(GfxRenderer& renderer) const;
+  // Achievement unlocks skip the boxed System notification entirely (Stuart's
+  // "just big text" call, msg 4082): no border, no fill, no title bar -- just
+  // notificationBody_ (the achievement name, see showAchievementNotification())
+  // in the largest font from a fixed descending-size list that fits within
+  // rect on one line, centered both ways in the same band drawNotification()
+  // would otherwise box. The candidate list is ordered largest-first so the
+  // first fit found is also the largest -- no separate "is this the biggest"
+  // pass needed.
+  void drawAchievementBanner(GfxRenderer& renderer, const DirtyWindow& rect) const;
 
   // Fixed-position box in the reserved banner band between the map and the
   // console (see BANNER_H), full-width minus a margin. Doesn't depend on

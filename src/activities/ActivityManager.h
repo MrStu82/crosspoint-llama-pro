@@ -106,7 +106,7 @@ class ActivityManager {
   void goToSolitaire();
   void goToMinesweeper();
   void goToSudoku();
-  void goHome(HomeMenuItem initialMenuItem = HomeMenuItem::NONE);
+  void goHome(HomeMenuItem initialMenuItem = HomeMenuItem::NONE, bool cleanInitialRefresh = false);
 
   // This will move current activity to stack instead of deleting it
   void pushActivity(std::unique_ptr<Activity>&& activity);

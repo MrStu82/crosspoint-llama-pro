@@ -614,6 +614,8 @@ inline constexpr const char* TITLE_STRINGS[] = {
     "Giant-Killer",       // 17
     "the Untouchable",    // 18
     "Dungeon Sovereign",  // 19
+    "the Prosperous",     // 20
+    "the Opportunist",    // 21
 };
 
 inline constexpr AchievementDef ACHIEVEMENT_DEFS[] = {
@@ -808,10 +810,48 @@ inline constexpr AchievementDef ACHIEVEMENT_DEFS[] = {
     {"Meticulous at Nineteen", "Reached depth 19 having fully explored 8 floors this run.", AchievementReward::Skill, 7},
     {"Wayfarer of Twenty-One", "Reached depth 21 having walked 1800 tiles this run.", AchievementReward::Title, 15},
     {"Cartographer's Peak at Twenty-Four", "Reached depth 24 having fully explored 12 floors this run.", AchievementReward::Title, 6},
+    // -- Loot & Economy bucket (Milestone 3, ids 175-209): see
+    // Achievements.h and AchievementConditions.h for the enum ids and
+    // condition rows (114-148) backing these entries. --
+    {"Copper Count", "Amassed 100 gold in a single run.", AchievementReward::None, 0},
+    {"Coin Purse", "Amassed 500 gold in a single run.", AchievementReward::Buff, 1},
+    {"Silver Lining", "Amassed 2,500 gold in a single run.", AchievementReward::Buff, 5},
+    {"Deep Pockets", "Amassed 5,000 gold in a single run.", AchievementReward::Buff, 9},
+    {"Vault Dweller", "Amassed 25,000 gold in a single run.", AchievementReward::Skill, 2},
+    {"Coffers Overflowing", "Amassed 50,000 gold in a single run.", AchievementReward::Skill, 6},
+    {"Beyond Counting", "Amassed 100,000 gold in a single run.", AchievementReward::Skill, 7},
+    {"Ring Finder", "Picked up 3 rings in a single run.", AchievementReward::None, 0},
+    {"Amulet Collector", "Picked up 3 amulets in a single run.", AchievementReward::Buff, 2},
+    {"Suited Up", "Picked up 10 pieces of armor in a single run.", AchievementReward::Buff, 6},
+    {"Shield Wall", "Picked up 8 shields in a single run.", AchievementReward::Buff, 10},
+    {"Well Stocked", "Picked up 15 food items in a single run.", AchievementReward::Skill, 3},
+    {"Armory", "Picked up 15 weapons in a single run.", AchievementReward::Skill, 7},
+    {"Box Collector", "Picked up 5 loot boxes in a single run.", AchievementReward::Buff, 3},
+    {"Well Read", "Used 5 scrolls in a single run.", AchievementReward::None, 0},
+    {"Archive Diver", "Used 15 scrolls in a single run.", AchievementReward::Buff, 4},
+    {"Snack Attack", "Ate 10 food items in a single run.", AchievementReward::Buff, 7},
+    {"Bottomless Stomach", "Ate 25 food items in a single run.", AchievementReward::Skill, 4},
+    {"Box Office Hit", "Opened 3 loot boxes in a single run.", AchievementReward::None, 0},
+    {"Unwrapping Spree", "Opened 8 loot boxes in a single run.", AchievementReward::Buff, 8},
+    {"Jackpot Streak", "Opened 15 loot boxes in a single run.", AchievementReward::Skill, 1},
+    {"Sponsor's Favorite", "Opened 25 loot boxes in a single run.", AchievementReward::Skill, 5},
+    {"Rich at Three", "Reached depth 3 having amassed 100 gold this run.", AchievementReward::Buff, 11},
+    {"Flush at Eight", "Reached depth 8 having amassed 2,500 gold this run.", AchievementReward::Buff, 12},
+    {"Gilded at Thirteen", "Reached depth 13 having amassed 5,000 gold this run.", AchievementReward::Skill, 5},
+    {"Mogul at Eighteen", "Reached depth 18 having amassed 25,000 gold this run.", AchievementReward::Skill, 1},
+    {"Tycoon at Twenty-Three", "Reached depth 23 having amassed 50,000 gold this run.", AchievementReward::Title, 20},
+    {"Ascetic", "Went a full floor without picking up an item.", AchievementReward::Buff, 13},
+    {"Self-Sufficient", "Went an entire run without picking up a single item.", AchievementReward::Title, 8},
+    {"Minimalist Delver", "Reached depth 9 having gone a full floor without picking up an item.", AchievementReward::Buff, 14},
+    {"Ring Hoarder", "Picked up 8 rings in a single run.", AchievementReward::Skill, 2},
+    {"Amulet Vault", "Picked up 8 amulets in a single run.", AchievementReward::Skill, 3},
+    {"Full Loadout", "Picked up 3 rings and 3 amulets in a single run.", AchievementReward::Buff, 1},
+    {"Well Equipped", "Picked up 10 pieces of armor and 8 shields in a single run.", AchievementReward::Skill, 6},
+    {"Grand Bazaar", "Picked up 5 loot boxes having amassed 5,000 gold this run.", AchievementReward::Title, 21},
 };
 
 inline constexpr int ACHIEVEMENT_DEF_COUNT = sizeof(ACHIEVEMENT_DEFS) / sizeof(ACHIEVEMENT_DEFS[0]);
-static_assert(ACHIEVEMENT_DEF_COUNT == 175, "ACHIEVEMENT_DEFS must have exactly 175 entries");
+static_assert(ACHIEVEMENT_DEF_COUNT == 210, "ACHIEVEMENT_DEFS must have exactly 210 entries");
 
 // Bounds-safe achievementDef(AchievementId) lookup lives in Achievements.h,
 // not here -- AchievementId is declared there (which already includes this

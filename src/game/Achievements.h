@@ -215,7 +215,52 @@ enum class AchievementId : uint8_t {
   MeticulousAtNineteen = 172,
   WayfarerOfTwentyOne = 173,
   CartographersPeakAtTwentyFour = 174,
-  Count = 175,
+
+  // -- Loot & Economy bucket (Milestone 3, ids 175-209): gold-accumulation
+  // tiers, item-pickup collection tiers by type (ring/amulet/armor/shield/
+  // food/weapon/lootbox), item-usage tiers (scroll/food only -- potion
+  // thresholds already saturated by the legacy + demo pools), loot-box-opened
+  // event tiers, depth+gold "efficient looter" compounds, no-pickup
+  // "ascetic" achievements, and higher-tier pickup + full-loadout compounds.
+  // Avoids the legacy Loot group's exact thresholds (gold 1000/10000,
+  // item-pickup-count 1/50). See AchievementConditions.h for the condition
+  // rows (114-148). --
+  CopperCount = 175,
+  CoinPurse = 176,
+  SilverLining = 177,
+  DeepPockets = 178,
+  VaultDweller = 179,
+  CoffersOverflowing = 180,
+  BeyondCounting = 181,
+  RingFinder = 182,
+  AmuletCollector = 183,
+  SuitedUp = 184,
+  ShieldWall = 185,
+  WellStocked = 186,
+  Armory = 187,
+  BoxCollector = 188,
+  WellRead = 189,
+  ArchiveDiver = 190,
+  SnackAttack = 191,
+  BottomlessStomach = 192,
+  BoxOfficeHit = 193,
+  UnwrappingSpree = 194,
+  JackpotStreak = 195,
+  SponsorsFavorite = 196,
+  RichAtThree = 197,
+  FlushAtEight = 198,
+  GildedAtThirteen = 199,
+  MogulAtEighteen = 200,
+  TycoonAtTwentyThree = 201,
+  Ascetic = 202,
+  SelfSufficient = 203,
+  MinimalistDelver = 204,
+  RingHoarder = 205,
+  AmuletVault = 206,
+  FullLoadout = 207,
+  WellEquipped = 208,
+  GrandBazaar = 209,
+  Count = 210,
 };
 
 // Bounds-safe lookup: AchievementId now runs past ACHIEVEMENT_DEF_COUNT (the
@@ -411,6 +456,41 @@ inline const char* achievementShortName(AchievementId id) {
     case AchievementId::MeticulousAtNineteen: return "Meticulous at Nineteen";
     case AchievementId::WayfarerOfTwentyOne: return "Wayfarer of Twenty-One";
     case AchievementId::CartographersPeakAtTwentyFour: return "Cartographer's Peak at Twenty-Four";
+    case AchievementId::CopperCount: return "Copper Count";
+    case AchievementId::CoinPurse: return "Coin Purse";
+    case AchievementId::SilverLining: return "Silver Lining";
+    case AchievementId::DeepPockets: return "Deep Pockets";
+    case AchievementId::VaultDweller: return "Vault Dweller";
+    case AchievementId::CoffersOverflowing: return "Coffers Overflowing";
+    case AchievementId::BeyondCounting: return "Beyond Counting";
+    case AchievementId::RingFinder: return "Ring Finder";
+    case AchievementId::AmuletCollector: return "Amulet Collector";
+    case AchievementId::SuitedUp: return "Suited Up";
+    case AchievementId::ShieldWall: return "Shield Wall";
+    case AchievementId::WellStocked: return "Well Stocked";
+    case AchievementId::Armory: return "Armory";
+    case AchievementId::BoxCollector: return "Box Collector";
+    case AchievementId::WellRead: return "Well Read";
+    case AchievementId::ArchiveDiver: return "Archive Diver";
+    case AchievementId::SnackAttack: return "Snack Attack";
+    case AchievementId::BottomlessStomach: return "Bottomless Stomach";
+    case AchievementId::BoxOfficeHit: return "Box Office Hit";
+    case AchievementId::UnwrappingSpree: return "Unwrapping Spree";
+    case AchievementId::JackpotStreak: return "Jackpot Streak";
+    case AchievementId::SponsorsFavorite: return "Sponsor's Favorite";
+    case AchievementId::RichAtThree: return "Rich at Three";
+    case AchievementId::FlushAtEight: return "Flush at Eight";
+    case AchievementId::GildedAtThirteen: return "Gilded at Thirteen";
+    case AchievementId::MogulAtEighteen: return "Mogul at Eighteen";
+    case AchievementId::TycoonAtTwentyThree: return "Tycoon at Twenty-Three";
+    case AchievementId::Ascetic: return "Ascetic";
+    case AchievementId::SelfSufficient: return "Self-Sufficient";
+    case AchievementId::MinimalistDelver: return "Minimalist Delver";
+    case AchievementId::RingHoarder: return "Ring Hoarder";
+    case AchievementId::AmuletVault: return "Amulet Vault";
+    case AchievementId::FullLoadout: return "Full Loadout";
+    case AchievementId::WellEquipped: return "Well Equipped";
+    case AchievementId::GrandBazaar: return "Grand Bazaar";
     default: return "";
   }
 }

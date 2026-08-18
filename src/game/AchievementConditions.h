@@ -80,8 +80,10 @@ struct AchievementCondition {
   NoEventWindow window = NoEventWindow::Run;
 
   // Compound: AND of two other rows, by index into CONDITIONS below. -1 == unused.
-  int8_t compoundA = -1;
-  int8_t compoundB = -1;
+  // int16_t (not int8_t): the pool is growing past 127 rows, and compound
+  // references must be able to point at any row in the full table.
+  int16_t compoundA = -1;
+  int16_t compoundB = -1;
 };
 
 // Demo table: 2 rows per condition type (12 total), proving the enum covers
@@ -452,6 +454,107 @@ constexpr AchievementCondition CONDITIONS[] = {
     {AchievementId::CartographersPeakAtTwentyFour, ConditionType::Compound, CounterField::Depth,
      CompareOp::GreaterEqual, 0, GameEventType::MonsterKilled, EventField::Damage,
      ItemType::ItemTypeCount, NoEventWindow::Run, 28, 101},  // Depth24(28) AND DozenCleared(101), index 113
+
+    // -- Loot & Economy bucket (Milestone 3, ids 175-209). Row index below ==
+    // position in this array (114 onward). Avoids the legacy gold thresholds
+    // (1000/10000) and item-pickup-count thresholds (1/50), and the existing
+    // potion ItemUsed thresholds (3/6/20) -- Group C here is Scroll/Food only. --
+
+    // Group A: gold-accumulation tiers (CounterCompare / Gold).
+    {AchievementId::CopperCount, ConditionType::CounterCompare, CounterField::Gold,
+     CompareOp::GreaterEqual, 100},      // index 114
+    {AchievementId::CoinPurse, ConditionType::CounterCompare, CounterField::Gold,
+     CompareOp::GreaterEqual, 500},      // index 115
+    {AchievementId::SilverLining, ConditionType::CounterCompare, CounterField::Gold,
+     CompareOp::GreaterEqual, 2500},     // index 116
+    {AchievementId::DeepPockets, ConditionType::CounterCompare, CounterField::Gold,
+     CompareOp::GreaterEqual, 5000},     // index 117
+    {AchievementId::VaultDweller, ConditionType::CounterCompare, CounterField::Gold,
+     CompareOp::GreaterEqual, 25000},    // index 118
+    {AchievementId::CoffersOverflowing, ConditionType::CounterCompare, CounterField::Gold,
+     CompareOp::GreaterEqual, 50000},    // index 119
+    {AchievementId::BeyondCounting, ConditionType::CounterCompare, CounterField::Gold,
+     CompareOp::GreaterEqual, 100000},   // index 120
+
+    // Group B: item-pickup-count tiers by type (ItemSpecific / ItemPickedUp).
+    {AchievementId::RingFinder, ConditionType::ItemSpecific, CounterField::Depth,
+     CompareOp::GreaterEqual, 3, GameEventType::ItemPickedUp, EventField::Damage, ItemType::Ring},     // index 121
+    {AchievementId::AmuletCollector, ConditionType::ItemSpecific, CounterField::Depth,
+     CompareOp::GreaterEqual, 3, GameEventType::ItemPickedUp, EventField::Damage, ItemType::Amulet},   // index 122
+    {AchievementId::SuitedUp, ConditionType::ItemSpecific, CounterField::Depth,
+     CompareOp::GreaterEqual, 10, GameEventType::ItemPickedUp, EventField::Damage, ItemType::Armor},   // index 123
+    {AchievementId::ShieldWall, ConditionType::ItemSpecific, CounterField::Depth,
+     CompareOp::GreaterEqual, 8, GameEventType::ItemPickedUp, EventField::Damage, ItemType::Shield},   // index 124
+    {AchievementId::WellStocked, ConditionType::ItemSpecific, CounterField::Depth,
+     CompareOp::GreaterEqual, 15, GameEventType::ItemPickedUp, EventField::Damage, ItemType::Food},    // index 125
+    {AchievementId::Armory, ConditionType::ItemSpecific, CounterField::Depth,
+     CompareOp::GreaterEqual, 15, GameEventType::ItemPickedUp, EventField::Damage, ItemType::Weapon},  // index 126
+    {AchievementId::BoxCollector, ConditionType::ItemSpecific, CounterField::Depth,
+     CompareOp::GreaterEqual, 5, GameEventType::ItemPickedUp, EventField::Damage, ItemType::LootBox},  // index 127
+
+    // Group C: item-usage tiers, Scroll/Food only (ItemSpecific / ItemUsed).
+    {AchievementId::WellRead, ConditionType::ItemSpecific, CounterField::Depth,
+     CompareOp::GreaterEqual, 5, GameEventType::ItemUsed, EventField::Damage, ItemType::Scroll},    // index 128
+    {AchievementId::ArchiveDiver, ConditionType::ItemSpecific, CounterField::Depth,
+     CompareOp::GreaterEqual, 15, GameEventType::ItemUsed, EventField::Damage, ItemType::Scroll},   // index 129
+    {AchievementId::SnackAttack, ConditionType::ItemSpecific, CounterField::Depth,
+     CompareOp::GreaterEqual, 10, GameEventType::ItemUsed, EventField::Damage, ItemType::Food},     // index 130
+    {AchievementId::BottomlessStomach, ConditionType::ItemSpecific, CounterField::Depth,
+     CompareOp::GreaterEqual, 25, GameEventType::ItemUsed, EventField::Damage, ItemType::Food},      // index 131
+
+    // Group D: loot-box-opened tiers (EventCount / LootBoxOpened).
+    {AchievementId::BoxOfficeHit, ConditionType::EventCount, CounterField::Depth,
+     CompareOp::GreaterEqual, 3, GameEventType::LootBoxOpened},     // index 132
+    {AchievementId::UnwrappingSpree, ConditionType::EventCount, CounterField::Depth,
+     CompareOp::GreaterEqual, 8, GameEventType::LootBoxOpened},     // index 133
+    {AchievementId::JackpotStreak, ConditionType::EventCount, CounterField::Depth,
+     CompareOp::GreaterEqual, 15, GameEventType::LootBoxOpened},    // index 134
+    {AchievementId::SponsorsFavorite, ConditionType::EventCount, CounterField::Depth,
+     CompareOp::GreaterEqual, 25, GameEventType::LootBoxOpened},    // index 135
+
+    // Group F: depth-plus-gold "efficient looter" compounds (Depth row AND a
+    // Group A gold row above, by CONDITIONS[] array index).
+    {AchievementId::RichAtThree, ConditionType::Compound, CounterField::Depth,
+     CompareOp::GreaterEqual, 0, GameEventType::MonsterKilled, EventField::Damage,
+     ItemType::ItemTypeCount, NoEventWindow::Run, 12, 114},   // Depth3(12) AND CopperCount(114), index 136
+    {AchievementId::FlushAtEight, ConditionType::Compound, CounterField::Depth,
+     CompareOp::GreaterEqual, 0, GameEventType::MonsterKilled, EventField::Damage,
+     ItemType::ItemTypeCount, NoEventWindow::Run, 16, 116},   // Depth8(16) AND SilverLining(116), index 137
+    {AchievementId::GildedAtThirteen, ConditionType::Compound, CounterField::Depth,
+     CompareOp::GreaterEqual, 0, GameEventType::MonsterKilled, EventField::Damage,
+     ItemType::ItemTypeCount, NoEventWindow::Run, 20, 117},   // Depth13(20) AND DeepPockets(117), index 138
+    {AchievementId::MogulAtEighteen, ConditionType::Compound, CounterField::Depth,
+     CompareOp::GreaterEqual, 0, GameEventType::MonsterKilled, EventField::Damage,
+     ItemType::ItemTypeCount, NoEventWindow::Run, 24, 118},   // Depth18(24) AND VaultDweller(118), index 139
+    {AchievementId::TycoonAtTwentyThree, ConditionType::Compound, CounterField::Depth,
+     CompareOp::GreaterEqual, 0, GameEventType::MonsterKilled, EventField::Damage,
+     ItemType::ItemTypeCount, NoEventWindow::Run, 27, 119},   // Depth23(27) AND CoffersOverflowing(119), index 140
+
+    // Group G: ascetic no-pickup achievements (NoEventInWindow / ItemPickedUp).
+    {AchievementId::Ascetic, ConditionType::NoEventInWindow, CounterField::Depth,
+     CompareOp::GreaterEqual, 0, GameEventType::ItemPickedUp, EventField::Damage,
+     ItemType::ItemTypeCount, NoEventWindow::Floor},   // index 141
+    {AchievementId::SelfSufficient, ConditionType::NoEventInWindow, CounterField::Depth,
+     CompareOp::GreaterEqual, 0, GameEventType::ItemPickedUp, EventField::Damage,
+     ItemType::ItemTypeCount, NoEventWindow::Run},     // index 142
+    {AchievementId::MinimalistDelver, ConditionType::Compound, CounterField::Depth,
+     CompareOp::GreaterEqual, 0, GameEventType::MonsterKilled, EventField::Damage,
+     ItemType::ItemTypeCount, NoEventWindow::Run, 141, 17},   // Ascetic(141) AND Depth9(17), index 143
+
+    // Final group: high-tier item-pickup and full-loadout compounds.
+    {AchievementId::RingHoarder, ConditionType::ItemSpecific, CounterField::Depth,
+     CompareOp::GreaterEqual, 8, GameEventType::ItemPickedUp, EventField::Damage, ItemType::Ring},     // index 144
+    {AchievementId::AmuletVault, ConditionType::ItemSpecific, CounterField::Depth,
+     CompareOp::GreaterEqual, 8, GameEventType::ItemPickedUp, EventField::Damage, ItemType::Amulet},   // index 145
+    {AchievementId::FullLoadout, ConditionType::Compound, CounterField::Depth,
+     CompareOp::GreaterEqual, 0, GameEventType::MonsterKilled, EventField::Damage,
+     ItemType::ItemTypeCount, NoEventWindow::Run, 121, 122},   // RingFinder(121) AND AmuletCollector(122), index 146
+    {AchievementId::WellEquipped, ConditionType::Compound, CounterField::Depth,
+     CompareOp::GreaterEqual, 0, GameEventType::MonsterKilled, EventField::Damage,
+     ItemType::ItemTypeCount, NoEventWindow::Run, 123, 124},   // SuitedUp(123) AND ShieldWall(124), index 147
+    {AchievementId::GrandBazaar, ConditionType::Compound, CounterField::Depth,
+     CompareOp::GreaterEqual, 0, GameEventType::MonsterKilled, EventField::Damage,
+     ItemType::ItemTypeCount, NoEventWindow::Run, 127, 117},   // BoxCollector(127) AND DeepPockets(117), index 148
 };
 
 constexpr uint8_t CONDITION_COUNT = sizeof(CONDITIONS) / sizeof(CONDITIONS[0]);

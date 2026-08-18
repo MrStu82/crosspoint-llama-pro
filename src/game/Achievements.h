@@ -260,7 +260,33 @@ enum class AchievementId : uint8_t {
   FullLoadout = 207,
   WellEquipped = 208,
   GrandBazaar = 209,
-  Count = 210,
+  // -- Curiosities & Secrets (bucket 6, 25 entries) --
+  CuriousSpecimen = 210,
+  OddlyRobust = 211,
+  FreakOfNature = 212,
+  WhatWasThatThing = 213,
+  InRudeHealth = 214,
+  BurstingWithVitality = 215,
+  UnnaturallyHale = 216,
+  BottleRocket = 217,
+  AlchemicalWaste = 218,
+  PaperAirplane = 219,
+  LiteraryLitterer = 220,
+  FoodFight = 221,
+  WasteNotWantMost = 222,
+  PotionCabinet = 223,
+  HoardOfVials = 224,
+  NestEgg = 225,
+  Windfall = 226,
+  Wanderlust = 227,
+  Restless = 228,
+  NeverSettled = 229,
+  Teetotaler = 230,
+  TeetotalerAtTwelve = 231,
+  StrangeConvergence = 232,
+  EerieCoincidence = 233,
+  HiddenDepths = 234,
+  Count = 235,
 };
 
 // Bounds-safe lookup: AchievementId now runs past ACHIEVEMENT_DEF_COUNT (the
@@ -491,6 +517,31 @@ inline const char* achievementShortName(AchievementId id) {
     case AchievementId::FullLoadout: return "Full Loadout";
     case AchievementId::WellEquipped: return "Well Equipped";
     case AchievementId::GrandBazaar: return "Grand Bazaar";
+    case AchievementId::CuriousSpecimen: return "Curious Specimen";
+    case AchievementId::OddlyRobust: return "Oddly Robust";
+    case AchievementId::FreakOfNature: return "Freak of Nature";
+    case AchievementId::WhatWasThatThing: return "What Was That Thing";
+    case AchievementId::InRudeHealth: return "In Rude Health";
+    case AchievementId::BurstingWithVitality: return "Bursting with Vitality";
+    case AchievementId::UnnaturallyHale: return "Unnaturally Hale";
+    case AchievementId::BottleRocket: return "Bottle Rocket";
+    case AchievementId::AlchemicalWaste: return "Alchemical Waste";
+    case AchievementId::PaperAirplane: return "Paper Airplane";
+    case AchievementId::LiteraryLitterer: return "Literary Litterer";
+    case AchievementId::FoodFight: return "Food Fight";
+    case AchievementId::WasteNotWantMost: return "Waste Not, Want Most";
+    case AchievementId::PotionCabinet: return "Potion Cabinet";
+    case AchievementId::HoardOfVials: return "Hoard of Vials";
+    case AchievementId::NestEgg: return "Nest Egg";
+    case AchievementId::Windfall: return "Windfall";
+    case AchievementId::Wanderlust: return "Wanderlust";
+    case AchievementId::Restless: return "Restless";
+    case AchievementId::NeverSettled: return "Never Settled";
+    case AchievementId::Teetotaler: return "Teetotaler";
+    case AchievementId::TeetotalerAtTwelve: return "Teetotaler at Twelve";
+    case AchievementId::StrangeConvergence: return "Strange Convergence";
+    case AchievementId::EerieCoincidence: return "Eerie Coincidence";
+    case AchievementId::HiddenDepths: return "Hidden Depths";
     default: return "";
   }
 }

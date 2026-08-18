@@ -616,6 +616,9 @@ inline constexpr const char* TITLE_STRINGS[] = {
     "Dungeon Sovereign",  // 19
     "the Prosperous",     // 20
     "the Opportunist",    // 21
+    "the Uncanny",        // 22
+    "the Abstinent",      // 23
+    "the Unfathomable",   // 24
 };
 
 inline constexpr AchievementDef ACHIEVEMENT_DEFS[] = {
@@ -848,10 +851,38 @@ inline constexpr AchievementDef ACHIEVEMENT_DEFS[] = {
     {"Full Loadout", "Picked up 3 rings and 3 amulets in a single run.", AchievementReward::Buff, 1},
     {"Well Equipped", "Picked up 10 pieces of armor and 8 shields in a single run.", AchievementReward::Skill, 6},
     {"Grand Bazaar", "Picked up 5 loot boxes having amassed 5,000 gold this run.", AchievementReward::Title, 21},
+    // -- Curiosities & Secrets bucket (Milestone 3, ids 210-234): see
+    // Achievements.h and AchievementConditions.h for the enum ids and
+    // condition rows (162-186) backing these entries. --
+    {"Curious Specimen", "Killed a monster with unusually high vitality.", AchievementReward::Buff, 2},
+    {"Oddly Robust", "Killed a monster that refused to die easily.", AchievementReward::Buff, 5},
+    {"Freak of Nature", "Killed a monster built like a tank.", AchievementReward::Skill, 3},
+    {"What Was That Thing", "Killed something that really shouldn't have had that much health.", AchievementReward::Title, 22},
+    {"In Rude Health", "Ended a turn in surprisingly good shape.", AchievementReward::None, 0},
+    {"Bursting with Vitality", "Ended a turn near full strength.", AchievementReward::Buff, 4},
+    {"Unnaturally Hale", "Ended a turn at an almost suspicious level of health.", AchievementReward::Skill, 2},
+    {"Bottle Rocket", "Threw a potion instead of drinking it. Three times.", AchievementReward::None, 0},
+    {"Alchemical Waste", "Threw ten potions. Waste not?", AchievementReward::Buff, 3},
+    {"Paper Airplane", "Threw a scroll instead of reading it.", AchievementReward::None, 0},
+    {"Literary Litterer", "Threw ten scrolls without reading a word.", AchievementReward::Buff, 3},
+    {"Food Fight", "Threw food at a monster instead of eating it.", AchievementReward::None, 0},
+    {"Waste Not, Want Most", "Threw ten meals at monsters. Bold strategy.", AchievementReward::Buff, 6},
+    {"Potion Cabinet", "Picked up fifteen potions in a single run.", AchievementReward::None, 0},
+    {"Hoard of Vials", "Picked up forty potions in a single run.", AchievementReward::Skill, 5},
+    {"Nest Egg", "Picked up twenty piles of gold in a single run.", AchievementReward::None, 0},
+    {"Windfall", "Picked up sixty piles of gold in a single run.", AchievementReward::Buff, 7},
+    {"Wanderlust", "Changed floors fifteen times in one run.", AchievementReward::None, 0},
+    {"Restless", "Changed floors thirty times in one run.", AchievementReward::Buff, 4},
+    {"Never Settled", "Changed floors fifty times in one run. Can't sit still.", AchievementReward::Skill, 6},
+    {"Teetotaler", "Completed a run without using a single item.", AchievementReward::LoreUnlock, 0},
+    {"Teetotaler at Twelve", "Reached depth 12 without using a single item this run.", AchievementReward::Title, 23},
+    {"Strange Convergence", "Killed a monstrously huge creature at a suspiciously shallow depth.", AchievementReward::LoreUnlock, 0},
+    {"Eerie Coincidence", "Finished a run having neither killed anything nor used a single item. Did you even play?", AchievementReward::Skill, 7},
+    {"Hidden Depths", "Reached depth 18 in almost suspiciously good health.", AchievementReward::Title, 24},
 };
 
 inline constexpr int ACHIEVEMENT_DEF_COUNT = sizeof(ACHIEVEMENT_DEFS) / sizeof(ACHIEVEMENT_DEFS[0]);
-static_assert(ACHIEVEMENT_DEF_COUNT == 210, "ACHIEVEMENT_DEFS must have exactly 210 entries");
+static_assert(ACHIEVEMENT_DEF_COUNT == 235, "ACHIEVEMENT_DEFS must have exactly 235 entries");
 
 // Bounds-safe achievementDef(AchievementId) lookup lives in Achievements.h,
 // not here -- AchievementId is declared there (which already includes this

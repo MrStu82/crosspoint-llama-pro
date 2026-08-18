@@ -555,6 +555,84 @@ constexpr AchievementCondition CONDITIONS[] = {
     {AchievementId::GrandBazaar, ConditionType::Compound, CounterField::Depth,
      CompareOp::GreaterEqual, 0, GameEventType::MonsterKilled, EventField::Damage,
      ItemType::ItemTypeCount, NoEventWindow::Run, 127, 117},   // BoxCollector(127) AND DeepPockets(117), index 148
+
+    // -- Curiosities & Secrets bucket (Milestone 3, ids 210-234) --
+    // Group A: beefy-monster tiers (EventFieldMatch / MonsterKilled / MonsterMaxHp,
+    // unused anywhere else in this table).
+    {AchievementId::CuriousSpecimen, ConditionType::EventFieldMatch, CounterField::Depth,
+     CompareOp::GreaterEqual, 40, GameEventType::MonsterKilled, EventField::MonsterMaxHp},
+    {AchievementId::OddlyRobust, ConditionType::EventFieldMatch, CounterField::Depth,
+     CompareOp::GreaterEqual, 70, GameEventType::MonsterKilled, EventField::MonsterMaxHp},
+    {AchievementId::FreakOfNature, ConditionType::EventFieldMatch, CounterField::Depth,
+     CompareOp::GreaterEqual, 110, GameEventType::MonsterKilled, EventField::MonsterMaxHp},
+    {AchievementId::WhatWasThatThing, ConditionType::EventFieldMatch, CounterField::Depth,
+     CompareOp::GreaterEqual, 160, GameEventType::MonsterKilled, EventField::MonsterMaxHp},
+
+    // Group B: live-HP curiosity tiers (CounterCompare / CounterField::Hp, unused elsewhere).
+    {AchievementId::InRudeHealth, ConditionType::CounterCompare, CounterField::Hp,
+     CompareOp::GreaterEqual, 40},
+    {AchievementId::BurstingWithVitality, ConditionType::CounterCompare, CounterField::Hp,
+     CompareOp::GreaterEqual, 70},
+    {AchievementId::UnnaturallyHale, ConditionType::CounterCompare, CounterField::Hp,
+     CompareOp::GreaterEqual, 100},
+
+    // Group C: thrown non-weapon items (ItemSpecific / ItemThrown / Potion,Scroll,Food —
+    // only Weapon was previously used for ItemThrown).
+    {AchievementId::BottleRocket, ConditionType::ItemSpecific, CounterField::Depth,
+     CompareOp::GreaterEqual, 3, GameEventType::ItemThrown, EventField::Damage, ItemType::Potion},
+    {AchievementId::AlchemicalWaste, ConditionType::ItemSpecific, CounterField::Depth,
+     CompareOp::GreaterEqual, 10, GameEventType::ItemThrown, EventField::Damage, ItemType::Potion},
+    {AchievementId::PaperAirplane, ConditionType::ItemSpecific, CounterField::Depth,
+     CompareOp::GreaterEqual, 3, GameEventType::ItemThrown, EventField::Damage, ItemType::Scroll},
+    {AchievementId::LiteraryLitterer, ConditionType::ItemSpecific, CounterField::Depth,
+     CompareOp::GreaterEqual, 10, GameEventType::ItemThrown, EventField::Damage, ItemType::Scroll},
+    {AchievementId::FoodFight, ConditionType::ItemSpecific, CounterField::Depth,
+     CompareOp::GreaterEqual, 3, GameEventType::ItemThrown, EventField::Damage, ItemType::Food},
+    {AchievementId::WasteNotWantMost, ConditionType::ItemSpecific, CounterField::Depth,
+     CompareOp::GreaterEqual, 10, GameEventType::ItemThrown, EventField::Damage, ItemType::Food},
+
+    // Group D: pickup tiers for previously-unused ItemPickedUp/Potion and ItemPickedUp/Gold.
+    {AchievementId::PotionCabinet, ConditionType::ItemSpecific, CounterField::Depth,
+     CompareOp::GreaterEqual, 15, GameEventType::ItemPickedUp, EventField::Damage, ItemType::Potion},
+    {AchievementId::HoardOfVials, ConditionType::ItemSpecific, CounterField::Depth,
+     CompareOp::GreaterEqual, 40, GameEventType::ItemPickedUp, EventField::Damage, ItemType::Potion},
+    {AchievementId::NestEgg, ConditionType::ItemSpecific, CounterField::Depth,
+     CompareOp::GreaterEqual, 20, GameEventType::ItemPickedUp, EventField::Damage, ItemType::Gold},
+    {AchievementId::Windfall, ConditionType::ItemSpecific, CounterField::Depth,
+     CompareOp::GreaterEqual, 60, GameEventType::ItemPickedUp, EventField::Damage, ItemType::Gold},
+
+    // Group E: floor-hopping tiers (EventCount / FloorChanged, never used as an
+    // EventCount row before — only as a struct flag elsewhere).
+    {AchievementId::Wanderlust, ConditionType::EventCount, CounterField::Depth,
+     CompareOp::GreaterEqual, 15, GameEventType::FloorChanged},
+    {AchievementId::Restless, ConditionType::EventCount, CounterField::Depth,
+     CompareOp::GreaterEqual, 30, GameEventType::FloorChanged},
+    {AchievementId::NeverSettled, ConditionType::EventCount, CounterField::Depth,
+     CompareOp::GreaterEqual, 50, GameEventType::FloorChanged},
+
+    // Group F: no-item-use pacifism (NoEventInWindow / ItemUsed, unused elsewhere) plus
+    // a depth-gated compound. Teetotaler's true row index in this table is 169 (0-based).
+    {AchievementId::Teetotaler, ConditionType::NoEventInWindow, CounterField::Depth,
+     CompareOp::GreaterEqual, 0, GameEventType::ItemUsed, EventField::Damage,
+     ItemType::ItemTypeCount, NoEventWindow::Run},   // index 169
+    {AchievementId::TeetotalerAtTwelve, ConditionType::Compound, CounterField::Depth,
+     CompareOp::GreaterEqual, 0, GameEventType::MonsterKilled, EventField::Damage,
+     ItemType::ItemTypeCount, NoEventWindow::Run, 182, 19},   // Teetotaler(182) AND Depth12(19)
+
+    // Group G: cross-bucket "coincidence" compounds — secrets flavor, mashing up
+    // two unrelated conditions from elsewhere in the pool. Indices below are real
+    // 0-based row positions in this table, verified via grep+nl, not stale
+    // in-file comments (this file's own trailing comments drift out of date as
+    // rows get inserted and are not reliable for new compound references).
+    {AchievementId::StrangeConvergence, ConditionType::Compound, CounterField::Depth,
+     CompareOp::GreaterEqual, 0, GameEventType::MonsterKilled, EventField::Damage,
+     ItemType::ItemTypeCount, NoEventWindow::Run, 165, 17},   // WhatWasThatThing(165) AND Depth9(17)
+    {AchievementId::EerieCoincidence, ConditionType::Compound, CounterField::Depth,
+     CompareOp::GreaterEqual, 0, GameEventType::MonsterKilled, EventField::Damage,
+     ItemType::ItemTypeCount, NoEventWindow::Run, 182, 72},   // Teetotaler(182) AND Bloodless(72)
+    {AchievementId::HiddenDepths, ConditionType::Compound, CounterField::Depth,
+     CompareOp::GreaterEqual, 0, GameEventType::MonsterKilled, EventField::Damage,
+     ItemType::ItemTypeCount, NoEventWindow::Run, 168, 24},   // UnnaturallyHale(168) AND Depth18(24)
 };
 
 constexpr uint8_t CONDITION_COUNT = sizeof(CONDITIONS) / sizeof(CONDITIONS[0]);

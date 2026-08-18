@@ -611,6 +611,7 @@ void GameActivity::handleAction() {
 
         game::GameEvent pickupEvent{};
         pickupEvent.type = game::GameEventType::ItemPickedUp;
+        pickupEvent.itemType = static_cast<game::ItemType>(levelItems[i].type);
         ACHIEVEMENTS.emit(pickupEvent);
         showPendingAchievementNotifications();
       }
@@ -795,6 +796,7 @@ void GameActivity::handleThrow(game::Direction dir, int inventoryIndex) {
   game::GameEvent throwEvent{};
   throwEvent.type = game::GameEventType::ItemThrown;
   throwEvent.killedMonster = killedMonster;
+  throwEvent.itemType = static_cast<game::ItemType>(item.type);
   ACHIEVEMENTS.emit(throwEvent);
   // One combined notification: a thrown boss overkill can queue both
   // PercussiveMaintenance (from ItemThrown above) and EscalationOfForce (from

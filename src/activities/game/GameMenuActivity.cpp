@@ -559,6 +559,7 @@ void GameMenuActivity::useInventoryItem(int index) {
   if (consumed) {
     game::GameEvent itemEvent{};
     itemEvent.type = game::GameEventType::ItemUsed;
+    itemEvent.itemType = static_cast<game::ItemType>(item.type);
     ACHIEVEMENTS.emit(itemEvent);
 
     // Remove item by shifting

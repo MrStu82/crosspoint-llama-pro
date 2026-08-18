@@ -33,6 +33,11 @@ class GameState {
   // stream is genuinely continuous across the whole run and correctly serialises with the save.
   uint32_t rollRange(uint32_t max);
   int rollRangeInclusive(int min, int max);
+  // Rolls one item from the shared loot table (game::rollLootItem, GameTypes.h) off the
+  // persistent combat RNG stream, same construct-roll-writeback pattern as rollRange() above.
+  // Called once per drop -- e.g. twice per monster kill (player stream + pet stream, Job Phase
+  // 2) -- so each call advances the stream independently, same as two separate rollRange calls.
+  game::Item rollLootItem(uint8_t depth);
 
   // Get the Nth most recent message (0 = most recent)
   const std::string& getMessage(int recencyIndex) const;

@@ -373,29 +373,12 @@ uint8_t placeItems(Tile* tiles, Item* items, Rng& rng, uint8_t depth) {
     int16_t ix, iy;
     if (!findRandomFloor(tiles, rng, ix, iy)) continue;
 
-    // Pick a random item type. Excludes RING_OF_POWER_DEF and MASTER_KEY_DEF (the two quest
-    // items, always the last two entries) — both are only ever placed as the boss's death drop,
-    // never random floor loot.
-    uint8_t defIdx = static_cast<uint8_t>(rng.nextRange(game::ITEM_DEF_COUNT - 2));
-    const auto& def = game::ITEM_DEFS[defIdx];
-
+    // Shared with GameActivity.cpp's corpse-drop rolls (game::rollLootItem, GameTypes.h) so
+    // floor loot and corpse loot never drift into two different tables.
     Item& item = items[placed];
+    item = game::rollLootItem(depth, rng);
     item.x = ix;
     item.y = iy;
-    item.type = def.type;
-    item.subtype = def.subtype;
-    item.count = (def.type == static_cast<uint8_t>(game::ItemType::Gold))
-                     ? static_cast<uint8_t>(rng.nextRangeInclusive(1, 10 + depth * 5))
-                     : 1;
-    item.enchantment = 0;
-    item.flags = 0;
-
-    // Small chance of enchantment on weapons/armor
-    if ((def.type == static_cast<uint8_t>(game::ItemType::Weapon) ||
-         def.type == static_cast<uint8_t>(game::ItemType::Armor)) &&
-        rng.nextRange(4) == 0) {
-      item.enchantment = static_cast<uint8_t>(rng.nextRangeInclusive(1, 3));
-    }
 
     placed++;
   }

@@ -140,6 +140,17 @@ struct Item {
   uint8_t flags = 0;
 };
 
+// Loot addressed to the player's pet rather than the player. Items here are deliberately
+// never written into a level's Item[] array -- GameRenderer's drawViewportCell() and every
+// pickup path only ever iterate that array, so a pet-stream item is invisible on the map and
+// unpickable by construction, not by an extra guard check. Every entry keeps x=-1,y=-1
+// (never positioned -- the pet "forages" it directly, see Job Phase 3). Cleared on every
+// floor load, same lifetime as levelItems.
+struct PetLootStream {
+  Item items[MAX_ITEMS_PER_LEVEL];
+  uint8_t itemCount = 0;
+};
+
 // --- Definition Tables (const, stored in flash) ---
 
 struct MonsterDef {
@@ -576,6 +587,55 @@ inline uint32_t levelSeed(uint32_t gameSeed, uint8_t depth) {
 inline uint8_t themeForDepth(uint32_t gameSeed, uint8_t depth) {
   Rng rng(levelSeed(gameSeed, depth) ^ 0x5AC38A2Du);
   return static_cast<uint8_t>(rng.nextRange(THEME_DEF_COUNT));
+}
+
+// --- Shared loot table (floor placement + corpse drops) ---
+
+// A random item meeting or exceeding this base value is eligible for the rare tail below.
+// Currently matches Nanoweave Blade (200) and Nanoweave Coat (300) -- the two top-tier
+// gear pieces -- deliberately excludes Sponsor Crate (value 0) and quest items (never
+// rolled here at all, see the exclusion below).
+inline constexpr uint16_t RARE_TAIL_VALUE_THRESHOLD = 150;
+// 1-in-20 chance per roll of drawing from the rare pool instead of the full table.
+inline constexpr uint32_t RARE_TAIL_CHANCE_DENOM = 20;
+
+// Rolls a single random item from the shared depth-scaled loot table: DungeonGenerator's
+// per-floor item placement and GameActivity's per-corpse drops both call this, so the two
+// never drift into separate tables. Always excludes the two quest items (Ring of Power,
+// Master Key -- only ever placed as the boss's death drop, see GameActivity.cpp). Returns
+// the item at (x=-1, y=-1); the caller positions or queues it.
+inline Item rollLootItem(uint8_t depth, Rng& rng) {
+  uint8_t defIdx;
+  if (rng.nextRange(RARE_TAIL_CHANCE_DENOM) == 0) {
+    uint8_t rarePool[ITEM_DEF_COUNT];
+    uint8_t rareCount = 0;
+    for (uint8_t i = 0; i < ITEM_DEF_COUNT - 2; i++) {
+      if (ITEM_DEFS[i].value >= RARE_TAIL_VALUE_THRESHOLD) {
+        rarePool[rareCount++] = i;
+      }
+    }
+    defIdx = rareCount > 0 ? rarePool[rng.nextRange(rareCount)]
+                           : static_cast<uint8_t>(rng.nextRange(ITEM_DEF_COUNT - 2));
+  } else {
+    defIdx = static_cast<uint8_t>(rng.nextRange(ITEM_DEF_COUNT - 2));
+  }
+  const auto& def = ITEM_DEFS[defIdx];
+
+  Item item{};
+  item.type = def.type;
+  item.subtype = def.subtype;
+  item.count = (def.type == static_cast<uint8_t>(ItemType::Gold))
+                   ? static_cast<uint8_t>(rng.nextRangeInclusive(1, 10 + depth * 5))
+                   : 1;
+  item.enchantment = 0;
+  if ((def.type == static_cast<uint8_t>(ItemType::Weapon) || def.type == static_cast<uint8_t>(ItemType::Armor)) &&
+      rng.nextRange(4) == 0) {
+    item.enchantment = static_cast<uint8_t>(rng.nextRangeInclusive(1, 3));
+  }
+  item.flags = 0;
+  item.x = -1;
+  item.y = -1;
+  return item;
 }
 
 // --- Achievement definitions ---

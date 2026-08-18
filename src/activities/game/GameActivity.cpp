@@ -311,6 +311,22 @@ void GameActivity::updateNotificationAutoDismiss() {
 
 // --- Movement ---
 
+void GameActivity::dropCorpseLoot(int16_t x, int16_t y) {
+  const uint8_t depth = GAME_STATE.player.dungeonDepth;
+
+  if (itemCount < game::MAX_ITEMS_PER_LEVEL) {
+    game::Item drop = GAME_STATE.rollLootItem(depth);
+    drop.x = x;
+    drop.y = y;
+    levelItems[itemCount++] = drop;
+  }
+
+  if (petLoot.itemCount < game::MAX_ITEMS_PER_LEVEL) {
+    // x=-1/y=-1 already set by rollLootItem -- pet-addressed loot is never positioned.
+    petLoot.items[petLoot.itemCount++] = GAME_STATE.rollLootItem(depth);
+  }
+}
+
 void GameActivity::handleMove(int dx, int dy) {
   auto& p = GAME_STATE.player;
 
@@ -391,6 +407,10 @@ void GameActivity::handleMove(int dx, int dy) {
         }
 
         checkLevelUp();
+
+        // Every kill drops corpse loot -- player stream + pet stream (Job Phase 2). Boss
+        // kills additionally get the two guaranteed quest-item drops below.
+        dropCorpseLoot(monsters[i].x, monsters[i].y);
 
         // Boss drops the Ring of Power
         if (monsters[i].type == game::BOSS_MONSTER_TYPE && itemCount < game::MAX_ITEMS_PER_LEVEL) {
@@ -743,6 +763,9 @@ void GameActivity::handleThrow(game::Direction dir, int inventoryIndex) {
           ACHIEVEMENTS.emit(sweepEvent);
         }
       }
+
+      // Every kill drops corpse loot -- same parity as a melee kill (see handleMove() above).
+      dropCorpseLoot(mon.x, mon.y);
 
       // Boss drops the Ring of Power -- same parity as a melee boss kill (see the
       // handleMove() kill branch above); a thrown kill must not be able to softlock
@@ -1132,6 +1155,9 @@ void GameActivity::loadOrGenerateLevel() {
   auto result = DungeonGenerator::generate(p.gameSeed, p.dungeonDepth, tiles, monsters, levelItems);
   monsterCount = result.monsterCount;
   itemCount = result.itemCount;
+  // Corpse drops don't persist across a floor reload/regenerate any more than the corpses
+  // themselves do -- fresh floor, empty pet stream.
+  petLoot.itemCount = 0;
 
   // Clear fog
   memset(fogOfWar, 0, sizeof(fogOfWar));

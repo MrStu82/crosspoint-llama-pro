@@ -47,6 +47,9 @@ class GameActivity final : public Activity {
   game::Item levelItems[game::MAX_ITEMS_PER_LEVEL];
   uint8_t monsterCount = 0;
   uint8_t itemCount = 0;
+  // Corpse drops addressed to the player's pet (Job Phase 2) -- never rendered/pickable, see
+  // game::PetLootStream. Reset alongside levelItems on every floor load.
+  game::PetLootStream petLoot;
 
   // Visibility cache (computed per turn)
   bool visible[game::MAP_SIZE];
@@ -86,6 +89,12 @@ class GameActivity final : public Activity {
   void computeVisibility();
   void handleMove(int dx, int dy);
   void handleAction();
+  // Rolls two independent loot drops for a monster kill at (x,y) -- one into levelItems
+  // (player-addressed, real coordinates, pickable/rendered same as any floor item) and one
+  // into petLoot (pet-addressed, x=-1/y=-1, never rendered/pickable -- see game::PetLootStream).
+  // Called from both the melee and thrown kill sites in handleMove()/handleThrow() so every
+  // regular monster kill drops loot, not just the boss.
+  void dropCorpseLoot(int16_t x, int16_t y);
   // Single choke point for draining ACHIEVEMENTS' pending-unlock queue and
   // surfacing it as a boxed notification, one achievement at a time. A single
   // game event can unlock more than one achievement at once (e.g.

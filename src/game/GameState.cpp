@@ -292,6 +292,13 @@ int GameState::rollRangeInclusive(int min, int max) {
   return v;
 }
 
+game::Item GameState::rollLootItem(uint8_t depth) {
+  game::Rng rng(player.combatRngState);
+  game::Item item = game::rollLootItem(depth, rng);
+  player.combatRngState = rng.state;
+  return item;
+}
+
 bool GameState::saveToFile() const {
   Storage.mkdir(SAVE_DIR);
 

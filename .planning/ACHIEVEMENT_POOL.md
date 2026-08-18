@@ -57,9 +57,9 @@ first before touching `ACHIEVEMENT_DEFS` again.
 | 4 | 2 | Exploration | 25 | **DONE** — `79e4f30` |
 | 5 | 3 | Loot & Economy | 35 | **DONE** — `95b883f` |
 | 6 | 3 | Curiosities & Secrets | 25 | **DONE** — `9c5fdb7` |
-| 7 | 3 | Pet & Companion | 15 | not started (inert until pet system exists) |
+| 7 | 3 | Pet & Companion | 15 | **DONE** — `49f1bdf` |
 
-**Running total: 235 / 250.**
+**Running total: 250 / 250. FULL POOL COMPLETE.**
 
 ## Bucket scope notes
 
@@ -91,8 +91,18 @@ first before touching `ACHIEVEMENT_DEFS` again.
   plus a depth-gated compound (2), and three cross-bucket "coincidence"
   compounds mashing up unrelated conditions from other buckets for a
   secrets flavor (3).
-- **Pet & Companion (15)** — TBD detail, Milestone 3. Authored inert — draws
-  as locked, no mechanical dependency on the pet system existing yet.
+- **Pet & Companion (15)** — Milestone 3, final bucket. Authored inert: no
+  `CONDITIONS[]` rows exist for ids 235-249 and the legacy `emit()` switch
+  never references them either, so nothing can ever call `unlock()` for them
+  — permanently locked at zero runtime/mechanical cost until a real pet
+  system lands and starts calling `unlock()` directly. Covers taming
+  (first/five-different/beast-twice-your-depth/deepest-floor), bond
+  strength (kept-alive-a-run/ten-runs/to-the-final-floor/saved-you-from-a-
+  killing-blow), care (fed-ten-times/fed-all-run/hatched-from-an-egg), and
+  flavor compounds (cleared-a-floor-together/carried-loot/alive-at-the-
+  bottom). Reward ladder mixes None (4), Buff (4), Skill (3), Title (2),
+  LoreUnlock (1) — no SponsorUnlock this bucket. Two new TITLE_STRINGS
+  entries added: "Beastfriend" (25), "the Bonded" (26).
 
 ## Milestone map
 
@@ -100,4 +110,5 @@ first before touching `ACHIEVEMENT_DEFS` again.
 - **Milestone 2** — Combat + Survival + Exploration. 90 → 175/250. Combat DONE (125/250), Survival DONE (150/250), Exploration DONE (175/250). **Milestone 2 complete.**
 - **Milestone 3** — Loot & Economy + Curiosities & Secrets + Pet & Companion.
   175 → 250/250. Loot & Economy DONE (210/250), Curiosities & Secrets DONE
-  (235/250). Full pool green pending the final Pet & Companion bucket.
+  (235/250), Pet & Companion DONE (250/250). **Milestone 3 complete. Full
+  250-entry pool complete.**

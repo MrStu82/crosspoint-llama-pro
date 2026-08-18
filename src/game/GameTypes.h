@@ -268,10 +268,14 @@ inline uint8_t selectLootBoxReward(uint32_t (*rollFn)(uint32_t)) {
 }
 
 // --- Buffs and Skills (achievement reward work) ---
-// Lifetime, stacking achievement rewards. Same point-of-use pattern as
+// Run-scoped, stacking achievement rewards. Same point-of-use pattern as
 // Sponsors below (never mutate base stats directly -- sum modifiers where a
-// stat is actually consumed) but additive/stacking rather than a single
-// active slot, and lifetime-persistent rather than rerolled per floor.
+// stat is actually consumed) but additive/stacking within a run rather than
+// a single active slot. Earned and spent within one run only -- wiped by
+// GameState::newGame() (player = game::Player{}) same as everything else on
+// Player, and re-earnable next run if drawn and achieved again. What
+// persists across runs is the lifetime AchievementBus::unlocked[] record
+// (progress screen), never these numbers -- see AchievementBus::unlock().
 // Skills are the same mechanism at bigger magnitude, gated to
 // deeper/harder achievements -- there is no separate active-use/trigger
 // subsystem; "Skill" here means "big passive", not "ability you invoke".

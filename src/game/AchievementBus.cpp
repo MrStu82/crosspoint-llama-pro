@@ -137,22 +137,31 @@ void AchievementBus::unlock(game::AchievementId id, const char* flavorText) {
   if (idx >= FIRST_DRAWABLE_ID && !isDrawnThisRun(id)) {
     return;
   }
+  // Run-scoped mechanical reward: a Buff/Skill grants a real, point-of-use
+  // stat modifier (same pattern as Sponsors -- never mutates a base stat
+  // directly) for THIS run only, per parent's ruling 2026-08-18. Achievements
+  // themselves reset per run (that's what the 50-id draw in resetRun() is
+  // for) so the reward must too, or a run-thirty player is carrying decades
+  // of unearned stats and the roguelike stops being one. It fires on every
+  // run this id is drawn and earned, not just the first time ever --
+  // grantBuff/grantSkill already no-op if the id is already active, so this
+  // can't double-grant mid-run. Player::activeBuffIds/activeSkillIds are
+  // wiped on every GameState::newGame() (player = game::Player{}), so
+  // nothing here outlives the run it was earned in; what persists across
+  // runs is only the lifetime unlocked[] record below (and the progress
+  // screen it drives), never the numbers.
+  if (!unlockedThisRun[idx]) {
+    const game::AchievementDef& def = game::achievementDef(id);
+    if (def.reward == game::AchievementReward::Buff) {
+      game::grantBuff(GAME_STATE.player, def.rewardValue);
+    } else if (def.reward == game::AchievementReward::Skill) {
+      game::grantSkill(GAME_STATE.player, def.rewardValue);
+    }
+  }
+
   unlockedThisRun[idx] = true;
   if (unlocked[idx]) return;
   unlocked[idx] = true;
-
-  // Mechanical reward: a Buff/Skill achievement grants a real, lifetime,
-  // point-of-use stat modifier (same pattern as Sponsors -- never mutates a
-  // base stat directly), not just a flavor-text notification. See
-  // GameTypes.h's Buffs and Skills section and Player::activeBuffIds/
-  // activeSkillIds. Persisted below via GameState::saveToFile(), same as any
-  // other Player field.
-  const game::AchievementDef& def = game::achievementDef(id);
-  if (def.reward == game::AchievementReward::Buff) {
-    game::grantBuff(GAME_STATE.player, def.rewardValue);
-  } else if (def.reward == game::AchievementReward::Skill) {
-    game::grantSkill(GAME_STATE.player, def.rewardValue);
-  }
 
   save();
   GAME_STATE.addMessage(flavorText);

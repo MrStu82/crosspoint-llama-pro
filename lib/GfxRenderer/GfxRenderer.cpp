@@ -1,4 +1,5 @@
 #include "GfxRenderer.h"
+#include "LineGeometry.h"
 
 #include <BidiUtils.h>
 #include <BuildScratch.h>
@@ -726,8 +727,21 @@ void GfxRenderer::drawLine(int x1, int y1, int x2, int y2, const bool state) con
 
 void GfxRenderer::drawLine(int x1, int y1, int x2, int y2, const int lineWidth, const bool state) const {
   const int half = lineWidth / 2;
+  // Offset perpendicular to the line's own axis, not always along y --
+  // a vertical line (x1==x2) must widen in x, or "thickening" it just
+  // stretches its length instead. A more-horizontal-than-vertical line
+  // widens in y (the pre-existing, correct behavior for y1==y2); a
+  // more-vertical-than-horizontal line widens in x.
+  const int dx = std::abs(x2 - x1);
+  const int dy = std::abs(y2 - y1);
+  const bool offsetInX = thickLineOffsetInX(dx, dy);
   for (int i = 0; i < lineWidth; i++) {
-    drawLine(x1, y1 + i - half, x2, y2 + i - half, state);
+    const int off = i - half;
+    if (offsetInX) {
+      drawLine(x1 + off, y1, x2 + off, y2, state);
+    } else {
+      drawLine(x1, y1 + off, x2, y2 + off, state);
+    }
   }
 }
 

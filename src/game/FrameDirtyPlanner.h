@@ -168,9 +168,10 @@ class FrameDirtyPlanner {
   // so a harness can drive this with a synthetic player/messages without
   // linking GameState.cpp at all if it doesn't need to.
   FramePlan planFrame(const PlannerLayout& layout, int playerX, int playerY, const char* hpBuf, const char* mpBuf,
-                       const char* depthBuf, const char* lvlBuf, const char* msg0, const char* msg1,
-                       const Tile* tiles, const uint8_t* fogOfWar, const Monster* monsters, uint8_t monsterCount,
-                       const Item* items, uint8_t itemCount, const bool* visible, const TileTheme* activeTheme) {
+                       const char* depthBuf, const char* lvlBuf, const char* hungerBuf, const char* msg0,
+                       const char* msg1, const Tile* tiles, const uint8_t* fogOfWar, const Monster* monsters,
+                       uint8_t monsterCount, const Item* items, uint8_t itemCount, const bool* visible,
+                       const TileTheme* activeTheme) {
     FramePlan plan;
 
     int viewX = 0;
@@ -205,7 +206,7 @@ class FrameDirtyPlanner {
     int dirtyCount = 0;
     tracker_.diffViewport(cells_, layout.viewCols, layout.viewRows, dirty_, MAX_DIRTY_CELLS, &dirtyCount);
 
-    bool statusChanged = tracker_.statusBarChanged(hpBuf, mpBuf, depthBuf, lvlBuf);
+    bool statusChanged = tracker_.statusBarChanged(hpBuf, mpBuf, depthBuf, lvlBuf, hungerBuf);
     bool messagesChangedFlag = tracker_.messagesChanged(msg0, msg1);
 
     if (needFullClear) {

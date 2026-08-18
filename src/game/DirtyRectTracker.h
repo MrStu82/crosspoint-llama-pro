@@ -83,13 +83,14 @@ class DirtyRectTracker {
 
   // Status bar / message text diffing -- simple string-changed checks. Each
   // call adopts the passed strings as the new cached value.
-  bool statusBarChanged(const char* hp, const char* mp, const char* depth, const char* lvl) {
+  bool statusBarChanged(const char* hp, const char* mp, const char* depth, const char* lvl, const char* hunger) {
     bool changed = strcmp(hp_, hp) != 0 || strcmp(mp_, mp) != 0 || strcmp(depth_, depth) != 0 ||
-                   strcmp(lvl_, lvl) != 0;
+                   strcmp(lvl_, lvl) != 0 || strcmp(hunger_, hunger) != 0;
     snprintf(hp_, sizeof(hp_), "%s", hp);
     snprintf(mp_, sizeof(mp_), "%s", mp);
     snprintf(depth_, sizeof(depth_), "%s", depth);
     snprintf(lvl_, sizeof(lvl_), "%s", lvl);
+    snprintf(hunger_, sizeof(hunger_), "%s", hunger);
     return changed;
   }
 
@@ -109,6 +110,7 @@ class DirtyRectTracker {
   char mp_[24] = "";
   char depth_[16] = "";
   char lvl_[16] = "";
+  char hunger_[16] = "";
   char msg0_[160] = "";
   char msg1_[160] = "";
 };

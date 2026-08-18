@@ -162,15 +162,16 @@ FramePlan GameRenderer::planFrame(const game::Tile* tiles, const uint8_t* fogOfW
   char mpBuf[24];
   char depthBuf[16];
   char lvlBuf[16];
-  formatStatusBarText(hpBuf, mpBuf, depthBuf, lvlBuf);
+  char hungerBuf[16];
+  formatStatusBarText(hpBuf, mpBuf, depthBuf, lvlBuf, hungerBuf);
 
   char msg0[160];
   char msg1[160];
   snprintf(msg0, sizeof(msg0), "%s", GAME_STATE.getMessage(0).c_str());
   snprintf(msg1, sizeof(msg1), "%s", GAME_STATE.getMessage(1).c_str());
 
-  FramePlan plan = planner_.planFrame(buildPlannerLayout(), p.x, p.y, hpBuf, mpBuf, depthBuf, lvlBuf, msg0, msg1,
-                                      tiles, fogOfWar, monsters, monsterCount, items, itemCount, visible,
+  FramePlan plan = planner_.planFrame(buildPlannerLayout(), p.x, p.y, hpBuf, mpBuf, depthBuf, lvlBuf, hungerBuf,
+                                      msg0, msg1, tiles, fogOfWar, monsters, monsterCount, items, itemCount, visible,
                                       activeTheme);
 
   // Notification box is entirely outside FrameDirtyPlanner's own diff logic
@@ -216,12 +217,23 @@ game::PlannerLayout GameRenderer::buildPlannerLayout() const {
 
 // --- Status Bar ---
 
-void GameRenderer::formatStatusBarText(char hpBuf[24], char mpBuf[24], char depthBuf[16], char lvlBuf[16]) const {
+void GameRenderer::formatStatusBarText(char hpBuf[24], char mpBuf[24], char depthBuf[16], char lvlBuf[16],
+                                       char hungerBuf[16]) const {
   const auto& p = GAME_STATE.player;
   snprintf(hpBuf, 24, "HP:%u/%u", p.hp, game::effectiveMaxHp(p));
   snprintf(mpBuf, 24, "MP:%u/%u", p.mp, p.maxMp);
   snprintf(depthBuf, 16, "Dl:%u", p.dungeonDepth);
   snprintf(lvlBuf, 16, "Cl:%u", p.charLevel);
+  // Word-state only, per parent's explicit "no raw counter" call -- the
+  // 300/450 thresholds already gate the hunger-clock's own tick outcomes
+  // (HungerClock.h), reused here purely for display banding.
+  const char* hungerWord = "Fed";
+  if (p.hunger >= game::HUNGER_STARVING_THRESHOLD) {
+    hungerWord = "Starving";
+  } else if (p.hunger >= game::HUNGER_HUNGRY_THRESHOLD) {
+    hungerWord = "Hungry";
+  }
+  snprintf(hungerBuf, 16, "%s", hungerWord);
 }
 
 void GameRenderer::drawStatusBar(GfxRenderer& renderer) const {
@@ -229,12 +241,15 @@ void GameRenderer::drawStatusBar(GfxRenderer& renderer) const {
   char mpBuf[24];
   char depthBuf[16];
   char lvlBuf[16];
-  formatStatusBarText(hpBuf, mpBuf, depthBuf, lvlBuf);
+  char hungerBuf[16];
+  formatStatusBarText(hpBuf, mpBuf, depthBuf, lvlBuf, hungerBuf);
 
-  // Left side: HP and MP
+  // Left side: HP, MP, hunger word-state
   renderer.drawText(UI_10_FONT_ID, 4, STATUS_Y, hpBuf, true, EpdFontFamily::BOLD);
   int hpWidth = renderer.getTextWidth(UI_10_FONT_ID, hpBuf, EpdFontFamily::BOLD);
   renderer.drawText(UI_10_FONT_ID, 4 + hpWidth + 10, STATUS_Y, mpBuf);
+  int mpWidth = renderer.getTextWidth(UI_10_FONT_ID, mpBuf);
+  renderer.drawText(UI_10_FONT_ID, 4 + hpWidth + 10 + mpWidth + 10, STATUS_Y, hungerBuf);
 
   // Right side: Dungeon level and Character level
   int lvlWidth = renderer.getTextWidth(UI_10_FONT_ID, lvlBuf);
@@ -477,7 +492,7 @@ namespace {
 enum class ArrowDir { Up, Down, Left, Right };
 
 void drawArrow(GfxRenderer& renderer, int cx, int cy, ArrowDir dir) {
-  constexpr int kArrowSize = 10;  // Half-extent of the arrow glyph, in pixels
+  constexpr int kArrowSize = 16;  // Half-extent of the arrow glyph, in pixels
   int xs[3];
   int ys[3];
   switch (dir) {
@@ -504,12 +519,48 @@ void drawArrow(GfxRenderer& renderer, int cx, int cy, ArrowDir dir) {
   }
   renderer.fillPolygon(xs, ys, 3, true);
 }
+
+// GfxRenderer::drawLine(x1,y1,x2,y2,lineWidth,state) thickens by offsetting Y
+// only (see GfxRenderer.cpp) -- correct for a horizontal run, but it stretches
+// a vertical one along its own length instead of widening it. Stroke
+// horizontals via the lineWidth overload; stroke verticals as two adjacent
+// 1px calls, matching drawRect's own per-side manual inset pattern for its
+// vertical sides.
+void strokeHLine(GfxRenderer& renderer, int x1, int x2, int y) { renderer.drawLine(x1, y, x2, y, 2, true); }
+
+void strokeVLine(GfxRenderer& renderer, int x, int y1, int y2) {
+  renderer.drawLine(x, y1, x, y2, true);
+  renderer.drawLine(x + 1, y1, x + 1, y2, true);
+}
 }  // namespace
 
 void GameRenderer::drawControls(GfxRenderer& renderer) const {
-  // Left side: 3x3 d-pad cross (Up/Left/Right/Down), no visible borders on the
-  // individual cells — the cross shape itself is the affordance, matching common
-  // on-screen d-pad conventions. Center cell is decorative/unused (no button there).
+  // Left side: d-pad drawn as one connected cross outline (12-vertex closed
+  // polyline), not five bordered cells -- hitTestControls()'s dead corners
+  // mean a bordered square would promise four tappable corners that don't
+  // exist. No internal divider lines: it must read as a single cross shape.
+  const int x0 = 0;
+  const int x1 = DPAD_COL_W;
+  const int x2 = DPAD_COL_W * 2;
+  const int x3 = DPAD_W;
+  const int y0 = controlsY;
+  const int y1 = controlsY + CONTROL_ROW_H;
+  const int y2 = controlsY + CONTROL_ROW_H * 2;
+  const int y3 = controlsY + CONTROL_ROW_H * 3;
+
+  strokeHLine(renderer, x1, x2, y0);
+  strokeVLine(renderer, x2, y0, y1);
+  strokeHLine(renderer, x2, x3, y1);
+  strokeVLine(renderer, x3, y1, y2);
+  strokeHLine(renderer, x3, x2, y2);
+  strokeVLine(renderer, x2, y2, y3);
+  strokeHLine(renderer, x2, x1, y3);
+  strokeVLine(renderer, x1, y3, y2);
+  strokeHLine(renderer, x1, x0, y2);
+  strokeVLine(renderer, x0, y2, y1);
+  strokeHLine(renderer, x0, x1, y1);
+  strokeVLine(renderer, x1, y1, y0);
+
   const int dpadRow0Y = controlsY;
   const int dpadRow1Y = controlsY + CONTROL_ROW_H;
   const int dpadRow2Y = controlsY + CONTROL_ROW_H * 2;

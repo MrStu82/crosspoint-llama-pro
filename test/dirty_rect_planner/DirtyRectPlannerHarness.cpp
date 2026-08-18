@@ -98,16 +98,17 @@ StepResult runStep(FrameDirtyPlanner& planner, const PlannerLayout& layout, int 
     }
   }
 
-  char hp[24], mp[24], depth[16], lvl[16];
+  char hp[24], mp[24], depth[16], lvl[16], hunger[16];
   std::snprintf(hp, sizeof(hp), "HP 20/20");
   std::snprintf(mp, sizeof(mp), "MP 5/5");
   std::snprintf(depth, sizeof(depth), "D1");
   std::snprintf(lvl, sizeof(lvl), "L1");
+  std::snprintf(hunger, sizeof(hunger), "Fed");
   const char* msg0 = "Welcome to World Dungeon.";
   const char* msg1 = "";
 
-  FramePlan plan = planner.planFrame(layout, playerX, playerY, hp, mp, depth, lvl, msg0, msg1, tiles, fog, nullptr, 0,
-                                     nullptr, 0, visible, theme);
+  FramePlan plan = planner.planFrame(layout, playerX, playerY, hp, mp, depth, lvl, hunger, msg0, msg1, tiles, fog,
+                                     nullptr, 0, nullptr, 0, visible, theme);
 
   StepResult r;
   r.fullClear = plan.fullClear;

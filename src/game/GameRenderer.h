@@ -261,10 +261,11 @@ class GameRenderer {
   // agree -- same reasoning as notificationRect() above.
   Rect corruptNoticeContinueRect() const;
 
-  // Formats the four status-bar fields into caller-owned buffers so
+  // Formats the five status-bar fields into caller-owned buffers so
   // drawStatusBar() (rendering) and planFrame() (diffing, via planner_) always
   // compare/render identical text -- avoids the two ever drifting apart.
-  void formatStatusBarText(char hpBuf[24], char mpBuf[24], char depthBuf[16], char lvlBuf[16]) const;
+  void formatStatusBarText(char hpBuf[24], char mpBuf[24], char depthBuf[16], char lvlBuf[16],
+                           char hungerBuf[16]) const;
 
   // Owns the cached previous frame + all dirty-diff logic (see
   // FrameDirtyPlanner.h) -- wholly free of GfxRenderer/HAL, so a host harness

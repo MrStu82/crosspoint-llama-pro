@@ -182,10 +182,11 @@ void testFreshFloorEntryAcrossSeedsAndDepths() {
     char depthBuf[8];
     std::snprintf(depthBuf, sizeof(depthBuf), "D%u", static_cast<unsigned>(depth));
     char lvlBuf[8] = "L1";
+    char hungerBuf[8] = "Fed";
     game::FramePlan plan =
-        planner.planFrame(layout, px, py, hpBuf, mpBuf, depthBuf, lvlBuf, "", "", tiles.data(), fogOfWar.data(),
-                          monsters.data(), result.monsterCount, items.data(), result.itemCount, visible,
-                          nullptr);
+        planner.planFrame(layout, px, py, hpBuf, mpBuf, depthBuf, lvlBuf, hungerBuf, "", "", tiles.data(),
+                          fogOfWar.data(), monsters.data(), result.monsterCount, items.data(), result.itemCount,
+                          visible, nullptr);
     (void)plan;
   }
 

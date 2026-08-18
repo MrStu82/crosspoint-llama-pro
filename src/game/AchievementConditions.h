@@ -308,6 +308,77 @@ constexpr AchievementCondition CONDITIONS[] = {
     {AchievementId::PeacefulSovereign, ConditionType::Compound, CounterField::Depth,
      CompareOp::GreaterEqual, 0, GameEventType::MonsterKilled, EventField::Damage,
      ItemType::ItemTypeCount, NoEventWindow::Run, 26, 59},   // Depth21(26) AND Bloodless(59), index 63
+
+    // -- Survival bucket (Milestone 2, ids 125-149). Row index below == position
+    // in this array (64 onward). Deliberately avoids the legacy Survival
+    // group's exact thresholds (1000/5000 turns, exactly-1-HP, level
+    // 5/10/20, 10 potions) -- see note in Achievements.h. --
+
+    // Group A: turn-count endurance tiers (CounterCompare / TurnCount).
+    {AchievementId::SteadyPace, ConditionType::CounterCompare, CounterField::TurnCount,
+     CompareOp::GreaterEqual, 100},   // index 64
+    {AchievementId::LongStretch, ConditionType::CounterCompare, CounterField::TurnCount,
+     CompareOp::GreaterEqual, 250},   // index 65
+    {AchievementId::GrindingItOut, ConditionType::CounterCompare, CounterField::TurnCount,
+     CompareOp::GreaterEqual, 600},   // index 66
+    {AchievementId::DeepFocus, ConditionType::CounterCompare, CounterField::TurnCount,
+     CompareOp::GreaterEqual, 1500},  // index 67
+    {AchievementId::Relentless, ConditionType::CounterCompare, CounterField::TurnCount,
+     CompareOp::GreaterEqual, 2500},  // index 68
+    {AchievementId::TimelessDelve, ConditionType::CounterCompare, CounterField::TurnCount,
+     CompareOp::GreaterEqual, 4000},  // index 69
+
+    // Group B: character-level milestone tiers (EventFieldMatch / LevelUp / NewLevel).
+    {AchievementId::RisingStar, ConditionType::EventFieldMatch, CounterField::Depth,
+     CompareOp::GreaterEqual, 3, GameEventType::LevelUp, EventField::NewLevel},   // index 70
+    {AchievementId::BattleHardened, ConditionType::EventFieldMatch, CounterField::Depth,
+     CompareOp::GreaterEqual, 7, GameEventType::LevelUp, EventField::NewLevel},   // index 71
+    {AchievementId::CombatAdept, ConditionType::EventFieldMatch, CounterField::Depth,
+     CompareOp::GreaterEqual, 13, GameEventType::LevelUp, EventField::NewLevel},  // index 72
+    {AchievementId::WarForged, ConditionType::EventFieldMatch, CounterField::Depth,
+     CompareOp::GreaterEqual, 16, GameEventType::LevelUp, EventField::NewLevel},  // index 73
+    {AchievementId::LegendaryMight, ConditionType::EventFieldMatch, CounterField::Depth,
+     CompareOp::GreaterEqual, 19, GameEventType::LevelUp, EventField::NewLevel},  // index 74
+    {AchievementId::LivingLegend, ConditionType::EventFieldMatch, CounterField::Depth,
+     CompareOp::GreaterEqual, 24, GameEventType::LevelUp, EventField::NewLevel},  // index 75
+
+    // Group C: near-death recovery tiers (EventFieldMatch / PlayerDamaged / HpAfter),
+    // LessEqual thresholds above 1 so these never collide with the legacy
+    // exactly-1-HP achievements (OneHitPoint, NickOfTime).
+    {AchievementId::CloseCall, ConditionType::EventFieldMatch, CounterField::Depth,
+     CompareOp::LessEqual, 8, GameEventType::PlayerDamaged, EventField::HpAfter},   // index 76
+    {AchievementId::RazorsEdge, ConditionType::EventFieldMatch, CounterField::Depth,
+     CompareOp::LessEqual, 5, GameEventType::PlayerDamaged, EventField::HpAfter},   // index 77
+    {AchievementId::ScrapingBy, ConditionType::EventFieldMatch, CounterField::Depth,
+     CompareOp::LessEqual, 3, GameEventType::PlayerDamaged, EventField::HpAfter},   // index 78
+    {AchievementId::WhisperFromTheBrink, ConditionType::EventFieldMatch, CounterField::Depth,
+     CompareOp::LessEqual, 2, GameEventType::PlayerDamaged, EventField::HpAfter},   // index 79
+
+    // Group D: low-hunger endurance tiers (CounterCompare / Hunger, LessEqual --
+    // opposite direction from the legacy IronStomach GreaterEqual-9000 gag).
+    {AchievementId::TighteningTheBelt, ConditionType::CounterCompare, CounterField::Hunger,
+     CompareOp::LessEqual, 25},  // index 80
+    {AchievementId::RunningOnEmpty, ConditionType::CounterCompare, CounterField::Hunger,
+     CompareOp::LessEqual, 10},  // index 81
+    {AchievementId::StarvingSurvivor, ConditionType::CounterCompare, CounterField::Hunger,
+     CompareOp::LessEqual, 3},   // index 82
+
+    // Group G: big single-hit damage survived (EventFieldMatch / PlayerDamaged / Damage).
+    {AchievementId::IronHide, ConditionType::EventFieldMatch, CounterField::Depth,
+     CompareOp::GreaterEqual, 15, GameEventType::PlayerDamaged, EventField::Damage},  // index 83
+    {AchievementId::ShrugItOff, ConditionType::EventFieldMatch, CounterField::Depth,
+     CompareOp::GreaterEqual, 25, GameEventType::PlayerDamaged, EventField::Damage},  // index 84
+    {AchievementId::JuggernautsEndurance, ConditionType::EventFieldMatch, CounterField::Depth,
+     CompareOp::GreaterEqual, 35, GameEventType::PlayerDamaged, EventField::Damage},  // index 85
+
+    // Group H: potion-reliance tiers (ItemSpecific / ItemUsed / Potion), thresholds
+    // chosen to straddle rather than collide with the legacy PotionChugger(10).
+    {AchievementId::SipAndSee, ConditionType::ItemSpecific, CounterField::Depth,
+     CompareOp::GreaterEqual, 3, GameEventType::ItemUsed, EventField::Damage, ItemType::Potion},   // index 86
+    {AchievementId::SteadyDosage, ConditionType::ItemSpecific, CounterField::Depth,
+     CompareOp::GreaterEqual, 6, GameEventType::ItemUsed, EventField::Damage, ItemType::Potion},   // index 87
+    {AchievementId::AlchemicalOverkill, ConditionType::ItemSpecific, CounterField::Depth,
+     CompareOp::GreaterEqual, 20, GameEventType::ItemUsed, EventField::Damage, ItemType::Potion},  // index 88
 };
 
 constexpr uint8_t CONDITION_COUNT = sizeof(CONDITIONS) / sizeof(CONDITIONS[0]);

@@ -755,10 +755,36 @@ inline constexpr AchievementDef ACHIEVEMENT_DEFS[] = {
     {"Pacifist to Eleven", "Reached depth 11 without landing a kill.", AchievementReward::Buff, 12},
     {"Pacifist to Sixteen", "Reached depth 16 without landing a kill.", AchievementReward::Skill, 4},
     {"Peaceful Sovereign", "Reached depth 21 without landing a kill.", AchievementReward::Title, 14},
+    // -- Survival bucket (Milestone 2, ids 125-149) --
+    {"Steady Pace", "Survived 100 turns in a single run.", AchievementReward::None, 0},
+    {"Long Stretch", "Survived 250 turns in a single run.", AchievementReward::Buff, 2},
+    {"Grinding It Out", "Survived 600 turns in a single run.", AchievementReward::Buff, 6},
+    {"Deep Focus", "Survived 1500 turns in a single run.", AchievementReward::Skill, 3},
+    {"Relentless", "Survived 2500 turns in a single run.", AchievementReward::Skill, 6},
+    {"Timeless Delve", "Survived 4000 turns in a single run.", AchievementReward::Title, 16},
+    {"Rising Star", "Reached character level 3.", AchievementReward::None, 0},
+    {"Battle-Hardened", "Reached character level 7.", AchievementReward::Buff, 3},
+    {"Combat Adept", "Reached character level 13.", AchievementReward::Buff, 9},
+    {"War-Forged", "Reached character level 16.", AchievementReward::Skill, 2},
+    {"Legendary Might", "Reached character level 19.", AchievementReward::Skill, 5},
+    {"Living Legend", "Reached character level 24.", AchievementReward::Title, 9},
+    {"Close Call", "Survived a hit that left you at 8 HP or less.", AchievementReward::None, 0},
+    {"Razor's Edge", "Survived a hit that left you at 5 HP or less.", AchievementReward::Buff, 5},
+    {"Scraping By", "Survived a hit that left you at 3 HP or less.", AchievementReward::Buff, 11},
+    {"Whisper From The Brink", "Survived a hit that left you at 2 HP or less.", AchievementReward::Skill, 4},
+    {"Tightening the Belt", "Let hunger drop to 25 or below and kept going.", AchievementReward::None, 0},
+    {"Running on Empty", "Let hunger drop to 10 or below and kept going.", AchievementReward::Buff, 8},
+    {"Starving Survivor", "Let hunger drop to 3 or below and kept going.", AchievementReward::Skill, 1},
+    {"Iron Hide", "Survived a single hit for 15 or more damage.", AchievementReward::Buff, 4},
+    {"Shrug It Off", "Survived a single hit for 25 or more damage.", AchievementReward::Buff, 12},
+    {"Juggernaut's Endurance", "Survived a single hit for 35 or more damage.", AchievementReward::Skill, 7},
+    {"Sip and See", "Drank 3 potions in a single run.", AchievementReward::None, 0},
+    {"Steady Dosage", "Drank 6 potions in a single run.", AchievementReward::Buff, 7},
+    {"Alchemical Overkill", "Drank 20 potions in a single run.", AchievementReward::Skill, 1},
 };
 
 inline constexpr int ACHIEVEMENT_DEF_COUNT = sizeof(ACHIEVEMENT_DEFS) / sizeof(ACHIEVEMENT_DEFS[0]);
-static_assert(ACHIEVEMENT_DEF_COUNT == 125, "ACHIEVEMENT_DEFS must have exactly 125 entries");
+static_assert(ACHIEVEMENT_DEF_COUNT == 150, "ACHIEVEMENT_DEFS must have exactly 150 entries");
 
 // Bounds-safe achievementDef(AchievementId) lookup lives in Achievements.h,
 // not here -- AchievementId is declared there (which already includes this

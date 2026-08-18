@@ -153,7 +153,38 @@ enum class AchievementId : uint8_t {
   PacifistToEleven = 122,
   PacifistToSixteen = 123,
   PeacefulSovereign = 124,
-  Count = 125,
+
+  // -- Survival bucket (Milestone 2, ids 125-149): turn-count endurance,
+  // character-level milestones, near-death recoveries, low-hunger
+  // endurance, big-hit survival, potion reliance. Deliberately avoids the
+  // legacy Survival group's exact thresholds (1000/5000 turns, exactly-1-HP,
+  // level 5/10/20, 10 potions) -- see the condition rows (64-88). --
+  SteadyPace = 125,
+  LongStretch = 126,
+  GrindingItOut = 127,
+  DeepFocus = 128,
+  Relentless = 129,
+  TimelessDelve = 130,
+  RisingStar = 131,
+  BattleHardened = 132,
+  CombatAdept = 133,
+  WarForged = 134,
+  LegendaryMight = 135,
+  LivingLegend = 136,
+  CloseCall = 137,
+  RazorsEdge = 138,
+  ScrapingBy = 139,
+  WhisperFromTheBrink = 140,
+  TighteningTheBelt = 141,
+  RunningOnEmpty = 142,
+  StarvingSurvivor = 143,
+  IronHide = 144,
+  ShrugItOff = 145,
+  JuggernautsEndurance = 146,
+  SipAndSee = 147,
+  SteadyDosage = 148,
+  AlchemicalOverkill = 149,
+  Count = 150,
 };
 
 // Bounds-safe lookup: AchievementId now runs past ACHIEVEMENT_DEF_COUNT (the
@@ -299,6 +330,31 @@ inline const char* achievementShortName(AchievementId id) {
     case AchievementId::PacifistToEleven: return "Pacifist to Eleven";
     case AchievementId::PacifistToSixteen: return "Pacifist to Sixteen";
     case AchievementId::PeacefulSovereign: return "Peaceful Sovereign";
+    case AchievementId::SteadyPace: return "Steady Pace";
+    case AchievementId::LongStretch: return "Long Stretch";
+    case AchievementId::GrindingItOut: return "Grinding It Out";
+    case AchievementId::DeepFocus: return "Deep Focus";
+    case AchievementId::Relentless: return "Relentless";
+    case AchievementId::TimelessDelve: return "Timeless Delve";
+    case AchievementId::RisingStar: return "Rising Star";
+    case AchievementId::BattleHardened: return "Battle-Hardened";
+    case AchievementId::CombatAdept: return "Combat Adept";
+    case AchievementId::WarForged: return "War-Forged";
+    case AchievementId::LegendaryMight: return "Legendary Might";
+    case AchievementId::LivingLegend: return "Living Legend";
+    case AchievementId::CloseCall: return "Close Call";
+    case AchievementId::RazorsEdge: return "Razor's Edge";
+    case AchievementId::ScrapingBy: return "Scraping By";
+    case AchievementId::WhisperFromTheBrink: return "Whisper From The Brink";
+    case AchievementId::TighteningTheBelt: return "Tightening the Belt";
+    case AchievementId::RunningOnEmpty: return "Running on Empty";
+    case AchievementId::StarvingSurvivor: return "Starving Survivor";
+    case AchievementId::IronHide: return "Iron Hide";
+    case AchievementId::ShrugItOff: return "Shrug It Off";
+    case AchievementId::JuggernautsEndurance: return "Juggernaut's Endurance";
+    case AchievementId::SipAndSee: return "Sip and See";
+    case AchievementId::SteadyDosage: return "Steady Dosage";
+    case AchievementId::AlchemicalOverkill: return "Alchemical Overkill";
     default: return "";
   }
 }

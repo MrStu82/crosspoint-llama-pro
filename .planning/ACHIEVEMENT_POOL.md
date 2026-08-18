@@ -56,10 +56,10 @@ first before touching `ACHIEVEMENT_DEFS` again.
 | 3 | 2 | Survival | 25 | **DONE** — `62057f4` |
 | 4 | 2 | Exploration | 25 | **DONE** — `79e4f30` |
 | 5 | 3 | Loot & Economy | 35 | **DONE** — `95b883f` |
-| 6 | 3 | Curiosities & Secrets | 25 | not started |
+| 6 | 3 | Curiosities & Secrets | 25 | **DONE** — `9c5fdb7` |
 | 7 | 3 | Pet & Companion | 15 | not started (inert until pet system exists) |
 
-**Running total: 210 / 250.**
+**Running total: 235 / 250.**
 
 ## Bucket scope notes
 
@@ -78,7 +78,19 @@ first before touching `ACHIEVEMENT_DEFS` again.
   ring/amulet pickup + full-loadout/well-equipped/grand-bazaar compounds
   (5). Compound rows needed `compoundA`/`compoundB` widened from `int8_t`
   to `int16_t` (pool now exceeds 127 rows).
-- **Curiosities & Secrets (25)** — TBD detail, Milestone 3.
+- **Curiosities & Secrets (25)** — no dedicated "secret found" mechanic exists
+  anywhere in the codebase (confirmed twice by grep), so this bucket is built
+  entirely from existing CounterField/GameEventType/EventField/ItemType
+  primitives confirmed unused elsewhere: beefy-monster kill tiers via
+  MonsterMaxHp (4), live-HP curiosity tiers via CounterField::Hp (3),
+  thrown-item tiers for potion/scroll/food — ItemThrown previously only
+  covered Weapon (6), pickup tiers for potion/gold — ItemPickedUp previously
+  only covered scroll/ring/amulet/armor/shield/weapon/lootbox (4),
+  floor-hopping tiers via FloorChanged as an EventCount row — previously
+  only a struct flag (3), no-item-use pacifism via NoEventInWindow/ItemUsed
+  plus a depth-gated compound (2), and three cross-bucket "coincidence"
+  compounds mashing up unrelated conditions from other buckets for a
+  secrets flavor (3).
 - **Pet & Companion (15)** — TBD detail, Milestone 3. Authored inert — draws
   as locked, no mechanical dependency on the pet system existing yet.
 
@@ -87,5 +99,5 @@ first before touching `ACHIEVEMENT_DEFS` again.
 - **Milestone 1** — Depth bucket. 90/250. DONE.
 - **Milestone 2** — Combat + Survival + Exploration. 90 → 175/250. Combat DONE (125/250), Survival DONE (150/250), Exploration DONE (175/250). **Milestone 2 complete.**
 - **Milestone 3** — Loot & Economy + Curiosities & Secrets + Pet & Companion.
-  175 → 250/250. Loot & Economy DONE (210/250). Full pool green pending
-  the remaining two buckets.
+  175 → 250/250. Loot & Economy DONE (210/250), Curiosities & Secrets DONE
+  (235/250). Full pool green pending the final Pet & Companion bucket.

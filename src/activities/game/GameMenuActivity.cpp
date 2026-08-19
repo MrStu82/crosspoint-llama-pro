@@ -945,6 +945,11 @@ void GameMenuActivity::renderPet() {
   }
 
   char buf[64];
+  if (pet.speciesId >= game::PET_SPECIES_COUNT) {
+    renderer.drawText(UI_10_FONT_ID, x, y, tr(STR_DM_PET_NO_COMPANION));
+    renderer.displayBuffer();
+    return;
+  }
 
   // "No art" is either a null theme slot or a Sprite2bpp with null data --
   // both fall through to the pre-existing text-only layout, same convention

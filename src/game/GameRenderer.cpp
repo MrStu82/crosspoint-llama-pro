@@ -314,6 +314,10 @@ void GameRenderer::drawViewportCell(GfxRenderer& renderer, int viewX, int viewY,
     if (mapX == p.x && mapY == p.y) {
       glyph = '@';
       sprite = activeTheme->player;
+    } else if (GAME_STATE.pet.active && GAME_STATE.pet.speciesId < game::PET_SPECIES_COUNT &&
+               mapX == GAME_STATE.pet.x && mapY == GAME_STATE.pet.y) {
+      glyph = game::PET_SPECIES_DEFS[GAME_STATE.pet.speciesId].glyph;
+      sprite = activeTheme->companion[GAME_STATE.pet.speciesId];
     } else {
       // Check monsters
       bool foundMonster = false;

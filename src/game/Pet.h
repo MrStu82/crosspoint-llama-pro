@@ -34,6 +34,8 @@ inline void rollNewPet(Pet& pet) {
   pet.attackBase = static_cast<uint8_t>(GAME_STATE.rollRangeInclusive(1, 3));
   pet.defenseBase = static_cast<uint8_t>(GAME_STATE.rollRangeInclusive(0, 2));
   pet.hasGear = false;
+  pet.x = GAME_STATE.player.x;
+  pet.y = GAME_STATE.player.y;
   pet.gear = Item{};
 }
 

@@ -519,6 +519,11 @@ void GameActivity::handleMove(int dx, int dy) {
     }
   }
 
+  // Companion trails one successful player step behind.
+  if (GAME_STATE.pet.active) {
+    GAME_STATE.pet.x = p.x;
+    GAME_STATE.pet.y = p.y;
+  }
   // Move player
   p.x = static_cast<int16_t>(newX);
   p.y = static_cast<int16_t>(newY);
@@ -1254,6 +1259,10 @@ void GameActivity::loadOrGenerateLevel() {
     // First visit — place player at stairs up
     p.x = result.stairsUpX;
     p.y = result.stairsUpY;
+  }
+  if (GAME_STATE.pet.active) {
+    GAME_STATE.pet.x = p.x;
+    GAME_STATE.pet.y = p.y;
   }
 }
 

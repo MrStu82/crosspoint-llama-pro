@@ -313,6 +313,8 @@ struct Pet {
   uint8_t hpBase = 0;
   uint8_t attackBase = 0;
   uint8_t defenseBase = 0;
+  int16_t x = 0;
+  int16_t y = 0;
   Item gear;
   bool hasGear = false;
 };

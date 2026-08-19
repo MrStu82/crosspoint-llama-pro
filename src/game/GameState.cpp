@@ -12,7 +12,7 @@
 #include "Pet.h"
 
 namespace {
-constexpr uint8_t SAVE_FILE_VERSION = 6;  // v2: turnCount widened to uint32_t, added kills +
+constexpr uint8_t SAVE_FILE_VERSION = 7;  // v2: turnCount widened to uint32_t, added kills +
                                           // combatRngState to Player (Phase 7, one bump for all three)
                                           // v3: added hunger to Player (Phase 11)
                                           // v4: added activeSponsorId to Player (Phase 11 sponsors)
@@ -119,6 +119,17 @@ bool readStringChecked(HalFile& file, std::string& s) {
 // persisted fields but lives independently of any live instance, so a
 // stale/incompatible file can be rejected atomically without ever touching
 // GAME_STATE's current run.
+struct PetV6 {
+  bool active = false;
+  uint8_t speciesId = 0;
+  char name[16] = {};
+  uint8_t hpBase = 0;
+  uint8_t attackBase = 0;
+  uint8_t defenseBase = 0;
+  game::Item gear{};
+  bool hasGear = false;
+};
+
 struct StagedSave {
   game::Player player{};
   game::Pet pet{};
@@ -176,9 +187,32 @@ SaveValidity parseSaveFile(HalFile& file, StagedSave& out) {
   // Pet (added v6 -- absent from v4/v5 files, out.pet stays default-constructed
   // i.e. active=false, meaning "no companion yet", same as a fresh run).
   if (version >= 6) {
-    if (!readPodChecked(file, out.pet)) {
+    if (version == 6) {
+      PetV6 legacyPet{};
+      if (!readPodChecked(file, legacyPet)) {
+        result.status = SaveValidity::Status::Invalid;
+        result.reason = "truncated";
+        return result;
+      }
+      out.pet.active = legacyPet.active;
+      out.pet.speciesId = legacyPet.speciesId;
+      memcpy(out.pet.name, legacyPet.name, sizeof(out.pet.name));
+      out.pet.hpBase = legacyPet.hpBase;
+      out.pet.attackBase = legacyPet.attackBase;
+      out.pet.defenseBase = legacyPet.defenseBase;
+      out.pet.gear = legacyPet.gear;
+      out.pet.hasGear = legacyPet.hasGear;
+      out.pet.x = out.player.x;
+      out.pet.y = out.player.y;
+    } else if (!readPodChecked(file, out.pet)) {
       result.status = SaveValidity::Status::Invalid;
       result.reason = "truncated";
+      return result;
+    }
+    out.pet.name[sizeof(out.pet.name) - 1] = '\0';
+    if (out.pet.active && out.pet.speciesId >= game::PET_SPECIES_COUNT) {
+      result.status = SaveValidity::Status::Invalid;
+      result.reason = "bad index";
       return result;
     }
   }

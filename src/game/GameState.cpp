@@ -155,10 +155,10 @@ SaveValidity parseSaveFile(HalFile& file, StagedSave& out) {
     result.reason = "truncated";
     return result;
   }
-  // v4 is the one prior layout this build still knows how to migrate (see
+  // v4 and v6 are the prior layouts this build still knows how to migrate (see
   // PlayerV4/playerFromV4 above) -- anything older or newer than that is
   // genuinely unsafe to reinterpret and gets rejected, same as before.
-  if (version != SAVE_FILE_VERSION && version != 4) {
+  if (version != SAVE_FILE_VERSION && version != 6 && version != 4) {
     // Player is written as raw POD -- any layout change (this file's
     // version history widened turnCount and added fields over time) makes an
     // older file's bytes unsafe to reinterpret as the new struct. Reject

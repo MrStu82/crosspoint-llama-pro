@@ -952,6 +952,8 @@ bool GameActivity::processMonsterTurns() {
                 }
               }
             }
+            if (GAME_STATE.pet.active && wmx == GAME_STATE.pet.x && wmy == GAME_STATE.pet.y) blocked = true;
+            if (GAME_STATE.pet.active && wmx == GAME_STATE.pet.x && wmy == GAME_STATE.pet.y) blocked = true;
             if (!blocked) {
               m.x = static_cast<int16_t>(wmx);
               m.y = static_cast<int16_t>(wmy);
@@ -996,6 +998,7 @@ bool GameActivity::processMonsterTurns() {
             break;
           }
         }
+        if (GAME_STATE.pet.active && nx == GAME_STATE.pet.x && ny == GAME_STATE.pet.y) occupied = true;
         if (occupied) continue;
 
         int ndx = static_cast<int>(p.x) - nx;

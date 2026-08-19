@@ -20,7 +20,7 @@ int main() {
   // Invalid species must reject atomically.
   auto bad=b; bad[o+offsetof(game::Pet,speciesId)]=game::PET_SPECIES_COUNT; put(bad); CHECK(!GAME_STATE.loadFromFile(), "invalid species rejected");
   // Unterminated stored name is sanitised, not read past its buffer.
-  auto unter=b; std::memset(unter.data()+o+offsetof(game::Pet,name), 'X', sizeof(game::Pet::name)); put(unter); CHECK(GAME_STATE.loadFromFile(), "unterminated valid save loads"); CHECK(GAME_STATE.pet.name[15]=='\0', "loaded name terminated");
+  auto unter=b; std::memset(unter.data()+o+offsetof(game::Pet,name), 'X', 16); put(unter); CHECK(GAME_STATE.loadFromFile(), "unterminated valid save loads"); CHECK(GAME_STATE.pet.name[15]=='\0', "loaded name terminated");
   // v6 layout migrates and receives a valid map position from the player.
   seed(); b=bytes(); PetV6 p6{}; const auto& p=GAME_STATE.pet; p6.active=p.active; p6.speciesId=p.speciesId; std::memcpy(p6.name,p.name,16); p6.hpBase=p.hpBase; p6.attackBase=p.attackBase; p6.defenseBase=p.defenseBase; p6.gear=p.gear; p6.hasGear=p.hasGear;
   std::vector<uint8_t> v6(b.begin(), b.begin()+o); v6[0]=6; v6.insert(v6.end(),(uint8_t*)&p6,(uint8_t*)&p6+sizeof(p6)); v6.insert(v6.end(),b.begin()+o+sizeof(game::Pet),b.end()); put(v6); CHECK(GAME_STATE.loadFromFile(), "v6 pet migrates"); CHECK(GAME_STATE.pet.x==GAME_STATE.player.x && GAME_STATE.pet.y==GAME_STATE.player.y, "v6 pet map position initialised");

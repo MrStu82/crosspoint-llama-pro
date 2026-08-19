@@ -3,6 +3,7 @@
 #include "GameTypes.h"
 #include "Sprite2bpp.h"
 #include "../../sprites/world_dungeon_system_carl_sprites.h"
+#include "../../sprites/world_dungeon_companion_species.h"
 
 namespace game {
 
@@ -15,7 +16,7 @@ struct TileTheme {
   const char* name;
   const Sprite2bpp* tiles[static_cast<size_t>(Tile::TileCount)];
   const Sprite2bpp* player;
-  const Sprite2bpp* companion;
+  const Sprite2bpp* companion[PET_SPECIES_COUNT];
   const Sprite2bpp* monsters[MONSTER_DEF_COUNT];
   const Sprite2bpp* items[ITEM_DEF_COUNT];
 };
@@ -35,7 +36,7 @@ inline constexpr TileTheme kThemeDefault = {
     "Default",
     {},  // tiles[Tile::TileCount]
     nullptr,
-    nullptr,
+    {},  // companion[PET_SPECIES_COUNT]
     {},  // monsters[MONSTER_DEF_COUNT]
     {},  // items[ITEM_DEF_COUNT]
 };
@@ -58,7 +59,13 @@ inline constexpr TileTheme kThemeCarl = {
         &kTileWater,
     },
     &kPlayerSystemCarl,
-    &kCompanionGeneric,
+    {
+        // Order matches PET_SPECIES_DEFS (GameTypes.h): Rat Terrier, Cave
+        // Lizard, Baby Griffin, Shadow Sprite, Iron Beetle, Sewer Pup, Scrap
+        // Drone, Grid Sprite.
+        &kSpeciesRatTerrier, &kSpeciesCaveLizard, &kSpeciesBabyGriffin, &kSpeciesShadowSprite,
+        &kSpeciesIronBeetle, &kSpeciesSewerPup, &kSpeciesScrapDrone, &kSpeciesGridSprite,
+    },
     {
         &kMonsterGiantRat, &kMonsterBat, &kMonsterSewerRatling, &kMonsterGridBug,
         &kMonsterMutantScav, &kMonsterBroodGrunt, &kMonsterHoundBeast, &kMonsterLargeSpider,

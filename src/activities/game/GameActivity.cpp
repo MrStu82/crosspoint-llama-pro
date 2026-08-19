@@ -8,6 +8,7 @@
 #include "GameMenuActivity.h"
 #include "MappedInputManager.h"
 #include "activities/ActivityResult.h"
+#include "components/themes/BaseTheme.h"
 #include "game/AchievementBus.h"
 #include "game/FlavorText.h"
 #include "game/GameSave.h"
@@ -101,6 +102,15 @@ void GameActivity::render(RenderLock&&) {
     return;
   }
   gameRenderer.draw(renderer, tiles, fogOfWar, monsters, monsterCount, levelItems, itemCount, visible);
+}
+
+// Redraws one Action/Menu button in the given pressed state and refreshes only
+// its own rect (Job Phase 6) -- never a full-screen update, since this fires on
+// every touch-down/drag-off, not just on resolved taps.
+void GameActivity::paintControlButton(int buttonIndex, bool pressed) {
+  gameRenderer.drawActionMenuButton(renderer, buttonIndex, pressed);
+  const Rect r = gameRenderer.actionMenuButtonRect(buttonIndex);
+  renderer.displayWindow(r.x, r.y, r.width, r.height);
 }
 
 // --- Input ---
@@ -204,9 +214,54 @@ void GameActivity::loop() {
     pressed = Button::Back;
     hasButton = true;
   } else {
-    // On-screen touch controls: the control area doubles as a d-pad + Action/Menu
-    // tap surface. Routed through the same handleMove/handleAction/openGameMenu
-    // calls as physical buttons, so there's exactly one dispatch path either way.
+    // Action/Menu pressed-state feedback (Job Phase 6): geometry comes straight
+    // from gameRenderer.actionMenuButtonRect() so the touch band can never drift
+    // from what's actually drawn. rowTouch()'s Down/Tap distinction lets a press
+    // show inverted immediately, then either resolve (Tap, inside the button) or
+    // abort (drag/lift off it) -- a stuck-inverted button is not acceptable.
+    const Rect actionRect = gameRenderer.actionMenuButtonRect(0);
+    int row = 0;
+    const auto rowHit =
+        mappedInput.rowTouch(row, actionRect.y, actionRect.height, GameRenderer::ACTION_MENU_BUTTON_COUNT,
+                             actionRect.x, actionRect.x + actionRect.width, actionRect.height);
+
+    if (rowHit == MappedInputManager::RowTouch::Down) {
+      const auto newPressed = (row == 0) ? PressedControlButton::Action : PressedControlButton::Menu;
+      if (pressedControlButton != newPressed) {
+        if (pressedControlButton != PressedControlButton::None) {
+          // Touch moved from one button to the other without releasing --
+          // restore the previously-pressed one before painting the new one.
+          paintControlButton(pressedControlButton == PressedControlButton::Action ? 0 : 1, false);
+        }
+        pressedControlButton = newPressed;
+        paintControlButton(row, true);
+      }
+      return;
+    }
+
+    if (rowHit == MappedInputManager::RowTouch::Tap) {
+      paintControlButton(row, false);
+      pressedControlButton = PressedControlButton::None;
+      if (row == 0) {
+        handleAction();
+      } else {
+        openGameMenu();
+      }
+      return;
+    }
+
+    // Drag-off abort: a button was showing pressed but this frame's touch
+    // didn't resolve to Down or Tap on that same row (finger lifted or
+    // dragged elsewhere) -- restore it now so it can never get stuck
+    // inverted.
+    if (pressedControlButton != PressedControlButton::None) {
+      paintControlButton(pressedControlButton == PressedControlButton::Action ? 0 : 1, false);
+      pressedControlButton = PressedControlButton::None;
+    }
+
+    // D-pad + fallback tap dispatch (unchanged): rowTouch() above only covers
+    // the Action/Menu column, so the d-pad region still uses the original
+    // tap-only hit test.
     int tx, ty;
     if (mappedInput.wasScreenTapped(tx, ty) && gameRenderer.hitTestControls(tx, ty, pressed)) {
       hasButton = true;

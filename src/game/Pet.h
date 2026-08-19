@@ -16,11 +16,19 @@ namespace game {
 // all drawn from the persistent combat RNG stream (GAME_STATE.rollRange /
 // rollRangeInclusive) so a save+reload reproduces the exact same pet --
 // never a locally constructed game::Rng, which would not survive a reload.
+// Rolls a fresh name from PET_NAME_POOL into an existing pet, independent of
+// species -- same table rollNewPet() draws from at creation. Shared so the
+// Pet screen's Random-name button (Job Phase 5) never keeps a second copy of
+// the roll.
+inline void rerollPetName(Pet& pet) {
+  const char* rolledName = PET_NAME_POOL[GAME_STATE.rollRange(PET_NAME_COUNT)];
+  snprintf(pet.name, sizeof(pet.name), "%s", rolledName);
+}
+
 inline void rollNewPet(Pet& pet) {
   pet.active = true;
   pet.speciesId = static_cast<uint8_t>(GAME_STATE.rollRange(PET_SPECIES_COUNT));
-  const char* rolledName = PET_NAME_POOL[GAME_STATE.rollRange(PET_NAME_COUNT)];
-  snprintf(pet.name, sizeof(pet.name), "%s", rolledName);
+  rerollPetName(pet);
   // Small per-instance spread so littermates of the same species still differ.
   pet.hpBase = static_cast<uint8_t>(GAME_STATE.rollRangeInclusive(8, 14));
   pet.attackBase = static_cast<uint8_t>(GAME_STATE.rollRangeInclusive(1, 3));

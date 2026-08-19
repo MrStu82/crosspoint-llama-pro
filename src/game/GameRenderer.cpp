@@ -586,26 +586,41 @@ void GameRenderer::drawControls(GfxRenderer& renderer) const {
   // ScreenshotUtil.cpp:96) instead of the 1px default. hitTestControls()'s
   // `x < DPAD_W` split is deliberately left untouched -- the gap band still
   // hit-tests as part of the Action/Menu region.
+  for (int i = 0; i < ACTION_MENU_BUTTON_COUNT; i++) {
+    drawActionMenuButton(renderer, i, /*pressed=*/false);
+  }
+}
+
+Rect GameRenderer::actionMenuButtonRect(int buttonIndex) const {
   const int buttonX = DPAD_W + CONTROL_BUTTON_GAP;
   const int buttonW = screenW - buttonX;
-  const int buttonH = (CONTROLS_H) / ACTION_MENU_BUTTON_COUNT;
+  const int buttonH = CONTROLS_H / ACTION_MENU_BUTTON_COUNT;
+  const int buttonY = controlsY + buttonIndex * buttonH;
+  return Rect(buttonX, buttonY, buttonW, buttonH);
+}
 
+void GameRenderer::drawActionMenuButton(GfxRenderer& renderer, int buttonIndex, bool pressed) const {
   static constexpr StrId kButtonLabelIds[ACTION_MENU_BUTTON_COUNT] = {
       StrId::STR_DM_HINT_ACTION,
       StrId::STR_DM_HINT_MENU,
   };
 
-  for (int i = 0; i < ACTION_MENU_BUTTON_COUNT; i++) {
-    const int buttonY = controlsY + i * buttonH;
-    renderer.drawRect(buttonX, buttonY, buttonW, buttonH, 2, true);
-
-    const char* label = I18n::getInstance().get(kButtonLabelIds[i]);
-    const int textW = renderer.getTextWidth(SMALL_FONT_ID, label);
-    const int textH = renderer.getLineHeight(SMALL_FONT_ID);
-    const int textX = buttonX + (buttonW - textW) / 2;
-    const int textY = buttonY + (buttonH - textH) / 2;
-    renderer.drawText(SMALL_FONT_ID, textX, textY, label);
+  const Rect r = actionMenuButtonRect(buttonIndex);
+  if (pressed) {
+    // Pressed look = invert only (Job Phase 6 spec): filled black, white
+    // text, no border/offset/shadow/animation.
+    renderer.fillRect(r.x, r.y, r.width, r.height, true);
+  } else {
+    renderer.fillRect(r.x, r.y, r.width, r.height, false);
+    renderer.drawRect(r.x, r.y, r.width, r.height, 2, true);
   }
+
+  const char* label = I18n::getInstance().get(kButtonLabelIds[buttonIndex]);
+  const int textW = renderer.getTextWidth(SMALL_FONT_ID, label);
+  const int textH = renderer.getLineHeight(SMALL_FONT_ID);
+  const int textX = r.x + (r.width - textW) / 2;
+  const int textY = r.y + (r.height - textH) / 2;
+  renderer.drawText(SMALL_FONT_ID, textX, textY, label, /*black=*/!pressed);
 }
 
 bool GameRenderer::hitTestControls(int x, int y, MappedInputManager::Button& outButton) const {

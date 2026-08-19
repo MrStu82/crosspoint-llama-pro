@@ -79,6 +79,21 @@ class GameActivity final : public Activity {
   CorruptNoticeScope corruptNoticeScope = CorruptNoticeScope::PerLevel;
   uint8_t corruptNoticeDepth = 0;
 
+  // Which on-screen Action/Menu button (if any) is currently showing pressed
+  // (inverted) visual feedback -- Job Phase 6. None outside of an active
+  // touch-down on one of those two buttons; set on rowTouch()'s Down, cleared
+  // (button redrawn normal) on Tap resolution or drag-off abort. Mirrors the
+  // simple held-flag idiom used by KeyboardEntryActivity's upHeld/downHeld/
+  // etc, just widened to three states since there are two candidate buttons
+  // sharing one row rather than one flag per key.
+  enum class PressedControlButton : uint8_t { None, Action, Menu };
+  PressedControlButton pressedControlButton = PressedControlButton::None;
+  // Redraws just one Action/Menu button (0=Action, 1=Menu) in the given
+  // pressed state and displayWindow()s only its rect -- never a full
+  // refresh. Shared by the Down/Tap/abort handling in loop() so the
+  // draw-then-refresh pair can't drift out of sync between call sites.
+  void paintControlButton(int buttonIndex, bool pressed);
+
   void loadOrGenerateLevel();
   void saveCurrentLevel();
   // Resolves a WholeRun CorruptSaveNotice: save.bin is always left untouched on disk (no

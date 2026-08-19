@@ -155,6 +155,21 @@ class GameRenderer {
   // Returns true and sets outButton if the tap landed on a control, false otherwise.
   bool hitTestControls(int x, int y, MappedInputManager::Button& outButton) const;
 
+  // Screen rect of one Action/Menu button (0 = Action/top, 1 = Menu/bottom).
+  // Shared by drawActionMenuButton() and GameActivity's rowTouch() press
+  // tracking so the drawn button, its touch region, and its pressed-state
+  // displayWindow() refresh can never drift apart (same reasoning as
+  // corruptNoticeContinueRect()).
+  Rect actionMenuButtonRect(int buttonIndex) const;
+
+  // Draws a single Action/Menu button (0 = Action/top, 1 = Menu/bottom) in
+  // either its normal (bordered, black text) or pressed (inverted: filled
+  // black, white text) look (Job Phase 6). Used both by drawControls()'s
+  // initial paint and by GameActivity's press/release/drag-off handling,
+  // which redraws just this one button and displayWindow()s only its rect --
+  // never a full refresh.
+  void drawActionMenuButton(GfxRenderer& renderer, int buttonIndex, bool pressed) const;
+
   // Paints the blocking death/victory overlay on top of whatever's already on
   // the panel (Phase 7 req 2/3). Deliberately does NOT call clearScreen() --
   // Phase 8's dirty-rect rewrite lands on top of this, and a full repaint here

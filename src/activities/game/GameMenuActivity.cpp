@@ -12,12 +12,14 @@
 #include "components/UITheme.h"
 #include "fontIds.h"
 #include "game/AchievementBus.h"
+#include "game/GameSprites.h"
 #include "game/GameState.h"
 #include "game/GameTheme.h"
 #include "game/GameTypes.h"
 #include "game/HungerClock.h"
 #include "game/Pet.h"
 #include "activities/ActivityResult.h"
+#include "activities/util/KeyboardEntryActivity.h"
 
 namespace {
 // Hold threshold for the long-press "throw item" action on Screen::Inventory (firmware
@@ -250,6 +252,34 @@ void GameMenuActivity::loop() {
         currentScreen = Screen::Menu;
         selectedIndex = 3;
         requestUpdate();
+        return;
+      }
+
+      // Rename/Random only apply while there's an active pet to name --
+      // renderPet() only shows these hints in that case, so guard the input
+      // side the same way to keep hints and behavior in sync.
+      if (GAME_STATE.pet.active) {
+        if (mappedInput.wasReleased(Button::Left)) {
+          startActivityForResult(
+              std::make_unique<KeyboardEntryActivity>(renderer, mappedInput, tr(STR_DM_PET_ENTER_NAME),
+                                                        GAME_STATE.pet.name, sizeof(GAME_STATE.pet.name) - 1,
+                                                        InputType::Text),
+              [this](const ActivityResult& result) {
+                if (!result.isCancelled) {
+                  const auto& text = std::get<KeyboardResult>(result.data).text;
+                  if (!text.empty()) {
+                    snprintf(GAME_STATE.pet.name, sizeof(GAME_STATE.pet.name), "%s", text.c_str());
+                  }
+                }
+                requestUpdate();
+              });
+          return;
+        }
+        if (mappedInput.wasReleased(Button::Right)) {
+          game::rerollPetName(GAME_STATE.pet);
+          requestUpdate();
+          return;
+        }
       }
 
       // Touch: Pet has no selectable rows, same back-out-on-any-tap idiom as
@@ -916,6 +946,16 @@ void GameMenuActivity::renderPet() {
 
   char buf[64];
 
+  // "No art" is either a null theme slot or a Sprite2bpp with null data --
+  // both fall through to the pre-existing text-only layout, same convention
+  // GameRenderer::drawCell uses for tile/monster/item sprites.
+  const auto* theme = game::getTheme(static_cast<game::GameThemeId>(SETTINGS.gameTheme));
+  const Sprite2bpp* companionSprite = theme->companion[pet.speciesId];
+  if (companionSprite != nullptr && companionSprite->data != nullptr) {
+    int spriteX = pageWidth - metrics.contentSidePadding - companionSprite->w;
+    drawSprite(renderer, spriteX, y, *companionSprite);
+  }
+
   renderer.drawText(UI_10_FONT_ID, x, y, pet.name, true, EpdFontFamily::BOLD);
   y += lineH;
 
@@ -958,7 +998,7 @@ void GameMenuActivity::renderPet() {
     renderer.drawText(UI_10_FONT_ID, x + 10, y, tr(STR_DM_PET_NO_GEAR));
   }
 
-  const auto labels = mappedInput.mapLabels(tr(STR_BACK), "", "", "");
+  const auto labels = mappedInput.mapLabels(tr(STR_BACK), "", tr(STR_DM_PET_RENAME), tr(STR_DM_PET_RANDOM));
   GUI.drawButtonHints(renderer, labels.btn1, labels.btn2, labels.btn3, labels.btn4);
 
   renderer.displayBuffer();

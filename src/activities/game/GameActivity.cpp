@@ -953,7 +953,6 @@ bool GameActivity::processMonsterTurns() {
               }
             }
             if (GAME_STATE.pet.active && wmx == GAME_STATE.pet.x && wmy == GAME_STATE.pet.y) blocked = true;
-            if (GAME_STATE.pet.active && wmx == GAME_STATE.pet.x && wmy == GAME_STATE.pet.y) blocked = true;
             if (!blocked) {
               m.x = static_cast<int16_t>(wmx);
               m.y = static_cast<int16_t>(wmy);

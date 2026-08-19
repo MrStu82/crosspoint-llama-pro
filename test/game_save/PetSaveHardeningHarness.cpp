@@ -14,7 +14,7 @@ struct PetV6 { bool active; uint8_t speciesId; char name[16]; uint8_t hpBase, at
 static const char* kPath = "/tmp/pet_save_gate/.crosspoint/game/save.bin";
 static std::vector<uint8_t> bytes() { std::ifstream f(kPath, std::ios::binary); return {std::istreambuf_iterator<char>(f), {}}; }
 static void put(const std::vector<uint8_t>& b) { std::ofstream f(kPath, std::ios::binary | std::ios::trunc); f.write((const char*)b.data(), b.size()); }
-static void seed() { system("rm -rf /tmp/pet_save_gate; mkdir -p /tmp/pet_save_gate"); GAME_STATE.newGame(7); GAME_STATE.pet.active=true; GAME_STATE.pet.speciesId=1; std::strcpy(GAME_STATE.pet.name,"Pip"); CHECK(GAME_STATE.saveToFile(), "seed save"); }
+static void seed() { system("rm -rf /tmp/pet_save_gate; mkdir -p /tmp/pet_save_gate"); HalStorage::getInstance().root = "/tmp/pet_save_gate"; GAME_STATE.newGame(7); GAME_STATE.pet.active=true; GAME_STATE.pet.speciesId=1; std::strcpy(GAME_STATE.pet.name,"Pip"); CHECK(GAME_STATE.saveToFile(), "seed save"); }
 int main() {
   seed(); auto b=bytes(); const size_t o=1+sizeof(game::Player);
   // Invalid species must reject atomically.

@@ -255,7 +255,6 @@ void GameState::newGame(uint32_t seed) {
 
   pet = game::Pet{};
   game::rollNewPet(pet);
-  ACHIEVEMENTS.unlock(game::AchievementId::FirstFriend, "Tamed your first companion.");
 
   inventoryCount = 0;
   memset(inventory, 0, sizeof(inventory));

@@ -12,6 +12,7 @@
 #include "game/FlavorText.h"
 #include "game/GameSave.h"
 #include "game/HungerClock.h"
+#include "game/Pet.h"
 
 // --- FOV ---
 
@@ -323,7 +324,11 @@ void GameActivity::dropCorpseLoot(int16_t x, int16_t y) {
 
   if (petLoot.itemCount < game::MAX_ITEMS_PER_LEVEL) {
     // x=-1/y=-1 already set by rollLootItem -- pet-addressed loot is never positioned.
-    petLoot.items[petLoot.itemCount++] = GAME_STATE.rollLootItem(depth);
+    game::Item found = GAME_STATE.rollLootItem(depth);
+    petLoot.items[petLoot.itemCount++] = found;
+    // Pet autonomously forages this stream -- auto-equips the item if it's
+    // strictly better gear than whatever it's currently carrying.
+    game::petForage(GAME_STATE.pet, found);
   }
 }
 

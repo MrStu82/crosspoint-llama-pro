@@ -278,6 +278,45 @@ inline uint8_t selectLootBoxReward(uint32_t (*rollFn)(uint32_t)) {
   return eligible[rollFn(eligibleCount)];
 }
 
+// --- Pet Companion (Job Phase 3) ---
+// One companion, rolled once at character creation and carried for the run.
+// Species and name are cosmetic-only (no stat differences between species by
+// design -- the pool exists for flavor/identity, not build variety); attack/
+// defense/hp bases ARE rolled per-instance (small random spread) so no two
+// pets of the same species are stat-identical either. Same point-of-use
+// pattern as buffs/sponsors above: hpBase/attackBase/defenseBase are stored,
+// but the level-scaled totals a caller actually needs (petMaxHp/petAttack/
+// petDefense in Pet.h) are computed at read time, never folded back into
+// these stored bases.
+struct PetSpeciesDef {
+  const char* name;
+  char glyph;
+};
+
+inline constexpr PetSpeciesDef PET_SPECIES_DEFS[] = {
+    {"Rat Terrier", 'd'}, {"Cave Lizard", 'l'}, {"Baby Griffin", 'g'},
+    {"Shadow Sprite", 's'}, {"Iron Beetle", 'i'}, {"Sewer Pup", 'p'},
+    {"Scrap Drone", 'r'}, {"Grid Sprite", 'x'},
+};
+inline constexpr int PET_SPECIES_COUNT = sizeof(PET_SPECIES_DEFS) / sizeof(PET_SPECIES_DEFS[0]);
+
+inline constexpr const char* PET_NAME_POOL[] = {
+    "Bolt", "Ash", "Pip", "Rusty", "Ember", "Sable", "Nova", "Fizz",
+    "Grit", "Pixel", "Cinder", "Dusk", "Wisp", "Copper", "Sprocket", "Marble",
+};
+inline constexpr int PET_NAME_COUNT = sizeof(PET_NAME_POOL) / sizeof(PET_NAME_POOL[0]);
+
+struct Pet {
+  bool active = false;
+  uint8_t speciesId = 0;
+  char name[16] = {};
+  uint8_t hpBase = 0;
+  uint8_t attackBase = 0;
+  uint8_t defenseBase = 0;
+  Item gear;
+  bool hasGear = false;
+};
+
 // --- Buffs and Skills (achievement reward work) ---
 // Run-scoped, stacking achievement rewards. Same point-of-use pattern as
 // Sponsors below (never mutate base stats directly -- sum modifiers where a

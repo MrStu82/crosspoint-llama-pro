@@ -16,6 +16,7 @@
 #include "game/GameTheme.h"
 #include "game/GameTypes.h"
 #include "game/HungerClock.h"
+#include "game/Pet.h"
 #include "activities/ActivityResult.h"
 
 namespace {
@@ -52,7 +53,7 @@ void GameMenuActivity::loop() {
 
   switch (currentScreen) {
     case Screen::Menu: {
-      constexpr int menuSize = 7;  // Resume, Inventory, Character, Achievements, Theme, Save & Quit, Abandon
+      constexpr int menuSize = 8;  // Resume, Inventory, Character, Pet, Achievements, Theme, Save & Quit, Abandon
 
       buttonNavigator.onNextRelease([this] {
         selectedIndex = ButtonNavigator::nextIndex(selectedIndex, menuSize);
@@ -80,21 +81,26 @@ void GameMenuActivity::loop() {
             selectedIndex = 0;
             requestUpdate();
             break;
-          case 3:  // Achievements
+          case 3:  // Pet
+            currentScreen = Screen::Pet;
+            selectedIndex = 0;
+            requestUpdate();
+            break;
+          case 4:  // Achievements
             currentScreen = Screen::Achievements;
             selectedIndex = 0;
             requestUpdate();
             break;
-          case 4:  // Theme
+          case 5:  // Theme
             SETTINGS.gameTheme = (SETTINGS.gameTheme + 1) % CrossPointSettings::GAME_THEME_COUNT;
             SETTINGS.saveToFile();
             requestUpdate();
             break;
-          case 5:  // Save & Quit
+          case 6:  // Save & Quit
             setResult(MenuResult{static_cast<int>(MenuAction::SAVE_QUIT), 0, 0});
             finish();
             return;
-          case 6:  // Abandon Run
+          case 7:  // Abandon Run
             setResult(MenuResult{static_cast<int>(MenuAction::ABANDON), 0, 0});
             finish();
             return;
@@ -239,10 +245,29 @@ void GameMenuActivity::loop() {
       break;
     }
 
-    case Screen::Achievements: {
+    case Screen::Pet: {
       if (mappedInput.wasReleased(Button::Back) || mappedInput.wasReleased(Button::Confirm)) {
         currentScreen = Screen::Menu;
         selectedIndex = 3;
+        requestUpdate();
+      }
+
+      // Touch: Pet has no selectable rows, same back-out-on-any-tap idiom as
+      // Screen::Character.
+      int tx, ty;
+      if (mappedInput.wasScreenTapped(tx, ty)) {
+        currentScreen = Screen::Menu;
+        selectedIndex = 3;
+        requestUpdate();
+        return;
+      }
+      break;
+    }
+
+    case Screen::Achievements: {
+      if (mappedInput.wasReleased(Button::Back) || mappedInput.wasReleased(Button::Confirm)) {
+        currentScreen = Screen::Menu;
+        selectedIndex = 4;
         requestUpdate();
         break;
       }
@@ -251,7 +276,7 @@ void GameMenuActivity::loop() {
       int tx, ty;
       if (mappedInput.wasScreenTapped(tx, ty)) {
         currentScreen = Screen::Menu;
-        selectedIndex = 3;
+        selectedIndex = 4;
         requestUpdate();
         return;
       }
@@ -284,7 +309,7 @@ void GameMenuActivity::loop() {
 // --- Touch (Screen::Menu) ---
 
 bool GameMenuActivity::handleMenuTouch() {
-  constexpr int menuSize = 7;  // Resume, Inventory, Character, Achievements, Theme, Save & Quit, Abandon
+  constexpr int menuSize = 8;  // Resume, Inventory, Character, Pet, Achievements, Theme, Save & Quit, Abandon
 
   // Row geometry must mirror BaseTheme::drawButtonMenu() exactly (see renderMenu()
   // for how contentTop/rect are computed, and BaseTheme.cpp's drawButtonMenu() for
@@ -344,21 +369,26 @@ bool GameMenuActivity::handleMenuTouch() {
           selectedIndex = 0;
           requestUpdate();
           return true;
-        case 3:  // Achievements
+        case 3:  // Pet
+          currentScreen = Screen::Pet;
+          selectedIndex = 0;
+          requestUpdate();
+          return true;
+        case 4:  // Achievements
           currentScreen = Screen::Achievements;
           selectedIndex = 0;
           requestUpdate();
           return true;
-        case 4:  // Theme
+        case 5:  // Theme
           SETTINGS.gameTheme = (SETTINGS.gameTheme + 1) % CrossPointSettings::GAME_THEME_COUNT;
           SETTINGS.saveToFile();
           requestUpdate();
           return true;
-        case 5:  // Save & Quit
+        case 6:  // Save & Quit
           setResult(MenuResult{static_cast<int>(MenuAction::SAVE_QUIT), 0, 0});
           finish();
           return true;
-        case 6:  // Abandon Run
+        case 7:  // Abandon Run
           setResult(MenuResult{static_cast<int>(MenuAction::ABANDON), 0, 0});
           finish();
           return true;
@@ -586,6 +616,9 @@ void GameMenuActivity::render(RenderLock&&) {
     case Screen::Character:
       renderCharacter();
       break;
+    case Screen::Pet:
+      renderPet();
+      break;
     case Screen::Achievements:
       renderAchievements();
       break;
@@ -608,14 +641,15 @@ void GameMenuActivity::renderMenu() {
   const int contentHeight = pageHeight - contentTop - metrics.buttonHintsHeight - metrics.verticalSpacing;
 
   static const StrId items[] = {StrId::STR_DM_RESUME_GAME,   StrId::STR_DM_INVENTORY,
-                                StrId::STR_DM_CHARACTER,     StrId::STR_DM_ACHIEVEMENTS_TITLE,
+                                StrId::STR_DM_CHARACTER,     StrId::STR_DM_PET,
+                                StrId::STR_DM_ACHIEVEMENTS_TITLE,
                                 StrId::STR_DM_THEME,         StrId::STR_DM_SAVE_AND_QUIT,
                                 StrId::STR_DM_ABANDON_RUN};
 
   GUI.drawButtonMenu(
-      renderer, Rect(0, contentTop, pageWidth, contentHeight), 7, selectedIndex,
+      renderer, Rect(0, contentTop, pageWidth, contentHeight), 8, selectedIndex,
       [](int index) {
-        if (index == 4) {
+        if (index == 5) {
           // Theme row shows the live selection, e.g. "Theme: Default" -- mirrors
           // the " +2"/" [E]" dynamic-suffix pattern used for inventory rows.
           const auto* theme = game::getTheme(static_cast<game::GameThemeId>(SETTINGS.gameTheme));
@@ -851,6 +885,77 @@ void GameMenuActivity::renderCharacter() {
   }
   if (!hasEquipped) {
     renderer.drawText(UI_10_FONT_ID, x + 10, y, "(none)");
+  }
+
+  const auto labels = mappedInput.mapLabels(tr(STR_BACK), "", "", "");
+  GUI.drawButtonHints(renderer, labels.btn1, labels.btn2, labels.btn3, labels.btn4);
+
+  renderer.displayBuffer();
+}
+
+void GameMenuActivity::renderPet() {
+  renderer.clearScreen();
+
+  const auto pageWidth = renderer.getScreenWidth();
+  auto metrics = UITheme::getInstance().getMetrics();
+
+  GUI.drawHeader(renderer, Rect(0, metrics.topPadding, pageWidth, metrics.headerHeight), tr(STR_DM_PET));
+
+  const auto& pet = GAME_STATE.pet;
+  const int x = metrics.contentSidePadding;
+  int y = metrics.topPadding + metrics.headerHeight + metrics.verticalSpacing + 10;
+  constexpr int lineH = 28;
+
+  if (!pet.active) {
+    renderer.drawText(UI_10_FONT_ID, x, y, tr(STR_DM_PET_NO_COMPANION));
+    const auto labels = mappedInput.mapLabels(tr(STR_BACK), "", "", "");
+    GUI.drawButtonHints(renderer, labels.btn1, labels.btn2, labels.btn3, labels.btn4);
+    renderer.displayBuffer();
+    return;
+  }
+
+  char buf[64];
+
+  renderer.drawText(UI_10_FONT_ID, x, y, pet.name, true, EpdFontFamily::BOLD);
+  y += lineH;
+
+  const auto& species = game::PET_SPECIES_DEFS[pet.speciesId];
+  snprintf(buf, sizeof(buf), "%s %s", I18N.get(StrId::STR_DM_PET_SPECIES), species.name);
+  renderer.drawText(UI_10_FONT_ID, x, y, buf);
+  y += lineH;
+
+  y += 10;  // spacer
+
+  snprintf(buf, sizeof(buf), "%s %u", I18N.get(StrId::STR_DM_PET_LEVEL), game::petLevel());
+  renderer.drawText(UI_10_FONT_ID, x, y, buf);
+  y += lineH;
+
+  snprintf(buf, sizeof(buf), "%s %u", I18N.get(StrId::STR_DM_PET_HP), game::petMaxHp(pet));
+  renderer.drawText(UI_10_FONT_ID, x, y, buf);
+  y += lineH;
+
+  snprintf(buf, sizeof(buf), "%s %d", I18N.get(StrId::STR_DM_PET_ATTACK), game::petAttack(pet));
+  renderer.drawText(UI_10_FONT_ID, x, y, buf);
+  y += lineH;
+
+  snprintf(buf, sizeof(buf), "%s %d", I18N.get(StrId::STR_DM_PET_DEFENSE), game::petDefense(pet));
+  renderer.drawText(UI_10_FONT_ID, x, y, buf);
+  y += lineH;
+
+  y += 10;  // spacer
+
+  renderer.drawText(UI_10_FONT_ID, x, y, tr(STR_DM_PET_GEAR), true, EpdFontFamily::BOLD);
+  y += lineH;
+
+  if (pet.hasGear) {
+    const auto* def = game::petFindItemDef(pet.gear);
+    std::string name = def != nullptr ? def->name : "?";
+    if (pet.gear.enchantment > 0) {
+      name += " +" + std::to_string(pet.gear.enchantment);
+    }
+    renderer.drawText(UI_10_FONT_ID, x + 10, y, name.c_str());
+  } else {
+    renderer.drawText(UI_10_FONT_ID, x + 10, y, tr(STR_DM_PET_NO_GEAR));
   }
 
   const auto labels = mappedInput.mapLabels(tr(STR_BACK), "", "", "");

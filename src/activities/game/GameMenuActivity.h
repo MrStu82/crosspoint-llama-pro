@@ -20,13 +20,14 @@ class GameMenuActivity final : public Activity {
   void render(RenderLock&&) override;
 
  private:
-  enum class Screen { Menu, Inventory, Character, Achievements, ThrowTarget };
+  enum class Screen { Menu, Inventory, Character, Pet, Achievements, ThrowTarget };
 
   void useInventoryItem(int index);
 
   void renderMenu();
   void renderInventory();
   void renderCharacter();
+  void renderPet();
   void renderAchievements();
   void renderThrowTarget();
 

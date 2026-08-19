@@ -10,6 +10,7 @@ class GameState {
 
  public:
   game::Player player;
+  game::Pet pet;
   game::Item inventory[game::MAX_INVENTORY];
   uint8_t inventoryCount = 0;
 

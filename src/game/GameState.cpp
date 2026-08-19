@@ -9,9 +9,10 @@
 
 #include "AchievementBus.h"
 #include "FlavorText.h"
+#include "Pet.h"
 
 namespace {
-constexpr uint8_t SAVE_FILE_VERSION = 5;  // v2: turnCount widened to uint32_t, added kills +
+constexpr uint8_t SAVE_FILE_VERSION = 6;  // v2: turnCount widened to uint32_t, added kills +
                                           // combatRngState to Player (Phase 7, one bump for all three)
                                           // v3: added hunger to Player (Phase 11)
                                           // v4: added activeSponsorId to Player (Phase 11 sponsors)
@@ -21,6 +22,10 @@ constexpr uint8_t SAVE_FILE_VERSION = 5;  // v2: turnCount widened to uint32_t, 
                                           // below: a v4 file loads its existing fields as-is and gets
                                           // the new buff/skill lists defaulted empty, so an in-progress
                                           // run on a player's device is never silently wiped by this bump.
+                                          // v6: added Pet to GameState (Job Phase 3 companion). A v5
+                                          // (or migrated v4) file has no pet bytes at all -- loaded with
+                                          // pet.active left false, exactly like "no companion yet",
+                                          // never invalidated either.
 
 // Mirrors Player's exact v4 on-disk layout (everything up to and including
 // activeSponsorId, before activeBuffIds/activeBuffCount/activeSkillIds/
@@ -116,6 +121,7 @@ bool readStringChecked(HalFile& file, std::string& s) {
 // GAME_STATE's current run.
 struct StagedSave {
   game::Player player{};
+  game::Pet pet{};
   game::Item inventory[game::MAX_INVENTORY]{};
   uint8_t inventoryCount = 0;
   std::string messages[game::MAX_MESSAGES];
@@ -161,6 +167,16 @@ SaveValidity parseSaveFile(HalFile& file, StagedSave& out) {
     out.player = playerFromV4(legacy);
   } else {
     if (!readPodChecked(file, out.player)) {
+      result.status = SaveValidity::Status::Invalid;
+      result.reason = "truncated";
+      return result;
+    }
+  }
+
+  // Pet (added v6 -- absent from v4/v5 files, out.pet stays default-constructed
+  // i.e. active=false, meaning "no companion yet", same as a fresh run).
+  if (version >= 6) {
+    if (!readPodChecked(file, out.pet)) {
       result.status = SaveValidity::Status::Invalid;
       result.reason = "truncated";
       return result;
@@ -236,6 +252,10 @@ void GameState::newGame(uint32_t seed) {
   player.turnCount = 0;
   player.kills = 0;
   player.combatRngState = seed ? seed : 1;  // game::Rng treats 0 as invalid; mirror that here
+
+  pet = game::Pet{};
+  game::rollNewPet(pet);
+  ACHIEVEMENTS.unlock(game::AchievementId::FirstFriend, "Tamed your first companion.");
 
   inventoryCount = 0;
   memset(inventory, 0, sizeof(inventory));
@@ -313,6 +333,9 @@ bool GameState::saveToFile() const {
   // Player struct (written as raw POD)
   serialization::writePod(file, player);
 
+  // Pet (added v6)
+  serialization::writePod(file, pet);
+
   // Inventory
   serialization::writePod(file, inventoryCount);
   for (uint8_t i = 0; i < inventoryCount; i++) {
@@ -364,6 +387,7 @@ bool GameState::loadFromFile() {
   }
 
   player = staged.player;
+  pet = staged.pet;
   inventoryCount = staged.inventoryCount;
   memcpy(inventory, staged.inventory, sizeof(inventory));
   messageCount = staged.messageCount;

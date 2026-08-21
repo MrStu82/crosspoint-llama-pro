@@ -10,10 +10,57 @@
 #include "esp_private/esp_system_attr.h"
 #include "esp_private/panic_internal.h"
 
+#if defined(__XTENSA__)
+#include "esp_cpu_utils.h"
+#include "esp_memory_utils.h"
+#include "xtensa_context.h"
+#endif
+
 #define MAX_PANIC_STACK_DEPTH 32
+#define MAX_PANIC_TRACE_DEPTH 16
+
+namespace {
+constexpr uint32_t PANIC_TRACE_MAGIC = 0x504E4354;  // "PNCT"
+
+const char* resetReasonName(esp_reset_reason_t reason) {
+  switch (reason) {
+    case ESP_RST_UNKNOWN: return "ESP_RST_UNKNOWN";
+    case ESP_RST_POWERON: return "ESP_RST_POWERON";
+    case ESP_RST_EXT: return "ESP_RST_EXT";
+    case ESP_RST_SW: return "ESP_RST_SW";
+    case ESP_RST_PANIC: return "ESP_RST_PANIC";
+    case ESP_RST_INT_WDT: return "ESP_RST_INT_WDT";
+    case ESP_RST_TASK_WDT: return "ESP_RST_TASK_WDT";
+    case ESP_RST_WDT: return "ESP_RST_WDT";
+    case ESP_RST_DEEPSLEEP: return "ESP_RST_DEEPSLEEP";
+    case ESP_RST_BROWNOUT: return "ESP_RST_BROWNOUT";
+    case ESP_RST_SDIO: return "ESP_RST_SDIO";
+    case ESP_RST_USB: return "ESP_RST_USB";
+    case ESP_RST_JTAG: return "ESP_RST_JTAG";
+    case ESP_RST_EFUSE: return "ESP_RST_EFUSE";
+    case ESP_RST_PWR_GLITCH: return "ESP_RST_PWR_GLITCH";
+    case ESP_RST_CPU_LOCKUP: return "ESP_RST_CPU_LOCKUP";
+    default: return "ESP_RST_OTHER";
+  }
+}
+
+std::string toHex(uint32_t value) {
+  char buffer[9];
+  snprintf(buffer, sizeof(buffer), "%08X", value);
+  return std::string(buffer);
+}
+}  // namespace
 
 RTC_NOINIT_ATTR char panicMessage[256];
 RTC_NOINIT_ATTR HalSystem::StackFrame panicStack[MAX_PANIC_STACK_DEPTH];
+RTC_NOINIT_ATTR uint32_t panicTraceMagic;
+RTC_NOINIT_ATTR HalSystem::TraceFrame panicTrace[MAX_PANIC_TRACE_DEPTH];
+RTC_NOINIT_ATTR uint32_t panicPc;
+RTC_NOINIT_ATTR uint32_t panicSp;
+RTC_NOINIT_ATTR uint32_t panicReturnPc;
+RTC_NOINIT_ATTR uint32_t panicCause;
+RTC_NOINIT_ATTR uint32_t panicFaultAddress;
+RTC_NOINIT_ATTR int32_t panicCore;
 
 extern "C" {
 
@@ -39,10 +86,7 @@ void IRAM_ATTR __wrap_panic_print_backtrace(const void* frame, int core) {
     return;
   }
 
-#if !__riscv
-  __real_panic_print_backtrace(frame, core);
-  return;
-#else
+#if defined(__riscv)
   for (size_t i = 0; i < MAX_PANIC_STACK_DEPTH; i++) {
     panicStack[i].sp = 0;
   }
@@ -68,9 +112,39 @@ void IRAM_ATTR __wrap_panic_print_backtrace(const void* frame, int core) {
       break;
     }
   }
+#elif defined(__XTENSA__)
+  const auto* xtFrame = static_cast<const XtExcFrame*>(frame);
+  panicPc = xtFrame->pc;
+  panicSp = xtFrame->a1;
+  panicReturnPc = xtFrame->a0;
+  panicCause = xtFrame->exccause;
+  panicFaultAddress = xtFrame->excvaddr;
+  panicCore = core;
+
+  for (size_t i = 0; i < MAX_PANIC_TRACE_DEPTH; i++) {
+    panicTrace[i].pc = 0;
+    panicTrace[i].sp = 0;
+  }
+
+  esp_backtrace_frame_t backtraceFrame{};
+  backtraceFrame.pc = xtFrame->pc;
+  backtraceFrame.sp = xtFrame->a1;
+  backtraceFrame.next_pc = xtFrame->a0;
+  backtraceFrame.exc_frame = const_cast<XtExcFrame*>(xtFrame);
+
+  if (esp_stack_ptr_is_sane(backtraceFrame.sp)) {
+    for (size_t i = 0; i < MAX_PANIC_TRACE_DEPTH; i++) {
+      panicTrace[i].pc = esp_cpu_process_stack_pc(backtraceFrame.pc);
+      panicTrace[i].sp = backtraceFrame.sp;
+      if (backtraceFrame.next_pc == 0 || !esp_backtrace_get_next_frame(&backtraceFrame)) {
+        break;
+      }
+    }
+  }
+  panicTraceMagic = PANIC_TRACE_MAGIC;
+#endif
 
   __real_panic_print_backtrace(frame, core);
-#endif
 }
 }
 
@@ -112,25 +186,49 @@ void clearPanic() {
   for (size_t i = 0; i < MAX_PANIC_STACK_DEPTH; i++) {
     panicStack[i].sp = 0;
   }
+  panicTraceMagic = 0;
+  panicPc = 0;
+  panicSp = 0;
+  panicReturnPc = 0;
+  panicCause = 0;
+  panicFaultAddress = 0;
+  panicCore = -1;
+  for (size_t i = 0; i < MAX_PANIC_TRACE_DEPTH; i++) {
+    panicTrace[i].pc = 0;
+    panicTrace[i].sp = 0;
+  }
   clearLastLogs();
 }
 
 std::string getPanicInfo(bool full) {
+  const auto resetReason = esp_reset_reason();
+  const std::string reason = panicMessage[0] != '\0'
+                                 ? std::string(panicMessage)
+                                 : "No panic_abort message; reset reason: " + std::string(resetReasonName(resetReason));
   if (!full) {
-    return panicMessage;
+    return reason;
   } else {
     std::string info;
 
     info += "CrossPoint version: " CROSSPOINT_VERSION;
-    info += "\n\nPanic reason: " + std::string(panicMessage);
+    info += "\n\nReset reason: " + std::string(resetReasonName(resetReason)) + " (" +
+            std::to_string(static_cast<int>(resetReason)) + ")";
+    info += "\nPanic reason: " + reason;
     info += "\n\nLast logs:\n" + getLastLogs();
-    info += "\n\nStack memory:\n";
 
-    auto toHex = [](uint32_t value) {
-      char buffer[9];
-      snprintf(buffer, sizeof(buffer), "%08X", value);
-      return std::string(buffer);
-    };
+    if (panicTraceMagic == PANIC_TRACE_MAGIC) {
+      info += "\n\nXtensa exception frame:\n";
+      info += "core=" + std::to_string(panicCore) + " pc=0x" + toHex(panicPc) + " sp=0x" + toHex(panicSp) +
+              " a0=0x" + toHex(panicReturnPc) + " exccause=0x" + toHex(panicCause) +
+              " excvaddr=0x" + toHex(panicFaultAddress);
+      info += "\nBacktrace (PC:SP):\n";
+      for (size_t i = 0; i < MAX_PANIC_TRACE_DEPTH; i++) {
+        if (panicTrace[i].pc == 0 || panicTrace[i].sp == 0) break;
+        info += "0x" + toHex(panicTrace[i].pc) + ":0x" + toHex(panicTrace[i].sp) + "\n";
+      }
+    }
+
+    info += "\n\nStack memory:\n";
     for (size_t i = 0; i < MAX_PANIC_STACK_DEPTH; i++) {
       if (panicStack[i].sp == 0) {
         break;

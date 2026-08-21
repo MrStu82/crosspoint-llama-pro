@@ -3,6 +3,7 @@
 #include <I18n.h>
 
 #include <cstdio>
+#include <string>
 
 #include "CrossPointSettings.h"
 #include "GameSprites.h"
@@ -523,7 +524,7 @@ Rect GameRenderer::corruptNoticeOptionRect(uint8_t optionIndex) const {
   const int boxX = (screenW - boxW) / 2;
   const int boxY = (screenH - boxH) / 2;
   const int bodyH = 150;
-  const int optionY = boxY + 26 + 40 + bodyH + 10;
+  const int optionY = boxY + 26 + 53 + bodyH + 10;
   const int optionH = 34;
   const int optionGap = 8;
   const int optionMarginX = 40;
@@ -555,8 +556,13 @@ void GameRenderer::drawCorruptSaveNotice(GfxRenderer& renderer, uint8_t depth, u
   renderer.drawRoundedRect(boxX, boxY, boxW, boxH, 2, 8, true);
 
   int y = boxY + 26;
-  renderer.drawCenteredText(NOTOSANS_18_FONT_ID, y, tr(STR_DM_CORRUPT_NOTICE_TITLE), true);
-  y += 40;
+  const int titleMarginX = 24;
+  const int titleMaxWidth = boxW - 2 * titleMarginX;
+  std::string titleText =
+      renderer.truncatedText(NOTOSANS_18_FONT_ID, tr(STR_DM_CORRUPT_NOTICE_TITLE), titleMaxWidth);
+  Rect titleBounds(boxX, y, boxW, 30);
+  UITheme::drawCenteredText(renderer, titleBounds, NOTOSANS_18_FONT_ID, y, titleText.c_str(), true);
+  y += 53;
 
   char body[192];
   snprintf(body, sizeof(body), tr(STR_DM_CORRUPT_NOTICE_BODY), static_cast<unsigned>(depth));
@@ -580,7 +586,8 @@ void GameRenderer::drawCorruptSaveNotice(GfxRenderer& renderer, uint8_t depth, u
     } else {
       renderer.drawRoundedRect(optionRect.x, optionRect.y, optionRect.width, optionRect.height, 2, 4, true);
     }
-    renderer.drawCenteredText(UI_12_FONT_ID, optionRect.y + optionRect.height / 2 - 8, optionLabels[i], selection != i);
+    renderer.drawCenteredText(UI_12_FONT_ID, optionRect.y + optionRect.height / 2 - 15, optionLabels[i],
+                              selection != i);
   }
 
   // One-shot full-refresh: same reasoning as drawEndScreen() -- new

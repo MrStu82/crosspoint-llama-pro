@@ -12,6 +12,8 @@ Live release baseline `7598e30` rendered Purge/Leave rows but `GameActivity::loo
 ## Host proof
 `test/corrupt_notice_hittest/CorruptNoticeHitTestHarness.cpp` compiles real `GameRenderer.cpp` and reports:
 
-`PASS: Purge=[70..409,456..489], Leave=[70..409,498..531], exact 340x34 rows + 8px gap`
+`PASS: Purge=[70..409,469..502], Leave=[70..409,511..544], exact 340x34 rows + 8px gap`
+
+The +13px Y position is the previously Pixel-signed Phase-12 title/body spacing; the shared helper preserves that rendered geometry exactly while making it tappable.
 
 Full X4 Pro build and independent Pixel/Gauge verdicts are pending.

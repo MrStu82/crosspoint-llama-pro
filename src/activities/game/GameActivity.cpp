@@ -136,13 +136,9 @@ void GameActivity::loop() {
   using Button = MappedInputManager::Button;
 
   if (screenMode == GameScreenMode::CorruptSaveNotice) {
-    // Existing input scheme only (per spec) -- Up/Down toggle the highlighted
-    // option, Confirm commits it, Back is a shortcut for "Leave it" (same
-    // back-out behavior Death/Victory's dismiss uses, just without deleting
-    // anything). No screen-tap handling here: this is a text-heavy modal with
-    // two options, not a control surface, and touch isn't part of the existing
-    // idiom for option popups elsewhere in the game (GameMenuActivity is
-    // button-driven).
+    // Up/Down still toggle the highlighted option, Confirm still commits it,
+    // and Back is still the shortcut for "Leave it". Touch commits whichever
+    // drawn row was tapped; GameRenderer owns the shared draw/hit geometry.
     if (mappedInput.wasReleased(Button::Up) || mappedInput.wasReleased(Button::Down)) {
       corruptNoticeSelection = corruptNoticeSelection == 0 ? 1 : 0;
       requestUpdate();
@@ -152,7 +148,19 @@ void GameActivity::loop() {
       onGoHome();
       return;
     }
-    if (mappedInput.wasReleased(Button::Confirm)) {
+    bool commitSelection = mappedInput.wasReleased(Button::Confirm);
+    if (!commitSelection) {
+      int tx, ty;
+      const bool tapped = mappedInput.wasScreenTapped(tx, ty);
+      if (tapped) {
+        const int tappedOption = gameRenderer.hitTestCorruptSaveNoticeOption(tx, ty);
+        if (tappedOption >= 0) {
+          corruptNoticeSelection = static_cast<uint8_t>(tappedOption);
+          commitSelection = true;
+        }
+      }
+    }
+    if (commitSelection) {
       if (corruptNoticeSelection == 0) {
         // Purge the record: the freshly generated floor computed at the top of
         // loadOrGenerateLevel() is already authoritative (loadLevel() left it

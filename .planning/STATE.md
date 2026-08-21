@@ -2,11 +2,11 @@
 gsd_state_version: '1.0'
 status: in_progress
 progress:
-  total_phases: 12
-  completed_phases: 10
+  total_phases: 13
+  completed_phases: 12
   total_plans: 5
   completed_plans: 5
-  percent: 83
+  percent: 92
 ---
 
 # Project State
@@ -20,11 +20,9 @@ See: .planning/PROJECT.md (updated 2026-08-15)
 
 ## Current Position
 
-Phase: 11 of 12 — opening (Milestone 3)
-Plan: Phase 10 closed 2026-08-16 — throw mechanic (`bool throwable` on `ItemDef`, directional throw-target input, dexterity-based damage curve, `GameEventType::ItemThrown`, `AchievementId::PercussiveMaintenance`) landed in one commit-set (`b1b4f1e2`), build green (Trantor `x4pro`, 59.91s), all 5 requirements proven PASS on host — see `.planning/evidence/phase10-gate.md`. Follow-up fix required by parent's ruling (msg 3758) landed same day as commit `72eac4b4acb343cc5df016dbb82e70a3dcc4f762`, build green (Trantor `x4pro`, 39.79s), pushed `d5dc2d9..72eac4b` on `phase-7-world-dungeon-correctness`. Phase 11 (loot boxes, Sponsored Content) not yet scoped — no reconnaissance or work-item draft done yet.
-Status: **Phase 10 is fully closed, including the follow-up fix.** Requirement 1 (throwable/non-throwable correctness) proven by `ITEM_DEFS[]` inspection. Requirement 2 (damage curve distinct from melee) proven by a 462-case host simulation (442 non-coincidental mismatches, confirmed distinct example + variance-width check). Requirement 3 (stack-aware consumption) proven by a 13-assertion host simulation mirroring `handleThrow()`'s consumption block verbatim. Requirement 4 (PercussiveMaintenance fire/no-fire matrix) proven via the `ach_test/` harness, extended twice: once for the original throw-kill scenario, then again per parent's msg 3758 ruling with a new "thrown overkill" Scenario 14 (thrown kill now also emits `MonsterKilled`, unlocking both `PercussiveMaintenance` and `EscalationOfForce` in one turn, both surfaced via a new bounded FIFO pending-unlock queue instead of the prior single-slot design that silently swallowed the second). Full re-run after the fix: 68/68 assertions PASS (`=== ALL PASS (0 failure(s)) ===`), catching and fixing two pre-existing stale Phase-9-era assertions (hardcoded `AchievementId::Count == 8`, now 9) along the way — proof that this harness needs re-running in full, not spot-checked, per parent's explicit instruction. Requirement 5 (no dirty-rect regression) proven by source inspection — `handleThrow()` reuses the existing single-`requestUpdate()`-per-handler pattern and the same bounded `showNotification()`/`FrameDirtyPlanner` mechanism as every other handler, no new redraw path. Full evidence in `.planning/evidence/phase10-gate.md`.
-Also landed this session, off the game_title_render cert-line fix thread (not a Phase 9/10 work item, but same branch/session): `9eb56a0` (cert-line UI_10 fix, both wordmark-border and tick-ring collisions resolved, parent + Pixel signed off) and `4718cab` (host-render-harness README, build recipe verified from a genuine clean-room rebuild, catching 3 real recipe bugs before documenting).
-No open items remain on Phase 10. The previously-flagged judgment call (`handleThrow()`'s kill branch not emitting `MonsterKilled`, so a thrown kill couldn't trigger `EscalationOfForce`) was resolved by parent's msg 3758 ruling — "emit `MonsterKilled` as well" — and implemented in commit `72eac4b4acb343cc5df016dbb82e70a3dcc4f762`.
+Phase: 13 of 13 — Corrupt-save touch options
+Plan: 13-01 in progress on live release baseline `7598e30`.
+Status: implement shared Purge/Leave draw-hit rectangles, preserve Up/Down/Confirm/Back, host-gate, rebuild once, then deliver a verified bare app image for offset `0x10000`.
 
 ### Milestone 1/2 history (prior, not current focus)
 

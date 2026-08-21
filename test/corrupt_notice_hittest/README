@@ -1,0 +1,19 @@
+# Corrupt-save option hit-test harness
+
+Pure host geometry test for the Purge and Leave rows. It compiles the real
+`GameRenderer.cpp` against inert dependency stubs, then scans the public
+`hitTestCorruptSaveNoticeOption()` used by `GameActivity::loop()`.
+
+It proves both rows exist, return distinct indices, remain exactly 340x34 at
+480x800, keep their 8px gap, and reject gap/off-screen points. Render and touch
+share the private `corruptNoticeOptionRect()` helper.
+
+```sh
+INCLUDES="-I test/corrupt_notice_hittest/stubs -I src -I src/game -I src/components -I lib/GfxRenderer -I lib/hal -I lib/I18n"
+rm -rf test/corrupt_notice_hittest/build && mkdir -p test/corrupt_notice_hittest/build
+for f in test/corrupt_notice_hittest/CorruptNoticeHitTestHarness.cpp src/game/GameRenderer.cpp src/components/UITheme.cpp test/corrupt_notice_hittest/stub_themes/BaseTheme.cpp test/corrupt_notice_hittest/stub_themes/LyraTheme.cpp test/corrupt_notice_hittest/stub_themes/RoundedRaffTheme.cpp test/corrupt_notice_hittest/stub_themes/Lyra3CoversTheme.cpp test/corrupt_notice_hittest/stub_gamestate/GameState.cpp src/game/GameSprites.cpp; do
+  g++ -std=c++20 -O0 -Wall -Wextra $INCLUDES -c "$f" -o "test/corrupt_notice_hittest/build/$(basename "$f" .cpp).o"
+done
+g++ test/corrupt_notice_hittest/build/*.o -o test/corrupt_notice_hittest/build/corrupt_notice_hittest_harness
+./test/corrupt_notice_hittest/build/corrupt_notice_hittest_harness
+```

@@ -9,6 +9,7 @@
 #include "MappedInputManager.h"
 
 class GameState;
+struct Rect;
 
 // DirtyWindow/FramePlan now live in FrameDirtyPlanner.h (game namespace) so
 // the pure planning logic -- and a host harness driving it -- has zero
@@ -143,6 +144,11 @@ class GameRenderer {
   // discipline. `selection` is 0 for Purge, 1 for Leave.
   void drawCorruptSaveNotice(GfxRenderer& renderer, uint8_t depth, uint8_t selection) const;
 
+  // Returns the tapped Purge/Leave option index, or -1 outside both rows.
+  // Uses the same private rect helper as drawCorruptSaveNotice(), so painted
+  // affordances and touch targets cannot drift apart.
+  int hitTestCorruptSaveNoticeOption(int x, int y) const;
+
   // Shows a boxed System notification (Phase 9 work item 3): bordered box,
   // inverted (black-filled, white-text) title bar, body text below. `body`
   // is copied into a fixed-size buffer (no heap, no per-turn construction --
@@ -159,6 +165,8 @@ class GameRenderer {
   bool notificationActive() const { return notificationActive_; }
 
  private:
+  Rect corruptNoticeOptionRect(uint8_t optionIndex) const;
+
   void computeLayout(int screenWidth, int screenHeight);
 
   void drawStatusBar(GfxRenderer& renderer) const;

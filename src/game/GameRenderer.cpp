@@ -517,6 +517,30 @@ void GameRenderer::drawEndScreen(GfxRenderer& renderer, bool isVictory, const En
   renderer.displayBuffer(HalDisplay::FULL_REFRESH);
 }
 
+Rect GameRenderer::corruptNoticeOptionRect(uint8_t optionIndex) const {
+  const int boxW = screenW - 60;
+  const int boxH = 340;
+  const int boxX = (screenW - boxW) / 2;
+  const int boxY = (screenH - boxH) / 2;
+  const int bodyH = 150;
+  const int optionY = boxY + 26 + 40 + bodyH + 10;
+  const int optionH = 34;
+  const int optionGap = 8;
+  const int optionMarginX = 40;
+  return Rect(boxX + optionMarginX, optionY + optionIndex * (optionH + optionGap), boxW - 2 * optionMarginX,
+              optionH);
+}
+
+int GameRenderer::hitTestCorruptSaveNoticeOption(int x, int y) const {
+  for (uint8_t option = 0; option < 2; option++) {
+    const Rect r = corruptNoticeOptionRect(option);
+    if (x >= r.x && x < r.x + r.width && y >= r.y && y < r.y + r.height) {
+      return option;
+    }
+  }
+  return -1;
+}
+
 void GameRenderer::drawCorruptSaveNotice(GfxRenderer& renderer, uint8_t depth, uint8_t selection) const {
   // Same overlay discipline as drawEndScreen(): no clearScreen(), self-contained
   // box, one-shot FULL_REFRESH -- this is the blocking corrupt-save notice
@@ -549,16 +573,14 @@ void GameRenderer::drawCorruptSaveNotice(GfxRenderer& renderer, uint8_t depth, u
   // visual language as a selected list row elsewhere in the UI (inverted fill,
   // not a border) so it reads unambiguously as "this one, if you press Confirm".
   const char* optionLabels[2] = {tr(STR_DM_CORRUPT_NOTICE_PURGE), tr(STR_DM_CORRUPT_NOTICE_LEAVE)};
-  const int optionH = 34;
-  const int optionMarginX = 40;
   for (int i = 0; i < 2; i++) {
-    int rowY = y + i * (optionH + 8);
+    const Rect optionRect = corruptNoticeOptionRect(i);
     if (selection == i) {
-      renderer.fillRoundedRect(boxX + optionMarginX, rowY, boxW - 2 * optionMarginX, optionH, 4, Color::Black);
+      renderer.fillRoundedRect(optionRect.x, optionRect.y, optionRect.width, optionRect.height, 4, Color::Black);
     } else {
-      renderer.drawRoundedRect(boxX + optionMarginX, rowY, boxW - 2 * optionMarginX, optionH, 2, 4, true);
+      renderer.drawRoundedRect(optionRect.x, optionRect.y, optionRect.width, optionRect.height, 2, 4, true);
     }
-    renderer.drawCenteredText(UI_12_FONT_ID, rowY + optionH / 2 - 8, optionLabels[i], selection != i);
+    renderer.drawCenteredText(UI_12_FONT_ID, optionRect.y + optionRect.height / 2 - 8, optionLabels[i], selection != i);
   }
 
   // One-shot full-refresh: same reasoning as drawEndScreen() -- new

@@ -536,27 +536,18 @@ void GameMenuActivity::useInventoryItem(int index) {
       break;
 
     case game::ItemType::LootBox: {
-      // Sponsor Crate (Phase 11 loot boxes). Reuses ITEM_DEFS -- no second table. Uniform
-      // draw over the eligible pool, deliberately NOT depth-biased (parent's explicit ruling,
-      // 2026-08-16: a loot box that skews high with depth is just a good item with extra
-      // steps -- the joke only lands if a deep floor can still hand back rations). Excludes
-      // Ring of Power / Master Key (positional, same technique placeItems() uses in
-      // DungeonGenerator.cpp) and the crate itself (LOOT_BOX_DEF, GameTypes.h) so opening one
-      // can't just hand back another unopened crate. Selection itself lives in
-      // game::selectLootBoxReward() (GameTypes.h) so it's host-harness-linkable.
-      const auto& reward = game::ITEM_DEFS[game::selectLootBoxReward(
-          [](uint32_t max) { return GAME_STATE.rollRange(max); })];
+      const auto tier = item.subtype < static_cast<uint8_t>(game::LootBoxTier::Count)
+                            ? static_cast<game::LootBoxTier>(item.subtype)
+                            : game::LootBoxTier::Common;
+      const auto reward = game::selectLootBoxReward(
+          tier, [](uint32_t max) { return GAME_STATE.rollRange(max); });
 
-      // When sponsors land as their own work item, this narration takes the sponsor name from
-      // that system instead of hardcoding "SPONSORED CONTENT" -- not building a second string
-      // table now, per parent's explicit call.
-      // Sponsor courtesy clause (Phase 11): extends the already-signed string above,
-      // never edits it. Only appended when a real sponsor is active -- SPONSOR_NONE
-      // (index 0, e.g. between floor loads) gets no clause at all.
       const char* sponsorName = game::SPONSOR_DEFS[p.activeSponsorId].name;
       bool hasSponsor = p.activeSponsorId != game::SPONSOR_NONE;
+      const char* rewardName = game::lootBoxRewardName(reward);
 
-      if (reward.type == static_cast<uint8_t>(game::ItemType::Gold)) {
+      if (reward.kind == game::LootBoxRewardKind::Item &&
+          game::ITEM_DEFS[reward.id].type == static_cast<uint8_t>(game::ItemType::Gold)) {
         int base = GAME_STATE.rollRangeInclusive(1, 10 + p.dungeonDepth * 5);
         int pct = game::sponsorGoldPercentModifier(p.activeSponsorId);
         uint16_t amount = static_cast<uint16_t>(base + (base * pct) / 100);
@@ -572,21 +563,35 @@ void GameMenuActivity::useInventoryItem(int index) {
                    amount);
         }
         consumed = true;  // reward went to the purse, not a slot -- box just disappears
-      } else {
-        item.type = reward.type;
-        item.subtype = reward.subtype;
+      } else if (reward.kind == game::LootBoxRewardKind::Item) {
+        const auto& itemReward = game::ITEM_DEFS[reward.id];
+        item.type = itemReward.type;
+        item.subtype = itemReward.subtype;
         item.count = 1;
         item.enchantment = 0;
         item.flags = 0;
         if (hasSponsor) {
           snprintf(msgBuf, sizeof(msgBuf), "SPONSORED CONTENT: Congratulations! You've won... %s! Brought to you by %s.",
-                   reward.name, sponsorName);
+                   rewardName, sponsorName);
         } else {
-          snprintf(msgBuf, sizeof(msgBuf), "SPONSORED CONTENT: Congratulations! You've won... %s!", reward.name);
+          snprintf(msgBuf, sizeof(msgBuf), "SPONSORED CONTENT: Congratulations! You've won... %s!", rewardName);
         }
         // consumed stays false: the crate transforms into its prize in place rather than being
         // removed-then-reinserted, so opening a crate can never fail on a full inventory (it
         // already held the slot a moment ago).
+      } else {
+        if (reward.kind == game::LootBoxRewardKind::Buff) {
+          game::grantBuff(p, reward.id);
+        } else {
+          game::grantSkill(p, reward.id);
+        }
+        if (hasSponsor) {
+          snprintf(msgBuf, sizeof(msgBuf), "SPONSORED CONTENT: %s granted! Brought to you by %s.", rewardName,
+                   sponsorName);
+        } else {
+          snprintf(msgBuf, sizeof(msgBuf), "SPONSORED CONTENT: %s granted!", rewardName);
+        }
+        consumed = true;
       }
 
       game::GameEvent boxEvent{};
@@ -751,6 +756,8 @@ void GameMenuActivity::renderInventory() {
               return std::string("Ring");
             case game::ItemType::Amulet:
               return std::string("Amulet");
+            case game::ItemType::LootBox:
+              return std::string("Loot Box");
             default:
               return std::string("");
           }

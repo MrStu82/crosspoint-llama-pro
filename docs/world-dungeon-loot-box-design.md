@@ -1,30 +1,31 @@
-# World Dungeon loot boxes — Phase 4 design checkpoint
+# World Dungeon loot boxes — Job Phase 4 shipping design
 
-## Locked rules
+## Locked shipping model
 
-- Six rarity tiers, in order: **Bronze, Silver, Gold, Platinum, Legendary, Celestial**.
-- A box is awarded by achievements, bosses, quests, or sponsor/viewer gifts. Boss tier rises with dungeon depth.
-- The player may open a queued box at any time. There is **no safe-room gate**.
-- Rewards are deliberately race-critical rather than class-safe. An item may be unstable or damaged; its description must say so before it is used.
-- Pets are never box rewards: each run starts with its independently rolled companion.
-- Sponsor/Benefactor boxes are deliberately off-ladder: they may contain exceptional or off-theme rewards.
+- Four tiers: **Common, Uncommon, Rare, Legendary**.
+- Tier roll is fixed and explicit: **50 / 30 / 15 / 5 percent**.
+- Four `ItemDef` records are one logical slot in the shared floor/corpse loot table, so adding
+  visible tiers does not multiply box frequency.
+- The player opens a box directly from inventory at any time. There is no safe-room gate.
+- One compact reward table per tier; no box-type registry and no second reward framework.
+- Tables reference existing `ITEM_DEFS`, `BUFF_DEFS`, and `SKILL_DEFS`. Quest items and nested
+  boxes are excluded.
+- A box transforms in place for item rewards (works with a full pack) and is consumed for gold,
+  buff, or skill rewards.
+- `SPONSOR_DEFS` supplies the signed presentation/courtesy identity only. It is deliberately not
+  a Legendary reward pool because `activeSponsorId` is transient per-floor state; Legendary
+  rewards use the existing run-persistent Skill pool instead.
+- Pets remain independent of boxes: each run starts with its separately rolled companion.
 
-## Minimal shipping model
+## Tier intent
 
-Keep the current `Sponsor Crate` as the first concrete box implementation. When box presentation is expanded, use a small type × tier grid rather than a separate one-off implementation per reward source:
-
-| Type | Purpose |
+| Tier | Existing pools used |
 |---|---|
-| Adventurer | General player progression rewards |
-| Boss | Depth-scaled combat/key-to-race rewards |
-| Sponsor/Benefactor | Sponsored, exceptional, potentially off-theme rewards |
-| Quest | Objective-specific rewards |
+| Common | baseline items, consumables, food, gold |
+| Uncommon | mid-grade items and entry buffs |
+| Rare | upper-grade items and the wider buff pool |
+| Legendary | top gear and existing skills |
 
-A box record therefore needs only `type`, `tier`, and an optional `unstable/damaged` modifier. Opening selects from its matching table, consumes the box, and displays the item description before equip/use. This avoids a box-generation framework and preserves room for future content.
-
-## Explicit Stuart decisions before implementation
-
-1. **How many types ship in the first playable release?** Recommendation: start with Adventurer, Boss, and Sponsor/Benefactor; add Quest only when quest rewards exist.
-2. **What are the per-tier drop tables and weights?** This includes which key-to-race items, damage/instability odds, currency range, and any sponsor-only exclusions belong at each tier.
-
-Until those two content decisions are made, no further loot-box code is warranted. The existing crate remains valid and independently testable; this note is the Phase 4 design checkpoint, not a new feature implementation.
+This is intentionally the smallest playable implementation: four fixed tables and two tiny
+selectors (`rollLootBoxTier`, `selectLootBoxReward`). Future quest/achievement-specific sources
+may award these same four item subtypes without changing the opening model.

@@ -232,13 +232,13 @@ inline constexpr ItemDef ITEM_DEFS[] = {
     {"Nutrient Bar", '%', static_cast<uint8_t>(ItemType::Food), 1, 30, 0, 0, false},
     // Gold
     {"Gold Coins", '$', static_cast<uint8_t>(ItemType::Gold), 0, 1, 0, 0, false},
-    // Sponsor Crate (Phase 11 loot boxes) -- spawns via the same unmodified random floor-item
-    // roll as everything above it; opening one (GameMenuActivity::useInventoryItem) rolls its
-    // prize from this same table, uniformly (no depth bias -- that's the joke, see parent's
-    // ruling), excluding quest items and itself. Inserted here (after Gold, before Master Key)
-    // so it stays outside RING_OF_POWER_DEF/MASTER_KEY_DEF's roll exclusion without disturbing
-    // RATIONS_DEF's hardcoded index above.
-    {"Sponsor Crate", '&', static_cast<uint8_t>(ItemType::LootBox), 0, 0, 0, 0, false},
+    // Four shipping loot-box tiers. They occupy one logical slot in the shared floor/corpse
+    // loot table: when that slot is selected, rollLootBoxTier() supplies the 50/30/15/5 split.
+    // Keeping them as normal ItemDefs means inventory/save/render code stays unchanged.
+    {"Common Sponsor Crate", '&', static_cast<uint8_t>(ItemType::LootBox), 0, 0, 0, 0, false},
+    {"Uncommon Sponsor Crate", '&', static_cast<uint8_t>(ItemType::LootBox), 1, 0, 0, 0, false},
+    {"Rare Sponsor Crate", '&', static_cast<uint8_t>(ItemType::LootBox), 2, 0, 0, 0, false},
+    {"Legendary Sponsor Crate", '&', static_cast<uint8_t>(ItemType::LootBox), 3, 0, 0, 0, false},
     // Quest item -- dropped by The Adjudicator on floor 26 (Phase 11 work item 4)
     {"Master Key", '"', static_cast<uint8_t>(ItemType::Amulet), 0, 500, 0, 0, false},
     // Quest item -- dropped by The Adjudicator
@@ -251,31 +251,34 @@ inline constexpr int MASTER_KEY_DEF = RING_OF_POWER_DEF - 1;  // Index of Master
 // outside the random roll, guaranteeing hunger is always escapable. See the
 // static_assert next to placeItems() that keeps this index pinned to a Food entry.
 inline constexpr int RATIONS_DEF = 17;
-// Index of Sponsor Crate -- excluded from its own reward roll in
-// GameMenuActivity::useInventoryItem() so opening one can't hand back another
-// unopened crate. See the static_assert below pinning this to a LootBox entry.
-inline constexpr int LOOT_BOX_DEF = 20;
-static_assert(static_cast<ItemType>(ITEM_DEFS[LOOT_BOX_DEF].type) == ItemType::LootBox,
-              "LOOT_BOX_DEF must point at the Sponsor Crate entry -- if ITEM_DEFS is ever "
-              "reordered, update this index or the reward roll's self-exclusion breaks");
+// Contiguous loot-box ItemDef range. Opening uses the tier-specific tables below, so no table
+// can hand back another unopened crate.
+inline constexpr int LOOT_BOX_FIRST_DEF = 20;
+inline constexpr int LOOT_BOX_TIER_COUNT = 4;
+inline constexpr int LOOT_BOX_LAST_DEF = LOOT_BOX_FIRST_DEF + LOOT_BOX_TIER_COUNT - 1;
+// Compatibility alias retained for the existing harness/call sites: the first box definition
+// is the one logical box slot in rollLootItem().
+inline constexpr int LOOT_BOX_DEF = LOOT_BOX_FIRST_DEF;
+static_assert(MASTER_KEY_DEF == LOOT_BOX_LAST_DEF + 1,
+              "loot-box definitions must remain contiguous immediately before quest items");
 
-// Sponsor Crate reward selection (Phase 11 loot boxes). Uniform draw over
-// ITEM_DEFS, excluding Ring of Power/Master Key (last two entries, positional
-// quest-item placement only) and the crate itself (LOOT_BOX_DEF) so opening
-// one can never hand back another unopened crate. rollFn takes max (exclusive)
-// and returns a value in [0, max) -- the caller supplies the real combat RNG
-// (GAME_STATE.rollRange) or a deterministic stand-in for host-harness testing.
-// Free of GameActivity/GameState so it can be linked and exercised outside the
-// firmware build. Behaviour identical to the inline loop it replaces; no new
-// state.
-inline uint8_t selectLootBoxReward(uint32_t (*rollFn)(uint32_t)) {
-  uint8_t eligible[ITEM_DEF_COUNT];
-  uint8_t eligibleCount = 0;
-  for (uint8_t d = 0; d < ITEM_DEF_COUNT - 2; d++) {
-    if (d == LOOT_BOX_DEF) continue;
-    eligible[eligibleCount++] = d;
-  }
-  return eligible[rollFn(eligibleCount)];
+enum class LootBoxTier : uint8_t { Common, Uncommon, Rare, Legendary, Count };
+
+inline bool isLootBoxDef(uint8_t defIndex) {
+  return defIndex >= LOOT_BOX_FIRST_DEF && defIndex <= LOOT_BOX_LAST_DEF;
+}
+
+// Four-tier ladder agreed for the first playable release. The single roll is deliberately
+// explicit: Common 50%, Uncommon 30%, Rare 15%, Legendary 5%.
+inline LootBoxTier lootBoxTierForRoll(uint32_t roll) {
+  if (roll < 50) return LootBoxTier::Common;
+  if (roll < 80) return LootBoxTier::Uncommon;
+  if (roll < 95) return LootBoxTier::Rare;
+  return LootBoxTier::Legendary;
+}
+
+inline LootBoxTier rollLootBoxTier(uint32_t (*rollFn)(uint32_t)) {
+  return lootBoxTierForRoll(rollFn(100));
 }
 
 // --- Pet Companion (Job Phase 3) ---
@@ -372,6 +375,77 @@ inline constexpr BuffDef SKILL_DEFS[] = {
 };
 inline constexpr int SKILL_DEF_COUNT = sizeof(SKILL_DEFS) / sizeof(SKILL_DEFS[0]);
 inline constexpr uint8_t SKILL_NONE = 0;
+
+// Loot boxes reuse the existing item/buff/skill pools. The four small tables are the whole
+// shipping model -- no registry, inheritance tree, or parallel reward definitions.
+enum class LootBoxRewardKind : uint8_t { Item, Buff, Skill };
+
+struct LootBoxReward {
+  LootBoxRewardKind kind;
+  uint8_t id;  // ItemDef, BuffDef, or SkillDef index according to kind.
+};
+
+inline constexpr LootBoxReward COMMON_BOX_REWARDS[] = {
+    {LootBoxRewardKind::Item, 0},  {LootBoxRewardKind::Item, 5},
+    {LootBoxRewardKind::Item, 8},  {LootBoxRewardKind::Item, 11},
+    {LootBoxRewardKind::Item, 14}, {LootBoxRewardKind::Item, RATIONS_DEF},
+    {LootBoxRewardKind::Item, 18}, {LootBoxRewardKind::Item, 19},
+};
+inline constexpr LootBoxReward UNCOMMON_BOX_REWARDS[] = {
+    {LootBoxRewardKind::Item, 1}, {LootBoxRewardKind::Item, 6},
+    {LootBoxRewardKind::Item, 9}, {LootBoxRewardKind::Item, 12},
+    {LootBoxRewardKind::Item, 15}, {LootBoxRewardKind::Buff, 1},
+    {LootBoxRewardKind::Buff, 2}, {LootBoxRewardKind::Buff, 3},
+    {LootBoxRewardKind::Buff, 4},
+};
+inline constexpr LootBoxReward RARE_BOX_REWARDS[] = {
+    {LootBoxRewardKind::Item, 2},  {LootBoxRewardKind::Item, 7},
+    {LootBoxRewardKind::Item, 10}, {LootBoxRewardKind::Item, 13},
+    {LootBoxRewardKind::Item, 16}, {LootBoxRewardKind::Buff, 5},
+    {LootBoxRewardKind::Buff, 6},  {LootBoxRewardKind::Buff, 7},
+    {LootBoxRewardKind::Buff, 8},  {LootBoxRewardKind::Buff, 9},
+    {LootBoxRewardKind::Buff, 10}, {LootBoxRewardKind::Buff, 11},
+    {LootBoxRewardKind::Buff, 12}, {LootBoxRewardKind::Buff, 13},
+    {LootBoxRewardKind::Buff, 14},
+};
+inline constexpr LootBoxReward LEGENDARY_BOX_REWARDS[] = {
+    {LootBoxRewardKind::Item, 3},  {LootBoxRewardKind::Item, 4},
+    {LootBoxRewardKind::Skill, 1}, {LootBoxRewardKind::Skill, 2},
+    {LootBoxRewardKind::Skill, 3}, {LootBoxRewardKind::Skill, 4},
+    {LootBoxRewardKind::Skill, 5}, {LootBoxRewardKind::Skill, 6},
+    {LootBoxRewardKind::Skill, 7},
+};
+// SPONSOR_DEFS is intentionally not a Legendary reward table: activeSponsorId is a transient
+// per-floor modifier rerolled by loadOrGenerateLevel(), whereas a box reward must survive the
+// floor on which it was opened. Legendary therefore grants from the existing persistent-for-run
+// Skill pool instead of pretending a temporary sponsor assignment is durable loot.
+
+inline LootBoxReward selectLootBoxReward(LootBoxTier tier, uint32_t (*rollFn)(uint32_t)) {
+  switch (tier) {
+    case LootBoxTier::Common:
+      return COMMON_BOX_REWARDS[rollFn(sizeof(COMMON_BOX_REWARDS) / sizeof(COMMON_BOX_REWARDS[0]))];
+    case LootBoxTier::Uncommon:
+      return UNCOMMON_BOX_REWARDS[rollFn(sizeof(UNCOMMON_BOX_REWARDS) / sizeof(UNCOMMON_BOX_REWARDS[0]))];
+    case LootBoxTier::Rare:
+      return RARE_BOX_REWARDS[rollFn(sizeof(RARE_BOX_REWARDS) / sizeof(RARE_BOX_REWARDS[0]))];
+    case LootBoxTier::Legendary:
+      return LEGENDARY_BOX_REWARDS[rollFn(sizeof(LEGENDARY_BOX_REWARDS) / sizeof(LEGENDARY_BOX_REWARDS[0]))];
+    default:
+      return COMMON_BOX_REWARDS[0];
+  }
+}
+
+inline const char* lootBoxRewardName(const LootBoxReward& reward) {
+  switch (reward.kind) {
+    case LootBoxRewardKind::Item:
+      return reward.id < ITEM_DEF_COUNT ? ITEM_DEFS[reward.id].name : "Unknown item";
+    case LootBoxRewardKind::Buff:
+      return reward.id < BUFF_DEF_COUNT ? BUFF_DEFS[reward.id].name : "Unknown buff";
+    case LootBoxRewardKind::Skill:
+      return reward.id < SKILL_DEF_COUNT ? SKILL_DEFS[reward.id].name : "Unknown skill";
+  }
+  return "Unknown reward";
+}
 
 inline void grantBuff(Player& p, uint8_t buffId) {
   if (buffId == BUFF_NONE || buffId >= BUFF_DEF_COUNT) return;
@@ -634,7 +708,7 @@ inline uint8_t themeForDepth(uint32_t gameSeed, uint8_t depth) {
 
 // A random item meeting or exceeding this base value is eligible for the rare tail below.
 // Currently matches Nanoweave Blade (200) and Nanoweave Coat (300) -- the two top-tier
-// gear pieces -- deliberately excludes Sponsor Crate (value 0) and quest items (never
+// gear pieces -- deliberately excludes loot boxes (value 0) and quest items (never
 // rolled here at all, see the exclusion below).
 inline constexpr uint16_t RARE_TAIL_VALUE_THRESHOLD = 150;
 // 1-in-20 chance per roll of drawing from the rare pool instead of the full table.
@@ -658,7 +732,20 @@ inline Item rollLootItem(uint8_t depth, Rng& rng) {
     defIdx = rareCount > 0 ? rarePool[rng.nextRange(rareCount)]
                            : static_cast<uint8_t>(rng.nextRange(ITEM_DEF_COUNT - 2));
   } else {
-    defIdx = static_cast<uint8_t>(rng.nextRange(ITEM_DEF_COUNT - 2));
+    // The four ItemDefs are one logical drop-table slot. This preserves the original Sponsor
+    // Crate frequency instead of making boxes four times as common merely because they now
+    // have four visible tiers.
+    uint8_t eligible[ITEM_DEF_COUNT];
+    uint8_t eligibleCount = 0;
+    for (uint8_t i = 0; i < ITEM_DEF_COUNT - 2; i++) {
+      if (isLootBoxDef(i) && i != LOOT_BOX_FIRST_DEF) continue;
+      eligible[eligibleCount++] = i;
+    }
+    defIdx = eligible[rng.nextRange(eligibleCount)];
+    if (defIdx == LOOT_BOX_FIRST_DEF) {
+      const auto tier = lootBoxTierForRoll(rng.nextRange(100));
+      defIdx = static_cast<uint8_t>(LOOT_BOX_FIRST_DEF + static_cast<uint8_t>(tier));
+    }
   }
   const auto& def = ITEM_DEFS[defIdx];
 

@@ -154,7 +154,9 @@ class FrameDirtyPlanner {
 
     // viewCols/viewRows come from GameRenderer::computeLayout(), always well
     // within MAX_TRACK_COLS/ROWS (40x32) on any screen this renderer targets.
-    CellVisual cells[MAX_TRACK_COLS * MAX_TRACK_ROWS];
+    // planFrame runs only on ActivityManagerRender. Keep its 7.5 KiB of
+    // scratch storage off that task's 8 KiB stack.
+    static CellVisual cells[MAX_TRACK_COLS * MAX_TRACK_ROWS];
     for (int row = 0; row < layout.viewRows; row++) {
       int mapY = viewY + row;
       for (int col = 0; col < layout.viewCols; col++) {
@@ -168,7 +170,7 @@ class FrameDirtyPlanner {
       }
     }
 
-    DirtyCell dirty[MAX_DIRTY_CELLS];
+    static DirtyCell dirty[MAX_DIRTY_CELLS];
     int dirtyCount = 0;
     tracker_.diffViewport(cells, layout.viewCols, layout.viewRows, dirty, MAX_DIRTY_CELLS, &dirtyCount);
 

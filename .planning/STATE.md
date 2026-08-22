@@ -16,7 +16,7 @@ progress:
 See: .planning/PROJECT.md (updated 2026-08-15)
 
 **Core value:** Every screen renders correctly and fully on-panel on the X4 Pro, with no clipped/overflowing content and no touch targets crowded against the bezel.
-**Current focus:** Inventory phases 1–4 complete on frozen base `f852309`: stable type grouping, contextual Use/Equip/Unequip plus Drop/Sell action menu, New-flag exit lifecycle, and deferred achievement persistence removing SD writes from kill/pickup input. Phase 5 final exact-commit Trantor gate/release is in progress. See `.planning/inventory-feature-roadmap.md`.
+**Current focus:** Pickup-latency follow-up on frozen inventory release `071f8b3`: target instrumentation compares input-handled→blocking-display-return for move vs pickup; the X4 Pro-only redundant Action press/release panel waveforms are removed so pickup has one panel transaction, matching movement. See `.planning/pickup-refresh-roadmap.md`.
 
 ## Current Position
 
@@ -131,7 +131,7 @@ Items acknowledged and carried forward from previous milestone close:
 - **Next actionable item:** — either (a) a specific next phase/step this agent will pick up unprompted, or (b) an explicit statement that the chain is parent-gated (naming exactly what's being waited on: a ruling, a dispatch, an approval) — "None" / blank is never valid; "waiting on parent" is valid ONLY when named with what for.
 - **Resume file:** — a path, or "None (see Next actionable item)" — never a bare "None" with nothing else armed.
 
-Last session: 2026-08-21
-Stopped at: **Inventory feature phases 1–4 implemented on branch `feature/inventory-actions-f852309` from exact base `f852309`; uncommitted preflight is green (focused harnesses, 150/150 host tests, X4 Pro build).**
-Next actionable item: Commit the frozen-base implementation, rebuild the exact commit on Trantor, carve and verify the bare X4 Pro app image, push source, then report the release evidence to parent.
-Resume file: `.planning/inventory-feature-roadmap.md`
+Last session: 2026-08-22
+Stopped at: **Pickup latency instrumentation/fix is implemented but not yet gated or committed on top of exact `071f8b30b634eefbf9b64453e308d23fc0f27d84`.**
+Next actionable item: Run focused refresh-policy proof and the complete host suite, commit/read back SHA, build that exact commit on Trantor, verify the bare X4 Pro app image, then report target instrumentation and artifact evidence.
+Resume file: `.planning/pickup-refresh-roadmap.md`

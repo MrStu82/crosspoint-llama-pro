@@ -12,6 +12,7 @@
 #include "components/themes/BaseTheme.h"
 #include "game/AchievementBus.h"
 #include "game/FlavorText.h"
+#include "game/GameControlRefreshPolicy.h"
 #include "game/GameSave.h"
 #include "game/HungerClock.h"
 #include "game/Pet.h"
@@ -102,7 +103,28 @@ void GameActivity::render(RenderLock&&) {
     gameRenderer.drawEndScreen(renderer, screenMode == GameScreenMode::Victory, endScreenData);
     return;
   }
+  const FrameInputKind renderedInput = pendingFrameInput_;
+  const uint32_t inputAtMs = pendingFrameInputAtMs_;
   gameRenderer.draw(renderer, tiles, fogOfWar, monsters, monsterCount, levelItems, itemCount, visible);
+  if (renderedInput != FrameInputKind::None) {
+    const char* label = renderedInput == FrameInputKind::Move       ? "move"
+                        : renderedInput == FrameInputKind::Pickup   ? "pickup"
+                        : renderedInput == FrameInputKind::Action   ? "action"
+                                                                    : "unknown";
+    LOG_DBG("GAME", "Input-to-display-return kind=%s elapsed=%lu ms", label,
+            static_cast<unsigned long>(millis() - inputAtMs));
+    // Only consume the probe we actually rendered. A newer input cannot be
+    // installed while RenderLock is held, but keep the equality guard so that
+    // invariant is explicit rather than accidental.
+    if (pendingFrameInputAtMs_ == inputAtMs) {
+      pendingFrameInput_ = FrameInputKind::None;
+    }
+  }
+}
+
+void GameActivity::markFrameInput(FrameInputKind kind) {
+  pendingFrameInput_ = kind;
+  pendingFrameInputAtMs_ = millis();
 }
 
 // Redraws one Action/Menu button in the given pressed state and refreshes only
@@ -233,18 +255,31 @@ void GameActivity::loop() {
         if (pressedControlButton != PressedControlButton::None) {
           // Touch moved from one button to the other without releasing --
           // restore the previously-pressed one before painting the new one.
-          paintControlButton(pressedControlButton == PressedControlButton::Action ? 0 : 1, false);
+          const int oldRow = pressedControlButton == PressedControlButton::Action ? 0 : 1;
+          if (game::refreshControlFeedbackImmediately(oldRow)) {
+            paintControlButton(oldRow, false);
+          }
         }
         pressedControlButton = newPressed;
-        paintControlButton(row, true);
+        // X4 Pro's UC8179 has no true window waveform: displayWindow() is a
+        // blocking full-panel FAST refresh. Painting Action down here, then
+        // normal on release, then rendering the pickup caused three panel
+        // waveforms for one tap. Keep Menu's feedback (it has no subsequent
+        // game-frame render), but leave Action visually normal until its one
+        // resulting frame is ready.
+        if (game::refreshControlFeedbackImmediately(row)) paintControlButton(row, true);
       }
       return;
     }
 
     if (rowHit == MappedInputManager::RowTouch::Tap) {
-      paintControlButton(row, false);
+      // Menu needs its pressed pixels restored before another Activity takes
+      // over. Action was deliberately never painted pressed, so refreshing it
+      // here would be a redundant full-panel waveform on UC8179.
+      if (game::refreshControlFeedbackImmediately(row)) paintControlButton(row, false);
       pressedControlButton = PressedControlButton::None;
       if (row == 0) {
+        markFrameInput(FrameInputKind::Action);
         handleAction();
       } else {
         openGameMenu();
@@ -257,7 +292,10 @@ void GameActivity::loop() {
     // dragged elsewhere) -- restore it now so it can never get stuck
     // inverted.
     if (pressedControlButton != PressedControlButton::None) {
-      paintControlButton(pressedControlButton == PressedControlButton::Action ? 0 : 1, false);
+      if (game::refreshControlFeedbackImmediately(
+              pressedControlButton == PressedControlButton::Action ? 0 : 1)) {
+        paintControlButton(1, false);
+      }
       pressedControlButton = PressedControlButton::None;
     }
 
@@ -274,18 +312,23 @@ void GameActivity::loop() {
 
   switch (pressed) {
     case Button::Up:
+      markFrameInput(FrameInputKind::Move);
       handleMove(0, -1);
       break;
     case Button::Down:
+      markFrameInput(FrameInputKind::Move);
       handleMove(0, 1);
       break;
     case Button::Left:
+      markFrameInput(FrameInputKind::Move);
       handleMove(-1, 0);
       break;
     case Button::Right:
+      markFrameInput(FrameInputKind::Move);
       handleMove(1, 0);
       break;
     case Button::Confirm:
+      markFrameInput(FrameInputKind::Action);
       handleAction();
       break;
     case Button::Back:
@@ -665,6 +708,9 @@ void GameActivity::handleAction() {
   // Pick up items
   for (uint8_t i = 0; i < itemCount; i++) {
     if (levelItems[i].x == p.x && levelItems[i].y == p.y) {
+      // Preserve the Action tap's original timestamp but label the resulting
+      // frame precisely, so target logs compare pickup against a plain move.
+      pendingFrameInput_ = FrameInputKind::Pickup;
       // Check if this is the Ring of Power — victory!
       const auto& ringDef = game::ITEM_DEFS[game::RING_OF_POWER_DEF];
       if (levelItems[i].type == ringDef.type && levelItems[i].subtype == ringDef.subtype) {

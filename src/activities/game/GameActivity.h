@@ -79,13 +79,10 @@ class GameActivity final : public Activity {
   CorruptNoticeScope corruptNoticeScope = CorruptNoticeScope::PerLevel;
   uint8_t corruptNoticeDepth = 0;
 
-  // Which on-screen Action/Menu button (if any) is currently showing pressed
-  // (inverted) visual feedback -- Job Phase 6. None outside of an active
-  // touch-down on one of those two buttons; set on rowTouch()'s Down, cleared
-  // (button redrawn normal) on Tap resolution or drag-off abort. Mirrors the
-  // simple held-flag idiom used by KeyboardEntryActivity's upHeld/downHeld/
-  // etc, just widened to three states since there are two candidate buttons
-  // sharing one row rather than one flag per key.
+  // Which on-screen Action/Menu button currently owns the touch. Menu still
+  // paints inverted feedback; Action deliberately remains normal because its
+  // resulting game frame is the only panel transaction (UC8179 window calls
+  // are full-panel waveforms). Cleared on Tap or drag-off.
   enum class PressedControlButton : uint8_t { None, Action, Menu };
   PressedControlButton pressedControlButton = PressedControlButton::None;
   // Redraws just one Action/Menu button (0=Action, 1=Menu) in the given
@@ -93,6 +90,16 @@ class GameActivity final : public Activity {
   // refresh. Shared by the Down/Tap/abort handling in loop() so the
   // draw-then-refresh pair can't drift out of sync between call sites.
   void paintControlButton(int buttonIndex, bool pressed);
+
+  // One-shot latency probe carried from the input task into the render task.
+  // The timestamp is taken when the input has resolved, and render() logs only
+  // after GameRenderer::draw() (and therefore the blocking panel call) returns.
+  // This makes move-vs-pickup timing directly comparable on the target without
+  // putting timing policy into the renderer.
+  enum class FrameInputKind : uint8_t { None, Move, Action, Pickup };
+  FrameInputKind pendingFrameInput_ = FrameInputKind::None;
+  uint32_t pendingFrameInputAtMs_ = 0;
+  void markFrameInput(FrameInputKind kind);
 
   void loadOrGenerateLevel();
   void saveCurrentLevel();

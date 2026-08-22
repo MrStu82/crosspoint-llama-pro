@@ -14,6 +14,7 @@
 #include "game/FlavorText.h"
 #include "game/GameControlRefreshPolicy.h"
 #include "game/GameSave.h"
+#include "game/DungeonScrollEffects.h"
 #include "game/HungerClock.h"
 #include "game/Pet.h"
 
@@ -21,6 +22,15 @@
 
 namespace {
 constexpr int FOV_RADIUS = 8;
+
+struct PerfScope {
+  const char* label;
+  uint32_t startedUs = micros();
+  ~PerfScope() {
+    LOG_DBG("GAME-PERF", "%s=%lu us", label,
+            static_cast<unsigned long>(micros() - startedUs));
+  }
+};
 
 // Bresenham line-of-sight: returns true if no wall blocks the line from (x0,y0) to (x1,y1)
 bool hasLineOfSight(const game::Tile* tiles, int x0, int y0, int x1, int y1) {
@@ -57,10 +67,7 @@ bool hasLineOfSight(const game::Tile* tiles, int x0, int y0, int x1, int y1) {
 // comment there.
 
 // Check if a tile is walkable for monsters
-bool isWalkable(game::Tile tile) {
-  return tile == game::Tile::Floor || tile == game::Tile::DoorOpen || tile == game::Tile::StairsUp ||
-         tile == game::Tile::StairsDown || tile == game::Tile::Rubble;
-}
+bool isWalkable(game::Tile tile) { return game::isDungeonWalkable(tile); }
 
 }  // namespace
 
@@ -392,6 +399,10 @@ void GameActivity::onGameMenuResult(const ActivityResult& result) {
 
     case GameMenuActivity::MenuAction::DROP:
       handleDrop(static_cast<int>(menuResult->pageTurnOption));
+      return;
+
+    case GameMenuActivity::MenuAction::USE_SCROLL:
+      handleScroll(static_cast<int>(menuResult->pageTurnOption));
       return;
   }
 }
@@ -806,6 +817,62 @@ void GameActivity::handleDrop(int inventoryIndex) {
   requestUpdate();
 }
 
+void GameActivity::handleScroll(int inventoryIndex) {
+  if (inventoryIndex < 0 || inventoryIndex >= GAME_STATE.inventoryCount) {
+    gameRenderer.invalidateFrameCache();
+    requestUpdate();
+    return;
+  }
+
+  const game::Item scroll = GAME_STATE.inventory[inventoryIndex];
+  if (scroll.type != static_cast<uint8_t>(game::ItemType::Scroll) ||
+      (scroll.subtype != 1 && scroll.subtype != 2)) {
+    gameRenderer.invalidateFrameCache();
+    requestUpdate();
+    return;
+  }
+
+  bool applied = false;
+  if (scroll.subtype == 2) {
+    game::revealWalkableTiles(tiles, fogOfWar);
+    GAME_STATE.addMessage("The level is revealed!");
+    applied = true;
+  } else {
+    int destinationX = GAME_STATE.player.x;
+    int destinationY = GAME_STATE.player.y;
+    if (game::chooseTeleportDestination(
+            tiles, monsters, monsterCount, GAME_STATE.pet.active, GAME_STATE.pet.x,
+            GAME_STATE.pet.y, GAME_STATE.player.x, GAME_STATE.player.y,
+            [](uint32_t max) { return GAME_STATE.rollRange(max); }, &destinationX,
+            &destinationY)) {
+      GAME_STATE.player.x = static_cast<int16_t>(destinationX);
+      GAME_STATE.player.y = static_cast<int16_t>(destinationY);
+      computeVisibility();
+      GAME_STATE.addMessage("Space folds. You blink across the level!");
+      applied = true;
+    } else {
+      GAME_STATE.addMessage("The scroll crackles, but finds nowhere safe.");
+    }
+  }
+
+  if (applied) {
+    game::GameEvent itemEvent{};
+    itemEvent.type = game::GameEventType::ItemUsed;
+    itemEvent.itemType = game::ItemType::Scroll;
+    ACHIEVEMENTS.emit(itemEvent);
+    for (int i = inventoryIndex; i < GAME_STATE.inventoryCount - 1; i++) {
+      GAME_STATE.inventory[i] = GAME_STATE.inventory[i + 1];
+    }
+    GAME_STATE.inventoryCount--;
+  }
+
+  // Returning from GameMenuActivity always overwrites the game framebuffer;
+  // force one authoritative game redraw, which also paints the newly-explored
+  // map or teleported player position.
+  gameRenderer.invalidateFrameCache();
+  requestUpdate();
+}
+
 // --- Throw ---
 
 void GameActivity::handleThrow(game::Direction dir, int inventoryIndex) {
@@ -990,6 +1057,7 @@ void GameActivity::handleThrow(game::Direction dir, int inventoryIndex) {
 // --- Monster AI ---
 
 bool GameActivity::processMonsterTurns() {
+  PerfScope perf{"monster-turns"};
   auto& p = GAME_STATE.player;
   if (p.hp == 0) return true;
 
@@ -1363,6 +1431,7 @@ void GameActivity::saveCurrentLevel() {
 // --- Visibility ---
 
 void GameActivity::computeVisibility() {
+  PerfScope perf{"visibility"};
   auto& p = GAME_STATE.player;
 
   memset(visible, 0, sizeof(visible));

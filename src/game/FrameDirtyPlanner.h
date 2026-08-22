@@ -18,6 +18,9 @@
 #include "GameTheme.h"
 #include "GameTypes.h"
 
+#include <cstddef>
+#include <cstring>
+
 namespace game {
 
 // A screen-coordinate rectangle that changed and needs a `displayWindow()`
@@ -110,7 +113,9 @@ class FrameDirtyPlanner {
   // full refresh.
   CellVisual computeCellVisual(int mapX, int mapY, const Tile* tiles, const uint8_t* fogOfWar,
                                 const Monster* monsters, uint8_t monsterCount, const Item* items, uint8_t itemCount,
-                                const bool* visible, int playerX, int playerY) const {
+                                const bool* visible, int playerX, int playerY,
+                                uint8_t indexedMonsterGlyph = 0, uint8_t indexedItemGlyph = 0,
+                                bool useIndexedOccupants = false) const {
     int mapIdx = mapY * MAP_WIDTH + mapX;
     bool isExplored = fogIsExplored(fogOfWar, mapX, mapY);
     bool isVisible = visible[mapIdx];
@@ -126,19 +131,27 @@ class FrameDirtyPlanner {
       if (mapX == playerX && mapY == playerY) {
         glyph = '@';
       } else {
-        bool foundMonster = false;
-        for (uint8_t m = 0; m < monsterCount; m++) {
-          if (monsters[m].x == mapX && monsters[m].y == mapY && monsters[m].hp > 0) {
-            glyph = MONSTER_DEFS[monsters[m].type].glyph;
-            foundMonster = true;
-            break;
+        if (useIndexedOccupants) {
+          if (indexedMonsterGlyph != 0) {
+            glyph = static_cast<char>(indexedMonsterGlyph);
+          } else if (indexedItemGlyph != 0) {
+            glyph = static_cast<char>(indexedItemGlyph);
           }
-        }
-        if (!foundMonster) {
-          for (uint8_t i = 0; i < itemCount; i++) {
-            if (items[i].x == mapX && items[i].y == mapY) {
-              glyph = itemGlyph(items[i].type);
+        } else {
+          bool foundMonster = false;
+          for (uint8_t m = 0; m < monsterCount; m++) {
+            if (monsters[m].x == mapX && monsters[m].y == mapY && monsters[m].hp > 0) {
+              glyph = MONSTER_DEFS[monsters[m].type].glyph;
+              foundMonster = true;
               break;
+            }
+          }
+          if (!foundMonster) {
+            for (uint8_t i = 0; i < itemCount; i++) {
+              if (items[i].x == mapX && items[i].y == mapY) {
+                glyph = itemGlyph(items[i].type);
+                break;
+              }
             }
           }
         }
@@ -166,6 +179,29 @@ class FrameDirtyPlanner {
     int viewY = 0;
     computeViewOrigin(playerX, playerY, layout, &viewX, &viewY);
 
+    const int viewportCellCount = layout.viewCols * layout.viewRows;
+    memset(monsterGlyphs_, 0, static_cast<size_t>(viewportCellCount));
+    memset(itemGlyphs_, 0, static_cast<size_t>(viewportCellCount));
+
+    // Index occupants once per frame. Previously every viewport cell scanned
+    // all monsters and then all items. Separate arrays preserve the existing
+    // monster-over-item priority; first occupant wins, matching forward scan.
+    for (uint8_t i = 0; i < monsterCount; i++) {
+      if (monsters[i].hp == 0) continue;
+      const int col = monsters[i].x - viewX;
+      const int row = monsters[i].y - viewY;
+      if (col < 0 || col >= layout.viewCols || row < 0 || row >= layout.viewRows) continue;
+      const int index = row * layout.viewCols + col;
+      if (monsterGlyphs_[index] == 0) monsterGlyphs_[index] = MONSTER_DEFS[monsters[i].type].glyph;
+    }
+    for (uint8_t i = 0; i < itemCount; i++) {
+      const int col = items[i].x - viewX;
+      const int row = items[i].y - viewY;
+      if (col < 0 || col >= layout.viewCols || row < 0 || row >= layout.viewRows) continue;
+      const int index = row * layout.viewCols + col;
+      if (itemGlyphs_[index] == 0) itemGlyphs_[index] = itemGlyph(items[i].type);
+    }
+
     const bool themeChanged = (activeTheme != lastTheme_);
     const bool needFullClear = !tracker_.hasSnapshot() || themeChanged;
 
@@ -181,8 +217,10 @@ class FrameDirtyPlanner {
         int mapX = viewX + col;
         CellVisual cv;
         if (mapX >= 0 && mapX < MAP_WIDTH && mapY >= 0 && mapY < MAP_HEIGHT) {
-          cv = computeCellVisual(mapX, mapY, tiles, fogOfWar, monsters, monsterCount, items, itemCount, visible,
-                                 playerX, playerY);
+          const int index = row * layout.viewCols + col;
+          cv = computeCellVisual(mapX, mapY, tiles, fogOfWar, monsters, monsterCount,
+                                 items, itemCount, visible, playerX, playerY,
+                                 monsterGlyphs_[index], itemGlyphs_[index], true);
         }
         cells_[row * layout.viewCols + col] = cv;
       }
@@ -247,6 +285,8 @@ class FrameDirtyPlanner {
   // here is heap, not stack.
   CellVisual cells_[MAX_TRACK_COLS * MAX_TRACK_ROWS];
   DirtyCell dirty_[MAX_DIRTY_CELLS];
+  uint8_t monsterGlyphs_[MAX_TRACK_COLS * MAX_TRACK_ROWS];
+  uint8_t itemGlyphs_[MAX_TRACK_COLS * MAX_TRACK_ROWS];
 };
 
 }  // namespace game

@@ -16,7 +16,7 @@ progress:
 See: .planning/PROJECT.md (updated 2026-08-15)
 
 **Core value:** Every screen renders correctly and fully on-panel on the X4 Pro, with no clipped/overflowing content and no touch targets crowded against the bezel.
-**Current focus:** Pickup-latency follow-up on frozen inventory release `071f8b3`: target instrumentation compares input-handled→blocking-display-return for move vs pickup; the X4 Pro-only redundant Action press/release panel waveforms are removed so pickup has one panel transaction, matching movement. See `.planning/pickup-refresh-roadmap.md`.
+**Current focus:** One combined World Dungeon batch on frozen inventory release `071f8b3`: pickup waveform elimination, real Mapping/Teleport scroll effects, and measured planner/message-pane performance sweep. See `.planning/pickup-refresh-roadmap.md`.
 
 ## Current Position
 
@@ -132,6 +132,6 @@ Items acknowledged and carried forward from previous milestone close:
 - **Resume file:** — a path, or "None (see Next actionable item)" — never a bare "None" with nothing else armed.
 
 Last session: 2026-08-22
-Stopped at: **Pickup latency instrumentation/fix is implemented but not yet gated or committed on top of exact `071f8b30b634eefbf9b64453e308d23fc0f27d84`.**
-Next actionable item: Run focused refresh-policy proof and the complete host suite, commit/read back SHA, build that exact commit on Trantor, verify the bare X4 Pro app image, then report target instrumentation and artifact evidence.
+Stopped at: **Pickup-only commit `5261f71` was gated but superseded before delivery by the combined scroll/performance batch; Mapping/Teleport and performance edits are implemented but uncommitted.**
+Next actionable item: Compile/run scroll and planner performance harnesses, remediate any failure, run complete host gates, commit/read back SHA, then build and verify one combined bare X4 Pro app image.
 Resume file: `.planning/pickup-refresh-roadmap.md`

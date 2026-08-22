@@ -145,6 +145,7 @@ class GameActivity final : public Activity {
   // Moves one complete inventory entry back onto the current floor at the
   // player's position. Invoked by GameMenuActivity's explicit Drop action.
   void handleDrop(int inventoryIndex);
+  void handleScroll(int inventoryIndex);
   // Returns true if the player died during this batch of monster turns (caller
   // should stop processing further turns/input once that happens).
   bool processMonsterTurns();

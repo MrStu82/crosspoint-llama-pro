@@ -10,7 +10,7 @@
 // GameActivity can react (no std::function callback members).
 class GameMenuActivity final : public Activity {
  public:
-  enum class MenuAction { RESUME, SAVE_QUIT, ABANDON, THROW, DROP };
+  enum class MenuAction { RESUME, SAVE_QUIT, ABANDON, THROW, DROP, USE_SCROLL };
 
   explicit GameMenuActivity(GfxRenderer& renderer, MappedInputManager& mappedInput)
       : Activity("GameMenu", renderer, mappedInput) {}

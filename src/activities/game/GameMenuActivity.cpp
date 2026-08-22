@@ -96,6 +96,19 @@ void GameMenuActivity::executeItemAction(ItemAction action) {
   const int inventoryIndex = itemActionInventoryIndex;
   switch (action) {
     case ItemAction::Primary:
+      // Mapping/Teleport need GameActivity's live floor/fog/monster state.
+      // Return the inventory index without consuming here; GameActivity owns
+      // both the effect and the consume-or-keep decision, so a scroll can
+      // never disappear after a message-only no-op again.
+      if (GAME_STATE.inventory[inventoryIndex].type == static_cast<uint8_t>(game::ItemType::Scroll) &&
+          (GAME_STATE.inventory[inventoryIndex].subtype == 1 ||
+           GAME_STATE.inventory[inventoryIndex].subtype == 2)) {
+        clearNewItemFlags();
+        setResult(MenuResult{static_cast<int>(MenuAction::USE_SCROLL), 0,
+                             static_cast<uint8_t>(inventoryIndex)});
+        finish();
+        return;
+      }
       if (game::isUsable(GAME_STATE.inventory[inventoryIndex])) {
         useInventoryItem(inventoryIndex);
       } else if (game::isEquippable(GAME_STATE.inventory[inventoryIndex])) {
@@ -713,12 +726,9 @@ void GameMenuActivity::useInventoryItem(int index) {
         snprintf(msgBuf, sizeof(msgBuf), "Your items glow briefly.");
         consumed = true;
       } else if (item.subtype == 1) {  // Teleport
-        // Handled back in game activity — for now just message
-        snprintf(msgBuf, sizeof(msgBuf), "You blink! (use in dungeon)");
-        consumed = true;
+        // Routed to GameActivity by executeItemAction(); never consume here.
       } else if (item.subtype == 2) {  // Mapping
-        snprintf(msgBuf, sizeof(msgBuf), "The level is revealed! (use in dungeon)");
-        consumed = true;
+        // Routed to GameActivity by executeItemAction(); never consume here.
       }
       break;
 

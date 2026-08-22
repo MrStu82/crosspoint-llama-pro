@@ -1,4 +1,4 @@
-# World Dungeon Pickup Refresh — GSD Plan
+# World Dungeon Pickup/Scroll/Performance Batch — GSD Plan
 
 Base: exact frozen inventory release `071f8b30b634eefbf9b64453e308d23fc0f27d84`.
 
@@ -16,8 +16,22 @@ Base: exact frozen inventory release `071f8b30b634eefbf9b64453e308d23fc0f27d84`.
 
 ## Phase 3 — Gate and release
 
-- [ ] Focused proof pins Action at one panel transaction and Menu feedback unchanged.
-- [ ] Inventory/actions/deferred-save regression harnesses pass.
-- [ ] Complete host suite passes.
-- [ ] Exact committed source builds locally for `x4pro` on Trantor.
-- [ ] Bare app image verified with SHA-256 and esptool image-info.
+- [x] Focused proof pins Action at one panel transaction and Menu feedback unchanged.
+- [x] Inventory/actions/deferred-save regression harnesses pass.
+- [x] Complete host suite passes.
+- [x] Exact committed pickup-only source built locally for `x4pro` on Trantor.
+
+## Phase 4 — Scroll effects
+
+- [x] Mapping effect moved to GameActivity's live floor state and reveals every walkable fog bit.
+- [x] Teleport effect moved to GameActivity, reservoir-selects a safe unoccupied walkable tile, and relocates the player.
+- [x] Mapping/Teleport are consumed only after their effect succeeds; zero-effect Teleport is retained.
+- [ ] Host effect harness and menu-route source proof pass.
+
+## Phase 5 — Engine performance sweep
+
+- [x] Profile hooks added for input→display return, plan, paint, display waveform, monster turns, and visibility.
+- [x] Per-cell O(view cells × (monsters + items)) occupant scan replaced with one per-frame viewport index.
+- [x] Message dirty rectangle excludes the permanent 136px blank reserve.
+- [ ] Benchmark planner before/after and record message-area delta.
+- [ ] Re-run all no-regression gates; build one final combined image only.

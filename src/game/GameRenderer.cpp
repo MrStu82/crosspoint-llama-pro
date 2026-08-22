@@ -54,11 +54,13 @@ void GameRenderer::initForTest(int screenWidth, int screenHeight) {
 void GameRenderer::draw(GfxRenderer& renderer, const game::Tile* tiles, const uint8_t* fogOfWar,
                         const game::Monster* monsters, uint8_t monsterCount, const game::Item* items, uint8_t itemCount,
                         const bool* visible) {
+  const uint32_t frameStartedUs = micros();
   // Refresh once per render pass (not per-cell) so a menu-driven theme change
   // takes effect on the next draw without any extra wiring.
   activeTheme = game::getTheme(static_cast<game::GameThemeId>(SETTINGS.gameTheme));
 
   FramePlan plan = planFrame(tiles, fogOfWar, monsters, monsterCount, items, itemCount, visible);
+  const uint32_t planFinishedUs = micros();
 
   if (plan.fullClear) {
     renderer.clearScreen();
@@ -76,7 +78,14 @@ void GameRenderer::draw(GfxRenderer& renderer, const game::Tile* tiles, const ui
     renderer.drawLine(0, viewportEndY, screenW, viewportEndY);
     renderer.drawLine(0, controlsY, screenW, controlsY);
 
+    const uint32_t paintFinishedUs = micros();
     renderer.displayBufferGhostGuard(ghostGuardCounter, SETTINGS.getRefreshFrequency(), HalDisplay::FAST_REFRESH);
+    const uint32_t displayFinishedUs = micros();
+    LOG_DBG("GAME-PERF", "frame full plan=%lu us paint=%lu us display=%lu us total=%lu us",
+            static_cast<unsigned long>(planFinishedUs - frameStartedUs),
+            static_cast<unsigned long>(paintFinishedUs - planFinishedUs),
+            static_cast<unsigned long>(displayFinishedUs - paintFinishedUs),
+            static_cast<unsigned long>(displayFinishedUs - frameStartedUs));
     return;
   }
 
@@ -149,8 +158,15 @@ void GameRenderer::draw(GfxRenderer& renderer, const game::Tile* tiles, const ui
   }
 
   if (haveUnion) {
+    const uint32_t paintFinishedUs = micros();
     renderer.displayWindow(unionX, unionY, unionW, unionH);
+    const uint32_t displayFinishedUs = micros();
     LOG_DBG("GAME", "Time = %lu ms for partial refresh, window = %dx%d", millis() - partialStartMs, unionW, unionH);
+    LOG_DBG("GAME-PERF", "frame partial plan=%lu us paint=%lu us display=%lu us total=%lu us window=%dx%d",
+            static_cast<unsigned long>(planFinishedUs - frameStartedUs),
+            static_cast<unsigned long>(paintFinishedUs - planFinishedUs),
+            static_cast<unsigned long>(displayFinishedUs - paintFinishedUs),
+            static_cast<unsigned long>(displayFinishedUs - frameStartedUs), unionW, unionH);
   }
 }
 
@@ -212,7 +228,9 @@ game::PlannerLayout GameRenderer::buildPlannerLayout() const {
   layout.screenW = screenW;
   layout.statusH = STATUS_H;
   layout.messageY = messageY;
-  layout.messageH = messageH;
+  // MESSAGE_PADDING_V is permanent blank reserve, not message content. Only
+  // refresh the eight actual text rows when the log changes.
+  layout.messageH = MESSAGE_LINE_COUNT * messageLineHeight + 2;
   return layout;
 }
 

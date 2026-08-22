@@ -15,6 +15,7 @@
 #include "Achievements.h"
 #include "GameState.h"
 #include "GameTypes.h"
+#include "HalStorage.h"
 
 namespace {
 
@@ -108,4 +109,26 @@ TEST(AchievementBusItemTypeFix, WrongItemTypeNeverUnlocksPotionChugger) {
   EXPECT_FALSE(bus.isUnlocked(game::AchievementId::PotionChugger))
       << "PotionChugger unlocked from Scroll ItemUsed events -- the itemType "
          "filter isn't discriminating types, it's just not blocking anymore";
+}
+
+TEST(AchievementBusPersistence, UnlockDoesNotWriteInsideEmitAndFlushRetriesAtSafeBoundary) {
+  AchievementBus& bus = ACHIEVEMENTS;
+  bus.load();
+  HalStorage::resetWriteOpenCalls();
+
+  // Find a run where FirstBlood is in the draw, then emit the same event a
+  // real kill sends. The storage stub counts write-open attempts.
+  game::GameEvent kill{};
+  kill.type = game::GameEventType::MonsterKilled;
+  for (int attempt = 0; attempt < 500 && !bus.isUnlocked(game::AchievementId::FirstBlood); attempt++) {
+    bus.resetRun();
+    bus.emit(kill);
+  }
+  ASSERT_TRUE(bus.isUnlocked(game::AchievementId::FirstBlood));
+  EXPECT_EQ(HalStorage::writeOpenCalls, 0) << "combat emit performed synchronous persistence";
+
+  EXPECT_FALSE(bus.flush()) << "stub write is expected to fail";
+  EXPECT_EQ(HalStorage::writeOpenCalls, 1) << "safe-boundary flush did not attempt exactly one write";
+  EXPECT_FALSE(bus.flush()) << "failed persistence must stay dirty for retry";
+  EXPECT_EQ(HalStorage::writeOpenCalls, 2) << "dirty retry was lost after failed write";
 }

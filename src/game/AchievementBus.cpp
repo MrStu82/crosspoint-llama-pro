@@ -25,6 +25,7 @@ constexpr uint8_t COMPLETIONIST_THRESHOLD = 40;
 AchievementBus AchievementBus::instance;
 
 void AchievementBus::load() {
+  persistenceDirty_ = false;
   for (auto& u : unlocked) u = false;
   lifetimeTilesWalked = 0;
   floorsExploredFully = 0;
@@ -74,6 +75,13 @@ bool AchievementBus::save() const {
   serialization::writePod(file, lifetimeTilesWalked);
   serialization::writePod(file, floorsExploredFully);
   serialization::writePod(file, magpiePickupCount);
+  return true;
+}
+
+bool AchievementBus::flush() {
+  if (!persistenceDirty_) return true;
+  if (!save()) return false;
+  persistenceDirty_ = false;
   return true;
 }
 
@@ -162,8 +170,7 @@ void AchievementBus::unlock(game::AchievementId id, const char* flavorText) {
   unlockedThisRun[idx] = true;
   if (unlocked[idx]) return;
   unlocked[idx] = true;
-
-  save();
+  persistenceDirty_ = true;
   GAME_STATE.addMessage(flavorText);
   if (pendingCount_ >= MAX_PENDING_UNLOCKS) {
     LOG_ERR("ACH", "pending-unlock queue full, dropping notification for: %s", flavorText);

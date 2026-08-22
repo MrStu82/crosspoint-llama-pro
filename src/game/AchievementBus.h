@@ -94,6 +94,9 @@ class AchievementBus {
   // row index), and as the NoEventInWindow "was this window broken" flag.
   uint16_t conditionEventCounts_[game::CONDITION_COUNT] = {};
   bool conditionWindowBroken_[game::CONDITION_COUNT] = {};
+  // unlock() marks lifetime state dirty; flush() writes once at a safe
+  // menu/exit boundary so combat and pickup input never blocks on SD I/O.
+  bool persistenceDirty_ = false;
 
   bool isDrawnThisRun(game::AchievementId id) const;
   void evaluateConditions(const game::GameEvent& event);
@@ -107,6 +110,10 @@ class AchievementBus {
   // Clears the run-scoped unlock set. Call once per new run (GameState::newGame()),
   // not on save-reload of an in-progress run.
   void resetRun();
+
+  // Persists newly-unlocked lifetime state once. A failed write leaves the
+  // dirty bit set so the next safe boundary retries.
+  bool flush();
 
   // Game logic calls this and knows nothing about achievement identities.
   void emit(const game::GameEvent& event);

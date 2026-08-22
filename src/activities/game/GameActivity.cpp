@@ -1,6 +1,7 @@
 #include "GameActivity.h"
 
 #include <GfxRenderer.h>
+#include <I18n.h>
 
 #include <algorithm>
 #include <cstring>
@@ -166,6 +167,7 @@ void GameActivity::loop() {
       dismissed = mappedInput.wasScreenTapped(tx, ty);
     }
     if (dismissed) {
+      ACHIEVEMENTS.flush();
       onGoHome();
     }
     return;
@@ -297,6 +299,9 @@ void GameActivity::loop() {
 // --- Game Menu ---
 
 void GameActivity::openGameMenu() {
+  // Persist lifetime unlocks outside combat/pickup input. A normal menu open
+  // is the first safe boundary after those hot paths.
+  ACHIEVEMENTS.flush();
   startActivityForResult(std::make_unique<GameMenuActivity>(renderer, mappedInput),
                          [this](const ActivityResult& result) { onGameMenuResult(result); });
 }
@@ -325,11 +330,13 @@ void GameActivity::onGameMenuResult(const ActivityResult& result) {
     case GameMenuActivity::MenuAction::SAVE_QUIT:
       saveCurrentLevel();
       GAME_STATE.saveToFile();
+      ACHIEVEMENTS.flush();
       GAME_STATE.addMessage("Game saved.");
       onGoHome();
       return;
 
     case GameMenuActivity::MenuAction::ABANDON:
+      ACHIEVEMENTS.flush();
       GameSave::deleteAll();
       GAME_STATE.deleteSaveFile();
       onGoHome();
@@ -338,6 +345,10 @@ void GameActivity::onGameMenuResult(const ActivityResult& result) {
     case GameMenuActivity::MenuAction::THROW:
       handleThrow(static_cast<game::Direction>(menuResult->orientation),
                   static_cast<int>(menuResult->pageTurnOption));
+      return;
+
+    case GameMenuActivity::MenuAction::DROP:
+      handleDrop(static_cast<int>(menuResult->pageTurnOption));
       return;
   }
 }
@@ -682,6 +693,7 @@ void GameActivity::handleAction() {
         GAME_STATE.inventory[GAME_STATE.inventoryCount] = levelItems[i];
         GAME_STATE.inventory[GAME_STATE.inventoryCount].x = -1;
         GAME_STATE.inventory[GAME_STATE.inventoryCount].y = -1;
+        GAME_STATE.inventory[GAME_STATE.inventoryCount].flags |= static_cast<uint8_t>(game::ItemFlag::New);
         GAME_STATE.inventoryCount++;
 
         // Find matching item def for message
@@ -716,6 +728,35 @@ void GameActivity::handleAction() {
   }
 
   GAME_STATE.addMessage("Nothing to do here.");
+  requestUpdate();
+}
+
+void GameActivity::handleDrop(int inventoryIndex) {
+  if (inventoryIndex < 0 || inventoryIndex >= GAME_STATE.inventoryCount) {
+    gameRenderer.invalidateFrameCache();
+    requestUpdate();
+    return;
+  }
+  if (itemCount >= game::MAX_ITEMS_PER_LEVEL) {
+    GAME_STATE.addMessage(tr(STR_DM_GROUND_FULL));
+    gameRenderer.invalidateFrameCache();
+    requestUpdate();
+    return;
+  }
+
+  game::Item dropped = GAME_STATE.inventory[inventoryIndex];
+  dropped.x = GAME_STATE.player.x;
+  dropped.y = GAME_STATE.player.y;
+  dropped.flags &= static_cast<uint8_t>(~static_cast<uint8_t>(game::ItemFlag::New));
+  dropped.flags &= static_cast<uint8_t>(~static_cast<uint8_t>(game::ItemFlag::Equipped));
+  levelItems[itemCount++] = dropped;
+
+  for (int i = inventoryIndex; i < GAME_STATE.inventoryCount - 1; i++) {
+    GAME_STATE.inventory[i] = GAME_STATE.inventory[i + 1];
+  }
+  GAME_STATE.inventoryCount--;
+  GAME_STATE.addMessage(tr(STR_DM_DROPPED_ITEM));
+  gameRenderer.invalidateFrameCache();
   requestUpdate();
 }
 

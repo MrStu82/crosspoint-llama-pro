@@ -4,6 +4,7 @@
 #include <I18n.h>
 #include <Logging.h>
 
+#include <algorithm>
 #include <cstdio>
 #include <cstring>
 #include <string>
@@ -596,8 +597,8 @@ void GameRenderer::drawControls(GfxRenderer& renderer) const {
 }
 
 Rect GameRenderer::actionMenuButtonRect(int buttonIndex) const {
-  const int buttonX = DPAD_W + CONTROL_BUTTON_GAP;
-  const int buttonW = screenW - buttonX;
+  const int buttonW = std::min(ACTION_MENU_BUTTON_W, screenW - DPAD_W - CONTROL_BUTTON_GAP);
+  const int buttonX = screenW - buttonW;
   const int buttonH = CONTROLS_H / ACTION_MENU_BUTTON_COUNT;
   const int buttonY = controlsY + buttonIndex * buttonH;
   return Rect(buttonX, buttonY, buttonW, buttonH);
@@ -660,15 +661,18 @@ bool GameRenderer::hitTestControls(int x, int y, MappedInputManager::Button& out
     return false;
   }
 
-  // Action/Menu region: two stacked bordered buttons.
-  const int buttonH = CONTROLS_H / ACTION_MENU_BUTTON_COUNT;
-  int buttonIndex = (y - controlsY) / buttonH;
-  if (buttonIndex >= ACTION_MENU_BUTTON_COUNT) {
-    buttonIndex = ACTION_MENU_BUTTON_COUNT - 1;  // absorb any rounding remainder pixels
+  // Action/Menu region: two compact right-aligned bordered buttons. Use the
+  // same rectangles as drawActionMenuButton() so the newly-empty centre band
+  // cannot activate an invisible control.
+  for (int buttonIndex = 0; buttonIndex < ACTION_MENU_BUTTON_COUNT; buttonIndex++) {
+    const Rect r = actionMenuButtonRect(buttonIndex);
+    if (x >= r.x && x < r.x + r.width && y >= r.y && y < r.y + r.height) {
+      outButton =
+          (buttonIndex == 0) ? MappedInputManager::Button::Confirm : MappedInputManager::Button::Back;
+      return true;
+    }
   }
-
-  outButton = (buttonIndex == 0) ? MappedInputManager::Button::Confirm : MappedInputManager::Button::Back;
-  return true;
+  return false;
 }
 
 void GameRenderer::drawEndScreen(GfxRenderer& renderer, bool isVictory, const EndScreenData& data) const {

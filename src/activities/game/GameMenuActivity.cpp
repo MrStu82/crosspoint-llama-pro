@@ -5,6 +5,7 @@
 
 #include <algorithm>
 #include <cstdio>
+#include <limits>
 #include <string>
 
 #include "CrossPointSettings.h"
@@ -26,17 +27,6 @@ namespace {
 // convention, matches RecentBooksActivity.cpp's long-press-to-remove threshold).
 constexpr unsigned long LONG_PRESS_MS = 1000;
 
-// Looks up the ItemDef backing a live inventory Item by (type, subtype), the same match
-// renderInventory()'s name/category lookups already use inline. Returns nullptr if the
-// item's type/subtype somehow doesn't match any table entry (should not happen in practice).
-const game::ItemDef* findItemDef(const game::Item& item) {
-  for (int d = 0; d < game::ITEM_DEF_COUNT; d++) {
-    if (game::ITEM_DEFS[d].type == item.type && game::ITEM_DEFS[d].subtype == item.subtype) {
-      return &game::ITEM_DEFS[d];
-    }
-  }
-  return nullptr;
-}
 }  // namespace
 
 // --- Lifecycle ---
@@ -46,6 +36,101 @@ void GameMenuActivity::onEnter() {
   currentScreen = Screen::Menu;
   selectedIndex = 0;
   requestUpdate();
+}
+
+void GameMenuActivity::clearNewItemFlags() {
+  game::clearNewInventoryFlags(GAME_STATE.inventory, GAME_STATE.inventoryCount);
+}
+
+void GameMenuActivity::enterInventory() {
+  game::sortInventoryByType(GAME_STATE.inventory, GAME_STATE.inventoryCount);
+  currentScreen = Screen::Inventory;
+  selectedIndex = 0;
+  itemActionInventoryIndex = -1;
+  requestUpdate();
+}
+
+void GameMenuActivity::leaveInventory() {
+  clearNewItemFlags();
+  currentScreen = Screen::Menu;
+  selectedIndex = 1;
+  itemActionInventoryIndex = -1;
+  requestUpdate();
+}
+
+void GameMenuActivity::openItemActions(int inventoryIndex) {
+  if (inventoryIndex < 0 || inventoryIndex >= GAME_STATE.inventoryCount) return;
+  itemActionInventoryIndex = inventoryIndex;
+  currentScreen = Screen::ItemActions;
+  selectedIndex = 0;
+  requestUpdate();
+}
+
+int GameMenuActivity::itemActionCount() const {
+  if (itemActionInventoryIndex < 0 || itemActionInventoryIndex >= GAME_STATE.inventoryCount) return 0;
+  const game::ItemDef* def = game::itemDefFor(GAME_STATE.inventory[itemActionInventoryIndex]);
+  return def != nullptr && def->throwable ? 4 : 3;
+}
+
+GameMenuActivity::ItemAction GameMenuActivity::itemActionForRow(int row) const {
+  const game::ItemDef* def =
+      itemActionInventoryIndex >= 0 && itemActionInventoryIndex < GAME_STATE.inventoryCount
+          ? game::itemDefFor(GAME_STATE.inventory[itemActionInventoryIndex])
+          : nullptr;
+  const bool throwable = def != nullptr && def->throwable;
+  if (row <= 0) return ItemAction::Primary;
+  if (throwable) {
+    if (row == 1) return ItemAction::Throw;
+    if (row == 2) return ItemAction::Drop;
+    return ItemAction::Sell;
+  }
+  return row == 1 ? ItemAction::Drop : ItemAction::Sell;
+}
+
+void GameMenuActivity::executeItemAction(ItemAction action) {
+  if (itemActionInventoryIndex < 0 || itemActionInventoryIndex >= GAME_STATE.inventoryCount) {
+    enterInventory();
+    return;
+  }
+
+  const int inventoryIndex = itemActionInventoryIndex;
+  switch (action) {
+    case ItemAction::Primary:
+      if (game::isUsable(GAME_STATE.inventory[inventoryIndex])) {
+        useInventoryItem(inventoryIndex);
+      } else if (game::isEquippable(GAME_STATE.inventory[inventoryIndex])) {
+        toggleInventoryEquip(inventoryIndex);
+      }
+      game::sortInventoryByType(GAME_STATE.inventory, GAME_STATE.inventoryCount);
+      currentScreen = Screen::Inventory;
+      selectedIndex = GAME_STATE.inventoryCount == 0 ? 0 : std::min(inventoryIndex, GAME_STATE.inventoryCount - 1);
+      itemActionInventoryIndex = -1;
+      requestUpdate();
+      return;
+
+    case ItemAction::Throw:
+      throwItemIndex = inventoryIndex;
+      itemActionInventoryIndex = -1;
+      currentScreen = Screen::ThrowTarget;
+      selectedIndex = 0;
+      requestUpdate();
+      return;
+
+    case ItemAction::Drop:
+      clearNewItemFlags();
+      setResult(MenuResult{static_cast<int>(MenuAction::DROP), 0, static_cast<uint8_t>(inventoryIndex)});
+      finish();
+      return;
+
+    case ItemAction::Sell:
+      sellInventoryItem(inventoryIndex);
+      game::sortInventoryByType(GAME_STATE.inventory, GAME_STATE.inventoryCount);
+      currentScreen = Screen::Inventory;
+      selectedIndex = GAME_STATE.inventoryCount == 0 ? 0 : std::min(inventoryIndex, GAME_STATE.inventoryCount - 1);
+      itemActionInventoryIndex = -1;
+      requestUpdate();
+      return;
+  }
 }
 
 // --- Input ---
@@ -74,9 +159,7 @@ void GameMenuActivity::loop() {
             finish();
             return;
           case 1:  // Inventory
-            currentScreen = Screen::Inventory;
-            selectedIndex = 0;
-            requestUpdate();
+            enterInventory();
             break;
           case 2:  // Character
             currentScreen = Screen::Character;
@@ -130,9 +213,7 @@ void GameMenuActivity::loop() {
       if (invCount == 0) {
         // Empty inventory — just go back
         if (mappedInput.wasReleased(Button::Back) || mappedInput.wasReleased(Button::Confirm)) {
-          currentScreen = Screen::Menu;
-          selectedIndex = 1;
-          requestUpdate();
+          leaveInventory();
         }
         break;
       }
@@ -161,7 +242,7 @@ void GameMenuActivity::loop() {
       // hold entirely and fall through to the ordinary short-press handling below.
       {
         const auto& hovered = GAME_STATE.inventory[selectedIndex];
-        const auto* def = findItemDef(hovered);
+        const auto* def = game::itemDefFor(hovered);
         if (def != nullptr && def->throwable && mappedInput.isPressed(Button::Confirm) &&
             mappedInput.getHeldTime() >= LONG_PRESS_MS) {
           longPressFired = true;
@@ -173,14 +254,11 @@ void GameMenuActivity::loop() {
       }
 
       if (mappedInput.wasReleased(Button::Confirm)) {
-        useInventoryItem(selectedIndex);
-        requestUpdate();
+        openItemActions(selectedIndex);
       }
 
       if (mappedInput.wasReleased(Button::Back)) {
-        currentScreen = Screen::Menu;
-        selectedIndex = 1;
-        requestUpdate();
+        leaveInventory();
       }
 
       // Touch: same dual-phase idiom as handleMenuTouch() -- touch-down previews the
@@ -188,6 +266,37 @@ void GameMenuActivity::loop() {
       if (handleInventoryTouch()) {
         return;
       }
+      break;
+    }
+
+    case Screen::ItemActions: {
+      const int actionCount = itemActionCount();
+      if (itemActionInventoryIndex < 0 || itemActionInventoryIndex >= GAME_STATE.inventoryCount || actionCount == 0) {
+        enterInventory();
+        break;
+      }
+
+      buttonNavigator.onNextRelease([this, actionCount] {
+        selectedIndex = ButtonNavigator::nextIndex(selectedIndex, actionCount);
+        requestUpdate();
+      });
+      buttonNavigator.onPreviousRelease([this, actionCount] {
+        selectedIndex = ButtonNavigator::previousIndex(selectedIndex, actionCount);
+        requestUpdate();
+      });
+
+      if (mappedInput.wasReleased(Button::Confirm)) {
+        executeItemAction(itemActionForRow(selectedIndex));
+        return;
+      }
+      if (mappedInput.wasReleased(Button::Back)) {
+        currentScreen = Screen::Inventory;
+        selectedIndex = itemActionInventoryIndex;
+        itemActionInventoryIndex = -1;
+        requestUpdate();
+        return;
+      }
+      if (handleItemActionTouch()) return;
       break;
     }
 
@@ -204,6 +313,7 @@ void GameMenuActivity::loop() {
       }
 
       auto commitThrow = [this](game::Direction dir) {
+        clearNewItemFlags();
         setResult(MenuResult{static_cast<int>(MenuAction::THROW), static_cast<uint8_t>(dir),
                              static_cast<uint8_t>(throwItemIndex)});
         finish();
@@ -390,9 +500,7 @@ bool GameMenuActivity::handleMenuTouch() {
           finish();
           return true;
         case 1:  // Inventory
-          currentScreen = Screen::Inventory;
-          selectedIndex = 0;
-          requestUpdate();
+          enterInventory();
           return true;
         case 2:  // Character
           currentScreen = Screen::Character;
@@ -449,13 +557,92 @@ bool GameMenuActivity::handleInventoryTouch() {
     case ListTouchResult::Consumed:
       return true;
     case ListTouchResult::Activated:
-      useInventoryItem(selectedIndex);
-      requestUpdate();
+      openItemActions(selectedIndex);
       return true;
     case ListTouchResult::None:
       return false;
   }
   return false;
+}
+
+bool GameMenuActivity::handleItemActionTouch() {
+  const int actionCount = itemActionCount();
+  if (actionCount == 0) return false;
+
+  const int pageWidth = renderer.getScreenWidth();
+  const int pageHeight = renderer.getScreenHeight();
+  const auto metrics = UITheme::getInstance().getMetrics();
+  const int contentTop = metrics.topPadding + metrics.headerHeight + metrics.verticalSpacing;
+  const int contentHeight = pageHeight - contentTop - metrics.buttonHintsHeight - metrics.verticalSpacing;
+  const int rowX = metrics.contentSidePadding;
+  const int rowWidth = pageWidth - metrics.contentSidePadding * 2;
+  const int rowStep = metrics.menuRowHeight + metrics.menuSpacing;
+
+  auto rowContains = [&](int row, int x, int y) {
+    const int rowY = contentTop + row * rowStep;
+    return x >= rowX && x < rowX + rowWidth && y >= rowY && y < rowY + metrics.menuRowHeight;
+  };
+
+  int tx = 0;
+  int ty = 0;
+  if (mappedInput.wasScreenTouchDown(tx, ty)) {
+    for (int row = 0; row < actionCount; row++) {
+      if (!rowContains(row, tx, ty)) continue;
+      if (selectedIndex != row) {
+        selectedIndex = row;
+        requestUpdate();
+      }
+      return true;
+    }
+    return false;
+  }
+
+  if (mappedInput.wasScreenTapped(tx, ty)) {
+    for (int row = 0; row < actionCount; row++) {
+      if (!rowContains(row, tx, ty)) continue;
+      selectedIndex = row;
+      executeItemAction(itemActionForRow(row));
+      return true;
+    }
+  }
+  return false;
+}
+
+void GameMenuActivity::toggleInventoryEquip(int index) {
+  if (index < 0 || index >= GAME_STATE.inventoryCount) return;
+  game::Item& item = GAME_STATE.inventory[index];
+  if (!game::isEquippable(item)) return;
+
+  if (item.flags & static_cast<uint8_t>(game::ItemFlag::Equipped)) {
+    item.flags &= static_cast<uint8_t>(~static_cast<uint8_t>(game::ItemFlag::Equipped));
+    GAME_STATE.addMessage(tr(STR_DM_UNEQUIPPED));
+    return;
+  }
+
+  for (uint8_t i = 0; i < GAME_STATE.inventoryCount; i++) {
+    if (static_cast<int>(i) != index && GAME_STATE.inventory[i].type == item.type) {
+      GAME_STATE.inventory[i].flags &= static_cast<uint8_t>(~static_cast<uint8_t>(game::ItemFlag::Equipped));
+    }
+  }
+  item.flags |= static_cast<uint8_t>(game::ItemFlag::Equipped);
+  GAME_STATE.addMessage(tr(STR_DM_EQUIPPED));
+}
+
+void GameMenuActivity::sellInventoryItem(int index) {
+  if (index < 0 || index >= GAME_STATE.inventoryCount) return;
+  const uint32_t saleValue = game::itemSaleValue(GAME_STATE.inventory[index]);
+  const uint32_t totalGold = static_cast<uint32_t>(GAME_STATE.player.gold) + saleValue;
+  GAME_STATE.player.gold = static_cast<uint16_t>(
+      std::min(totalGold, static_cast<uint32_t>(std::numeric_limits<uint16_t>::max())));
+
+  char message[48];
+  snprintf(message, sizeof(message), tr(STR_DM_SOLD_FOR_GOLD), static_cast<unsigned>(saleValue));
+  GAME_STATE.addMessage(message);
+
+  for (int i = index; i < GAME_STATE.inventoryCount - 1; i++) {
+    GAME_STATE.inventory[i] = GAME_STATE.inventory[i + 1];
+  }
+  GAME_STATE.inventoryCount--;
 }
 
 // --- Use Inventory Item ---
@@ -473,7 +660,7 @@ void GameMenuActivity::useInventoryItem(int index) {
   // "999" (3) + longest sponsor name "The Adjudicator's Legal Team" / "System Uptime
   // Guarantee (tm)" (28) + null = 144, rounded up with headroom so a future sponsor/item
   // name addition doesn't silently truncate mid-punchline.
-  char msgBuf[160];
+  char msgBuf[160] = {};
 
   switch (type) {
     case game::ItemType::Potion:
@@ -569,7 +756,7 @@ void GameMenuActivity::useInventoryItem(int index) {
         item.subtype = itemReward.subtype;
         item.count = 1;
         item.enchantment = 0;
-        item.flags = 0;
+        item.flags = static_cast<uint8_t>(game::ItemFlag::New);
         if (hasSponsor) {
           snprintf(msgBuf, sizeof(msgBuf), "SPONSORED CONTENT: Congratulations! You've won... %s! Brought to you by %s.",
                    rewardName, sponsorName);
@@ -601,25 +788,10 @@ void GameMenuActivity::useInventoryItem(int index) {
     }
 
     default:
-      // Weapons, armor, etc. — toggle equip
-      if (item.flags & static_cast<uint8_t>(game::ItemFlag::Equipped)) {
-        item.flags &= ~static_cast<uint8_t>(game::ItemFlag::Equipped);
-        snprintf(msgBuf, sizeof(msgBuf), "Unequipped.");
-      } else {
-        // Unequip any existing item of same type
-        for (uint8_t i = 0; i < GAME_STATE.inventoryCount; i++) {
-          if (static_cast<int>(i) != index && GAME_STATE.inventory[i].type == item.type &&
-              (GAME_STATE.inventory[i].flags & static_cast<uint8_t>(game::ItemFlag::Equipped))) {
-            GAME_STATE.inventory[i].flags &= ~static_cast<uint8_t>(game::ItemFlag::Equipped);
-          }
-        }
-        item.flags |= static_cast<uint8_t>(game::ItemFlag::Equipped);
-        snprintf(msgBuf, sizeof(msgBuf), "Equipped!");
-      }
       break;
   }
 
-  GAME_STATE.addMessage(msgBuf);
+  if (msgBuf[0] != '\0') GAME_STATE.addMessage(msgBuf);
 
   if (consumed) {
     game::GameEvent itemEvent{};
@@ -647,6 +819,9 @@ void GameMenuActivity::render(RenderLock&&) {
       break;
     case Screen::Inventory:
       renderInventory();
+      break;
+    case Screen::ItemActions:
+      renderItemActions();
       break;
     case Screen::Character:
       renderCharacter();
@@ -731,6 +906,11 @@ void GameMenuActivity::renderInventory() {
               if (item.flags & static_cast<uint8_t>(game::ItemFlag::Equipped)) {
                 name += " [E]";
               }
+              if (item.flags & static_cast<uint8_t>(game::ItemFlag::New)) {
+                name += " [";
+                name += tr(STR_DM_NEW_ITEM);
+                name += "]";
+              }
               return name;
             }
           }
@@ -785,14 +965,14 @@ void GameMenuActivity::renderInventory() {
         });
   }
 
-  const char* confirmLabel = invCount > 0 ? tr(STR_DM_USE_EQUIP) : "";
+  const char* confirmLabel = invCount > 0 ? tr(STR_SELECT) : "";
 
   // Surface the hold-to-throw hint only when the hovered item is actually throwable --
   // otherwise the fourth hint slot stays blank, matching every other screen's convention
   // of not showing a hint for an action that isn't currently available.
   const char* holdThrowLabel = "";
   if (invCount > 0) {
-    const auto* def = findItemDef(GAME_STATE.inventory[selectedIndex]);
+    const auto* def = game::itemDefFor(GAME_STATE.inventory[selectedIndex]);
     if (def != nullptr && def->throwable) {
       holdThrowLabel = tr(STR_DM_HINT_HOLD_THROW);
     }
@@ -801,6 +981,54 @@ void GameMenuActivity::renderInventory() {
   const auto labels = mappedInput.mapLabels(tr(STR_BACK), confirmLabel, "", holdThrowLabel);
   GUI.drawButtonHints(renderer, labels.btn1, labels.btn2, labels.btn3, labels.btn4);
 
+  renderer.displayBuffer();
+}
+
+void GameMenuActivity::renderItemActions() {
+  renderer.clearScreen();
+
+  const int pageWidth = renderer.getScreenWidth();
+  const int pageHeight = renderer.getScreenHeight();
+  const auto metrics = UITheme::getInstance().getMetrics();
+  const bool valid = itemActionInventoryIndex >= 0 && itemActionInventoryIndex < GAME_STATE.inventoryCount;
+  const game::Item* item = valid ? &GAME_STATE.inventory[itemActionInventoryIndex] : nullptr;
+  const game::ItemDef* def = item == nullptr ? nullptr : game::itemDefFor(*item);
+  GUI.drawHeader(renderer, Rect(0, metrics.topPadding, pageWidth, metrics.headerHeight),
+                 def == nullptr ? tr(STR_DM_ITEM_ACTIONS) : def->name);
+
+  const int contentTop = metrics.topPadding + metrics.headerHeight + metrics.verticalSpacing;
+  const int contentHeight = pageHeight - contentTop - metrics.buttonHintsHeight - metrics.verticalSpacing;
+  const int actionCount = itemActionCount();
+
+  GUI.drawButtonMenu(
+      renderer, Rect(0, contentTop, pageWidth, contentHeight), actionCount, selectedIndex,
+      [this, item](int row) {
+        const ItemAction action = itemActionForRow(row);
+        switch (action) {
+          case ItemAction::Primary:
+            if (item != nullptr && game::isEquippable(*item)) {
+              return std::string((item->flags & static_cast<uint8_t>(game::ItemFlag::Equipped))
+                                     ? tr(STR_DM_UNEQUIP)
+                                     : tr(STR_DM_EQUIP));
+            }
+            return std::string(tr(STR_DM_USE));
+          case ItemAction::Throw:
+            return std::string(tr(STR_DM_THROW));
+          case ItemAction::Drop:
+            return std::string(tr(STR_DM_DROP));
+          case ItemAction::Sell: {
+            char label[48];
+            snprintf(label, sizeof(label), tr(STR_DM_SELL_FOR_GOLD),
+                     item == nullptr ? 0u : static_cast<unsigned>(game::itemSaleValue(*item)));
+            return std::string(label);
+          }
+        }
+        return std::string();
+      },
+      nullptr);
+
+  const auto labels = mappedInput.mapLabels(tr(STR_BACK), tr(STR_SELECT), "", "");
+  GUI.drawButtonHints(renderer, labels.btn1, labels.btn2, labels.btn3, labels.btn4);
   renderer.displayBuffer();
 }
 
@@ -1100,7 +1328,7 @@ void GameMenuActivity::renderThrowTarget() {
   // Name the item actually in flight -- throwItemIndex was captured on long-press,
   // not re-derived from selectedIndex (which Screen::Inventory keeps mutating).
   if (throwItemIndex >= 0 && throwItemIndex < GAME_STATE.inventoryCount) {
-    const auto* def = findItemDef(GAME_STATE.inventory[throwItemIndex]);
+    const auto* def = game::itemDefFor(GAME_STATE.inventory[throwItemIndex]);
     if (def != nullptr) {
       renderer.drawText(UI_10_FONT_ID, x, y, def->name, true, EpdFontFamily::BOLD);
       y += lineH;

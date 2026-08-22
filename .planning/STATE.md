@@ -16,7 +16,7 @@ progress:
 See: .planning/PROJECT.md (updated 2026-08-15)
 
 **Core value:** Every screen renders correctly and fully on-panel on the X4 Pro, with no clipped/overflowing content and no touch targets crowded against the bezel.
-**Current focus:** Milestone 3 (Phases 7-12, World Dungeon). Phases 7 (Correctness), 8 (Reclaim the frame / dirty-rect rendering), 9 (Voice — DCC flavour/achievements), and 10 (Decisions — throw mechanic + Percussive Maintenance) are closed, including a required follow-up fix (parent msg 3758, 2026-08-16) closed same day. Phase 11 (The Show — loot boxes, *Sponsored Content*) is opening on branch `phase-7-world-dungeon-correctness`, per parent's explicit "Push, then Phase 11" (msg 3758), with standing authorization to proceed through implementation without further check-in. **Delivery plan (parent msg 3650, direct from Stuart): no interim on-glass flashes — build straight through Phases 9, 10, 11 with host-only machine-verified gates per phase, ship parent exactly one final image when Phase 12 closes.** Milestone 1 (Phases 1-4) and Milestone 2 (Phases 5-6, Tamagotchi overhaul) are prior, separately-shipped work — see their sections below for history, not current activity.
+**Current focus:** Inventory phases 1–4 complete on frozen base `f852309`: stable type grouping, contextual Use/Equip/Unequip plus Drop/Sell action menu, New-flag exit lifecycle, and deferred achievement persistence removing SD writes from kill/pickup input. Phase 5 final exact-commit Trantor gate/release is in progress. See `.planning/inventory-feature-roadmap.md`.
 
 ## Current Position
 
@@ -132,6 +132,6 @@ Items acknowledged and carried forward from previous milestone close:
 - **Resume file:** — a path, or "None (see Next actionable item)" — never a bare "None" with nothing else armed.
 
 Last session: 2026-08-21
-Stopped at: **Job Phase 4 loot boxes CLOSED.** Implementation `f307adc0d4256815d5ca7168522f2e80adb0d58e`; clean-clone Trantor gate passed harness, 149/149 host tests and X4 Pro production build.
-Next actionable item: Reconcile the parent-authorised continuation to Phase 12 against the roadmap and already-landed Job Phases 5/6; start the next concrete unclosed phase without shipping an interim image. If no Phase 12 requirements exist in the recorded plan, request that single missing scope decision from parent.
-Resume file: `.planning/evidence/job-phase4-loot-box-gate.md`
+Stopped at: **Inventory feature phases 1–4 implemented on branch `feature/inventory-actions-f852309` from exact base `f852309`; uncommitted preflight is green (focused harnesses, 150/150 host tests, X4 Pro build).**
+Next actionable item: Commit the frozen-base implementation, rebuild the exact commit on Trantor, carve and verify the bare X4 Pro app image, push source, then report the release evidence to parent.
+Resume file: `.planning/inventory-feature-roadmap.md`

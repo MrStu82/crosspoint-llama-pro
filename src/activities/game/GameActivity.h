@@ -135,6 +135,9 @@ class GameActivity final : public Activity {
   // inventoryIndex's item, finds the nearest monster in line along dir, applies
   // dexterity-based damage, and emits GameEventType::ItemThrown.
   void handleThrow(game::Direction dir, int inventoryIndex);
+  // Moves one complete inventory entry back onto the current floor at the
+  // player's position. Invoked by GameMenuActivity's explicit Drop action.
+  void handleDrop(int inventoryIndex);
   // Returns true if the player died during this batch of monster turns (caller
   // should stop processing further turns/input once that happens).
   bool processMonsterTurns();

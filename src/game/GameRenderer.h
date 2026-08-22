@@ -88,9 +88,13 @@ class GameRenderer {
   static constexpr int DPAD_W = 168;         // Total d-pad width (3 equal columns)
   static constexpr int DPAD_COL_W = DPAD_W / 3;
 
-  // Action/Menu bordered buttons occupy the right half of the control area, stacked
-  // vertically (Action on top, Menu below), each spanning the remaining width.
+  // Action/Menu bordered buttons occupy a compact right-aligned column, stacked
+  // vertically (Action on top, Menu below).
   static constexpr int ACTION_MENU_BUTTON_COUNT = 2;
+  // Compact, touch-safe action column anchored to the right edge. The old
+  // remaining-width layout was 292px wide on X4 Pro and visually dominated
+  // the d-pad; 220px retains an 84px-tall target while restoring balance.
+  static constexpr int ACTION_MENU_BUTTON_W = 220;
   // Visual gap between the d-pad region and the Action/Menu buttons -- they
   // previously butted flush against each other with no separation.
   static constexpr int CONTROL_BUTTON_GAP = 20;

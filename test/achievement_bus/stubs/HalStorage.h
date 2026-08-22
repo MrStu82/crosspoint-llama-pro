@@ -15,9 +15,16 @@ class HalFile {
 
 class HalStorage {
  public:
+  inline static int writeOpenCalls = 0;
+
   bool mkdir(const char*) { return true; }
   bool openFileForRead(const char*, const char*, HalFile&) { return false; }
-  bool openFileForWrite(const char*, const char*, HalFile&) { return false; }
+  bool openFileForWrite(const char*, const char*, HalFile&) {
+    writeOpenCalls++;
+    return false;
+  }
+
+  static void resetWriteOpenCalls() { writeOpenCalls = 0; }
 
   static HalStorage& getInstance() {
     static HalStorage instance;

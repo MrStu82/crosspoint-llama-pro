@@ -70,6 +70,7 @@ enum class ItemFlag : uint8_t {
   Identified = 1 << 0,
   Cursed = 1 << 1,
   Equipped = 1 << 2,
+  New = 1 << 3,
 };
 
 enum class Direction : uint8_t { North, South, East, West };
@@ -245,6 +246,54 @@ inline constexpr ItemDef ITEM_DEFS[] = {
     {"Ring of Power", '=', static_cast<uint8_t>(ItemType::Ring), 0, 999, 0, 0, false},
 };
 inline constexpr int ITEM_DEF_COUNT = sizeof(ITEM_DEFS) / sizeof(ITEM_DEFS[0]);
+
+inline const ItemDef* itemDefFor(const Item& item) {
+  for (int i = 0; i < ITEM_DEF_COUNT; i++) {
+    if (ITEM_DEFS[i].type == item.type && ITEM_DEFS[i].subtype == item.subtype) {
+      return &ITEM_DEFS[i];
+    }
+  }
+  return nullptr;
+}
+
+inline bool isEquippable(const Item& item) {
+  const auto type = static_cast<ItemType>(item.type);
+  return type == ItemType::Weapon || type == ItemType::Armor || type == ItemType::Shield ||
+         type == ItemType::Ring || type == ItemType::Amulet;
+}
+
+inline bool isUsable(const Item& item) {
+  const auto type = static_cast<ItemType>(item.type);
+  return type == ItemType::Potion || type == ItemType::Scroll || type == ItemType::Food ||
+         type == ItemType::LootBox;
+}
+
+inline uint32_t itemSaleValue(const Item& item) {
+  const ItemDef* def = itemDefFor(item);
+  return def == nullptr ? 0u : static_cast<uint32_t>(def->value) * item.count;
+}
+
+// Stable, allocation-free grouping by ItemType. Inventory is capped at 20,
+// making insertion sort both simpler and cheaper than introducing a dynamic
+// index container. Same-type items retain their pickup order.
+inline void sortInventoryByType(Item* items, uint8_t count) {
+  for (uint8_t i = 1; i < count; i++) {
+    const Item value = items[i];
+    uint8_t j = i;
+    while (j > 0 && items[j - 1].type > value.type) {
+      items[j] = items[j - 1];
+      j--;
+    }
+    items[j] = value;
+  }
+}
+
+inline void clearNewInventoryFlags(Item* items, uint8_t count) {
+  constexpr uint8_t newMask = static_cast<uint8_t>(ItemFlag::New);
+  for (uint8_t i = 0; i < count; i++) {
+    items[i].flags &= static_cast<uint8_t>(~newMask);
+  }
+}
 inline constexpr int RING_OF_POWER_DEF = ITEM_DEF_COUNT - 1;  // Index of Ring of Power
 inline constexpr int MASTER_KEY_DEF = RING_OF_POWER_DEF - 1;  // Index of Master Key
 // Index of Rations -- forced onto every floor by placeItems() (DungeonGenerator.cpp)

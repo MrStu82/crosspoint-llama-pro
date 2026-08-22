@@ -10,7 +10,7 @@
 // GameActivity can react (no std::function callback members).
 class GameMenuActivity final : public Activity {
  public:
-  enum class MenuAction { RESUME, SAVE_QUIT, ABANDON, THROW };
+  enum class MenuAction { RESUME, SAVE_QUIT, ABANDON, THROW, DROP };
 
   explicit GameMenuActivity(GfxRenderer& renderer, MappedInputManager& mappedInput)
       : Activity("GameMenu", renderer, mappedInput) {}
@@ -20,12 +20,23 @@ class GameMenuActivity final : public Activity {
   void render(RenderLock&&) override;
 
  private:
-  enum class Screen { Menu, Inventory, Character, Pet, Achievements, ThrowTarget };
+  enum class Screen { Menu, Inventory, ItemActions, Character, Pet, Achievements, ThrowTarget };
+  enum class ItemAction : uint8_t { Primary, Throw, Drop, Sell };
 
   void useInventoryItem(int index);
+  void toggleInventoryEquip(int index);
+  void sellInventoryItem(int index);
+  void enterInventory();
+  void leaveInventory();
+  void openItemActions(int inventoryIndex);
+  void executeItemAction(ItemAction action);
+  int itemActionCount() const;
+  ItemAction itemActionForRow(int row) const;
+  void clearNewItemFlags();
 
   void renderMenu();
   void renderInventory();
+  void renderItemActions();
   void renderCharacter();
   void renderPet();
   void renderAchievements();
@@ -44,6 +55,7 @@ class GameMenuActivity final : public Activity {
   // the same content band renderInventory()'s GUI.drawList() draws into, so hit-test rows
   // always match what's drawn. Returns true if the touch was consumed (landed on a row).
   bool handleInventoryTouch();
+  bool handleItemActionTouch();
 
   Screen currentScreen = Screen::Menu;
   int selectedIndex = 0;
@@ -58,4 +70,5 @@ class GameMenuActivity final : public Activity {
   // Inventory index of the item being thrown, captured when entering Screen::ThrowTarget
   // so the later direction press can report it back to GameActivity via MenuResult.
   int throwItemIndex = -1;
+  int itemActionInventoryIndex = -1;
 };

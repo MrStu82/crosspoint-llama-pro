@@ -257,6 +257,9 @@ void SettingsActivity::loop() {
     if (settingIndexFromPoint(tx, ty, tappedSetting)) {
       selectedSettingIndex = tappedSetting;
       toggleCurrentSetting();
+      // Touch activation is not persistent cursor focus. Return focus to the
+      // category strip so Back never needs an extra press to clear a row.
+      selectedSettingIndex = 0;
       requestUpdate();
       return;
     }

@@ -43,20 +43,11 @@ Final-candidate simulator captures:
 - `/workspace/agent/reader-style-final.png` — SHA-256
   `fe321be822d6eabbe000725d33a3d7a2ee04516dfc5aeac3843edd20b4103dd0`.
 
-## 2026-08-25 approved dual-OTA partition expansion
+## 2026-08-25 final safe SD-font revision
 
-Stuart chose partition expansion after the full approved font set exceeded the old
-0x640000-byte OTA slot. The controlled layout keeps two equal rollback-capable
-OTA slots and the terminal coredump partition:
-
-- app0: `0x010000..0x750000` (`0x740000`, 7,602,176 bytes)
-- app1: `0x750000..0xe90000` (`0x740000`, 7,602,176 bytes)
-- spiffs: `0xe90000..0xff0000` (`0x160000`, 1,441,792 bytes)
-- coredump: `0xff0000..0x1000000` (`0x10000`, 65,536 bytes)
-
-The firmware's user content/settings storage is the SD-backed `HalStorage`; no
-SPIFFS partition image is built. The retained 1.375 MiB internal filesystem is
-still over 17x the OEM X4 Pro table's documented 0x14000 SPIFFS allocation.
-`test/partition_layout/verify.py` deterministically rejects overlap, unequal or
-missing OTA slots, less than 1 MiB filesystem capacity, and layouts not ending
-at the 16 MiB flash boundary.
+Partition expansion was explicitly cancelled. `partitions.csv` is byte-identical
+to the original dual-OTA table (two 0x640000 slots, 0x360000 SPIFFS, coredump).
+Lexend Deca and Bitter are now declared in the existing downloadable `.cpfont`
+pipeline at 10/12/14/16 pt with regular/bold/italic/bold-italic styles. The small
+bounded built-ins remain only as offline preview/fallback; broad Latin/Cyrillic
+coverage is carried on SD rather than consuming OTA app space.

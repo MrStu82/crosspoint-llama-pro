@@ -20,10 +20,12 @@ parser.add_argument("size", type=int, help="font size to use.")
 parser.add_argument("fontstack", action="store", nargs='+', help="list of font files, ordered by descending priority.")
 parser.add_argument("--2bit", dest="is2Bit", action="store_true", help="generate 2-bit greyscale bitmap instead of 1-bit black and white.")
 parser.add_argument("--additional-intervals", dest="additional_intervals", action="append", help="Additional code point intervals to export as min,max. This argument can be repeated.")
-parser.add_argument("--exact-intervals", dest="exact_intervals", action="store_true", help="Ignore the built-in Latin/Cyrillic/etc block list entirely and export ONLY the intervals given via --additional-intervals. For minimal digit/symbol subset fonts.")
+parser.add_argument("--exact-intervals", dest="exact_intervals", action="store_true", help="Ignore the built-in interval list and export only --additional-intervals.")
+parser.add_argument("--font-include-intervals", dest="font_include_intervals", action="append", help="Restrict a font-stack entry to specific intervals. Format: faceIndex:min,max . This argument can be repeated.")
 parser.add_argument("--compress", dest="compress", action="store_true", help="Compress glyph bitmaps using DEFLATE with group-based compression.")
 parser.add_argument("--force-autohint", dest="force_autohint", action="store_true", help="Force FreeType auto-hinter instead of native font hinting. Improves stem width consistency for fonts with weak or no native TrueType hints.")
 parser.add_argument("--pnum", dest="pnum", action="store_true", help="Use proportional numerals (pnum OpenType feature) instead of default tabular figures. Reduces visual gaps between digits in running prose.")
+parser.add_argument("--darken-aa", dest="darken_aa", action="store_true", help="Use darker 2-bit anti-aliasing thresholds for reader fonts.")
 args = parser.parse_args()
 
 import freetype
@@ -35,7 +37,8 @@ font_stack = [freetype.Face(f) for f in args.fontstack]
 is2Bit = args.is2Bit
 size = args.size
 font_name = args.name
-load_flags = freetype.FT_LOAD_RENDER
+aa_thresholds = (3, 6, 10) if args.darken_aa else (4, 8, 12)
+load_flags = freetype.FT_LOAD_RENDER | freetype.FT_LOAD_NO_BITMAP
 if args.force_autohint:
     load_flags |= freetype.FT_LOAD_FORCE_AUTOHINT
 
@@ -136,6 +139,29 @@ intervals = [
     (0xFFFD, 0xFFFD),
 ]
 
+# Keep common non-rendering controls/format marks present but invisible when a
+# requested interval includes them. Some source fonts expose cmap entries for
+# these, often with blank glyphs; generating our own zero-width glyph keeps the
+# output consistent and avoids showing U+FFFD for text cleanup artifacts.
+SYNTHETIC_BLANK_CODEPOINT_RANGES = (
+    (0x0000, 0x001F),  # C0 controls
+    (0x007F, 0x009F),  # DEL + C1 controls / mis-decoded Windows-1252 bytes
+    (0x00AD, 0x00AD),  # soft hyphen
+    (0x034F, 0x034F),  # combining grapheme joiner
+    (0x061C, 0x061C),  # Arabic letter mark
+    (0x180B, 0x180F),  # Mongolian variation selectors / separator
+    (0x200B, 0x200F),  # zero-width and bidi marks
+    (0x202A, 0x202E),  # bidi embedding/override marks
+    (0x2060, 0x2064),  # word joiner / invisible operators
+    (0x2066, 0x206F),  # bidi isolates / invisible controls
+    (0xFE00, 0xFE0F),  # variation selectors
+    (0xFEFF, 0xFEFF),  # zero-width no-break space / BOM
+)
+
+
+def is_synthetic_blank_codepoint(code_point: int) -> bool:
+    return any(start <= code_point <= end for start, end in SYNTHETIC_BLANK_CODEPOINT_RANGES)
+
 add_ints = []
 if args.additional_intervals:
     add_ints = [tuple([int(n, base=0) for n in i.split(",")]) for i in args.additional_intervals]
@@ -144,6 +170,22 @@ if args.exact_intervals:
     if not add_ints:
         parser.error("--exact-intervals requires at least one --additional-intervals")
     intervals = []
+
+font_include_intervals = {}
+if args.font_include_intervals:
+    for spec in args.font_include_intervals:
+        face_str, interval_str = spec.split(":", 1)
+        face_idx = int(face_str, base=0)
+        interval = tuple(int(n, base=0) for n in interval_str.split(","))
+        if face_idx < 0 or face_idx >= len(font_stack):
+            raise ValueError(f"font-include-intervals face index out of range: {spec}")
+        font_include_intervals.setdefault(face_idx, []).append(interval)
+
+def code_point_in_intervals(code_point, cp_intervals):
+    for i_start, i_end in cp_intervals:
+        if i_start <= code_point <= i_end:
+            return True
+    return False
 
 def norm_floor(val):
     return int(math.floor(val / (1 << 6)))
@@ -240,6 +282,10 @@ if args.pnum:
 def load_glyph(code_point):
     face_index = 0
     while face_index < len(font_stack):
+        allowed_intervals = font_include_intervals.get(face_index)
+        if allowed_intervals and not code_point_in_intervals(code_point, allowed_intervals):
+            face_index += 1
+            continue
         face = font_stack[face_index]
         glyph_index = pnum_glyph_overrides.get((face_index, code_point))
         if glyph_index is None:
@@ -263,7 +309,7 @@ for i_start, i_end in unvalidated_intervals:
     start = i_start
     for code_point in range(i_start, i_end + 1):
         face = load_glyph(code_point)
-        if face is None:
+        if face is None and not is_synthetic_blank_codepoint(code_point):
             if start < code_point:
                 intervals.append((start, code_point - 1))
             start = code_point + 1
@@ -278,7 +324,35 @@ all_glyphs = []
 
 for i_start, i_end in intervals:
     for code_point in range(i_start, i_end + 1):
+        if is_synthetic_blank_codepoint(code_point):
+            glyph = GlyphProps(
+                width = 0,
+                height = 0,
+                advance_x = 0,
+                left = 0,
+                top = 0,
+                data_length = 0,
+                data_offset = total_size,
+                code_point = code_point,
+            )
+            all_glyphs.append((glyph, b''))
+            continue
+
         face = load_glyph(code_point)
+        if face is None:
+            glyph = GlyphProps(
+                width = 0,
+                height = 0,
+                advance_x = 0,
+                left = 0,
+                top = 0,
+                data_length = 0,
+                data_offset = total_size,
+                code_point = code_point,
+            )
+            all_glyphs.append((glyph, b''))
+            continue
+
         bitmap = face.glyph.bitmap
 
         # Build out 4-bit greyscale bitmap
@@ -299,7 +373,8 @@ for i_start, i_end in intervals:
                 px = 0
 
         if is2Bit:
-            # 0-3 white, 4-7 light grey, 8-11 dark grey, 12-15 black
+            # Default: 0-3 white, 4-7 light grey, 8-11 dark grey, 12-15 black.
+            # --darken-aa lowers the cutoffs to push edge pixels one shade darker.
             # Downsample to 2-bit bitmap
             pixels2b = []
             px = 0
@@ -310,11 +385,11 @@ for i_start, i_end in intervals:
                     bm = pixels4g[y * pitch + (x // 2)]
                     bm = (bm >> ((x % 2) * 4)) & 0xF
 
-                    if bm >= 12:
+                    if bm >= aa_thresholds[2]:
                         px += 3
-                    elif bm >= 8:
+                    elif bm >= aa_thresholds[1]:
                         px += 2
-                    elif bm >= 4:
+                    elif bm >= aa_thresholds[0]:
                         px += 1
 
                     if (y * bitmap.width + x) % 4 == 3:
@@ -860,7 +935,7 @@ if compress:
                 f"Glyph {i} (code point U+{props.code_point:04X}) byte-aligned size "
                 f"{glyph_aligned_size} exceeds GROUP_MAX_UNCOMPRESSED_BYTES="
                 f"{GROUP_MAX_UNCOMPRESSED_BYTES}. Consider: (1) increasing GROUP_MAX_UNCOMPRESSED_BYTES, "
-                f"(2) reducing font size, or (3) excluding this codepoint."  
+                f"(2) reducing font size, or (3) excluding this codepoint."
             )
         size_overflow = group_uncompressed + glyph_aligned_size > GROUP_MAX_UNCOMPRESSED_BYTES
 
@@ -992,14 +1067,14 @@ if ligature_pairs:
         print(f"    {{ 0x{packed_pair:08X}, 0x{lig_cp:04X} }}, // {cp_label(packed_pair >> 16)} {cp_label(packed_pair & 0xFFFF)} -> {cp_label(lig_cp)}")
     print("};\n")
 
-print(f"static const EpdFontData {font_name} = {{")
+print(f"static constexpr EpdFontData {font_name} = {{")
 print(f"    {font_name}Bitmaps,")
 print(f"    {font_name}Glyphs,")
 print(f"    {font_name}Intervals,")
 print(f"    {len(intervals)},")
-print(f"    {norm_ceil(face.size.height)},")
-print(f"    {norm_ceil(face.size.ascender)},")
-print(f"    {norm_floor(face.size.descender)},")
+print(f"    {norm_ceil(font_stack[0].size.height)},")
+print(f"    {norm_ceil(font_stack[0].size.ascender)},")
+print(f"    {norm_floor(font_stack[0].size.descender)},")
 print(f"    {'true' if is2Bit else 'false'},")
 if compress:
     print(f"    {font_name}Groups,")

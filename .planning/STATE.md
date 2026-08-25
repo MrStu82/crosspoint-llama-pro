@@ -18,11 +18,11 @@ See: .planning/PROJECT.md (updated 2026-08-15)
 **Core value:** Every screen renders correctly and fully on-panel on the X4 Pro, with no clipped/overflowing content and no touch targets crowded against the bezel.
 **Current focus:** Reader convergence milestone (Phases 13-16): audited upstream fixes, approved CrossInk-derived reader capabilities, pinned sleep favourite, then simulator/release gate. Stuart approved the text-only black/white v2 prototype on 2026-08-25.
 
-**2026-08-25 controlled revision:** Stuart approved expanding the app partition.
-The full approved Lexend Deca/Bitter payload is restored; the 16 MiB table now
-keeps two equal 0x740000 OTA slots, 0x160000 SPIFFS, and the existing coredump.
-The deterministic layout check passes. One authorised X4 Pro release build is
-the next action.
+**2026-08-25 final safe revision:** partition expansion is cancelled. The
+original dual-OTA/SPIFFS table is preserved. Lexend Deca and Bitter use the
+existing downloadable SD `.cpfont` pipeline at 10/12/14/16 pt, with only the
+bounded offline preview/fallback retained in firmware. One authorised X4 Pro
+release build is the next action.
 
 ## Current Position
 
@@ -137,6 +137,6 @@ Items acknowledged and carried forward from previous milestone close:
 - **Resume file:** — a path, or "None (see Next actionable item)" — never a bare "None" with nothing else armed.
 
 Last session: 2026-08-25
-Stopped at: Reader convergence Phase 16 controlled dual-OTA expansion prepared from `4e4789211cfd9469ca6f18a87450cd18f5d15776`; deterministic partition layout check green.
+Stopped at: Reader convergence Phase 16 safe SD-font revision prepared on top of the cancelled expansion commit; original partition table restored.
 Next actionable item: Execute the single authorised Trantor X4 Pro release build, carve/verify the bare app image, then run one Pixel/Gauge gate.
 Resume file: `.planning/evidence/reader-convergence-gate.md`

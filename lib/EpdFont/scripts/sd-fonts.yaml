@@ -106,12 +106,12 @@ families:
   - name: Bitter
     description: "Slab serif designed for e-ink (Latin, Cyrillic)"
     intervals: latin-ext,cyrillic
-    sizes: [12, 14, 16, 18]
+    sizes: [10, 12, 14, 16]
     styles:
-      regular:    {url: "https://raw.githubusercontent.com/google/fonts/main/ofl/bitter/Bitter%5Bwght%5D.ttf", variable: {wght: 500}}
-      bold:       {url: "https://raw.githubusercontent.com/google/fonts/main/ofl/bitter/Bitter%5Bwght%5D.ttf", variable: {wght: 700}}
-      italic:     {url: "https://raw.githubusercontent.com/google/fonts/main/ofl/bitter/Bitter-Italic%5Bwght%5D.ttf", variable: {wght: 500}}
-      bolditalic: {url: "https://raw.githubusercontent.com/google/fonts/main/ofl/bitter/Bitter-Italic%5Bwght%5D.ttf", variable: {wght: 700}}
+      regular:    {path: "builtinFonts/source/Bitter/Bitter-Regular.ttf"}
+      bold:       {path: "builtinFonts/source/Bitter/Bitter-Bold.ttf"}
+      italic:     {path: "builtinFonts/source/Bitter/Bitter-Italic.ttf"}
+      bolditalic: {path: "builtinFonts/source/Bitter/Bitter-BoldItalic.ttf"}
 
   - name: Domitian
     description: "A humanist serif for literary reading (Latin, Greek, Cyrillic)"
@@ -154,6 +154,16 @@ families:
       bold:       {path: "builtinFonts/source/NotoSans/NotoSans-Bold.ttf"}
       italic:     {path: "builtinFonts/source/NotoSans/NotoSans-Italic.ttf"}
       bolditalic: {path: "builtinFonts/source/NotoSans/NotoSans-BoldItalic.ttf"}
+
+  - name: LexendDeca
+    description: "Low-clutter sans-serif for comfortable reading (Latin)"
+    intervals: latin-ext
+    sizes: [10, 12, 14, 16]
+    styles:
+      regular:    {path: "builtinFonts/source/LexendDeca/LexendDeca-Regular.ttf"}
+      bold:       {path: "builtinFonts/source/LexendDeca/LexendDeca-Bold.ttf"}
+      italic:     {path: "builtinFonts/source/LexendDeca/LexendDeca-Italic.ttf"}
+      bolditalic: {path: "builtinFonts/source/LexendDeca/LexendDeca-BoldItalic.ttf"}
 
   - name: Inter
     description: "Modern sans-serif (Latin, Greek, Cyrillic)"

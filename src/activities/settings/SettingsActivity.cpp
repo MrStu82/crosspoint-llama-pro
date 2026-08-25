@@ -85,9 +85,11 @@ void SettingsActivity::rebuildSettingsLists() {
     systemSettings.push_back(SettingInfo::Action(StrId::STR_CHECK_UPDATES, SettingAction::CheckForUpdates));
   }
   systemSettings.push_back(SettingInfo::Action(StrId::STR_SD_FIRMWARE_UPDATE, SettingAction::SdFirmwareUpdate));
+  #ifndef SIMULATOR
   if (BoardConfig::hasUsbMassStorage()) {
     systemSettings.push_back(SettingInfo::Action(StrId::STR_USB_TRANSFER, SettingAction::UsbTransfer));
   }
+  #endif
   systemSettings.push_back(SettingInfo::Action(StrId::STR_LANGUAGE, SettingAction::Language));
   systemSettings.push_back(SettingInfo::Action(StrId::STR_DEBUG_PANEL, SettingAction::DebugPanel));
   readerSettings.insert(readerSettings.begin(),

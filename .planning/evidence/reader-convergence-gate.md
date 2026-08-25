@@ -42,3 +42,21 @@ Final-candidate simulator captures:
   `6e776d5da69d02e8165e5bcd196ecbd35835d2023e0073d5d36840758ed4d21e`.
 - `/workspace/agent/reader-style-final.png` — SHA-256
   `fe321be822d6eabbe000725d33a3d7a2ee04516dfc5aeac3843edd20b4103dd0`.
+
+## 2026-08-25 approved dual-OTA partition expansion
+
+Stuart chose partition expansion after the full approved font set exceeded the old
+0x640000-byte OTA slot. The controlled layout keeps two equal rollback-capable
+OTA slots and the terminal coredump partition:
+
+- app0: `0x010000..0x750000` (`0x740000`, 7,602,176 bytes)
+- app1: `0x750000..0xe90000` (`0x740000`, 7,602,176 bytes)
+- spiffs: `0xe90000..0xff0000` (`0x160000`, 1,441,792 bytes)
+- coredump: `0xff0000..0x1000000` (`0x10000`, 65,536 bytes)
+
+The firmware's user content/settings storage is the SD-backed `HalStorage`; no
+SPIFFS partition image is built. The retained 1.375 MiB internal filesystem is
+still over 17x the OEM X4 Pro table's documented 0x14000 SPIFFS allocation.
+`test/partition_layout/verify.py` deterministically rejects overlap, unequal or
+missing OTA slots, less than 1 MiB filesystem capacity, and layouts not ending
+at the 16 MiB flash boundary.

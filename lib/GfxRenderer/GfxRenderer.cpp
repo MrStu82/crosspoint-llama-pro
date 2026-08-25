@@ -1693,7 +1693,12 @@ void GfxRenderer::displayWindow(int x, int y, int width, int height, bool turnOf
   const AlignedMemRect mem = screenRectToAlignedMemRect(orientation, x, y, width, height, panelWidth, panelHeight);
   if (!mem.valid) return;
 
+#ifdef SIMULATOR
+  (void)turnOffScreen;
+  display.displayWindow(mem.x, mem.y, mem.w, mem.h);
+#else
   display.displayWindow(mem.x, mem.y, mem.w, mem.h, turnOffScreen);
+#endif
 }
 
 size_t GfxRenderer::readFramebufferRegion(int x, int y, int w, int h, uint8_t* dst, size_t dstCapacity) const {
@@ -2234,7 +2239,12 @@ void GfxRenderer::writeGrayscalePlaneStrip(bool lsbPlane, const uint8_t* scratch
 bool GfxRenderer::supportsStripGrayscale() const { return display.supportsStripGrayscale(); }
 
 void GfxRenderer::setCustomLut(bool enabled, const unsigned char* lutData) const {
+#ifdef SIMULATOR
+  (void)enabled;
+  (void)lutData;
+#else
   display.setCustomLut(enabled, lutData);
+#endif
 }
 
 void GfxRenderer::freeBwBufferChunks() {

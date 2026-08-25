@@ -48,19 +48,35 @@ void DebugPanelActivity::render(RenderLock&&) {
     y += lineHeight;
   };
 
+  #ifdef SIMULATOR
+  snprintf(buf, sizeof(buf), "simulator (X4 Pro)");
+  #else
   snprintf(buf, sizeof(buf), "%s (%s)", HalGPIO::getDisplayControllerName(), HalGPIO::getDisplayControllerSource());
+  #endif
   row(tr(STR_DEBUG_DISPLAY), buf);
 
-  snprintf(buf, sizeof(buf), "%ux%u, 1-bit", BoardConfig::ACTIVE.displayWidth, BoardConfig::ACTIVE.displayHeight);
+  snprintf(buf, sizeof(buf), "%dx%d, 1-bit", renderer.getScreenWidth(), renderer.getScreenHeight());
   row(tr(STR_DEBUG_RESOLUTION), buf);
 
+  #ifdef SIMULATOR
+  snprintf(buf, sizeof(buf), "native host");
+  #else
   snprintf(buf, sizeof(buf), "%s rev %d", ESP.getChipModel(), ESP.getChipRevision());
+  #endif
   row(tr(STR_DEBUG_CHIP), buf);
 
+  #ifdef SIMULATOR
+  snprintf(buf, sizeof(buf), "host-backed");
+  #else
   snprintf(buf, sizeof(buf), "%u MB", static_cast<unsigned>(ESP.getFlashChipSize() / (1024 * 1024)));
+  #endif
   row(tr(STR_DEBUG_FLASH), buf);
 
+  #ifdef SIMULATOR
+  snprintf(buf, sizeof(buf), "host-backed");
+  #else
   snprintf(buf, sizeof(buf), "%u MB", static_cast<unsigned>(ESP.getPsramSize() / (1024 * 1024)));
+  #endif
   row(tr(STR_DEBUG_PSRAM), buf);
 
   row(tr(STR_DEBUG_FIRMWARE), FIRMWARE_GIT_SHA);

@@ -16,6 +16,16 @@
 #include "components/UITheme.h"
 #include "fontIds.h"
 
+namespace {
+bool readStationMac(uint8_t (&mac)[6]) {
+#ifdef SIMULATOR
+  return WiFi.macAddress(mac) != nullptr;
+#else
+  return esp_read_mac(mac, ESP_MAC_WIFI_STA) == ESP_OK;
+#endif
+}
+}  // namespace
+
 void WifiSelectionActivity::onEnter() {
   Activity::onEnter();
 
@@ -49,12 +59,11 @@ void WifiSelectionActivity::onEnter() {
   // is often still off (notably after an X4 Pro WiFi session).
   uint8_t mac[6] = {};
   char macStr[64];
-  const esp_err_t macResult = esp_read_mac(mac, ESP_MAC_WIFI_STA);
-  if (macResult == ESP_OK) {
+  if (readStationMac(mac)) {
     snprintf(macStr, sizeof(macStr), "%s %02x-%02x-%02x-%02x-%02x-%02x", tr(STR_MAC_ADDRESS), mac[0], mac[1], mac[2],
              mac[3], mac[4], mac[5]);
   } else {
-    LOG_ERR("WIFI", "Failed to read station MAC (err=%d)", static_cast<int>(macResult));
+    LOG_ERR("WIFI", "Failed to read station MAC");
     snprintf(macStr, sizeof(macStr), "%s --", tr(STR_MAC_ADDRESS));
   }
   cachedMacAddress = std::string(macStr);
@@ -370,14 +379,13 @@ void WifiSelectionActivity::attemptConnection() {
 
   // Set hostname so routers show "CrossPoint-Reader-AABBCCDDEEFF" instead of "esp32-XXXXXXXXXXXX"
   uint8_t mac[6] = {};
-  const esp_err_t macResult = esp_read_mac(mac, ESP_MAC_WIFI_STA);
-  if (macResult == ESP_OK) {
+  if (readStationMac(mac)) {
     char hostname[sizeof("CrossPoint-Reader-") + 12];
     snprintf(hostname, sizeof(hostname), "CrossPoint-Reader-%02X%02X%02X%02X%02X%02X", mac[0], mac[1], mac[2], mac[3],
              mac[4], mac[5]);
     WiFi.setHostname(hostname);
   } else {
-    LOG_ERR("WIFI", "Failed to read station MAC for hostname (err=%d)", static_cast<int>(macResult));
+    LOG_ERR("WIFI", "Failed to read station MAC for hostname");
   }
 
   if (selectedRequiresPassword && !enteredPassword.empty()) {

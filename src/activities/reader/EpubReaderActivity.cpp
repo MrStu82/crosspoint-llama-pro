@@ -35,6 +35,7 @@
 #include "RecentBooksStore.h"
 #include "SdCardFontSystem.h"
 #include "activities/home/StatsManager.h"
+#include "util/BookReadingStats.h"
 #include "activities/settings/TextSettingsActivity.h"
 #include "components/UITheme.h"
 #include "fontIds.h"
@@ -211,7 +212,7 @@ void EpubReaderActivity::onEnter() {
   // Save current epub as last opened epub and add to recent books
   APP_STATE.openEpubPath = epub->getPath();
   APP_STATE.saveToFile();
-  RECENT_BOOKS.addBook(epub->getPath(), epub->getTitle(), epub->getAuthor(), epub->getThumbBmpPath());
+  RECENT_BOOKS.addBook(epub->getPath(), epub->getTitle(), epub->getAuthor(), epub->getThumbBmpPath(), epub->getIsbn());
   StatsManager::getInstance().incrementBooksOpened();
   sessionStartTime = millis();
 
@@ -227,6 +228,7 @@ void EpubReaderActivity::onExit() {
   if (sessionStartTime != 0UL) {
     const unsigned long secs = (millis() - sessionStartTime) / 1000;
     StatsManager::getInstance().addReadingTimeSeconds(secs);
+    BookReadingStats::add(epub->getPath(), secs, 0);
     sessionStartTime = 0UL;
   }
   StatsManager::getInstance().save();
@@ -457,7 +459,8 @@ void EpubReaderActivity::loop() {
       recentsEntryRemoved = RECENT_BOOKS.removeByPath(epub->getPath());
     } else if (!atEndOfBook && recentsEntryRemoved) {
       // Re-add (goes to front of the list via addBook — accepted ordering side effect).
-      RECENT_BOOKS.addBook(epub->getPath(), epub->getTitle(), epub->getAuthor(), epub->getThumbBmpPath());
+      RECENT_BOOKS.addBook(epub->getPath(), epub->getTitle(), epub->getAuthor(), epub->getThumbBmpPath(),
+                           epub->getIsbn());
       recentsEntryRemoved = false;
     }
   }
@@ -1110,10 +1113,12 @@ void EpubReaderActivity::pageTurn(bool isForwardTurn) {
   if (sessionStartTime != 0UL) {
     const unsigned long secs = (millis() - sessionStartTime) / 1000;
     StatsManager::getInstance().addReadingTimeSeconds(secs);
+    BookReadingStats::add(epub->getPath(), secs, isForwardTurn ? 1 : 0);
     sessionStartTime += secs * 1000;
   }
   // Only forward turns count as pages read -- paging back to reread shouldn't inflate the count.
   if (isForwardTurn) {
+    if (sessionStartTime == 0UL) BookReadingStats::add(epub->getPath(), 0, 1);
     StatsManager::getInstance().incrementPagesRead();
   }
   requestUpdate();

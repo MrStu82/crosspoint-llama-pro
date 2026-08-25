@@ -38,6 +38,11 @@ class HttpDownloader {
   static bool fetchUrl(const std::string& url, const DataCallback& onData, const std::string& username = "",
                        const std::string& password = "");
 
+  // POST a JSON document with a bearer token. The token and payload are never
+  // logged; intended for scoped metadata APIs, not user-content uploads.
+  static bool postJson(const std::string& url, const std::string& payload, const std::string& bearerToken,
+                       std::string& outContent);
+
   /**
    * Download a file to the SD card with optional credentials.
    */

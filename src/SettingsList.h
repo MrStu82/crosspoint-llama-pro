@@ -13,6 +13,7 @@
 #include <vector>
 
 #include "CrossPointSettings.h"
+#include "HardcoverCredentialStore.h"
 #include "KOReaderCredentialStore.h"
 #include "ReaderFontSizes.h"
 #include "activities/settings/SettingsActivity.h"
@@ -381,6 +382,17 @@ inline std::vector<SettingInfo> getSettingsList(const SdCardFontRegistry* regist
               KOREADER_STORE.saveToFile();
             },
             "koSyncBehavior", StrId::STR_KOREADER_SYNC),
+        // Hardcover beta catalog API (web provisioning only). The PAT is
+        // device-bound/obfuscated on disk and omitted from GET /api/settings.
+        SettingInfo::DynamicString(
+            StrId::STR_HARDCOVER_API_TOKEN, [] { return HARDCOVER_STORE.getToken(); },
+            [](const std::string& v) {
+              HARDCOVER_STORE.setToken(v);
+              HARDCOVER_STORE.saveToFile();
+            },
+            "hardcoverApiToken")
+            .withObfuscated(),
+
         // --- Status Bar Settings (web-only, uses StatusBarSettingsActivity) ---
         SettingInfo::Toggle(StrId::STR_CHAPTER_PAGE_COUNT, &CrossPointSettings::statusBarChapterPageCount,
                             "statusBarChapterPageCount", StrId::STR_CUSTOMISE_STATUS_BAR),

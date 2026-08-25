@@ -30,6 +30,16 @@ bool startsWithImageMediaType(const std::string& mediaType) {
 
   return true;
 }
+
+std::string canonicalIsbn(const std::string& identifier) {
+  std::string value;
+  value.reserve(13);
+  for (const unsigned char c : identifier) {
+    if (std::isdigit(c)) value.push_back(static_cast<char>(c));
+    else if ((c == 'x' || c == 'X') && value.size() == 9) value.push_back('X');
+  }
+  return value.size() == 10 || value.size() == 13 ? value : std::string{};
+}
 }  // namespace
 
 bool ContentOpfParser::setup() {
@@ -120,6 +130,12 @@ void XMLCALL ContentOpfParser::startElement(void* userData, const XML_Char* name
 
   if (self->state == IN_METADATA && xmlLocalNameEquals(name, "language")) {
     self->state = IN_BOOK_LANGUAGE;
+    return;
+  }
+
+  if (self->state == IN_METADATA && xmlLocalNameEquals(name, "identifier")) {
+    self->currentIdentifier.clear();
+    self->state = IN_BOOK_IDENTIFIER;
     return;
   }
 
@@ -356,6 +372,12 @@ void XMLCALL ContentOpfParser::characterData(void* userData, const XML_Char* s, 
     self->language.append(s, len);
     return;
   }
+
+
+  if (self->state == IN_BOOK_IDENTIFIER) {
+    self->currentIdentifier.append(s, len);
+    return;
+  }
 }
 
 void XMLCALL ContentOpfParser::endElement(void* userData, const XML_Char* name) {
@@ -391,6 +413,13 @@ void XMLCALL ContentOpfParser::endElement(void* userData, const XML_Char* name) 
   }
 
   if (self->state == IN_BOOK_LANGUAGE && xmlLocalNameEquals(name, "language")) {
+    self->state = IN_METADATA;
+    return;
+  }
+
+  if (self->state == IN_BOOK_IDENTIFIER && xmlLocalNameEquals(name, "identifier")) {
+    if (self->isbn.empty()) self->isbn = canonicalIsbn(self->currentIdentifier);
+    self->currentIdentifier.clear();
     self->state = IN_METADATA;
     return;
   }

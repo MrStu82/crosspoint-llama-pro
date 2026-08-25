@@ -1213,7 +1213,12 @@ void CrossPointWebServer::handleGetSettings() const {
       }
       case SettingType::STRING: {
         doc["type"] = "string";
-        if (s.stringGetter) {
+        if (s.obfuscated) {
+          const std::string current = s.stringGetter ? s.stringGetter() :
+              std::string(reinterpret_cast<const char*>(&SETTINGS) + s.stringOffset);
+          doc["value"] = "";
+          doc["hasValue"] = !current.empty();
+        } else if (s.stringGetter) {
           doc["value"] = s.stringGetter();
         } else if (s.stringMaxLen > 0) {
           doc["value"] = reinterpret_cast<const char*>(&SETTINGS) + s.stringOffset;

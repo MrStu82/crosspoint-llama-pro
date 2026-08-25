@@ -23,6 +23,7 @@
 #include "CrossPointState.h"
 #include "Frontlight.h"
 #include "KOReaderCredentialStore.h"
+#include "HardcoverCredentialStore.h"
 #include "MappedInputManager.h"
 #include "OpdsServerStore.h"
 #include "RecentBooksStore.h"
@@ -46,6 +47,16 @@ FrontlightManager frontlightManager;
 static unsigned long allowSleepAt = 0;
 
 // Fonts
+EpdFont caveat15Font(&caveat_15_regular);
+EpdFontFamily caveat15FontFamily(&caveat15Font);
+EpdFont caveat18Font(&caveat_18_regular);
+EpdFontFamily caveat18FontFamily(&caveat18Font);
+EpdFont caveat27Font(&caveat_27_regular);
+EpdFontFamily caveat27FontFamily(&caveat27Font);
+EpdFont caveat30Font(&caveat_30_regular);
+EpdFontFamily caveat30FontFamily(&caveat30Font);
+EpdFont caveat42Font(&caveat_42_regular);
+EpdFontFamily caveat42FontFamily(&caveat42Font);
 EpdFont notoserif14RegularFont(&notoserif_14_regular);
 EpdFont notoserif14BoldFont(&notoserif_14_bold);
 EpdFont notoserif14ItalicFont(&notoserif_14_italic);
@@ -290,6 +301,11 @@ void setupDisplayAndFonts(bool seamless = false) {
   }
   fontCacheManager.setFontDecompressor(&fontDecompressor);
   renderer.setFontCacheManager(&fontCacheManager);
+  renderer.insertFont(CAVEAT_15_FONT_ID, caveat15FontFamily);
+  renderer.insertFont(CAVEAT_18_FONT_ID, caveat18FontFamily);
+  renderer.insertFont(CAVEAT_27_FONT_ID, caveat27FontFamily);
+  renderer.insertFont(CAVEAT_30_FONT_ID, caveat30FontFamily);
+  renderer.insertFont(CAVEAT_42_FONT_ID, caveat42FontFamily);
   renderer.insertFont(NOTOSERIF_14_FONT_ID, notoserif14FontFamily);
 #ifndef OMIT_FONTS
   renderer.insertFont(NOTOSERIF_12_FONT_ID, notoserif12FontFamily);
@@ -381,6 +397,7 @@ void setup() {
   RECENT_BOOKS.loadFromFile();
   I18N.setLanguage(static_cast<Language>(SETTINGS.language));
   KOREADER_STORE.loadFromFile();
+  HARDCOVER_STORE.loadFromFile();
   OPDS_STORE.loadFromFile();
   UITheme::getInstance().reload();
   ButtonNavigator::setMappedInputManager(mappedInputManager);

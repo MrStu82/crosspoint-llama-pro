@@ -5,12 +5,17 @@
 #include <FsHelpers.h>
 #include <GfxRenderer.h>
 #include <HalDisplay.h>
+#include <HalPowerManager.h>
 #include <HalStorage.h>
 #include <I18n.h>
 #include <Utf8.h>
 #include <Xtc.h>
 
+#include <algorithm>
 #include <cstring>
+#include <ctime>
+#include <cstdio>
+#include <cctype>
 #include <vector>
 
 #include "CrossPointSettings.h"
@@ -20,7 +25,73 @@
 #include "RecentBooksStore.h"
 #include "components/UITheme.h"
 #include "fontIds.h"
+#include "network/HardcoverRating.h"
 #include "util/BookProgressBadge.h"
+#include "util/BookReadingStats.h"
+
+namespace {
+const Rect kInkCover{20, 99, 290, 438};
+const Rect kInkFooter{14, 728, 452, 60};
+constexpr int kInkTabWidth = 72;
+constexpr int kInkTabGap = 4;
+
+int textTop(const GfxRenderer& renderer, int fontId, int baseline) {
+  return baseline - renderer.getFontAscenderSize(fontId);
+}
+
+void drawCentered(const GfxRenderer& renderer, int fontId, int cx, int baseline, const char* text,
+                  bool black = true, EpdFontFamily::Style style = EpdFontFamily::REGULAR) {
+  renderer.drawText(fontId, cx - renderer.getTextWidth(fontId, text, style) / 2,
+                    textTop(renderer, fontId, baseline), text, black, style);
+}
+
+void drawStar(const GfxRenderer& renderer, int cx, int cy, bool filled, bool partial) {
+  constexpr int px[10] = {0, 3, 10, 5, 6, 0, -6, -5, -10, -3};
+  constexpr int py[10] = {-10, -3, -3, 2, 9, 5, 9, 2, -3, -3};
+  for (int i = 0; i < 10; ++i) renderer.drawLine(cx + px[i], cy + py[i], cx + px[(i + 1) % 10], cy + py[(i + 1) % 10]);
+  if (filled) {
+    for (int y = cy - 7; y <= cy + 5; ++y) {
+      const int half = 2 + (y - (cy - 7)) / 2;
+      renderer.drawLine(cx - std::min(8, half), y, cx + std::min(8, half), y);
+    }
+  } else if (partial) {
+    for (int y = cy - 7; y <= cy + 5; y += 2) renderer.drawLine(cx - 7, y, cx - 1, y);
+  }
+}
+
+void drawFooterIcon(const GfxRenderer& r, int index, int cx, int cy, bool black) {
+  // Deliberately tiny, strict 1-bit line icons. Geometry is centred on cx for
+  // both draw and the 72px hitbox used below.
+  if (index == 0) {  // Home
+    r.drawLine(cx - 9, cy, cx, cy - 8, black); r.drawLine(cx, cy - 8, cx + 9, cy, black);
+    r.drawRect(cx - 7, cy, 14, 10, black);
+  } else if (index == 1) {  // Books on shelf
+    r.drawRect(cx - 10, cy - 8, 5, 15, black); r.drawRect(cx - 3, cy - 8, 5, 15, black);
+    r.drawRect(cx + 4, cy - 6, 5, 13, black); r.drawLine(cx - 11, cy + 9, cx + 11, cy + 9, black);
+  } else if (index == 2) {  // File cabinet
+    r.drawRect(cx - 9, cy - 9, 18, 18, black); r.drawLine(cx - 9, cy, cx + 9, cy, black);
+    r.drawLine(cx - 3, cy - 5, cx + 3, cy - 5, black); r.drawLine(cx - 3, cy + 4, cx + 3, cy + 4, black);
+  } else if (index == 3) {  // Game pad
+    r.drawRoundedRect(cx - 11, cy - 7, 22, 14, 1, 4, black);
+    r.drawLine(cx - 7, cy, cx - 1, cy, black); r.drawLine(cx - 4, cy - 3, cx - 4, cy + 3, black);
+    r.fillRect(cx + 4, cy - 2, 2, 2, black); r.fillRect(cx + 7, cy + 1, 2, 2, black);
+  } else if (index == 4) {  // Transfer
+    r.drawLine(cx - 10, cy - 4, cx + 7, cy - 4, black); r.drawLine(cx + 7, cy - 4, cx + 3, cy - 8, black);
+    r.drawLine(cx + 10, cy + 4, cx - 7, cy + 4, black); r.drawLine(cx - 7, cy + 4, cx - 3, cy + 8, black);
+  } else {  // Continuous eight-tooth outline cog with clear bore.
+    constexpr int ox[16] = {-3,-3,3,3,8,8,11,11,8,8,3,3,-3,-3,-8,-8};
+    constexpr int oy[16] = {-11,-8,-8,-11,-8,-5,-5,3,3,8,8,11,11,8,8,3};
+    for (int i = 0; i < 16; ++i) r.drawLine(cx + ox[i], cy + oy[i], cx + ox[(i + 1) % 16], cy + oy[(i + 1) % 16], 2, black);
+    r.drawRoundedRect(cx - 4, cy - 4, 8, 8, 1, 4, black);
+  }
+}
+
+std::string upper(const std::string& value) {
+  std::string result = value;
+  for (char& c : result) c = static_cast<char>(std::toupper(static_cast<unsigned char>(c)));
+  return result;
+}
+}  // namespace
 
 int HomeActivity::getMenuItemCount() const {
   int count = 6;  // File Browser, Recents, File transfer, Settings, Stats, Games
@@ -120,6 +191,12 @@ void HomeActivity::onEnter() {
   const auto& metrics = UITheme::getInstance().getMetrics();
   loadRecentBooks(metrics.homeRecentBooksCount);
 
+  if (usesInkPointHome() && !recentBooks.empty()) {
+    const auto& book = recentBooks.front();
+    rating = HardcoverRating::loadLastGood({book.path, book.isbn, book.title, book.author});
+    bookStats = BookReadingStats::read(book.path);
+  }
+
   const auto base = static_cast<int>(recentBooks.size());
   selectorIndex = initialMenuItem == HomeMenuItem::NONE ? 0 : base + menuItemToIndex(initialMenuItem, hasOpdsServers);
 
@@ -171,6 +248,10 @@ void HomeActivity::freeCoverBuffer() {
 }
 
 void HomeActivity::loop() {
+  if (usesInkPointHome()) {
+    loopInkPointHome();
+    return;
+  }
   const int menuCount = getMenuItemCount();
   const auto& metrics = UITheme::getInstance().getMetrics();
 
@@ -306,6 +387,10 @@ void HomeActivity::loop() {
 }
 
 void HomeActivity::render(RenderLock&&) {
+  if (usesInkPointHome()) {
+    renderInkPointHome();
+    return;
+  }
   const auto& metrics = UITheme::getInstance().getMetrics();
   const auto pageWidth = renderer.getScreenWidth();
   const auto pageHeight = renderer.getScreenHeight();
@@ -385,3 +470,183 @@ void HomeActivity::onOpdsBrowserOpen() { activityManager.goToBrowser(); }
 void HomeActivity::onStatsOpen() { activityManager.goToStats(); }
 
 void HomeActivity::onGamesOpen() { activityManager.goToGames(); }
+
+bool HomeActivity::usesInkPointHome() const {
+  return renderer.getScreenWidth() == 480 && renderer.getScreenHeight() == 800;
+}
+
+void HomeActivity::loopInkPointHome() {
+  if (firstRenderDone && !ratingRefreshAttempted && !recentBooks.empty()) {
+    ratingRefreshAttempted = true;
+    const auto now = static_cast<int64_t>(std::time(nullptr));
+    const bool stale = !rating || now <= 0 || rating->fetchedAt <= 0 || now - rating->fetchedAt >= 24 * 60 * 60;
+    if (stale) {
+      const auto& book = recentBooks.front();
+      auto refreshed = HardcoverRating::refresh({book.path, book.isbn, book.title, book.author}, now);
+      if (refreshed) {
+        rating = std::move(refreshed);
+        requestUpdate();
+      }
+    }
+  }
+
+  buttonNavigator.onNext([this] { inkPointFocus = ButtonNavigator::nextIndex(inkPointFocus, 7); requestUpdate(); });
+  buttonNavigator.onPrevious([this] { inkPointFocus = ButtonNavigator::previousIndex(inkPointFocus, 7); requestUpdate(); });
+
+  auto activate = [this](int target) {
+    switch (target) {
+      case 0: if (!recentBooks.empty()) onSelectBook(recentBooks.front().path); break;
+      case 1: break;  // Home is already active.
+      case 2: onRecentsOpen(); break;      // Library/recent-books catalogue.
+      case 3: onFileBrowserOpen(); break;
+      case 4: onGamesOpen(); break;
+      case 5: onFileTransferOpen(); break;
+      case 6: onSettingsOpen(); break;
+    }
+  };
+
+  int x = 0, y = 0;
+  if (mappedInput.wasScreenTapped(x, y)) {
+    if (!recentBooks.empty() && x >= kInkCover.x && x < kInkCover.x + kInkCover.width &&
+        y >= kInkCover.y && y < kInkCover.y + kInkCover.height) {
+      activate(0);
+      return;
+    }
+    if (y >= kInkFooter.y && y < kInkFooter.y + kInkFooter.height) {
+      for (int i = 0; i < 6; ++i) {
+        const int left = kInkFooter.x + i * (kInkTabWidth + kInkTabGap);
+        if (x >= left && x < left + kInkTabWidth) { inkPointFocus = i + 1; activate(i + 1); return; }
+      }
+    }
+  }
+  if (mappedInput.wasReleased(MappedInputManager::Button::Confirm)) activate(inkPointFocus);
+}
+
+void HomeActivity::renderInkPointHome() {
+  renderer.clearScreen();
+
+  // Fixed status lane, then a heading lane separated by whitespace only.
+  char battery[12];
+  std::snprintf(battery, sizeof(battery), "%u%%", static_cast<unsigned>(powerManager.getBatteryPercentage()));
+  renderer.drawText(SMALL_FONT_ID, 438 - renderer.getTextWidth(SMALL_FONT_ID, battery), 2, battery);
+  renderer.drawText(CAVEAT_42_FONT_ID, 20, 21, "Now reading");
+
+  const RecentBook* book = recentBooks.empty() ? nullptr : &recentBooks.front();
+  bool coverDrawn = false;
+  int coverW = kInkCover.width;
+  int coverH = kInkCover.height;
+  if (book && !book->coverBmpPath.empty()) {
+    const auto& metrics = UITheme::getInstance().getMetrics();
+    const std::string thumbPath = UITheme::getCoverThumbPath(book->coverBmpPath, metrics.homeCoverHeight);
+    HalFile file;
+    if (Storage.openFileForRead("HOME", thumbPath, file)) {
+      Bitmap bitmap(file);
+      if (bitmap.parseHeaders() == BmpReaderError::Ok) {
+        coverW = std::min(kInkCover.width, (kInkCover.height * bitmap.getWidth()) / bitmap.getHeight());
+        coverH = std::min(kInkCover.height, (coverW * bitmap.getHeight()) / bitmap.getWidth());
+        renderer.drawBitmap(bitmap, kInkCover.x, kInkCover.y, coverW, coverH);
+        coverDrawn = true;
+      }
+    }
+  }
+  if (!coverDrawn) {
+    renderer.drawRect(kInkCover.x, kInkCover.y, coverW, coverH, 2, true);
+    if (book) {
+      const int cx = kInkCover.x + coverW / 2;
+      drawCentered(renderer, NOTOSERIF_18_FONT_ID, cx, kInkCover.y + 180, book->title.c_str(), true,
+                   EpdFontFamily::BOLD);
+      drawCentered(renderer, UI_12_FONT_ID, cx, kInkCover.y + 215, book->author.c_str());
+    } else {
+      drawCentered(renderer, UI_12_FONT_ID, kInkCover.x + coverW / 2, kInkCover.y + 210, "No recent book");
+    }
+  }
+
+  // Thin progress bar is physically attached to the cover's lower edge.
+  const int progressY = kInkCover.y + coverH;
+  renderer.drawRect(kInkCover.x, progressY, coverW, 4);
+  if (book && book->progressPercent >= 0) {
+    renderer.fillRect(kInkCover.x + 1, progressY + 1,
+                      std::max(0, std::min(coverW - 2, (coverW - 2) * book->progressPercent / 100)), 2);
+  }
+
+  if (book) {
+    const int rightX = 330;
+    const std::string title = upper(book->title);
+    // Narrow-column title: wrap by words rather than clipping. UI face remains
+    // deliberately separate from Caveat's heading/accent role.
+    std::vector<std::string> lines;
+    std::string line;
+    size_t start = 0;
+    while (start < title.size() && lines.size() < 4) {
+      size_t end = title.find(' ', start);
+      std::string word = title.substr(start, end == std::string::npos ? std::string::npos : end - start);
+      std::string candidate = line.empty() ? word : line + " " + word;
+      if (!line.empty() && renderer.getTextWidth(NOTOSANS_14_FONT_ID, candidate.c_str(), EpdFontFamily::BOLD) > 130) {
+        lines.push_back(line); line = word;
+      } else line = candidate;
+      if (end == std::string::npos) break;
+      start = end + 1;
+    }
+    if (!line.empty() && lines.size() < 4) lines.push_back(line);
+    int y = 103;
+    for (const auto& titleLine : lines) {
+      renderer.drawText(NOTOSANS_14_FONT_ID, rightX, y, titleLine.c_str(), true, EpdFontFamily::BOLD);
+      y += 31;
+    }
+    renderer.drawText(UI_10_FONT_ID, rightX, y + 5, book->author.c_str());
+    if (rating && rating->publicationYear > 0) {
+      char year[8]; std::snprintf(year, sizeof(year), "%d", rating->publicationYear);
+      renderer.drawText(UI_10_FONT_ID, rightX, y + 27, year);
+    }
+    if (rating) {
+      const int whole = rating->valueX100 / 100;
+      const int fraction = rating->valueX100 % 100;
+      for (int i = 0; i < 5; ++i) drawStar(renderer, rightX + 11 + i * 24, y + 62, i < whole, i == whole && fraction > 0);
+    }
+
+    constexpr const char* labels[3] = {"TIME READ", "CHAPTER LEFT", "BOOK LEFT"};
+    char timeRead[16], chapterLeft[16] = "-", bookLeft[16] = "-";
+    const uint32_t minutes = bookStats.totalSeconds / 60;
+    std::snprintf(timeRead, sizeof(timeRead), "%luh %02lum", static_cast<unsigned long>(minutes / 60),
+                  static_cast<unsigned long>(minutes % 60));
+    if (bookStats.etaConfident() && book->progressPercent > 0 && book->progressPercent < 100) {
+      const uint32_t totalPagesEstimate = bookStats.forwardPages * 100U / static_cast<uint32_t>(book->progressPercent);
+      const uint32_t remainingPages = totalPagesEstimate > bookStats.forwardPages ? totalPagesEstimate - bookStats.forwardPages : 0;
+      const uint32_t leftMinutes = remainingPages * bookStats.secondsPerPage() / 60;
+      std::snprintf(bookLeft, sizeof(bookLeft), "%luh %02lum", static_cast<unsigned long>(leftMinutes / 60),
+                    static_cast<unsigned long>(leftMinutes % 60));
+    }
+    const char* values[3] = {timeRead, chapterLeft, bookLeft};
+    for (int i = 0; i < 3; ++i) {
+      const int statY = 326 + i * 66;
+      renderer.drawText(UI_10_FONT_ID, rightX, statY, labels[i]);
+      renderer.drawText(CAVEAT_18_FONT_ID, rightX, statY + 20, values[i]);
+    }
+  }
+
+  // Accepted two-line quote and one-line attribution, vertically balanced in
+  // the band below the cover and above persistent navigation.
+  drawCentered(renderer, CAVEAT_15_FONT_ID, 240, 601,
+               "Eliminate all other factors, and");
+  drawCentered(renderer, CAVEAT_15_FONT_ID, 240, 626,
+               "the one which remains must be the truth.");
+  drawCentered(renderer, SMALL_FONT_ID, 240, 653,
+               "Sherlock Holmes, The Sign of the Four, Arthur Conan Doyle");
+
+  static constexpr const char* kLabels[6] = {"Home", "Library", "Files", "Games", "Transfer", "Settings"};
+  for (int i = 0; i < 6; ++i) {
+    const int left = kInkFooter.x + i * (kInkTabWidth + kInkTabGap);
+    const bool active = i == 0;
+    if (active) renderer.fillRoundedRect(left, kInkFooter.y, kInkTabWidth, kInkFooter.height, 7, Color::Black);
+    else renderer.drawRoundedRect(left, kInkFooter.y, kInkTabWidth, kInkFooter.height, 2, 7, true);
+    const int cx = left + kInkTabWidth / 2;
+    drawFooterIcon(renderer, i, cx, kInkFooter.y + 19, !active);
+    drawCentered(renderer, SMALL_FONT_ID, cx, kInkFooter.y + 49, kLabels[i], !active);
+    if (inkPointFocus == i + 1 && !active) renderer.drawRoundedRect(left + 3, kInkFooter.y + 3, kInkTabWidth - 6,
+                                                                    kInkFooter.height - 6, 1, 5, true);
+  }
+  if (inkPointFocus == 0 && book) renderer.drawRect(kInkCover.x - 3, kInkCover.y - 3, coverW + 6, coverH + 10, 2, true);
+
+  renderer.displayBuffer(cleanInitialRefresh && !firstRenderDone ? HalDisplay::HALF_REFRESH : HalDisplay::FAST_REFRESH);
+  firstRenderDone = true;
+}

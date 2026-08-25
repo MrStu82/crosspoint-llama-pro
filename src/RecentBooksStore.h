@@ -10,6 +10,9 @@ struct RecentBook {
   std::string title;
   std::string author;
   std::string coverBmpPath;
+  // Optional canonical lookup key. Older recent.json files omit it and safely
+  // fall back to exact title+author matching.
+  std::string isbn;
 
   // Whole-book read progress (0-100), or -1 if unknown. Populated at load time from
   // BookProgressBadge, not persisted here -- it would just go stale between reads.
@@ -36,7 +39,7 @@ class RecentBooksStore : public PersistableStore<RecentBooksStore> {
 
   // Add a book to the recent list (moves to front if already exists)
   void addBook(const std::string& path, const std::string& title, const std::string& author,
-               const std::string& coverBmpPath);
+               const std::string& coverBmpPath, const std::string& isbn = "");
 
   void updateBook(const std::string& path, const std::string& title, const std::string& author,
                   const std::string& coverBmpPath);

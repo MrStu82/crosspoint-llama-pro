@@ -229,3 +229,10 @@ Plans:
 ### Phase 16: Simulator and release gate
 **Goal:** `simulator_x4_pro` deterministic input/framebuffer proof, one local Trantor X4 Pro build, release provenance, Pixel/Gauge single gate.
 **Status:** Pending Phase 15.
+
+### Phase 17: Approved InkPointX Home / Now Reading
+**Goal:** Implement the approved 480×800 benchmark `00af7165a57d22140fd2c520a04111906f488bccd19b2dce0882a1b79bb1b348` with truthful per-book stats, cover-only resume, shared Caveat heading token, deterministic daily quote and six-tab persistent navigation.
+**Depends on:** Hardcover beta GraphQL search, resolved by Stuart; dedicated `read:catalog:search` PAT provisioned through device web settings.
+**Constraint:** Existing partition table, dual OTA, rollback and SPIFFS remain unchanged. One implementation build only; simulator proof, then one Pixel/Gauge gate. No implementation starts while the rating source is undecided.
+**Plan:** `.planning/INKPOINTX_HOME_IMPLEMENTATION_BRIEF.md`.
+**Status:** Implementation in progress; provider isolated, atomic last-good cache and simulator gate underway.

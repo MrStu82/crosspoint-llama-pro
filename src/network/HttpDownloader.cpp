@@ -228,6 +228,57 @@ HttpDownloader::DownloadError runGetSecure(const std::string& url, const std::st
   return runGet(url, username, password, sink);
 #endif
 }
+
+bool runPostJson(const std::string& url, const std::string& payload, const std::string& bearerToken,
+                 std::string& response) {
+#if defined(SIMULATOR)
+  // Network fetches are deliberately disabled in the deterministic simulator.
+  // Home exercises the same parser/cache path using a seeded last-good record.
+  (void)url;
+  (void)payload;
+  (void)bearerToken;
+  (void)response;
+  return false;
+#elif defined(FREEINK_NET_WOLFSSL)
+  freeink::SecureHttpClient http;
+  http.setTimeout(HTTP_TIMEOUT_MS);
+  http.setInsecure();
+  if (!http.begin(url)) return false;
+  http.setUserAgent("CrossPoint-ESP32-" CROSSPOINT_VERSION);
+  http.addHeader("Content-Type", "application/json");
+  http.addHeader("Authorization", std::string("Bearer ") + bearerToken);
+  const int status = http.POST(payload);
+  if (status != 200 || !http.responseComplete()) return false;
+  response = http.getString();
+  return true;
+#else
+  esp_http_client_config_t config = {};
+  config.url = url.c_str();
+  config.buffer_size = HTTP_RX_BUF;
+  config.buffer_size_tx = HTTP_TX_BUF;
+  config.timeout_ms = HTTP_TIMEOUT_MS;
+  config.crt_bundle_attach = esp_crt_bundle_attach;
+  esp_http_client_handle_t client = esp_http_client_init(&config);
+  if (!client) return false;
+  const std::string auth = std::string("Bearer ") + bearerToken;
+  esp_http_client_set_method(client, HTTP_METHOD_POST);
+  esp_http_client_set_header(client, "User-Agent", "CrossPoint-ESP32-" CROSSPOINT_VERSION);
+  esp_http_client_set_header(client, "Content-Type", "application/json");
+  esp_http_client_set_header(client, "Authorization", auth.c_str());
+  esp_http_client_set_post_field(client, payload.data(), payload.size());
+  if (esp_http_client_perform(client) != ESP_OK || esp_http_client_get_status_code(client) != 200) {
+    esp_http_client_cleanup(client);
+    return false;
+  }
+  response.clear();
+  char buffer[READ_CHUNK];
+  int read = 0;
+  while ((read = esp_http_client_read(client, buffer, sizeof(buffer))) > 0) response.append(buffer, read);
+  const bool complete = read == 0 && esp_http_client_is_complete_data_received(client);
+  esp_http_client_cleanup(client);
+  return complete;
+#endif
+}
 }  // namespace
 
 bool HttpDownloader::fetchUrl(const std::string& url, Stream& outContent, const std::string& username,
@@ -256,6 +307,13 @@ bool HttpDownloader::fetchUrl(const std::string& url, const DataCallback& onData
   Sink sink;
   sink.write = onData;
   return runGetSecure(url, username, password, sink) == OK;
+}
+
+bool HttpDownloader::postJson(const std::string& url, const std::string& payload, const std::string& bearerToken,
+                              std::string& outContent) {
+  if (bearerToken.empty()) return false;
+  outContent.clear();
+  return runPostJson(url, payload, bearerToken, outContent);
 }
 
 HttpDownloader::DownloadError HttpDownloader::downloadToFile(const std::string& url, const std::string& destPath,

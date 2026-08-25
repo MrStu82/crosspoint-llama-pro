@@ -2,8 +2,8 @@
 gsd_state_version: '1.0'
 status: in_progress
 progress:
-  total_phases: 16
-  completed_phases: 15
+  total_phases: 17
+  completed_phases: 16
   total_plans: 5
   completed_plans: 5
   percent: 94
@@ -16,7 +16,7 @@ progress:
 See: .planning/PROJECT.md (updated 2026-08-15)
 
 **Core value:** Every screen renders correctly and fully on-panel on the X4 Pro, with no clipped/overflowing content and no touch targets crowded against the bezel.
-**Current focus:** Reader convergence milestone (Phases 13-16): audited upstream fixes, approved CrossInk-derived reader capabilities, pinned sleep favourite, then simulator/release gate. Stuart approved the text-only black/white v2 prototype on 2026-08-25.
+**Current focus:** Phase 17 implementation — approved InkPointX Home benchmark `00af7165…1b348`, Hardcover beta GraphQL rating lookup with device-bound scoped PAT, atomic last-good cache, simulator proof, and one X4 Pro release build.
 
 **2026-08-25 final safe revision:** partition expansion is cancelled. The
 original dual-OTA/SPIFFS table is preserved. Lexend Deca and Bitter use the
@@ -26,8 +26,8 @@ release build is the next action.
 
 ## Current Position
 
-Phase: 16 of 16 — simulator and release gate in progress
-Plan: work from frozen completed Dungeon line `6e872b0531452b3e4a3e50651e1ce937d71d2610`; apply only audited compatible fixes and approved v2 features; exactly one X4 Pro implementation build, one simulator proof, one Pixel/Gauge gate.
+Phase: 17 of 17 — host + simulator gates green; one X4 Pro release build pending
+Plan: `.planning/INKPOINTX_HOME_IMPLEMENTATION_BRIEF.md`. Stuart selected Hardcover Search API: ISBN first, exact title+author fallback; cache last-good atomically; never blank stale data.
 **Chained self-continuation job (parent msg 4140, 2026-08-18, separate local 1-5 numbering, runs inside/ahead of Phase 11 scoping):** Job Phase 1 (`drawLine` multi-width overload fix — thick vertical lines were stretching instead of widening because the old code always offset y regardless of orientation) is DONE and independently verified: commit `7e447bc56b66958a1ec3a0ed88a0fb7483453c6f` (`git rev-parse HEAD` + `wc -c`=41 confirmed), Trantor firmware build green (`x4pro`, 39.43s, SUCCESS), host gtest suite 143/143 passed including all 5 new `ThickLineOffsetInX`/`ThickLineShape` cases proving both the axis decision and the widened-band-not-stretched-length shape. Chain proceeding immediately, no stop, into Job Phase 2 (corpse loot: dual player/pet-addressed drop streams off the same floor/monster-scaled table with a rare tail; pet stream never enters player inventory, never renders on map, not player-pickable). Job Phase 3 = the pet (rolled at creation, levels with player, autonomous foraging of the Phase 2 pet stream, auto-equip, profile/gear screen). Job Phase 4 = loot-box DESIGN NOTE ONLY (six tiers, no safe-room gate, key-to-race drops, some unstable — box-type count and per-tier tables left for Stuart), no code/commit, chain halts after sending the note. Job Phase 5 (progress screen + character naming w/ Random button) is explicitly NOT auto-chained — separate dispatch from parent required.
 
 **Job Phase 6 (added by parent msg 4142, 2026-08-18, queued AFTER Phase 5, does not interrupt in-progress Phase 2 work):** pressed-state feedback on the Action/Menu on-screen buttons. Pixel-reviewed, spec ratified, build as written: geometry from `drawControls()` (`GameRenderer.cpp:534-545`, `buttonX=188, buttonW=292, controlsY=632, buttonH=84`); down/release via `MappedInputManager::rowTouch()` (`MappedInputManager.cpp:205`, `top=632, rowStep=84, rowCount=2, xStart=188, xEnd=480, rowHeight=84`, `Down`=press-begin/`Tap`=resolved release); pressed look = invert only (`fillRect(...,true)` + `drawText(..., black=false)`, no border/offset/shadow/animation); refresh = `displayWindow()` on that rect only (never a full refresh); new `pressedControlButton` (Action/Menu/none) field on `GameActivity`, same pattern as existing `upHeld` flags, set on Down/cleared on resolution; Action release restores fill+displayWindow then dispatches `handleAction()`, Menu release skips restore and dispatches `openGameMenu()` immediately (screen supersedes it); drag-off abort (lift without resolving to Tap inside the button) restores identically on both buttons — non-negotiable, a stuck-inverted button is the exact defect this phase prevents. Gate: Trantor `pio run -e x4pro` green + gtest suite, then continue chain, no stop.
@@ -137,6 +137,6 @@ Items acknowledged and carried forward from previous milestone close:
 - **Resume file:** — a path, or "None (see Next actionable item)" — never a bare "None" with nothing else armed.
 
 Last session: 2026-08-25
-Stopped at: Reader convergence Phase 16 safe SD-font revision prepared on top of the cancelled expansion commit; original partition table restored.
-Next actionable item: Execute the single authorised Trantor X4 Pro release build, carve/verify the bare app image, then run one Pixel/Gauge gate.
-Resume file: `.planning/evidence/reader-convergence-gate.md`
+Stopped at: Phase 17 implementation started at HEAD 632acc579e1a2247ba9e4af5c50eb4af1a81b045; approved benchmark 00af7165…1b348.
+Next actionable item: Commit the host/simulator-green Phase 17 tree, run the single Trantor X4 Pro release build, then one Pixel/Gauge gate.
+Resume file: `.planning/INKPOINTX_HOME_IMPLEMENTATION_BRIEF.md`

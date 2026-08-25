@@ -15,6 +15,7 @@
 #include "ReaderUtils.h"
 #include "RecentBooksStore.h"
 #include "activities/home/StatsManager.h"
+#include "util/BookReadingStats.h"
 #include "components/UITheme.h"
 #include "fontIds.h"
 #include "util/BookProgressBadge.h"
@@ -56,6 +57,7 @@ void TxtReaderActivity::onExit() {
   if (sessionStartTime != 0UL) {
     const unsigned long secs = (millis() - sessionStartTime) / 1000;
     StatsManager::getInstance().addReadingTimeSeconds(secs);
+    BookReadingStats::add(txt->getPath(), secs, 0);
     sessionStartTime = 0UL;
   }
   StatsManager::getInstance().save();
@@ -89,6 +91,7 @@ void TxtReaderActivity::loop() {
     if (sessionStartTime != 0UL) {
       const unsigned long secs = (millis() - sessionStartTime) / 1000;
       StatsManager::getInstance().addReadingTimeSeconds(secs);
+      BookReadingStats::add(txt->getPath(), secs, 0);
       sessionStartTime += secs * 1000;
     }
     // Backward turns (rereading) don't count as pages read.
@@ -97,11 +100,13 @@ void TxtReaderActivity::loop() {
     if (currentPage < totalPages - 1) {
       currentPage++;
       if (sessionStartTime != 0UL) {
-        const unsigned long secs = (millis() - sessionStartTime) / 1000;
-        StatsManager::getInstance().addReadingTimeSeconds(secs);
-        sessionStartTime += secs * 1000;
+      const unsigned long secs = (millis() - sessionStartTime) / 1000;
+      StatsManager::getInstance().addReadingTimeSeconds(secs);
+      BookReadingStats::add(txt->getPath(), secs, 1);
+      sessionStartTime += secs * 1000;
       }
       StatsManager::getInstance().incrementPagesRead();
+      if (sessionStartTime == 0UL) BookReadingStats::add(txt->getPath(), 0, 1);
       requestUpdate();
     } else {
       onGoHome();

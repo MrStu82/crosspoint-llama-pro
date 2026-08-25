@@ -1,5 +1,11 @@
 #pragma once
 
+#include <builtinFonts/caveat_15_regular.h>
+#include <builtinFonts/caveat_18_regular.h>
+#include <builtinFonts/caveat_27_regular.h>
+#include <builtinFonts/caveat_30_regular.h>
+#include <builtinFonts/caveat_42_regular.h>
+
 #include <builtinFonts/lexenddeca_10_bold.h>
 #include <builtinFonts/lexenddeca_10_bolditalic.h>
 #include <builtinFonts/lexenddeca_10_italic.h>

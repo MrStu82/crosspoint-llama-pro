@@ -1,9 +1,12 @@
 #pragma once
 #include <functional>
+#include <optional>
 #include <vector>
 
 #include "./FileBrowserActivity.h"
 #include "activities/Activity.h"
+#include "network/HardcoverRating.h"
+#include "util/BookReadingStats.h"
 #include "util/ButtonNavigator.h"
 
 struct RecentBook;
@@ -17,6 +20,10 @@ class HomeActivity final : public Activity {
   bool firstRenderDone = false;
   bool hasOpdsServers = false;
   bool coverRendered = false;      // Track if cover has been rendered once
+  bool ratingRefreshAttempted = false;
+  int inkPointFocus = 0;  // 0=cover, 1..6=persistent footer destinations
+  std::optional<RatingSnapshot> rating;
+  BookReadingStatsValue bookStats;
   bool coverBufferStored = false;  // Track if cover buffer is stored
   // Home can be entered while Back is still held (e.g. leaving Settings with
   // Back): ignore that stale release until a fresh press is seen here.
@@ -80,6 +87,9 @@ class HomeActivity final : public Activity {
   void freeCoverBuffer();     // Free the stored cover buffer
   void loadRecentBooks(int maxBooks);
   void loadRecentCovers(int coverHeight);
+  bool usesInkPointHome() const;
+  void loopInkPointHome();
+  void renderInkPointHome();
 
  public:
   explicit HomeActivity(GfxRenderer& renderer, MappedInputManager& mappedInput,

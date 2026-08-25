@@ -22,6 +22,7 @@
 #include "RecentBooksStore.h"
 #include "XtcReaderChapterSelectionActivity.h"
 #include "activities/home/StatsManager.h"
+#include "util/BookReadingStats.h"
 #include "components/UITheme.h"
 #include "fontIds.h"
 #include "util/BookProgressBadge.h"
@@ -55,6 +56,7 @@ void XtcReaderActivity::onExit() {
   if (sessionStartTime != 0UL) {
     const unsigned long secs = (millis() - sessionStartTime) / 1000;
     StatsManager::getInstance().addReadingTimeSeconds(secs);
+    BookReadingStats::add(xtc->getPath(), secs, 0);
     sessionStartTime = 0UL;
   }
   StatsManager::getInstance().save();
@@ -157,6 +159,7 @@ void XtcReaderActivity::loop() {
     if (sessionStartTime != 0UL) {
       const unsigned long secs = (millis() - sessionStartTime) / 1000;
       StatsManager::getInstance().addReadingTimeSeconds(secs);
+      BookReadingStats::add(xtc->getPath(), secs, 0);
       sessionStartTime += secs * 1000;
     }
     // Backward turns (rereading) don't count as pages read.
@@ -169,9 +172,11 @@ void XtcReaderActivity::loop() {
     if (sessionStartTime != 0UL) {
       const unsigned long secs = (millis() - sessionStartTime) / 1000;
       StatsManager::getInstance().addReadingTimeSeconds(secs);
+      BookReadingStats::add(xtc->getPath(), secs, 1);
       sessionStartTime += secs * 1000;
     }
     StatsManager::getInstance().incrementPagesRead();
+    if (sessionStartTime == 0UL) BookReadingStats::add(xtc->getPath(), 0, 1);
     requestUpdate();
   }
 }

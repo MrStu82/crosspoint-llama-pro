@@ -362,10 +362,12 @@
     }
 
     if (setting.type === 'string') {
-      const inputType = setting.name.toLowerCase().includes('password') ? 'password' : 'text';
+      const sensitive = setting.name.toLowerCase().includes('password') || setting.name.toLowerCase().includes('token');
+      const inputType = sensitive ? 'password' : 'text';
       const val = setting.value || '';
+      const placeholder = sensitive && setting.hasValue ? ' placeholder="(unchanged)"' : '';
       return '<input type="' + inputType + '" id="' + id + '" value="' + escapeHtml(val) + '"' +
-        ' oninput="handleSettingChanged(\'' + setting.key + '\')">';
+        placeholder + ' oninput="handleSettingChanged(\'' + setting.key + '\')">';
     }
 
     return '';

@@ -15,10 +15,30 @@
 
 ## Deterministic host proof
 
-- Trantor host suite: 165/165 passed (`/home/skippy/build/reader-host-test.log`).
-- Native `simulator_x4_pro`: SUCCESS (`/home/skippy/build/reader-simulator-build.log`).
+- Trantor host suite on the final candidate: 165/165 passed
+  (`/home/skippy/build/reader-v2-host-test.log`).
+- Native `simulator_x4_pro` on the final candidate: SUCCESS
+  (`/home/skippy/build/reader-v2-simulator-build.log`).
 - Input sequence: Home `TAP:150,590` → Reader tab `TAP:150,105` → Text Settings `TAP:110,160` → Style tab `TAP:280,325`.
 - Captures:
   - `/workspace/agent/reader-options-simulator.png` — built-in Noto Serif/Noto Sans/Lexend Deca/Bitter.
   - `/workspace/agent/reader-style-simulator.png` — explicit Focus Reading, Guide Dots, Force Paragraph Indents and Hyphenation On/Off rows.
 - Simulator is the actual product project, pinned through `platformio.ini`; destructive USB-MSC is intentionally unavailable while settings/render paths stay real.
+
+## X4 Pro partition correction
+
+The first implementation link exceeded the existing OTA-safe app partition by
+962,374 bytes. The corrected generator keeps all 32 Lexend Deca/Bitter
+family/size/style variants, but bounds the optional built-in coverage to
+Western prose and ten explicitly requested miscellaneous glyphs. Broader
+language and emoji coverage remains available through the existing SD
+`.cpfont` system and the built-in Noto families. The committed source TTFs and
+`convert-crossink-reader-fonts.sh` make the generated headers reproducible;
+an immediate regeneration produced a clean worktree.
+
+Final-candidate simulator captures:
+
+- `/workspace/agent/reader-options-final.png` — SHA-256
+  `6e776d5da69d02e8165e5bcd196ecbd35835d2023e0073d5d36840758ed4d21e`.
+- `/workspace/agent/reader-style-final.png` — SHA-256
+  `fe321be822d6eabbe000725d33a3d7a2ee04516dfc5aeac3843edd20b4103dd0`.

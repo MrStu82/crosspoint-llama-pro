@@ -18,6 +18,12 @@ See: .planning/PROJECT.md (updated 2026-08-15)
 **Core value:** Every screen renders correctly and fully on-panel on the X4 Pro, with no clipped/overflowing content and no touch targets crowded against the bezel.
 **Current focus:** Reader convergence milestone (Phases 13-16): audited upstream fixes, approved CrossInk-derived reader capabilities, pinned sleep favourite, then simulator/release gate. Stuart approved the text-only black/white v2 prototype on 2026-08-25.
 
+**2026-08-25 final candidate:** bounded generated Lexend Deca/Bitter coverage
+retains every approved family/size/style variant while respecting the existing
+OTA partition. Final-candidate host tests pass 165/165 and native
+`simulator_x4_pro` build/captures pass. One authorised X4 Pro release build is
+the next action.
+
 ## Current Position
 
 Phase: 16 of 16 — simulator and release gate in progress
@@ -130,7 +136,7 @@ Items acknowledged and carried forward from previous milestone close:
 - **Next actionable item:** — either (a) a specific next phase/step this agent will pick up unprompted, or (b) an explicit statement that the chain is parent-gated (naming exactly what's being waited on: a ruling, a dispatch, an approval) — "None" / blank is never valid; "waiting on parent" is valid ONLY when named with what for.
 - **Resume file:** — a path, or "None (see Next actionable item)" — never a bare "None" with nothing else armed.
 
-Last session: 2026-08-21
-Stopped at: **Milestone 3 CLOSED at Phase 12.** Exact final source `f852309adc59b404acf827d4d0fcecee8ecc8810`; final host gates pass; bare updater artifact hash and provenance recorded.
-Next actionable item: Parent-gated — await Skippy's acceptance/delivery decision for the single final Phase-12 artifact; no implementation or additional firmware build remains in this milestone.
-Resume file: `.planning/evidence/milestone3-phase11-12-final-gate.md`
+Last session: 2026-08-25
+Stopped at: Reader convergence Phase 16 final candidate `844046ac6a811e829ef86d3d9cb2d9ed81ccab92`; 165/165 host tests and native simulator build/captures green after partition correction.
+Next actionable item: Execute the single authorised Trantor X4 Pro release build, carve/verify the bare app image, then run one Pixel/Gauge gate.
+Resume file: `.planning/evidence/reader-convergence-gate.md`

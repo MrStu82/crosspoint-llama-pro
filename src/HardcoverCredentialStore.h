@@ -15,17 +15,13 @@ class HardcoverCredentialStore : public PersistableStore<HardcoverCredentialStor
   friend class PersistableStore<HardcoverCredentialStore>;
 
  public:
-  enum class ImportResult { NOT_FOUND, INVALID, SAVE_FAILED, REMOVE_FAILED, IMPORTED };
-
   static const char* getFilePath() { return "/.crosspoint/hardcover.json"; }
-  static const char* getImportPath() { return "/hardcover.token"; }
   void toJson(JsonDocument& doc) const;
   bool fromJson(JsonVariantConst doc);
   const std::string& getToken() const { return token; }
   bool hasToken() const { return !token.empty(); }
   void setToken(const std::string& value);
   bool saveAtomic();
-  ImportResult importTokenFile();
   bool forget();
   static bool isValidToken(const std::string& value);
 };

@@ -137,6 +137,6 @@ Items acknowledged and carried forward from previous milestone close:
 - **Resume file:** — a path, or "None (see Next actionable item)" — never a bare "None" with nothing else armed.
 
 Last session: 2026-08-25
-Stopped at: Phase 17 implementation started at HEAD 632acc579e1a2247ba9e4af5c50eb4af1a81b045; approved benchmark 00af7165…1b348.
-Next actionable item: Commit the host/simulator-green Phase 17 tree, run the single Trantor X4 Pro release build, then one Pixel/Gauge gate.
+Stopped at: Phase 17 private one-step flash/provisioning revision on top of f13a112; approved benchmark 00af7165…1b348.
+Next actionable item: Commit and verify the no-secret flash package, rebuild once on Trantor, then run one matching Pixel/Gauge gate.
 Resume file: `.planning/INKPOINTX_HOME_IMPLEMENTATION_BRIEF.md`

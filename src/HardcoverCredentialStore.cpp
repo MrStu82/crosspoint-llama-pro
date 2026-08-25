@@ -1,6 +1,5 @@
 #include "HardcoverCredentialStore.h"
 
-#include <HalStorage.h>
 #include <ObfuscationUtils.h>
 
 #include <cctype>
@@ -11,14 +10,6 @@ namespace {
 constexpr size_t kMaxTokenBytes = 512;
 constexpr size_t kMinTokenBytes = 16;
 
-std::string trimmed(std::string value) {
-  while (!value.empty() && (value.back() == '\n' || value.back() == '\r' || value.back() == ' ' || value.back() == '\t'))
-    value.pop_back();
-  size_t start = 0;
-  while (start < value.size() && (value[start] == '\n' || value[start] == '\r' || value[start] == ' ' || value[start] == '\t'))
-    ++start;
-  return value.substr(start);
-}
 }
 
 void HardcoverCredentialStore::toJson(JsonDocument& doc) const {
@@ -40,7 +31,11 @@ bool HardcoverCredentialStore::fromJson(JsonVariantConst doc) {
 }
 
 void HardcoverCredentialStore::setToken(const std::string& value) {
-  token = value.size() <= kMaxTokenBytes ? value : std::string{};
+  if (value.empty()) {
+    token.clear();
+  } else if (isValidToken(value)) {
+    token = value;
+  }
 }
 
 bool HardcoverCredentialStore::isValidToken(const std::string& value) {
@@ -58,27 +53,6 @@ bool HardcoverCredentialStore::saveAtomic() {
   serializeJson(doc, json);
   return ProgressFile::writeAtomic("/.crosspoint", reinterpret_cast<const uint8_t*>(json.data()), json.size(),
                                    "hardcover.json");
-}
-
-HardcoverCredentialStore::ImportResult HardcoverCredentialStore::importTokenFile() {
-  HalFile file;
-  if (!Storage.openFileForRead("HCT", getImportPath(), file)) return ImportResult::NOT_FOUND;
-  const size_t size = file.size();
-  if (size == 0 || size > kMaxTokenBytes + 8) return ImportResult::INVALID;
-  std::string candidate(size, '\0');
-  if (file.read(candidate.data(), size) != static_cast<int>(size)) return ImportResult::INVALID;
-  file.close();
-  candidate = trimmed(std::move(candidate));
-  if (!isValidToken(candidate)) return ImportResult::INVALID;
-
-  const std::string previous = token;
-  token = std::move(candidate);
-  if (!saveAtomic()) {
-    token = previous;
-    return ImportResult::SAVE_FAILED;
-  }
-  if (!Storage.remove(getImportPath())) return ImportResult::REMOVE_FAILED;
-  return ImportResult::IMPORTED;
 }
 
 bool HardcoverCredentialStore::forget() {

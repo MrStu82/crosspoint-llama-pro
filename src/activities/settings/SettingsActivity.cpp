@@ -92,7 +92,6 @@ void SettingsActivity::rebuildSettingsLists() {
     systemSettings.push_back(SettingInfo::Action(StrId::STR_USB_TRANSFER, SettingAction::UsbTransfer));
   }
   #endif
-  systemSettings.push_back(SettingInfo::Action(StrId::STR_HARDCOVER_IMPORT_TOKEN, SettingAction::HardcoverImport));
   if (HARDCOVER_STORE.hasToken()) {
     systemSettings.push_back(SettingInfo::Action(StrId::STR_HARDCOVER_FORGET_TOKEN, SettingAction::HardcoverForget));
   }
@@ -423,10 +422,6 @@ void SettingsActivity::toggleCurrentSetting() {
         break;
       case SettingAction::UsbTransfer:
         startActivityForResult(std::make_unique<UsbTransferActivity>(renderer, mappedInput), resultHandler);
-        break;
-      case SettingAction::HardcoverImport:
-        HARDCOVER_STORE.importTokenFile();
-        rebuildSettingsLists();
         break;
       case SettingAction::HardcoverForget:
         startActivityForResult(

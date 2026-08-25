@@ -1,7 +1,9 @@
 #pragma once
 
 #include "activities/Activity.h"
+#ifndef SIMULATOR
 #include "UsbMassStorage.h"
+#endif
 
 /**
  * USB Mass Storage ("USB Transfer") activity.
@@ -35,7 +37,9 @@ class UsbTransferActivity : public Activity {
  private:
   State state = State::WAITING;
   bool wasConnected = false;
+#ifndef SIMULATOR
   freeink::UsbMassStorage usbMsc;
+#endif
 
   void endSessionAndFinish();
 };

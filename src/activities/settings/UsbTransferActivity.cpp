@@ -14,6 +14,13 @@ void UsbTransferActivity::onEnter() {
   Activity::onEnter();
   wasConnected = false;
 
+#ifdef SIMULATOR
+  // USB-MSC is intentionally non-destructive in the desktop simulator.
+  state = State::ERROR;
+  requestUpdate();
+  return;
+#else
+
   auto* dev = Storage.rawBlockDeviceForUsbMsc();
   if (!dev || !usbMsc.begin(dev)) {
     LOG_ERR("USB", "UsbTransferActivity: begin() failed (dev=%p)", (void*)dev);
@@ -23,9 +30,11 @@ void UsbTransferActivity::onEnter() {
 
   LOG_INF("USB", "UsbTransferActivity: MSC active, waiting for host");
   state = State::WAITING;
+#endif
 }
 
 void UsbTransferActivity::onExit() {
+#ifndef SIMULATOR
   // Defensive: guarantee MSC is torn down and the app FS is remounted even if
   // we get exited some way other than endSessionAndFinish() (e.g. a future
   // global "go home" shortcut). Idempotent if already ended.
@@ -40,13 +49,16 @@ void UsbTransferActivity::onExit() {
   if (state != State::ERROR) {
     StatsActivity::invalidateBookCountCache();
   }
+#endif
   Activity::onExit();
 }
 
 void UsbTransferActivity::endSessionAndFinish() {
+#ifndef SIMULATOR
   LOG_INF("USB", "UsbTransferActivity: ending session");
   usbMsc.end();
   Storage.begin();
+#endif
   finish();
 }
 
@@ -64,7 +76,11 @@ void UsbTransferActivity::loop() {
     return;
   }
 
+#ifdef SIMULATOR
+  const bool connected = false;
+#else
   const bool connected = usbMsc.hostConnected();
+#endif
   if (connected != wasConnected) {
     wasConnected = connected;
     if (connected) {

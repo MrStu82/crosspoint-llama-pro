@@ -2,11 +2,11 @@
 gsd_state_version: '1.0'
 status: in_progress
 progress:
-  total_phases: 12
-  completed_phases: 10
+  total_phases: 16
+  completed_phases: 12
   total_plans: 5
   completed_plans: 5
-  percent: 83
+  percent: 75
 ---
 
 # Project State
@@ -16,13 +16,12 @@ progress:
 See: .planning/PROJECT.md (updated 2026-08-15)
 
 **Core value:** Every screen renders correctly and fully on-panel on the X4 Pro, with no clipped/overflowing content and no touch targets crowded against the bezel.
-**Current focus:** One combined World Dungeon batch on frozen inventory release `071f8b3`: pickup waveform elimination, real Mapping/Teleport scroll effects, and measured planner/message-pane performance sweep. See `.planning/pickup-refresh-roadmap.md`.
+**Current focus:** Reader convergence milestone (Phases 13-16): audited upstream fixes, approved CrossInk-derived reader capabilities, pinned sleep favourite, then simulator/release gate. Stuart approved the text-only black/white v2 prototype on 2026-08-25.
 
 ## Current Position
 
-Phase: 11 of 12 — Job Phase 4 loot-box implementation CLOSED (Milestone 3)
-Plan: Job Phase 4 is closed at implementation commit `f307adc0d4256815d5ca7168522f2e80adb0d58e`: four Common/Uncommon/Rare/Legendary box tiers, exact 50/30/15/5 selector, one compact table per tier reusing `ITEM_DEFS`/`BUFF_DEFS`/`SKILL_DEFS`, four visible `ItemDef` records occupying one logical shared-loot slot, and direct inventory opening with no safe-room gate. `SPONSOR_DEFS` remains presentation/per-floor state rather than being misused as durable Legendary loot. Clean-clone Trantor gate passed: deterministic harness ALL CHECKS PASSED, full host suite 149/149, X4 Pro production build SUCCESS; firmware SHA-256 `22f41dcb39dd255b0857aa341682309e5e6aa7b7ac4f575fc65616ba09c0e29a`. Evidence: `.planning/evidence/job-phase4-loot-box-gate.md`. No image ships at this intermediate gate.
-
+Phase: 13 of 16 — upstream bug-fix ports in progress
+Plan: work from frozen completed Dungeon line `6e872b0531452b3e4a3e50651e1ce937d71d2610`; apply only audited compatible fixes and approved v2 features; exactly one X4 Pro implementation build, one simulator proof, one Pixel/Gauge gate.
 **Chained self-continuation job (parent msg 4140, 2026-08-18, separate local 1-5 numbering, runs inside/ahead of Phase 11 scoping):** Job Phase 1 (`drawLine` multi-width overload fix — thick vertical lines were stretching instead of widening because the old code always offset y regardless of orientation) is DONE and independently verified: commit `7e447bc56b66958a1ec3a0ed88a0fb7483453c6f` (`git rev-parse HEAD` + `wc -c`=41 confirmed), Trantor firmware build green (`x4pro`, 39.43s, SUCCESS), host gtest suite 143/143 passed including all 5 new `ThickLineOffsetInX`/`ThickLineShape` cases proving both the axis decision and the widened-band-not-stretched-length shape. Chain proceeding immediately, no stop, into Job Phase 2 (corpse loot: dual player/pet-addressed drop streams off the same floor/monster-scaled table with a rare tail; pet stream never enters player inventory, never renders on map, not player-pickable). Job Phase 3 = the pet (rolled at creation, levels with player, autonomous foraging of the Phase 2 pet stream, auto-equip, profile/gear screen). Job Phase 4 = loot-box DESIGN NOTE ONLY (six tiers, no safe-room gate, key-to-race drops, some unstable — box-type count and per-tier tables left for Stuart), no code/commit, chain halts after sending the note. Job Phase 5 (progress screen + character naming w/ Random button) is explicitly NOT auto-chained — separate dispatch from parent required.
 
 **Job Phase 6 (added by parent msg 4142, 2026-08-18, queued AFTER Phase 5, does not interrupt in-progress Phase 2 work):** pressed-state feedback on the Action/Menu on-screen buttons. Pixel-reviewed, spec ratified, build as written: geometry from `drawControls()` (`GameRenderer.cpp:534-545`, `buttonX=188, buttonW=292, controlsY=632, buttonH=84`); down/release via `MappedInputManager::rowTouch()` (`MappedInputManager.cpp:205`, `top=632, rowStep=84, rowCount=2, xStart=188, xEnd=480, rowHeight=84`, `Down`=press-begin/`Tap`=resolved release); pressed look = invert only (`fillRect(...,true)` + `drawText(..., black=false)`, no border/offset/shadow/animation); refresh = `displayWindow()` on that rect only (never a full refresh); new `pressedControlButton` (Action/Menu/none) field on `GameActivity`, same pattern as existing `upHeld` flags, set on Down/cleared on resolution; Action release restores fill+displayWindow then dispatches `handleAction()`, Menu release skips restore and dispatches `openGameMenu()` immediately (screen supersedes it); drag-off abort (lift without resolving to Tap inside the button) restores identically on both buttons — non-negotiable, a stuck-inverted button is the exact defect this phase prevents. Gate: Trantor `pio run -e x4pro` green + gtest suite, then continue chain, no stop.
@@ -73,7 +72,7 @@ Last activity: 2026-08-11 — build-order item 2 (discipline as a persisted stat
 - The earlier "carve a gap from the content budget" open question was resolved without touching the content budget at all: `BaseTheme::drawButtonHints()` is a complete no-op on touch hardware (`if (gpio.hasTouch()) { return; }`), so `bottomReserved` was already blank/unused pixels there. The fix simply stops flushing that already-dead band to the panel — the reader page underneath shows through it for free, satisfying parent's "sliver of page peeking through IS the requirement" ruling without shrinking any existing region or risking a new overflow.
 - Fit-check uses `LOG_ERR` (not `assert()`), per repo CLAUDE.md's error-handling hierarchy — this is a configuration-sanity check (theme metrics could change bottomReserved in the future), not a fatal "impossible state".
 
-Progress: [████████░░] 67% (8/12 phases complete)
+Progress: [██████████] 100% (12/12 phases complete)
 
 ## Performance Metrics
 
@@ -131,7 +130,7 @@ Items acknowledged and carried forward from previous milestone close:
 - **Next actionable item:** — either (a) a specific next phase/step this agent will pick up unprompted, or (b) an explicit statement that the chain is parent-gated (naming exactly what's being waited on: a ruling, a dispatch, an approval) — "None" / blank is never valid; "waiting on parent" is valid ONLY when named with what for.
 - **Resume file:** — a path, or "None (see Next actionable item)" — never a bare "None" with nothing else armed.
 
-Last session: 2026-08-22
-Stopped at: **Pickup-only commit `5261f71` was gated but superseded before delivery by the combined scroll/performance batch; Mapping/Teleport and performance edits are implemented but uncommitted.**
-Next actionable item: Compile/run scroll and planner performance harnesses, remediate any failure, run complete host gates, commit/read back SHA, then build and verify one combined bare X4 Pro app image.
-Resume file: `.planning/pickup-refresh-roadmap.md`
+Last session: 2026-08-21
+Stopped at: **Milestone 3 CLOSED at Phase 12.** Exact final source `f852309adc59b404acf827d4d0fcecee8ecc8810`; final host gates pass; bare updater artifact hash and provenance recorded.
+Next actionable item: Parent-gated — await Skippy's acceptance/delivery decision for the single final Phase-12 artifact; no implementation or additional firmware build remains in this milestone.
+Resume file: `.planning/evidence/milestone3-phase11-12-final-gate.md`

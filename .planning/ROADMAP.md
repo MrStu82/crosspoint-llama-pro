@@ -205,5 +205,27 @@ Plans:
 - [x] 10-01: Throw mechanic + PercussiveMaintenance — closed, see evidence/phase10-gate.md.
 - [x] 10-02: Follow-up fix (MonsterKilled emit on thrown kills + AchievementBus multi-unlock queue) per parent msg 3758 — closed, commit `72eac4b4acb343cc5df016dbb82e70a3dcc4f762`, see evidence/phase10-gate.md.
 
-### Phases 11-12: World Dungeon — The Show / The Co-star
-Requirements TBD, pulled from the plan doc as each phase opens. **Flash cadence (revised 2026-08-15, supersedes the old 9+10/11+12 pairing): no interim images at all — one final flash to Stuart when Phase 12 closes.** Every phase gate stays host-machine-verified evidence to parent, same rigor as before; there is no glass gate again until the very last phase closes.
+### Phase 11: World Dungeon — The Show / reward economy
+**Goal**: Per-run achievement economy plus loot boxes.
+**Status**: Closed 2026-08-21. The append-only 250-entry achievement pool deals 50 ids per run from the full pool; rewards reuse the existing run-scoped buff/skill machinery. Four Common/Uncommon/Rare/Legendary loot-box tiers use exact 50/30/15/5 weighting and one compact existing-definition reward table per tier. Four visible box records occupy one logical shared-loot slot. Detailed proof: `.planning/evidence/job-phase4-loot-box-gate.md` and `.planning/evidence/milestone3-phase11-12-final-gate.md`.
+
+### Phase 12: World Dungeon — The Co-star / companion
+**Goal**: Two corpse-loot streams and a run-identity companion.
+**Status**: Closed 2026-08-21. Every eligible kill rolls independent player-visible and companion-only streams. The companion is independently rolled at run creation, levels with the player, forages its private stream, auto-equips its best gear and has a profile/progress/gear surface. Save and occupancy boundaries are hardened and migration-tested. Final clean-source gate: loot-box harness PASS, ASan/UBSan companion-save harness PASS, full host suite 149/149, X4 Pro production build SUCCESS. Final bare app image recorded in `.planning/evidence/milestone3-phase11-12-final-gate.md`. Standing flash cadence honoured: no interim Phase 11 image; one final image after Phase 12 closure.
+
+
+### Phase 13: Audited upstream bug fixes
+**Goal:** Port every compatible runtime fix identified in `audits/crosspoint-reader-upstream-crossink-audit.md`; no blind merge or feature sweep.
+**Status:** In progress.
+
+### Phase 14: Approved reader capabilities
+**Goal:** Native Lexend Deca/Bitter selection, 10/12/14/16pt sizes, limited symbols, redaction, simple tables, optional Bionic/Guide Dots, force paragraph indents; retain existing strikethrough/thick underline/hr behavior.
+**Status:** Pending Phase 13.
+
+### Phase 15: Pinned sleep favourite
+**Goal:** Explicit Pinned/Unpinned state and missing-file fallback in the existing sleep-image flow.
+**Status:** Pending Phase 14.
+
+### Phase 16: Simulator and release gate
+**Goal:** `simulator_x4_pro` deterministic input/framebuffer proof, one local Trantor X4 Pro build, release provenance, Pixel/Gauge single gate.
+**Status:** Pending Phase 15.

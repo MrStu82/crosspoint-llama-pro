@@ -40,9 +40,9 @@ void TextBlock::bindArenaPointers() {
 
 TextBlock::TextBlock(const std::vector<std::string>& words, const std::vector<int16_t>& wordXpos,
                      const std::vector<EpdFontFamily::Style>& wordStyles, const std::vector<uint8_t>& focusBoundary,
-                     const std::vector<uint16_t>& focusSuffixX, const BlockStyle& blockStyle,
+                     const std::vector<uint16_t>& focusSuffixX, const BlockStyle& blockStyle, const bool guideDotsPresent,
                      std::vector<std::string> rubyTexts)
-    : blockStyle(blockStyle), rubyTexts(std::move(rubyTexts)) {
+    : blockStyle(blockStyle), guideDotsPresent(guideDotsPresent), rubyTexts(std::move(rubyTexts)) {
   // Same invariant as deserialize(): a block never holds an all-empty rubyTexts, so a
   // ruby-less line costs nothing beyond its arena. The layout engine hands one over for
   // every line it extracts, ruby or not; release it here rather than carrying it for the
@@ -223,6 +223,17 @@ void TextBlock::render(const GfxRenderer& renderer, const int fontId, const int 
 
     const int drawX = wordX;
 
+    if (guideDotsPresent && i > 0) {
+      const int previousEnd = xposArr[i - 1] + x +
+                              renderer.getTextAdvanceX(fontId, wordText(i - 1), wordStyle(i - 1));
+      const int gap = drawX - previousEnd;
+      if (gap >= 5) {
+        const int dotX = previousEnd + gap / 2;
+        const int dotY = wordY + std::max(1, ascender / 2);
+        renderer.fillRect(dotX - 1, dotY - 1, 2, 2, true);
+      }
+    }
+
     if (boundary > 0) {
       // Focus split: draw bold prefix, then the regular suffix at a pre-computed x offset.
       // The bold prefix is bounded to 9 codepoints by the clamp on targetBoldChars in
@@ -309,6 +320,7 @@ bool TextBlock::serialize(HalFile& file) const {
   // per-word arrays and the text blob.
   serialization::writePod(file, numWords);
   serialization::writePod(file, static_cast<uint8_t>(focusPresent ? 1 : 0));
+  serialization::writePod(file, static_cast<uint8_t>(guideDotsPresent ? 1 : 0));
   serialization::writePod(file, textBytes);
   if (numWords > 0) {
     const size_t size = arenaSize(numWords, focusPresent, textBytes);
@@ -345,9 +357,11 @@ bool TextBlock::serialize(HalFile& file) const {
 std::unique_ptr<TextBlock> TextBlock::deserialize(HalFile& file) {
   uint16_t wc;
   uint8_t hasFocus;
+  uint8_t hasGuideDots;
   uint16_t textBytes;
   serialization::readPod(file, wc);
   serialization::readPod(file, hasFocus);
+  serialization::readPod(file, hasGuideDots);
   serialization::readPod(file, textBytes);
 
   // Sanity checks: cap the arena allocation and reject impossible geometry
@@ -369,6 +383,7 @@ std::unique_ptr<TextBlock> TextBlock::deserialize(HalFile& file) {
   block->numWords = wc;
   block->textBytes = textBytes;
   block->focusPresent = hasFocus != 0;
+  block->guideDotsPresent = hasGuideDots != 0;
 
   if (wc > 0) {
     const size_t size = arenaSize(wc, block->focusPresent, textBytes);

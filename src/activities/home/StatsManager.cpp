@@ -105,6 +105,12 @@ int StatsManager::getCurrentDate() const {
   // time(), which is only ever set as a side effect of an NTP sync and reverts to 1970
   // on every reboot) and apply the user's configured UTC offset, same as the clock display.
   int yyyymmdd = 0;
+#ifdef SIMULATOR
+  uint16_t year = 0;
+  uint8_t month = 0, day = 0, hour = 0, minute = 0;
+  if (!halClock.getDateTime(year, month, day, hour, minute)) return 0;
+  yyyymmdd = static_cast<int>(year) * 10000 + static_cast<int>(month) * 100 + day;
+#else
   if (!halClock.getDate(yyyymmdd, SETTINGS.clockUtcOffsetQ)) {
     // RTC absent, or present but never set (oscillator stopped) — first boot before the
     // user has synced or set the clock. Returning 0 means day rollover (and the 7-day
@@ -112,6 +118,7 @@ int StatsManager::getCurrentDate() const {
     // everything against a fabricated date, which is worse.
     return 0;
   }
+#endif
   return yyyymmdd;
 }
 

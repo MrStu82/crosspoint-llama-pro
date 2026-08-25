@@ -109,9 +109,16 @@ bool isNightAtEpoch(int32_t epoch) {
 int32_t TamagotchiActivity::nowEpoch() {
   int yyyymmdd = 0;
   uint8_t hour = 0, minute = 0;
+#ifdef SIMULATOR
+  uint16_t year = 0;
+  uint8_t month = 0, day = 0;
+  if (!halClock.getDateTime(year, month, day, hour, minute)) return 0;
+  yyyymmdd = static_cast<int>(year) * 10000 + static_cast<int>(month) * 100 + day;
+#else
   if (!halClock.getDate(yyyymmdd, SETTINGS.clockUtcOffsetQ) || !halClock.getTime(hour, minute)) {
     return 0;
   }
+#endif
   struct tm t {};
   t.tm_year = yyyymmdd / 10000 - 1900;
   t.tm_mon = (yyyymmdd / 100) % 100 - 1;

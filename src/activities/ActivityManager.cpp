@@ -57,9 +57,12 @@ void ActivityManager::renderTaskLoop() {
   // high-water-mark log is the on-glass proof the fix bought back headroom,
   // and the assert is the standing trip-wire against the next oversized
   // local reintroducing the same margin problem before it panics for real.
-  constexpr UBaseType_t kStackWatermarkLogEveryFrames = 64;
-  constexpr UBaseType_t kStackWatermarkMinWords = 256;  // ~1KB on Xtensa/32-bit words
-  static UBaseType_t renderFrameCount = 0;
+  // `uxTaskGetStackHighWaterMark()` is word-count data; keeping the local
+  // storage unsigned also lets the native simulator exercise this trip-wire
+  // without depending on an ESP-IDF-only typedef.
+  constexpr unsigned int kStackWatermarkLogEveryFrames = 64;
+  constexpr unsigned int kStackWatermarkMinWords = 256;  // ~1KB on Xtensa/32-bit words
+  static unsigned int renderFrameCount = 0;
 
   while (true) {
     ulTaskNotifyTake(pdTRUE, portMAX_DELAY);
@@ -71,7 +74,7 @@ void ActivityManager::renderTaskLoop() {
       currentActivity->render(std::move(lock));
     }
 
-    UBaseType_t stackWordsFree = uxTaskGetStackHighWaterMark(nullptr);
+    const unsigned int stackWordsFree = uxTaskGetStackHighWaterMark(nullptr);
     renderFrameCount++;
     if (renderFrameCount % kStackWatermarkLogEveryFrames == 0) {
       LOG_DBG("ACT", "render task stack high-water mark: %u words free", static_cast<unsigned>(stackWordsFree));

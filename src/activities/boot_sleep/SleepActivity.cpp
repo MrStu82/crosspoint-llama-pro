@@ -1,6 +1,7 @@
 #include "SleepActivity.h"
 
 #include <Epub.h>
+#include <FontCacheManager.h>
 #include <FsHelpers.h>
 #include <GfxRenderer.h>
 #include <HalGPIO.h>
@@ -57,6 +58,11 @@ void SleepActivity::onEnter() {
 }
 
 void SleepActivity::renderCustomSleepScreen() const {
+  // Image decode needs a contiguous working buffer; SD fallback glyph caches
+  // are rebuildable and must not crowd it out.
+  if (auto* cache = renderer.getFontCacheManager()) {
+    cache->releaseSdFontCaches();
+  }
   // Check if we have a /.sleep (preferred) or /sleep directory
   const char* sleepDir = nullptr;
   auto dir = Storage.open("/.sleep");

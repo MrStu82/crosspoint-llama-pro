@@ -424,3 +424,9 @@ STR_FIRMWARE_WRITE_FAILED: "Falha na gravação do firmware"
 STR_FIRMWARE_UPDATE_DO_NOT_POWER_OFF: "Não desligue o dispositivo!"
 STR_RECOVERY_MODE: "Modo de Recuperação"
 STR_RECOVERY_MODE_HINT: "Coloque o ficheiro firmware.bin na raiz do cartão SD e selecione-o"
+
+STR_LEXEND_DECA: "Lexend Deca"
+STR_BITTER: "Bitter"
+
+STR_GUIDE_DOTS: "Guide Dots"
+STR_FORCE_PARAGRAPH_INDENTS: "Force Paragraph Indents"

@@ -426,3 +426,9 @@ STR_RECOVERY_MODE: "Modo de recuperación"
 STR_RECOVERY_MODE_HINT: "Ponga firmware.bin en la raíz de la tarj. SD y selecciónelo"
 STR_ADD_HIDDEN_NETWORK: "Añadir red oculta..."
 STR_ENTER_WIFI_SSID: "Introduce el nombre de la red (SSID)"
+
+STR_LEXEND_DECA: "Lexend Deca"
+STR_BITTER: "Bitter"
+
+STR_GUIDE_DOTS: "Guide Dots"
+STR_FORCE_PARAGRAPH_INDENTS: "Force Paragraph Indents"

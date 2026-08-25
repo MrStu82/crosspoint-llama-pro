@@ -71,6 +71,21 @@ void SleepActivity::renderCustomSleepScreen() const {
   // render a custom sleep screen instead of the default.
   // This takes priority over the /sleep folder.
   HalFile file;
+  // A pinned image is an explicit user choice and wins over rotation. If it was
+  // removed from the SD card, fall through without trapping sleep rendering.
+  if (!APP_STATE.favoriteSleepImagePath.empty() &&
+      Storage.openFileForRead("SLP", APP_STATE.favoriteSleepImagePath, file)) {
+    Bitmap bitmap(file, true);
+    if (bitmap.parseHeaders() == BmpReaderError::Ok) {
+      LOG_DBG("SLP", "Loading pinned image: %s", APP_STATE.favoriteSleepImagePath.c_str());
+      renderBitmapSleepScreen(bitmap);
+      file.close();
+      if (dir) dir.close();
+      return;
+    }
+    file.close();
+  }
+
   if (Storage.openFileForRead("SLP", "/sleep.bmp", file)) {
     Bitmap bitmap(file, true);
     if (bitmap.parseHeaders() == BmpReaderError::Ok) {

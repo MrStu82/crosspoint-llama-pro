@@ -9,6 +9,7 @@
 #include <algorithm>
 
 #include "CrossPointSettings.h"
+#include "CrossPointState.h"
 #include "components/UITheme.h"
 #include "fontIds.h"
 
@@ -101,8 +102,9 @@ void BmpViewerActivity::onEnter() {
       bool hasNext = (siblingImages.size() > 1 && currentImageIndex != -1 &&
                       currentImageIndex < static_cast<int>(siblingImages.size()) - 1);
 
-      const auto labels =
-          mappedInput.mapLabels(tr(STR_BACK), tr(STR_SET_SLEEP_COVER), (hasPrevious ? "<" : ""), (hasNext ? ">" : ""));
+      const bool pinned = APP_STATE.favoriteSleepImagePath == filePath;
+      const auto labels = mappedInput.mapLabels(tr(STR_BACK), pinned ? "Pinned" : "Pin", (hasPrevious ? "<" : ""),
+                                                (hasNext ? ">" : ""));
 
       GUI.fillPopupProgress(renderer, popupRect, 50);
 
@@ -143,36 +145,16 @@ void BmpViewerActivity::onExit() {
   renderer.displayBuffer(HalDisplay::HALF_REFRESH);
 }
 
-void BmpViewerActivity::doSetSleepCover() {
-  GUI.drawPopup(renderer, tr(STR_LOADING_POPUP));
-
-  bool success = false;
-  HalFile inFile, outFile;
-  if (Storage.openFileForRead("BMP", filePath, inFile)) {
-    if (Storage.openFileForWrite("BMP", "/sleep.bmp", outFile)) {
-      char buffer[2048];
-      int bytesRead;
-      success = true;
-      while ((bytesRead = inFile.read(buffer, sizeof(buffer))) > 0) {
-        if (outFile.write(buffer, bytesRead) != bytesRead) {
-          success = false;
-          break;
-        }
-      }
-      outFile.close();
-    }
-    inFile.close();
-  }
-
-  if (success) {
+void BmpViewerActivity::togglePinnedSleepImage() {
+  const bool wasPinned = APP_STATE.favoriteSleepImagePath == filePath;
+  APP_STATE.favoriteSleepImagePath = wasPinned ? std::string() : filePath;
+  APP_STATE.saveToFile();
+  if (!wasPinned) {
     SETTINGS.sleepScreen = CrossPointSettings::SLEEP_SCREEN_MODE::CUSTOM;
     SETTINGS.saveToFile();
-    GUI.drawPopup(renderer, tr(STR_DONE));
-  } else {
-    GUI.drawPopup(renderer, tr(STR_FAILED_LOWER));
   }
-
-  delay(1000);
+  GUI.drawPopup(renderer, wasPinned ? "Unpinned" : "Pinned");
+  delay(500);
   onEnter();
 }
 
@@ -212,18 +194,18 @@ void BmpViewerActivity::loop() {
   }
 
   // Bottom button-hint strip, same touch idiom as EndOfBookOptions /
-  // EpubReaderPercentSelectionActivity: right third mirrors the "Set sleep cover" hint,
+  // EpubReaderPercentSelectionActivity: right third mirrors the "Pin sleep image" hint,
   // giving the Confirm-gated action below a touch-reachable equivalent.
   int tx = 0;
   int ty = 0;
   if (mappedInput.wasScreenTapped(tx, ty) && ty >= renderer.getScreenHeight() - 80 &&
       tx > renderer.getScreenWidth() * 2 / 3) {
-    doSetSleepCover();
+    togglePinnedSleepImage();
     return;
   }
 
   if (mappedInput.wasReleased(MappedInputManager::Button::Confirm)) {
-    doSetSleepCover();
+    togglePinnedSleepImage();
     return;
   }
 

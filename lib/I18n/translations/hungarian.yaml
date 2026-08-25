@@ -402,3 +402,9 @@ STR_UPDATE_ALL: "Összes frissítése"
 STR_UPDATE_AVAILABLE: "Frissítés"
 STR_VALIDATING_FIRMWARE: "Firmware ellenőrzése..."
 STR_XTC_STATUS_BAR: "XTC állapotsáv"
+
+STR_LEXEND_DECA: "Lexend Deca"
+STR_BITTER: "Bitter"
+
+STR_GUIDE_DOTS: "Guide Dots"
+STR_FORCE_PARAGRAPH_INDENTS: "Force Paragraph Indents"

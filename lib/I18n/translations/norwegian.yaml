@@ -386,3 +386,9 @@ STR_FIRMWARE_WRITE_FAILED: "Skriving av fastvare mislyktes"
 STR_FIRMWARE_UPDATE_DO_NOT_POWER_OFF: "Ikke slå av!"
 STR_RECOVERY_MODE: "Gjenopprettingsmodus"
 STR_RECOVERY_MODE_HINT: "Legg firmware.bin i roten av SD-kortet og velg den"
+
+STR_LEXEND_DECA: "Lexend Deca"
+STR_BITTER: "Bitter"
+
+STR_GUIDE_DOTS: "Guide Dots"
+STR_FORCE_PARAGRAPH_INDENTS: "Force Paragraph Indents"

@@ -16,7 +16,7 @@ class BmpViewerActivity final : public Activity {
 
  private:
   void loadSiblingImages();
-  void doSetSleepCover();
+  void togglePinnedSleepImage();
 
   std::string filePath;
   std::vector<std::string> siblingImages;

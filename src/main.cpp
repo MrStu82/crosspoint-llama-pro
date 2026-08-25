@@ -53,6 +53,47 @@ EpdFont notoserif14BoldItalicFont(&notoserif_14_bolditalic);
 EpdFontFamily notoserif14FontFamily(&notoserif14RegularFont, &notoserif14BoldFont, &notoserif14ItalicFont,
                                     &notoserif14BoldItalicFont);
 #ifndef OMIT_FONTS
+EpdFont lexendDeca10RegularFont(&lexenddeca_10_regular);
+EpdFont lexendDeca10BoldFont(&lexenddeca_10_bold);
+EpdFont lexendDeca10ItalicFont(&lexenddeca_10_italic);
+EpdFont lexendDeca10BoldItalicFont(&lexenddeca_10_bolditalic);
+EpdFontFamily lexendDeca10FontFamily(&lexendDeca10RegularFont, &lexendDeca10BoldFont, &lexendDeca10ItalicFont, &lexendDeca10BoldItalicFont);
+EpdFont lexendDeca12RegularFont(&lexenddeca_12_regular);
+EpdFont lexendDeca12BoldFont(&lexenddeca_12_bold);
+EpdFont lexendDeca12ItalicFont(&lexenddeca_12_italic);
+EpdFont lexendDeca12BoldItalicFont(&lexenddeca_12_bolditalic);
+EpdFontFamily lexendDeca12FontFamily(&lexendDeca12RegularFont, &lexendDeca12BoldFont, &lexendDeca12ItalicFont, &lexendDeca12BoldItalicFont);
+EpdFont lexendDeca14RegularFont(&lexenddeca_14_regular);
+EpdFont lexendDeca14BoldFont(&lexenddeca_14_bold);
+EpdFont lexendDeca14ItalicFont(&lexenddeca_14_italic);
+EpdFont lexendDeca14BoldItalicFont(&lexenddeca_14_bolditalic);
+EpdFontFamily lexendDeca14FontFamily(&lexendDeca14RegularFont, &lexendDeca14BoldFont, &lexendDeca14ItalicFont, &lexendDeca14BoldItalicFont);
+EpdFont lexendDeca16RegularFont(&lexenddeca_16_regular);
+EpdFont lexendDeca16BoldFont(&lexenddeca_16_bold);
+EpdFont lexendDeca16ItalicFont(&lexenddeca_16_italic);
+EpdFont lexendDeca16BoldItalicFont(&lexenddeca_16_bolditalic);
+EpdFontFamily lexendDeca16FontFamily(&lexendDeca16RegularFont, &lexendDeca16BoldFont, &lexendDeca16ItalicFont, &lexendDeca16BoldItalicFont);
+EpdFont bitter10RegularFont(&bitter_10_regular);
+EpdFont bitter10BoldFont(&bitter_10_bold);
+EpdFont bitter10ItalicFont(&bitter_10_italic);
+EpdFont bitter10BoldItalicFont(&bitter_10_bolditalic);
+EpdFontFamily bitter10FontFamily(&bitter10RegularFont, &bitter10BoldFont, &bitter10ItalicFont, &bitter10BoldItalicFont);
+EpdFont bitter12RegularFont(&bitter_12_regular);
+EpdFont bitter12BoldFont(&bitter_12_bold);
+EpdFont bitter12ItalicFont(&bitter_12_italic);
+EpdFont bitter12BoldItalicFont(&bitter_12_bolditalic);
+EpdFontFamily bitter12FontFamily(&bitter12RegularFont, &bitter12BoldFont, &bitter12ItalicFont, &bitter12BoldItalicFont);
+EpdFont bitter14RegularFont(&bitter_14_regular);
+EpdFont bitter14BoldFont(&bitter_14_bold);
+EpdFont bitter14ItalicFont(&bitter_14_italic);
+EpdFont bitter14BoldItalicFont(&bitter_14_bolditalic);
+EpdFontFamily bitter14FontFamily(&bitter14RegularFont, &bitter14BoldFont, &bitter14ItalicFont, &bitter14BoldItalicFont);
+EpdFont bitter16RegularFont(&bitter_16_regular);
+EpdFont bitter16BoldFont(&bitter_16_bold);
+EpdFont bitter16ItalicFont(&bitter_16_italic);
+EpdFont bitter16BoldItalicFont(&bitter_16_bolditalic);
+EpdFontFamily bitter16FontFamily(&bitter16RegularFont, &bitter16BoldFont, &bitter16ItalicFont, &bitter16BoldItalicFont);
+
 EpdFont notoserif12RegularFont(&notoserif_12_regular);
 EpdFont notoserif12BoldFont(&notoserif_12_bold);
 EpdFont notoserif12ItalicFont(&notoserif_12_italic);
@@ -252,6 +293,14 @@ void setupDisplayAndFonts(bool seamless = false) {
   renderer.insertFont(NOTOSERIF_14_FONT_ID, notoserif14FontFamily);
 #ifndef OMIT_FONTS
   renderer.insertFont(NOTOSERIF_12_FONT_ID, notoserif12FontFamily);
+  renderer.insertFont(LEXENDDECA_10_FONT_ID, lexendDeca10FontFamily);
+  renderer.insertFont(LEXENDDECA_12_FONT_ID, lexendDeca12FontFamily);
+  renderer.insertFont(LEXENDDECA_14_FONT_ID, lexendDeca14FontFamily);
+  renderer.insertFont(LEXENDDECA_16_FONT_ID, lexendDeca16FontFamily);
+  renderer.insertFont(BITTER_10_FONT_ID, bitter10FontFamily);
+  renderer.insertFont(BITTER_12_FONT_ID, bitter12FontFamily);
+  renderer.insertFont(BITTER_14_FONT_ID, bitter14FontFamily);
+  renderer.insertFont(BITTER_16_FONT_ID, bitter16FontFamily);
   renderer.insertFont(NOTOSERIF_16_FONT_ID, notoserif16FontFamily);
   renderer.insertFont(NOTOSERIF_18_FONT_ID, notoserif18FontFamily);
 

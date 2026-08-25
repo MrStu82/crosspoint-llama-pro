@@ -615,3 +615,9 @@ STR_DM_CORRUPT_NOTICE_TITLE: "CORRUPTED RECORD"
 STR_DM_CORRUPT_NOTICE_BODY: "Your save data predates the current System build and cannot be validated. The System does not honour legacy contracts. Floor %u has been regenerated."
 STR_DM_CORRUPT_NOTICE_BODY_WHOLERUN: "Your save data predates the current System build and cannot be validated. The System does not honour legacy contracts. A new run has been started."
 STR_DM_CORRUPT_NOTICE_CONTINUE: "Continue"
+
+STR_LEXEND_DECA: "Lexend Deca"
+STR_BITTER: "Bitter"
+
+STR_GUIDE_DOTS: "Guide Dots"
+STR_FORCE_PARAGRAPH_INDENTS: "Force Paragraph Indents"

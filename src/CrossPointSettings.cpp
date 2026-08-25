@@ -267,6 +267,8 @@ ReaderRenderSpec CrossPointSettings::readerRenderSpec(const uint16_t viewportWid
   spec.embeddedStyle = embeddedStyle != 0;
   spec.imageRendering = imageRendering;
   spec.focusReadingEnabled = focusReadingEnabled != 0;
+  spec.guideReadingEnabled = guideReadingEnabled != 0;
+  spec.forceParagraphIndents = forceParagraphIndents != 0;
   return spec;
 }
 
@@ -340,29 +342,26 @@ void CrossPointSettings::clearSdFontFamily() {
 }
 
 int CrossPointSettings::getReaderFontId() const {
-  // Check SD card font first
   if (sdFontFamilyName[0] != '\0' && sdFontIdResolver) {
-    int id = sdFontIdResolver(sdFontResolverCtx, sdFontFamilyName, fontPointSize);
+    const int id = sdFontIdResolver(sdFontResolverCtx, sdFontFamilyName, fontPointSize);
     if (id != 0) return id;
-    // Fall through to built-in if SD font not found
   }
 
-  // A built-in family only exists at BUILTIN_READER_POINT_SIZES, so a size
-  // carried over from an SD family may not be one of them. ensureLoaded()
-  // normally persists the snap; snap again here (without allocating — this runs
-  // in the page render loop) so rendering is correct even before it has run.
-  const uint8_t pt =
-      snapToNearestPointSize(BUILTIN_READER_POINT_SIZES, std::size(BUILTIN_READER_POINT_SIZES), fontPointSize);
-  const bool sans = (fontFamily == NOTOSANS);
-  switch (pt) {
-    case 12:
-      return sans ? NOTOSANS_12_FONT_ID : NOTOSERIF_12_FONT_ID;
-    case 16:
-      return sans ? NOTOSANS_16_FONT_ID : NOTOSERIF_16_FONT_ID;
-    case 18:
-      return sans ? NOTOSANS_18_FONT_ID : NOTOSERIF_18_FONT_ID;
-    case 14:
-    default:
-      return sans ? NOTOSANS_14_FONT_ID : NOTOSERIF_14_FONT_ID;
+  const bool crossInkFamily = fontFamily == LEXEND_DECA || fontFamily == BITTER;
+  const auto* sizes = crossInkFamily ? CROSSINK_READER_POINT_SIZES : NOTO_READER_POINT_SIZES;
+  const size_t sizeCount = crossInkFamily ? std::size(CROSSINK_READER_POINT_SIZES) : std::size(NOTO_READER_POINT_SIZES);
+  const uint8_t pt = snapToNearestPointSize(sizes, sizeCount, fontPointSize);
+  if (fontFamily == LEXEND_DECA) {
+    switch (pt) { case 10: return LEXENDDECA_10_FONT_ID; case 12: return LEXENDDECA_12_FONT_ID;
+      case 16: return LEXENDDECA_16_FONT_ID; default: return LEXENDDECA_14_FONT_ID; }
   }
+  if (fontFamily == BITTER) {
+    switch (pt) { case 10: return BITTER_10_FONT_ID; case 12: return BITTER_12_FONT_ID;
+      case 16: return BITTER_16_FONT_ID; default: return BITTER_14_FONT_ID; }
+  }
+  const bool sans = fontFamily == NOTOSANS;
+  switch (pt) { case 12: return sans ? NOTOSANS_12_FONT_ID : NOTOSERIF_12_FONT_ID;
+    case 16: return sans ? NOTOSANS_16_FONT_ID : NOTOSERIF_16_FONT_ID;
+    case 18: return sans ? NOTOSANS_18_FONT_ID : NOTOSERIF_18_FONT_ID;
+    default: return sans ? NOTOSANS_14_FONT_ID : NOTOSERIF_14_FONT_ID; }
 }

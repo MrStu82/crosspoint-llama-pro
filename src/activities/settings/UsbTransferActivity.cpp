@@ -6,6 +6,7 @@
 #include <Logging.h>
 
 #include "MappedInputManager.h"
+#include "HardcoverCredentialStore.h"
 #include "activities/home/StatsActivity.h"
 #include "components/UITheme.h"
 #include "fontIds.h"
@@ -58,6 +59,14 @@ void UsbTransferActivity::endSessionAndFinish() {
   LOG_INF("USB", "UsbTransferActivity: ending session");
   usbMsc.end();
   Storage.begin();
+  const auto imported = HARDCOVER_STORE.importTokenFile();
+  if (imported == HardcoverCredentialStore::ImportResult::IMPORTED) {
+    LOG_INF("HCR", "Imported Hardcover catalog token");
+  } else if (imported == HardcoverCredentialStore::ImportResult::INVALID ||
+             imported == HardcoverCredentialStore::ImportResult::SAVE_FAILED ||
+             imported == HardcoverCredentialStore::ImportResult::REMOVE_FAILED) {
+    LOG_ERR("HCR", "Hardcover token import failed (%d)", static_cast<int>(imported));
+  }
 #endif
   finish();
 }

@@ -68,9 +68,13 @@ menus. The benchmark is the acceptance contract, not a suggestion.
 
 - Endpoint: `POST https://api.hardcover.app/v1/graphql`; catalog `search`
   requires only the dedicated `read:catalog:search` PAT scope. The token is
-  provisioned from the existing device web-settings path, rendered as a
-  password input, omitted from settings GET responses, device-bound/obfuscated
-  at rest in `/.crosspoint/hardcover.json`, and never compiled or logged.
+  provisioned at runtime. Transfer accepts a one-time `/hardcover.token` file,
+  validates the `hc_pat_` prefix, bounded length and safe character set,
+  atomically persists the device-bound/obfuscated value at
+  `/.crosspoint/hardcover.json`, and removes the import file only after the
+  save succeeds. Settings exposes explicit import/replace and confirmed forget
+  actions. The web password field remains write-only/redacted (`hasValue`,
+  never the token). The token is never compiled or logged.
 - Match ISBN first when EPUB metadata supplies one; on missing/no-match, query
   title+author and accept only an exact normalised title plus exact author.
 - Provider is isolated behind `RatingSnapshot` because Hardcover documents the

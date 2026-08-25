@@ -28,6 +28,8 @@ enum class SettingAction {
   TextSettings,
   Frontlight,
   UsbTransfer,
+  HardcoverImport,
+  HardcoverForget,
   DebugPanel,
 };
 

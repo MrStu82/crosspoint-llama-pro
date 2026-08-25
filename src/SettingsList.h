@@ -388,7 +388,7 @@ inline std::vector<SettingInfo> getSettingsList(const SdCardFontRegistry* regist
             StrId::STR_HARDCOVER_API_TOKEN, [] { return HARDCOVER_STORE.getToken(); },
             [](const std::string& v) {
               HARDCOVER_STORE.setToken(v);
-              HARDCOVER_STORE.saveToFile();
+              HARDCOVER_STORE.saveAtomic();
             },
             "hardcoverApiToken")
             .withObfuscated(),

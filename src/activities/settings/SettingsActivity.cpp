@@ -13,6 +13,7 @@
 #include "CrossPointSettings.h"
 #include "DebugPanelActivity.h"
 #include "FontDownloadActivity.h"
+#include "HardcoverCredentialStore.h"
 #include "FrontlightActivity.h"
 #include "KOReaderSettingsActivity.h"
 #include "LanguageSelectActivity.h"
@@ -23,6 +24,7 @@
 #include "SdFirmwareUpdateActivity.h"
 #include "SettingsList.h"
 #include "UsbTransferActivity.h"
+#include "activities/util/ConfirmationActivity.h"
 #include "StatusBarSettingsActivity.h"
 #include "TextSettingsActivity.h"
 #include "activities/network/WifiSelectionActivity.h"
@@ -90,6 +92,10 @@ void SettingsActivity::rebuildSettingsLists() {
     systemSettings.push_back(SettingInfo::Action(StrId::STR_USB_TRANSFER, SettingAction::UsbTransfer));
   }
   #endif
+  systemSettings.push_back(SettingInfo::Action(StrId::STR_HARDCOVER_IMPORT_TOKEN, SettingAction::HardcoverImport));
+  if (HARDCOVER_STORE.hasToken()) {
+    systemSettings.push_back(SettingInfo::Action(StrId::STR_HARDCOVER_FORGET_TOKEN, SettingAction::HardcoverForget));
+  }
   systemSettings.push_back(SettingInfo::Action(StrId::STR_LANGUAGE, SettingAction::Language));
   systemSettings.push_back(SettingInfo::Action(StrId::STR_DEBUG_PANEL, SettingAction::DebugPanel));
   readerSettings.insert(readerSettings.begin(),
@@ -417,6 +423,19 @@ void SettingsActivity::toggleCurrentSetting() {
         break;
       case SettingAction::UsbTransfer:
         startActivityForResult(std::make_unique<UsbTransferActivity>(renderer, mappedInput), resultHandler);
+        break;
+      case SettingAction::HardcoverImport:
+        HARDCOVER_STORE.importTokenFile();
+        rebuildSettingsLists();
+        break;
+      case SettingAction::HardcoverForget:
+        startActivityForResult(
+            std::make_unique<ConfirmationActivity>(renderer, mappedInput, tr(STR_HARDCOVER_FORGET_TOKEN),
+                                                   tr(STR_HARDCOVER_FORGET_CONFIRM)),
+            [this](const ActivityResult& result) {
+              if (!result.isCancelled) HARDCOVER_STORE.forget();
+              rebuildSettingsLists();
+            });
         break;
       case SettingAction::DebugPanel:
         startActivityForResult(std::make_unique<DebugPanelActivity>(renderer, mappedInput), resultHandler);

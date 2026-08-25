@@ -3,10 +3,10 @@ gsd_state_version: '1.0'
 status: in_progress
 progress:
   total_phases: 16
-  completed_phases: 12
+  completed_phases: 15
   total_plans: 5
   completed_plans: 5
-  percent: 75
+  percent: 94
 ---
 
 # Project State
@@ -20,7 +20,7 @@ See: .planning/PROJECT.md (updated 2026-08-15)
 
 ## Current Position
 
-Phase: 13 of 16 — upstream bug-fix ports in progress
+Phase: 16 of 16 — simulator and release gate in progress
 Plan: work from frozen completed Dungeon line `6e872b0531452b3e4a3e50651e1ce937d71d2610`; apply only audited compatible fixes and approved v2 features; exactly one X4 Pro implementation build, one simulator proof, one Pixel/Gauge gate.
 **Chained self-continuation job (parent msg 4140, 2026-08-18, separate local 1-5 numbering, runs inside/ahead of Phase 11 scoping):** Job Phase 1 (`drawLine` multi-width overload fix — thick vertical lines were stretching instead of widening because the old code always offset y regardless of orientation) is DONE and independently verified: commit `7e447bc56b66958a1ec3a0ed88a0fb7483453c6f` (`git rev-parse HEAD` + `wc -c`=41 confirmed), Trantor firmware build green (`x4pro`, 39.43s, SUCCESS), host gtest suite 143/143 passed including all 5 new `ThickLineOffsetInX`/`ThickLineShape` cases proving both the axis decision and the widened-band-not-stretched-length shape. Chain proceeding immediately, no stop, into Job Phase 2 (corpse loot: dual player/pet-addressed drop streams off the same floor/monster-scaled table with a rare tail; pet stream never enters player inventory, never renders on map, not player-pickable). Job Phase 3 = the pet (rolled at creation, levels with player, autonomous foraging of the Phase 2 pet stream, auto-equip, profile/gear screen). Job Phase 4 = loot-box DESIGN NOTE ONLY (six tiers, no safe-room gate, key-to-race drops, some unstable — box-type count and per-tier tables left for Stuart), no code/commit, chain halts after sending the note. Job Phase 5 (progress screen + character naming w/ Random button) is explicitly NOT auto-chained — separate dispatch from parent required.
 

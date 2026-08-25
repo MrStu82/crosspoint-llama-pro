@@ -53,6 +53,7 @@ class TextBlock final : public Block {
   const int16_t* xposArr = nullptr;
   const uint16_t* focusSuffixXArr = nullptr;  // null when !focusPresent
   const uint8_t* stylesArr = nullptr;
+  const uint8_t* backgroundBlackArr = nullptr;
   const uint8_t* focusBoundaryArr = nullptr;  // null when !focusPresent
   const char* textArr = nullptr;
   std::vector<std::string> rubyTexts;
@@ -67,7 +68,8 @@ class TextBlock final : public Block {
   // is false -- callers must check and fail the line instead of using it.
   explicit TextBlock(const std::vector<std::string>& words, const std::vector<int16_t>& wordXpos,
                      const std::vector<EpdFontFamily::Style>& wordStyles, const std::vector<uint8_t>& focusBoundary,
-                     const std::vector<uint16_t>& focusSuffixX, const BlockStyle& blockStyle = BlockStyle(), bool guideDotsPresent = false,
+                     const std::vector<uint16_t>& focusSuffixX, const std::vector<uint8_t>& backgroundBlack,
+                     const BlockStyle& blockStyle = BlockStyle(), bool guideDotsPresent = false,
                      std::vector<std::string> rubyTexts = {});
   ~TextBlock() override = default;
   TextBlock(const TextBlock&) = delete;

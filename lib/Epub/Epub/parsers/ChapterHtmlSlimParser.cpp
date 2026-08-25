@@ -148,6 +148,10 @@ void ChapterHtmlSlimParser::applyTextDecorationToEntry(StyleStackEntry& entry, c
     entry.hasTextDecoration = true;
     entry.textDecoration = css.textDecoration;
   }
+  if (css.hasBackgroundBlack()) {
+    entry.hasBackgroundBlack = true;
+    entry.backgroundBlack = css.backgroundBlack;
+  }
 }
 
 void ChapterHtmlSlimParser::pushDecorationStyleEntry(const CssTextDecoration defaultDecoration,
@@ -180,6 +184,7 @@ void ChapterHtmlSlimParser::updateEffectiveInlineStyle() {
   effectiveDirection = currentCssStyle.direction;
   effectiveSup = false;
   effectiveSub = false;
+  effectiveBackgroundBlack = currentCssStyle.hasBackgroundBlack() && currentCssStyle.backgroundBlack;
 
   // Apply inline style stack in order
   for (const auto& entry : inlineStyleStack) {
@@ -206,6 +211,7 @@ void ChapterHtmlSlimParser::updateEffectiveInlineStyle() {
       effectiveSub = entry.sub;
       if (entry.sub) effectiveSup = false;
     }
+    if (entry.hasBackgroundBlack) effectiveBackgroundBlack = entry.backgroundBlack;
   }
 
   // Keep inherited direction in the active empty text block so upcoming block starts
@@ -273,7 +279,8 @@ void ChapterHtmlSlimParser::flushPartWordBuffer() {
 
   // flush the buffer
   partWordBuffer[partWordBufferIndex] = '\0';
-  currentTextBlock->addWord(partWordBuffer, fontStyle, false, nextWordContinues, partWordVisibleOffset);
+  currentTextBlock->addWord(partWordBuffer, fontStyle, false, nextWordContinues, partWordVisibleOffset,
+                            effectiveBackgroundBlack);
   partWordBufferIndex = 0;
   nextWordContinues = false;
   listItemBulletOnly = false;
@@ -1032,7 +1039,7 @@ void XMLCALL ChapterHtmlSlimParser::startElement(void* userData, const XML_Char*
       self->updateEffectiveInlineStyle();
 
       if (strcmp(name, "li") == 0) {
-        self->currentTextBlock->addWord("\xe2\x80\xa2", EpdFontFamily::REGULAR, false, false, self->visibleTextOffset);
+        self->currentTextBlock->addWord("\xe2\x80\xa2", EpdFontFamily::REGULAR, false, false, self->visibleTextOffset, self->effectiveBackgroundBlack);
         self->listItemBulletOnly = true;
       }
     }
@@ -1109,7 +1116,7 @@ void XMLCALL ChapterHtmlSlimParser::startElement(void* userData, const XML_Char*
   } else if (strcmp(name, "span") == 0 || !isHeaderOrBlock(name)) {
     // Handle span and other inline elements for CSS styling
     if (cssStyle.hasFontWeight() || cssStyle.hasFontStyle() || cssStyle.hasTextDecoration() ||
-        cssStyle.hasDirection() || cssStyle.hasVerticalAlign()) {
+        cssStyle.hasDirection() || cssStyle.hasVerticalAlign() || cssStyle.hasBackgroundBlack()) {
       // Flush buffer before style change so preceding text gets current style
       if (self->partWordBufferIndex > 0) {
         self->flushPartWordBuffer();

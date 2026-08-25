@@ -39,7 +39,9 @@ namespace {
 //      out with the previous, more restrictive break set and no longer match.
 // v39: Ruby groups are no longer soft-flushed mid-group.
 // v40: Full-viewport images clamp top margin to remain inside the page.
-constexpr uint8_t SECTION_FILE_VERSION = 41;
+// v41: Guide dots and forced paragraph indents join the render spec.
+// v42: Text blocks persist simple black-background redaction flags.
+constexpr uint8_t SECTION_FILE_VERSION = 42;
 // Written into the version field while a build is in progress; patched to
 // SECTION_FILE_VERSION only when the build is finalized. An abandoned /
 // crash-interrupted .bin therefore carries version 0, which loadSectionFile rejects

@@ -74,24 +74,25 @@ enum class CssVerticalAlign : uint8_t { Baseline = 0, Super = 1, Sub = 2 };
 
 // Bitmask for tracking which properties have been explicitly set
 struct CssPropertyFlags {
-  uint16_t textAlign : 1;
-  uint16_t fontStyle : 1;
-  uint16_t fontWeight : 1;
-  uint16_t textDecoration : 1;
-  uint16_t textIndent : 1;
-  uint16_t marginTop : 1;
-  uint16_t marginBottom : 1;
-  uint16_t marginLeft : 1;
-  uint16_t marginRight : 1;
-  uint16_t paddingTop : 1;
-  uint16_t paddingBottom : 1;
-  uint16_t paddingLeft : 1;
-  uint16_t paddingRight : 1;
-  uint16_t imageHeight : 1;
-  uint16_t imageWidth : 1;
-  uint16_t display : 1;
-  uint16_t direction : 1;
-  uint16_t verticalAlign : 1;
+  uint32_t textAlign : 1;
+  uint32_t fontStyle : 1;
+  uint32_t fontWeight : 1;
+  uint32_t textDecoration : 1;
+  uint32_t textIndent : 1;
+  uint32_t marginTop : 1;
+  uint32_t marginBottom : 1;
+  uint32_t marginLeft : 1;
+  uint32_t marginRight : 1;
+  uint32_t paddingTop : 1;
+  uint32_t paddingBottom : 1;
+  uint32_t paddingLeft : 1;
+  uint32_t paddingRight : 1;
+  uint32_t imageHeight : 1;
+  uint32_t imageWidth : 1;
+  uint32_t display : 1;
+  uint32_t direction : 1;
+  uint32_t verticalAlign : 1;
+  uint32_t backgroundBlack : 1;
 
   CssPropertyFlags()
       : textAlign(0),
@@ -111,23 +112,24 @@ struct CssPropertyFlags {
         imageWidth(0),
         display(0),
         direction(0),
-        verticalAlign(0) {}
+        verticalAlign(0),
+        backgroundBlack(0) {}
 
   [[nodiscard]] bool anySet() const {
     return textAlign || fontStyle || fontWeight || textDecoration || textIndent || marginTop || marginBottom ||
            marginLeft || marginRight || paddingTop || paddingBottom || paddingLeft || paddingRight || imageHeight ||
-           imageWidth || display || direction || verticalAlign;
+           imageWidth || display || direction || verticalAlign || backgroundBlack;
   }
 
   void clearAll() {
     textAlign = fontStyle = fontWeight = textDecoration = textIndent = 0;
     marginTop = marginBottom = marginLeft = marginRight = 0;
     paddingTop = paddingBottom = paddingLeft = paddingRight = 0;
-    imageHeight = imageWidth = display = direction = verticalAlign = 0;
+    imageHeight = imageWidth = display = direction = verticalAlign = backgroundBlack = 0;
   }
 };
 
-// Cache serializes defined flags as uint32_t with bit indices 0..17.
+// Cache serializes defined flags as uint32_t with bit indices 0..18.
 static_assert(sizeof(CssPropertyFlags) <= sizeof(uint32_t),
               "CssPropertyFlags exceeds 32 bits; update cache read/write in CssParser.cpp");
 
@@ -154,6 +156,7 @@ struct CssStyle {
   CssLength imageWidth;     // Width for img when both or only width set
   CssDisplay display = CssDisplay::Block;                       // display property (Block or None)
   CssVerticalAlign verticalAlign = CssVerticalAlign::Baseline;  // vertical-align (super/sub positioning)
+  bool backgroundBlack = false;
 
   CssPropertyFlags defined;  // Tracks which properties were explicitly set
 
@@ -224,6 +227,7 @@ struct CssStyle {
       display = base.display;
       defined.display = 1;
     }
+    if (base.hasBackgroundBlack()) { backgroundBlack = base.backgroundBlack; defined.backgroundBlack = 1; }
     if (base.hasDirection()) {
       direction = base.direction;
       defined.direction = 1;
@@ -250,6 +254,7 @@ struct CssStyle {
   [[nodiscard]] bool hasImageHeight() const { return defined.imageHeight; }
   [[nodiscard]] bool hasImageWidth() const { return defined.imageWidth; }
   [[nodiscard]] bool hasDisplay() const { return defined.display; }
+  [[nodiscard]] bool hasBackgroundBlack() const { return defined.backgroundBlack; }
   [[nodiscard]] bool hasDirection() const { return defined.direction; }
   [[nodiscard]] bool hasVerticalAlign() const { return defined.verticalAlign; }
 
@@ -265,6 +270,7 @@ struct CssStyle {
     imageHeight = imageWidth = CssLength{};
     display = CssDisplay::Block;
     verticalAlign = CssVerticalAlign::Baseline;
+    backgroundBlack = false;
     defined.clearAll();
   }
 };

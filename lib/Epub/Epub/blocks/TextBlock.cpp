@@ -12,7 +12,7 @@
 
 size_t TextBlock::arenaSize(const uint16_t wordCount, const bool hasFocus, const uint16_t textBytes) {
   // Layout documented in TextBlock.h: 16-bit arrays first, then 8-bit arrays, then text.
-  size_t size = static_cast<size_t>(wordCount) * (sizeof(uint16_t) + sizeof(int16_t) + sizeof(uint8_t));
+  size_t size = static_cast<size_t>(wordCount) * (sizeof(uint16_t) + sizeof(int16_t) + sizeof(uint8_t) + sizeof(uint8_t));
   if (hasFocus) {
     size += static_cast<size_t>(wordCount) * (sizeof(uint16_t) + sizeof(uint8_t));
   }
@@ -31,6 +31,8 @@ void TextBlock::bindArenaPointers() {
   }
   stylesArr = base + off;
   off += wc;
+  backgroundBlackArr = base + off;
+  off += wc;
   if (focusPresent) {
     focusBoundaryArr = base + off;
     off += wc;
@@ -40,7 +42,8 @@ void TextBlock::bindArenaPointers() {
 
 TextBlock::TextBlock(const std::vector<std::string>& words, const std::vector<int16_t>& wordXpos,
                      const std::vector<EpdFontFamily::Style>& wordStyles, const std::vector<uint8_t>& focusBoundary,
-                     const std::vector<uint16_t>& focusSuffixX, const BlockStyle& blockStyle, const bool guideDotsPresent,
+                     const std::vector<uint16_t>& focusSuffixX, const std::vector<uint8_t>& backgroundBlack,
+                     const BlockStyle& blockStyle, const bool guideDotsPresent,
                      std::vector<std::string> rubyTexts)
     : blockStyle(blockStyle), guideDotsPresent(guideDotsPresent), rubyTexts(std::move(rubyTexts)) {
   // Same invariant as deserialize(): a block never holds an all-empty rubyTexts, so a
@@ -55,7 +58,8 @@ TextBlock::TextBlock(const std::vector<std::string>& words, const std::vector<in
   // When present, they must be sized in lockstep with words[].
   const bool hasFocus = !focusBoundary.empty();
   if (words.size() != wordXpos.size() || words.size() != wordStyles.size() || words.size() > 10000 ||
-      (hasFocus && (words.size() != focusBoundary.size() || words.size() != focusSuffixX.size()))) {
+      (hasFocus && (words.size() != focusBoundary.size() || words.size() != focusSuffixX.size())) ||
+      words.size() != backgroundBlack.size()) {
     LOG_ERR("TXB", "Construction failed: size mismatch (words=%u, xpos=%u, styles=%u, boundary=%u, suffixX=%u)",
             static_cast<uint32_t>(words.size()), static_cast<uint32_t>(wordXpos.size()),
             static_cast<uint32_t>(wordStyles.size()), static_cast<uint32_t>(focusBoundary.size()),
@@ -99,12 +103,14 @@ TextBlock::TextBlock(const std::vector<std::string>& words, const std::vector<in
   auto* textOff = const_cast<uint16_t*>(textOffArr);
   auto* xpos = const_cast<int16_t*>(xposArr);
   auto* styles = const_cast<uint8_t*>(stylesArr);
+  auto* backgrounds = const_cast<uint8_t*>(backgroundBlackArr);
   auto* text = const_cast<char*>(textArr);
   uint16_t off = 0;
   for (uint16_t i = 0; i < numWords; i++) {
     textOff[i] = off;
     xpos[i] = wordXpos[i];
     styles[i] = static_cast<uint8_t>(wordStyles[i]);
+    backgrounds[i] = backgroundBlack[i] ? 1 : 0;
     memcpy(text + off, words[i].data(), words[i].size());
     off += static_cast<uint16_t>(words[i].size());
     text[off++] = '\0';
@@ -222,6 +228,12 @@ void TextBlock::render(const GfxRenderer& renderer, const int fontId, const int 
     }
 
     const int drawX = wordX;
+
+    if (backgroundBlackArr[i] != 0) {
+      int backgroundWidth = renderer.getTextAdvanceX(fontId, word, currentStyle);
+      if (wordTextLen(i) == 1 && word[0] == ' ') backgroundWidth = renderer.getSpaceWidth(fontId, currentStyle);
+      if (backgroundWidth > 0) renderer.fillRect(drawX, wordY, backgroundWidth, ascender, true);
+    }
 
     if (guideDotsPresent && i > 0) {
       const int previousEnd = xposArr[i - 1] + x +

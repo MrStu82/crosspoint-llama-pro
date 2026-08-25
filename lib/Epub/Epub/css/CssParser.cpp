@@ -148,6 +148,20 @@ std::string_view stripTrailingImportant(std::string_view value) {
   return value;
 }
 
+
+bool tryInterpretBackgroundBlack(std::string_view value, bool& out) {
+  value = stripTrailingImportant(value);
+  while (!value.empty() && isCssWhitespace(value.front())) value.remove_prefix(1);
+  std::string compact;
+  compact.reserve(value.size());
+  for (char c : value) if (!isCssWhitespace(c)) compact.push_back(c);
+  if (compact == "black" || compact == "#000" || compact == "#000000" || compact == "rgb(0,0,0)" ||
+      compact == "rgba(0,0,0,1)" || compact == "rgba(0,0,0,1.0)") { out = true; return true; }
+  if (compact == "white" || compact == "#fff" || compact == "#ffffff" || compact == "transparent" ||
+      compact == "none") { out = false; return true; }
+  return false;
+}
+
 }  // anonymous namespace
 
 // Transparent case-insensitive hash/equal. Bodies live here (rather than
@@ -392,6 +406,9 @@ void CssParser::parseDeclarationIntoStyle(std::string_view decl, CssStyle& style
     const std::string_view displayValue = stripTrailingImportant(value);
     style.display = iequalsAscii(displayValue, "none") ? CssDisplay::None : CssDisplay::Block;
     style.defined.display = 1;
+  } else if (iequalsAscii(name, "background") || iequalsAscii(name, "background-color")) {
+    bool black = false;
+    if (tryInterpretBackgroundBlack(value, black)) { style.backgroundBlack = black; style.defined.backgroundBlack = 1; }
   } else if (iequalsAscii(name, "direction")) {
     const std::string_view directionValue = stripTrailingImportant(value);
     if (iequalsAscii(directionValue, "rtl")) {
@@ -744,6 +761,7 @@ bool CssParser::saveToCache() const {
     writeLength(style.imageWidth);
     file.write(static_cast<uint8_t>(style.display));
     file.write(static_cast<uint8_t>(style.verticalAlign));
+    file.write(static_cast<uint8_t>(style.backgroundBlack ? 1 : 0));
 
     // Write defined flags as uint32_t
     uint32_t definedBits = 0;
@@ -765,6 +783,7 @@ bool CssParser::saveToCache() const {
     if (style.defined.display) definedBits |= 1 << 15;
     if (style.defined.direction) definedBits |= 1 << 16;
     if (style.defined.verticalAlign) definedBits |= 1 << 17;
+    if (style.defined.backgroundBlack) definedBits |= 1 << 18;
     file.write(reinterpret_cast<const uint8_t*>(&definedBits), sizeof(definedBits));
   }
 
@@ -818,7 +837,7 @@ bool CssParser::loadFromCache() {
   constexpr size_t CSS_LENGTH_FIELD_COUNT = 11;
   constexpr size_t CSS_LENGTH_BYTES = sizeof(float) + sizeof(uint8_t);
   constexpr size_t CSS_FIXED_STYLE_BYTES =
-      5 * sizeof(uint8_t) + (CSS_LENGTH_FIELD_COUNT * CSS_LENGTH_BYTES) + sizeof(uint8_t) + sizeof(uint32_t);
+      5 * sizeof(uint8_t) + (CSS_LENGTH_FIELD_COUNT * CSS_LENGTH_BYTES) + 3 * sizeof(uint8_t) + sizeof(uint32_t);
 
   // Read each rule
   for (uint16_t i = 0; i < ruleCount; ++i) {
@@ -923,6 +942,10 @@ bool CssParser::loadFromCache() {
     }
     style.verticalAlign = static_cast<CssVerticalAlign>(verticalAlignVal);
 
+    uint8_t backgroundBlackVal;
+    if (file.read(&backgroundBlackVal, 1) != 1) { rulesBySelector_.clear(); return false; }
+    style.backgroundBlack = backgroundBlackVal != 0;
+
     // Read defined flags
     uint32_t definedBits = 0;
     if (file.read(&definedBits, sizeof(definedBits)) != sizeof(definedBits)) {
@@ -947,6 +970,7 @@ bool CssParser::loadFromCache() {
     style.defined.display = (definedBits & 1 << 15) != 0;
     style.defined.direction = (definedBits & 1 << 16) != 0;
     style.defined.verticalAlign = (definedBits & 1 << 17) != 0;
+    style.defined.backgroundBlack = (definedBits & 1 << 18) != 0;
 
     rulesBySelector_[selector] = style;
   }

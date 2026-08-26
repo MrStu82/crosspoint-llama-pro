@@ -15,6 +15,8 @@ from pathlib import Path
 # Layout constants mirrored from HomeActivity.cpp / InkPointShell.h.  Kept
 # named rather than inlined so a future layout change reads as a deliberate
 # edit here instead of a magic-number hunt.
+PANEL_WIDTH = 480
+PANEL_HEIGHT = 800
 CONTENT_TOP = 104
 COVER_LANE = (20, CONTENT_TOP, 220, 434)  # x, y, w, h -- the maximum, not the frame
 COVER_RIGHT = 240
@@ -39,8 +41,15 @@ class Bmp:
         if self.bpp != 32:
             raise AssertionError(f"{path}: expected 32bpp, got {self.bpp}")
         self.stride = ((self.width * self.bpp + 31) // 32) * 4
+        # The simulator writes the viewable area, not the full panel: it drops
+        # the bezel margin from every edge.  Every constant below is a panel
+        # coordinate, so translate once here rather than pre-shifting each one.
+        self.dx = (PANEL_WIDTH - self.width) // 2
+        self.dy = (PANEL_HEIGHT - self.height) // 2
 
     def ink_count(self, left: int, top: int, right: int, bottom: int) -> int:
+        left, right = left - self.dx, right - self.dx
+        top, bottom = top - self.dy, bottom - self.dy
         count = 0
         for y in range(max(0, top), min(self.height, bottom)):
             source_y = self.height - 1 - y if self.bottom_up else y

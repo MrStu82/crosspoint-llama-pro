@@ -115,6 +115,44 @@ std::string fitText(const GfxRenderer& renderer, int fontId, std::string value, 
     value.pop_back();
   return value + "...";
 }
+
+// Wrap only at whitespace.  This is intentionally separate from wrapWords(),
+// whose hard-token splitting is useful for prose but wrong for a book title:
+// a title must never turn DUNGEON into DUN / GEON merely to fill a column.
+std::vector<std::string> wrapWholeWords(const GfxRenderer& renderer, const int fontId,
+                                        const std::string& text, const int maxWidth,
+                                        const size_t maxLines, bool& fits,
+                                        const EpdFontFamily::Style style = EpdFontFamily::REGULAR) {
+  std::vector<std::string> lines;
+  std::string line;
+  fits = true;
+  size_t start = 0;
+  while (start < text.size()) {
+    while (start < text.size() && text[start] == ' ') ++start;
+    if (start == text.size()) break;
+    const size_t end = text.find(' ', start);
+    const std::string word = text.substr(start, end == std::string::npos ? std::string::npos : end - start);
+    if (renderer.getTextWidth(fontId, word.c_str(), style) > maxWidth) {
+      fits = false;
+      return {};
+    }
+    const std::string candidate = line.empty() ? word : line + " " + word;
+    if (renderer.getTextWidth(fontId, candidate.c_str(), style) <= maxWidth) {
+      line = candidate;
+    } else {
+      if (lines.size() + 1 >= maxLines) {
+        fits = false;
+        return {};
+      }
+      lines.push_back(line);
+      line = word;
+    }
+    if (end == std::string::npos) break;
+    start = end + 1;
+  }
+  if (!line.empty()) lines.push_back(line);
+  return lines;
+}
 }  // namespace
 
 int HomeActivity::getMenuItemCount() const {
@@ -606,13 +644,34 @@ void HomeActivity::renderInkPointHome() {
   constexpr int rightWidth = 130;
   if (book) {
     const std::string title = upper(book->title);
-    // Narrow-column title: wrap by words rather than clipping. UI face remains
-    // deliberately separate from Caveat's heading/accent role.
-    const auto lines = wrapWords(renderer, NOTOSANS_12_FONT_ID, title, rightWidth, 5, EpdFontFamily::BOLD);
+    // Choose the largest readable UI face that fits the complete title using
+    // whole-word lines. Caveat remains heading/accent-only.
+    struct TitleFit { int font; size_t maxLines; int step; };
+    constexpr TitleFit candidates[] = {
+        {NOTOSANS_14_FONT_ID, 4, 31},
+        {NOTOSANS_12_FONT_ID, 5, 27},
+        {UI_10_FONT_ID, 6, 22},
+    };
+    int titleFont = UI_10_FONT_ID;
+    int titleStep = 22;
+    bool titleFits = false;
+    std::vector<std::string> lines;
+    for (const auto& candidate : candidates) {
+      lines = wrapWholeWords(renderer, candidate.font, title, rightWidth, candidate.maxLines,
+                             titleFits, EpdFontFamily::BOLD);
+      if (titleFits) {
+        titleFont = candidate.font;
+        titleStep = candidate.step;
+        break;
+      }
+    }
+    // A single pathological token cannot wrap. Keep it on one bounded line
+    // with a deliberate ellipsis rather than splitting it across lines.
+    if (!titleFits) lines = {fitText(renderer, UI_10_FONT_ID, title, rightWidth, EpdFontFamily::BOLD)};
     int y = 103;
     for (const auto& titleLine : lines) {
-      renderer.drawText(NOTOSANS_12_FONT_ID, rightX, y, titleLine.c_str(), true, EpdFontFamily::BOLD);
-      y += 27;
+      renderer.drawText(titleFont, rightX, y, titleLine.c_str(), true, EpdFontFamily::BOLD);
+      y += titleStep;
     }
     const auto fittedAuthor = fitText(renderer, UI_10_FONT_ID, book->author, rightWidth);
     renderer.drawText(UI_10_FONT_ID, rightX, y + 5, fittedAuthor.c_str());
@@ -628,8 +687,8 @@ void HomeActivity::renderInkPointHome() {
 
   }
 
-  // Values are never omitted. Caveat lacks an em-dash glyph, so unavailable
-  // values use a small vector dash in the same value lane.
+  // Values are never omitted. Placeholders use the readable UI face, whose
+  // em-dash coverage is guaranteed; Caveat remains for actual numeric values.
   constexpr const char* labels[3] = {"TIME READ", "CHAPTER LEFT", "BOOK LEFT"};
   char timeRead[16] = {}, chapterLeft[16] = {}, bookLeft[16] = {};
   bool valueAvailable[3] = {false, false, false};
@@ -652,7 +711,7 @@ void HomeActivity::renderInkPointHome() {
     const int statY = 326 + i * 66;
     renderer.drawText(UI_10_FONT_ID, rightX, statY, labels[i]);
     if (valueAvailable[i]) renderer.drawText(CAVEAT_18_FONT_ID, rightX, statY + 20, values[i]);
-    else renderer.drawLine(rightX, statY + 31, rightX + 20, statY + 31, 3, true);
+    else renderer.drawText(UI_12_FONT_ID, rightX, statY + 20, "\xE2\x80\x94");
   }
 
   // The local-date quote is selected from a 366-record audited shuffled deck.

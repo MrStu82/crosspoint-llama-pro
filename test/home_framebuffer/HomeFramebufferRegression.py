@@ -41,11 +41,13 @@ def main() -> None:
     parser = argparse.ArgumentParser()
     parser.add_argument("--populated", type=Path, required=True)
     parser.add_argument("--unavailable", type=Path, required=True)
+    parser.add_argument("--long", type=Path, required=True)
     args = parser.parse_args()
 
     populated = Bmp(args.populated)
     unavailable = Bmp(args.unavailable)
-    for image in (populated, unavailable):
+    long_title = Bmp(args.long)
+    for image in (populated, unavailable, long_title):
         assert image.width >= 470 and image.height >= 790, (image.width, image.height)
 
     # DUNGEON / CRAWLER / CARL must be three intact whole-word ink bands in
@@ -63,7 +65,14 @@ def main() -> None:
     ]
     assert all(count >= 8 for count in placeholder_counts), placeholder_counts
 
-    print(f"PASS title_bands={title_counts} unavailable_markers={placeholder_counts}")
+    # Malformed metadata may contain one over-wide token. The renderer must
+    # bound that token while retaining later whole words on their own lines,
+    # with no ink escaping the right column.
+    long_bands = [long_title.ink_count(327, top, 462, top + 24) for top in range(100, 220, 22)]
+    assert sum(count >= 20 for count in long_bands) >= 2, long_bands
+    assert long_title.ink_count(462, 96, 476, 230) == 0, "long title crossed right-column edge"
+
+    print(f"PASS title_bands={title_counts} unavailable_markers={placeholder_counts} long_bands={long_bands}")
 
 
 if __name__ == "__main__":

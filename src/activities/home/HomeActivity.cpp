@@ -153,6 +153,37 @@ std::vector<std::string> wrapWholeWords(const GfxRenderer& renderer, const int f
   if (!line.empty()) lines.push_back(line);
   return lines;
 }
+
+// Last-resort title fitting for malformed metadata containing an over-wide
+// token. Preserve every usable whole word and represent only the impossible
+// token with a bounded marker; never collapse the complete title into a
+// character-truncated line (which can visually join unrelated words).
+std::vector<std::string> wrapBoundedTitle(const GfxRenderer& renderer, const int fontId,
+                                          const std::string& text, const int maxWidth,
+                                          const size_t maxLines,
+                                          const EpdFontFamily::Style style) {
+  std::vector<std::string> lines;
+  std::string line;
+  size_t start = 0;
+  while (start < text.size() && lines.size() < maxLines) {
+    while (start < text.size() && text[start] == ' ') ++start;
+    if (start == text.size()) break;
+    const size_t end = text.find(' ', start);
+    std::string word = text.substr(start, end == std::string::npos ? std::string::npos : end - start);
+    if (renderer.getTextWidth(fontId, word.c_str(), style) > maxWidth) word = "...";
+    const std::string candidate = line.empty() ? word : line + " " + word;
+    if (renderer.getTextWidth(fontId, candidate.c_str(), style) <= maxWidth) {
+      line = candidate;
+    } else {
+      lines.push_back(line);
+      line = word;
+    }
+    if (end == std::string::npos) break;
+    start = end + 1;
+  }
+  if (!line.empty() && lines.size() < maxLines) lines.push_back(line);
+  return lines;
+}
 }  // namespace
 
 int HomeActivity::getMenuItemCount() const {
@@ -665,9 +696,10 @@ void HomeActivity::renderInkPointHome() {
         break;
       }
     }
-    // A single pathological token cannot wrap. Keep it on one bounded line
-    // with a deliberate ellipsis rather than splitting it across lines.
-    if (!titleFits) lines = {fitText(renderer, UI_10_FONT_ID, title, rightWidth, EpdFontFamily::BOLD)};
+    // A pathological token cannot wrap. Bound only that token, retaining the
+    // remaining whole words on subsequent lines.
+    if (!titleFits)
+      lines = wrapBoundedTitle(renderer, UI_10_FONT_ID, title, rightWidth, 6, EpdFontFamily::BOLD);
     int y = 103;
     for (const auto& titleLine : lines) {
       renderer.drawText(titleFont, rightX, y, titleLine.c_str(), true, EpdFontFamily::BOLD);

@@ -136,7 +136,7 @@ Items acknowledged and carried forward from previous milestone close:
 - **Next actionable item:** — either (a) a specific next phase/step this agent will pick up unprompted, or (b) an explicit statement that the chain is parent-gated (naming exactly what's being waited on: a ruling, a dispatch, an approval) — "None" / blank is never valid; "waiting on parent" is valid ONLY when named with what for.
 - **Resume file:** — a path, or "None (see Next actionable item)" — never a bare "None" with nothing else armed.
 
-Last session: 2026-08-25
-Stopped at: Phase 17 private one-step flash/provisioning revision on top of f13a112; approved benchmark 00af7165…1b348.
-Next actionable item: Commit and verify the no-secret flash package, rebuild once on Trantor, then run one matching Pixel/Gauge gate.
+Last session: 2026-08-26
+Stopped at: Phase 17 corrective implementation on top of 8f59481; 174/174 host tests and the eight-state Trantor simulator self-check are green. Approved benchmark remains 00af7165…1b348.
+Next actionable item: Commit the corrective source, build the X4 image and private no-secret flash package on Trantor, then retain ownership through exact-artifact Gauge and Pixel gates.
 Resume file: `.planning/INKPOINTX_HOME_IMPLEMENTATION_BRIEF.md`

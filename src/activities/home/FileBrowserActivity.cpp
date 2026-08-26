@@ -11,6 +11,7 @@
 #include "CrossPointSettings.h"
 #include "MappedInputManager.h"
 #include "activities/util/ConfirmationActivity.h"
+#include "components/InkPointShell.h"
 #include "components/UITheme.h"
 #include "fontIds.h"
 #include "util/BookCacheUtils.h"
@@ -187,6 +188,13 @@ bool FileBrowserActivity::removeDirFile(const std::string& fullPath) {
 }
 
 void FileBrowserActivity::loop() {
+  const bool inkPoint = mode == Mode::Books && InkPointShell::enabled(renderer);
+  if (inkPoint) {
+    if (const auto destination = InkPointShell::tappedDestination(mappedInput)) {
+      InkPointShell::navigate(*destination);
+      return;
+    }
+  }
   // Long press BACK (1s+) goes to root folder (Books mode only).
   // In firmware-pick mode we keep navigation simple: short Back = up dir / cancel.
   if (mode == Mode::Books && mappedInput.isPressed(MappedInputManager::Button::Back) &&
@@ -206,12 +214,17 @@ void FileBrowserActivity::loop() {
     return;
   }
 
-  const int pathReserved = renderer.getLineHeight(SMALL_FONT_ID) + UITheme::getInstance().getMetrics().verticalSpacing;
-  const int pageItems = UITheme::getNumberOfItemsPerPage(renderer, true, false, true, false, pathReserved);
+  const int pathReserved = inkPoint ? 0 : renderer.getLineHeight(SMALL_FONT_ID) +
+                                                UITheme::getInstance().getMetrics().verticalSpacing;
+  const int pageItems = inkPoint
+                            ? GUI.getListPageItems(InkPointShell::kFooterTop - InkPointShell::kContentTop - 8, false)
+                            : UITheme::getNumberOfItemsPerPage(renderer, true, false, true, false, pathReserved);
   const auto& metrics = UITheme::getInstance().getMetrics();
-  const int contentTop = metrics.topPadding + metrics.headerHeight + metrics.verticalSpacing;
-  const int contentHeight =
-      renderer.getScreenHeight() - contentTop - metrics.buttonHintsHeight - metrics.verticalSpacing - pathReserved;
+  const int contentTop = inkPoint ? InkPointShell::kContentTop
+                                  : metrics.topPadding + metrics.headerHeight + metrics.verticalSpacing;
+  const int contentHeight = inkPoint ? InkPointShell::kFooterTop - contentTop - 8
+                                     : renderer.getScreenHeight() - contentTop - metrics.buttonHintsHeight -
+                                           metrics.verticalSpacing - pathReserved;
 
   auto activateSelected = [this] {
     if (lockNextConfirmRelease) {
@@ -400,13 +413,17 @@ void FileBrowserActivity::render(RenderLock&&) {
       (mode == Mode::PickFirmware)
           ? std::string(tr(STR_SELECT_FIRMWARE_FILE))
           : ((basepath == "/") ? std::string(tr(STR_SD_CARD)) : basepath.substr(basepath.rfind('/') + 1));
-  GUI.drawHeader(renderer, Rect{0, metrics.topPadding, pageWidth, metrics.headerHeight}, folderName.c_str());
+  const bool inkPoint = mode == Mode::Books && InkPointShell::enabled(renderer);
+  if (inkPoint) InkPointShell::drawHeader(renderer, "Files");
+  else GUI.drawHeader(renderer, Rect{0, metrics.topPadding, pageWidth, metrics.headerHeight}, folderName.c_str());
 
   const int pathLineHeight = renderer.getLineHeight(SMALL_FONT_ID);
-  const int pathReserved = pathLineHeight + metrics.verticalSpacing;
-  const int contentTop = metrics.topPadding + metrics.headerHeight + metrics.verticalSpacing;
-  const int contentHeight =
-      pageHeight - contentTop - metrics.buttonHintsHeight - metrics.verticalSpacing - pathReserved;
+  const int pathReserved = inkPoint ? 0 : pathLineHeight + metrics.verticalSpacing;
+  const int contentTop = inkPoint ? InkPointShell::kContentTop
+                                  : metrics.topPadding + metrics.headerHeight + metrics.verticalSpacing;
+  const int contentHeight = inkPoint ? InkPointShell::kFooterTop - contentTop - 8
+                                     : pageHeight - contentTop - metrics.buttonHintsHeight - metrics.verticalSpacing -
+                                           pathReserved;
   if (files.empty()) {
     const char* emptyMsg = (mode == Mode::PickFirmware) ? tr(STR_NO_BIN_FILES) : tr(STR_NO_FILES_FOUND);
     renderer.drawText(UI_10_FONT_ID, metrics.contentSidePadding, contentTop + 20, emptyMsg);
@@ -419,7 +436,7 @@ void FileBrowserActivity::render(RenderLock&&) {
   }
 
   // Full path display
-  {
+  if (!inkPoint) {
     const int pathY = pageHeight - metrics.buttonHintsHeight - metrics.verticalSpacing - pathLineHeight;
     const int separatorY = pathY - metrics.verticalSpacing / 2;
     renderer.drawLine(0, separatorY, pageWidth - 1, separatorY, 3, true);
@@ -451,9 +468,13 @@ void FileBrowserActivity::render(RenderLock&&) {
   // STR_SELECT instead. Directories in the same picker still descend, so keep STR_OPEN there.
   const bool selectingFirmwareFile = mode == Mode::PickFirmware && !files.empty() && files[selectorIndex].back() != '/';
   const char* confirmLabel = files.empty() ? "" : (selectingFirmwareFile ? tr(STR_SELECT) : tr(STR_OPEN));
-  const auto labels = mappedInput.mapLabels(backLabel, confirmLabel, files.empty() ? "" : tr(STR_DIR_UP),
-                                            files.empty() ? "" : tr(STR_DIR_DOWN));
-  GUI.drawButtonHints(renderer, labels.btn1, labels.btn2, labels.btn3, labels.btn4);
+  if (inkPoint) {
+    InkPointShell::drawFooter(renderer, InkPointShell::Destination::Files);
+  } else {
+    const auto labels = mappedInput.mapLabels(backLabel, confirmLabel, files.empty() ? "" : tr(STR_DIR_UP),
+                                              files.empty() ? "" : tr(STR_DIR_DOWN));
+    GUI.drawButtonHints(renderer, labels.btn1, labels.btn2, labels.btn3, labels.btn4);
+  }
 
   renderer.displayBuffer();
 }

@@ -1266,6 +1266,7 @@ void CrossPointWebServer::handlePostSettings() {
 
   const auto& settings = getSettingsList(&sdFontSystem.registry());
   int applied = 0;
+  const char* failedKey = nullptr;
 
   for (const auto& s : settings) {
     if (!s.key) continue;
@@ -1307,7 +1308,10 @@ void CrossPointWebServer::handlePostSettings() {
       case SettingType::STRING: {
         const std::string val = doc[s.key].as<std::string>();
         if (s.stringSetter) {
-          s.stringSetter(val);
+          if (!s.stringSetter(val)) {
+            failedKey = s.key;
+            break;
+          }
         } else if (s.stringMaxLen > 0) {
           char* ptr = reinterpret_cast<char*>(&SETTINGS) + s.stringOffset;
           strncpy(ptr, val.c_str(), s.stringMaxLen - 1);
@@ -1319,9 +1323,16 @@ void CrossPointWebServer::handlePostSettings() {
       default:
         break;
     }
+    if (failedKey) break;
   }
 
   SETTINGS.saveToFile();
+
+  if (failedKey) {
+    LOG_ERR("WEB", "Failed to persist setting: %s", failedKey);
+    server->send(500, "text/plain", String("Failed to persist setting: ") + failedKey);
+    return;
+  }
 
   LOG_DBG("WEB", "Applied %d setting(s)", applied);
   server->send(200, "text/plain", String("Applied ") + String(applied) + " setting(s)");

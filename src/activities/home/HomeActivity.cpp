@@ -24,6 +24,7 @@
 #include "OpdsServerStore.h"
 #include "RecentBooksStore.h"
 #include "components/UITheme.h"
+#include "components/InkPointShell.h"
 #include "fontIds.h"
 #include "network/HardcoverRating.h"
 #include "util/BookProgressBadge.h"
@@ -59,37 +60,33 @@ void drawStar(const GfxRenderer& renderer, int cx, int cy, bool filled, bool par
   }
 }
 
-void drawFooterIcon(const GfxRenderer& r, int index, int cx, int cy, bool black) {
-  // Deliberately tiny, strict 1-bit line icons. Geometry is centred on cx for
-  // both draw and the 72px hitbox used below.
-  if (index == 0) {  // Home
-    r.drawLine(cx - 9, cy, cx, cy - 8, black); r.drawLine(cx, cy - 8, cx + 9, cy, black);
-    r.drawRect(cx - 7, cy, 14, 10, black);
-  } else if (index == 1) {  // Books on shelf
-    r.drawRect(cx - 10, cy - 8, 5, 15, black); r.drawRect(cx - 3, cy - 8, 5, 15, black);
-    r.drawRect(cx + 4, cy - 6, 5, 13, black); r.drawLine(cx - 11, cy + 9, cx + 11, cy + 9, black);
-  } else if (index == 2) {  // File cabinet
-    r.drawRect(cx - 9, cy - 9, 18, 18, black); r.drawLine(cx - 9, cy, cx + 9, cy, black);
-    r.drawLine(cx - 3, cy - 5, cx + 3, cy - 5, black); r.drawLine(cx - 3, cy + 4, cx + 3, cy + 4, black);
-  } else if (index == 3) {  // Game pad
-    r.drawRoundedRect(cx - 11, cy - 7, 22, 14, 1, 4, black);
-    r.drawLine(cx - 7, cy, cx - 1, cy, black); r.drawLine(cx - 4, cy - 3, cx - 4, cy + 3, black);
-    r.fillRect(cx + 4, cy - 2, 2, 2, black); r.fillRect(cx + 7, cy + 1, 2, 2, black);
-  } else if (index == 4) {  // Transfer
-    r.drawLine(cx - 10, cy - 4, cx + 7, cy - 4, black); r.drawLine(cx + 7, cy - 4, cx + 3, cy - 8, black);
-    r.drawLine(cx + 10, cy + 4, cx - 7, cy + 4, black); r.drawLine(cx - 7, cy + 4, cx - 3, cy + 8, black);
-  } else {  // Continuous eight-tooth outline cog with clear bore.
-    constexpr int ox[16] = {-3,-3,3,3,8,8,11,11,8,8,3,3,-3,-3,-8,-8};
-    constexpr int oy[16] = {-11,-8,-8,-11,-8,-5,-5,3,3,8,8,11,11,8,8,3};
-    for (int i = 0; i < 16; ++i) r.drawLine(cx + ox[i], cy + oy[i], cx + ox[(i + 1) % 16], cy + oy[(i + 1) % 16], 2, black);
-    r.drawRoundedRect(cx - 4, cy - 4, 8, 8, 1, 4, black);
-  }
-}
-
 std::string upper(const std::string& value) {
   std::string result = value;
   for (char& c : result) c = static_cast<char>(std::toupper(static_cast<unsigned char>(c)));
   return result;
+}
+
+std::vector<std::string> wrapWords(const GfxRenderer& renderer, const int fontId, const std::string& text,
+                                   const int maxWidth, const size_t maxLines,
+                                   const EpdFontFamily::Style style = EpdFontFamily::REGULAR) {
+  std::vector<std::string> lines;
+  std::string line;
+  size_t start = 0;
+  while (start < text.size() && lines.size() < maxLines) {
+    const size_t end = text.find(' ', start);
+    const std::string word = text.substr(start, end == std::string::npos ? std::string::npos : end - start);
+    const std::string candidate = line.empty() ? word : line + " " + word;
+    if (!line.empty() && renderer.getTextWidth(fontId, candidate.c_str(), style) > maxWidth) {
+      lines.push_back(line);
+      line = word;
+    } else {
+      line = candidate;
+    }
+    if (end == std::string::npos) break;
+    start = end + 1;
+  }
+  if (!line.empty() && lines.size() < maxLines) lines.push_back(line);
+  return lines;
 }
 }  // namespace
 
@@ -525,11 +522,7 @@ void HomeActivity::loopInkPointHome() {
 void HomeActivity::renderInkPointHome() {
   renderer.clearScreen();
 
-  // Fixed status lane, then a heading lane separated by whitespace only.
-  char battery[12];
-  std::snprintf(battery, sizeof(battery), "%u%%", static_cast<unsigned>(powerManager.getBatteryPercentage()));
-  renderer.drawText(SMALL_FONT_ID, 438 - renderer.getTextWidth(SMALL_FONT_ID, battery), 2, battery);
-  renderer.drawText(CAVEAT_42_FONT_ID, 20, 21, "Now reading");
+  InkPointShell::drawHeader(renderer, "Now reading");
 
   const RecentBook* book = recentBooks.empty() ? nullptr : &recentBooks.front();
   bool coverDrawn = false;
@@ -553,9 +546,16 @@ void HomeActivity::renderInkPointHome() {
     renderer.drawRect(kInkCover.x, kInkCover.y, coverW, coverH, 2, true);
     if (book) {
       const int cx = kInkCover.x + coverW / 2;
-      drawCentered(renderer, NOTOSERIF_18_FONT_ID, cx, kInkCover.y + 180, book->title.c_str(), true,
-                   EpdFontFamily::BOLD);
-      drawCentered(renderer, UI_12_FONT_ID, cx, kInkCover.y + 215, book->author.c_str());
+      const auto titleLines = wrapWords(renderer, NOTOSERIF_18_FONT_ID, book->title, coverW - 36, 4,
+                                        EpdFontFamily::BOLD);
+      const int firstBaseline = kInkCover.y + 165 - static_cast<int>(titleLines.size() - 1) * 16;
+      for (size_t i = 0; i < titleLines.size(); ++i)
+        drawCentered(renderer, NOTOSERIF_18_FONT_ID, cx, firstBaseline + static_cast<int>(i) * 32,
+                     titleLines[i].c_str(), true, EpdFontFamily::BOLD);
+      const auto authorLines = wrapWords(renderer, UI_12_FONT_ID, book->author, coverW - 36, 2);
+      for (size_t i = 0; i < authorLines.size(); ++i)
+        drawCentered(renderer, UI_12_FONT_ID, cx, kInkCover.y + 235 + static_cast<int>(i) * 24,
+                     authorLines[i].c_str());
     } else {
       drawCentered(renderer, UI_12_FONT_ID, kInkCover.x + coverW / 2, kInkCover.y + 210, "No recent book");
     }
@@ -605,7 +605,7 @@ void HomeActivity::renderInkPointHome() {
     }
 
     constexpr const char* labels[3] = {"TIME READ", "CHAPTER LEFT", "BOOK LEFT"};
-    char timeRead[16], chapterLeft[16] = "-", bookLeft[16] = "-";
+    char timeRead[16], chapterLeft[16] = "\xe2\x80\x94", bookLeft[16] = "\xe2\x80\x94";
     const uint32_t minutes = bookStats.totalSeconds / 60;
     std::snprintf(timeRead, sizeof(timeRead), "%luh %02lum", static_cast<unsigned long>(minutes / 60),
                   static_cast<unsigned long>(minutes % 60));
@@ -633,18 +633,7 @@ void HomeActivity::renderInkPointHome() {
   drawCentered(renderer, SMALL_FONT_ID, 240, 653,
                "Sherlock Holmes, The Sign of the Four, Arthur Conan Doyle");
 
-  static constexpr const char* kLabels[6] = {"Home", "Library", "Files", "Games", "Transfer", "Settings"};
-  for (int i = 0; i < 6; ++i) {
-    const int left = kInkFooter.x + i * (kInkTabWidth + kInkTabGap);
-    const bool active = i == 0;
-    if (active) renderer.fillRoundedRect(left, kInkFooter.y, kInkTabWidth, kInkFooter.height, 7, Color::Black);
-    else renderer.drawRoundedRect(left, kInkFooter.y, kInkTabWidth, kInkFooter.height, 2, 7, true);
-    const int cx = left + kInkTabWidth / 2;
-    drawFooterIcon(renderer, i, cx, kInkFooter.y + 19, !active);
-    drawCentered(renderer, SMALL_FONT_ID, cx, kInkFooter.y + 49, kLabels[i], !active);
-    if (inkPointFocus == i + 1 && !active) renderer.drawRoundedRect(left + 3, kInkFooter.y + 3, kInkTabWidth - 6,
-                                                                    kInkFooter.height - 6, 1, 5, true);
-  }
+  InkPointShell::drawFooter(renderer, InkPointShell::Destination::Home, inkPointFocus - 1);
   if (inkPointFocus == 0 && book) renderer.drawRect(kInkCover.x - 3, kInkCover.y - 3, coverW + 6, coverH + 10, 2, true);
 
   renderer.displayBuffer(cleanInitialRefresh && !firstRenderDone ? HalDisplay::HALF_REFRESH : HalDisplay::FAST_REFRESH);

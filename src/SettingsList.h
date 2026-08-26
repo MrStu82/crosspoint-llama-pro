@@ -341,21 +341,21 @@ inline std::vector<SettingInfo> getSettingsList(const SdCardFontRegistry* regist
             StrId::STR_KOREADER_USERNAME, [] { return KOREADER_STORE.getUsername(); },
             [](const std::string& v) {
               KOREADER_STORE.setCredentials(v, KOREADER_STORE.getPassword());
-              KOREADER_STORE.saveToFile();
+              return KOREADER_STORE.saveToFile();
             },
             "koUsername", StrId::STR_KOREADER_SYNC),
         SettingInfo::DynamicString(
             StrId::STR_KOREADER_PASSWORD, [] { return KOREADER_STORE.getPassword(); },
             [](const std::string& v) {
               KOREADER_STORE.setCredentials(KOREADER_STORE.getUsername(), v);
-              KOREADER_STORE.saveToFile();
+              return KOREADER_STORE.saveToFile();
             },
             "koPassword", StrId::STR_KOREADER_SYNC),
         SettingInfo::DynamicString(
             StrId::STR_SYNC_SERVER_URL, [] { return KOREADER_STORE.getServerUrl(); },
             [](const std::string& v) {
               KOREADER_STORE.setServerUrl(v);
-              KOREADER_STORE.saveToFile();
+              return KOREADER_STORE.saveToFile();
             },
             "koServerUrl", StrId::STR_KOREADER_SYNC),
         SettingInfo::DynamicEnum(
@@ -386,10 +386,7 @@ inline std::vector<SettingInfo> getSettingsList(const SdCardFontRegistry* regist
         // device-bound/obfuscated on disk and omitted from GET /api/settings.
         SettingInfo::DynamicString(
             StrId::STR_HARDCOVER_API_TOKEN, [] { return HARDCOVER_STORE.getToken(); },
-            [](const std::string& v) {
-              HARDCOVER_STORE.setToken(v);
-              HARDCOVER_STORE.saveAtomic();
-            },
+            [](const std::string& v) { return HARDCOVER_STORE.replaceTokenAtomic(v); },
             "hardcoverApiToken")
             .withObfuscated(),
 

@@ -1,0 +1,10 @@
+add_executable(HardcoverCredentialTransactionTest
+  HardcoverCredentialTransactionTest.cpp
+)
+
+target_link_libraries(HardcoverCredentialTransactionTest PRIVATE
+  crosspoint_test_common
+  GTest::gtest_main
+)
+
+gtest_discover_tests(HardcoverCredentialTransactionTest)

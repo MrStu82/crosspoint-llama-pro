@@ -11,6 +11,7 @@
 #include "RecentBooksStore.h"
 #include "activities/util/ConfirmationActivity.h"
 #include "components/UITheme.h"
+#include "components/InkPointShell.h"
 #include "fontIds.h"
 
 namespace {
@@ -42,11 +43,22 @@ void RecentBooksActivity::onExit() {
 }
 
 void RecentBooksActivity::loop() {
-  const int pageItems = UITheme::getInstance().getNumberOfItemsPerPage(renderer, true, false, true, true);
+  if (InkPointShell::enabled(renderer)) {
+    if (const auto destination = InkPointShell::tappedDestination(mappedInput)) {
+      InkPointShell::navigate(*destination);
+      return;
+    }
+  }
+  const int pageItems = InkPointShell::enabled(renderer)
+                            ? GUI.getListPageItems(InkPointShell::kFooterTop - InkPointShell::kContentTop - 8, true)
+                            : UITheme::getInstance().getNumberOfItemsPerPage(renderer, true, false, true, true);
   const auto& metrics = UITheme::getInstance().getMetrics();
-  const int contentTop = metrics.topPadding + metrics.headerHeight + metrics.verticalSpacing;
-  const int contentHeight =
-      renderer.getScreenHeight() - contentTop - metrics.buttonHintsHeight - metrics.verticalSpacing;
+  const bool inkPoint = InkPointShell::enabled(renderer);
+  const int contentTop = inkPoint ? InkPointShell::kContentTop
+                                  : metrics.topPadding + metrics.headerHeight + metrics.verticalSpacing;
+  const int contentHeight = inkPoint ? InkPointShell::kFooterTop - contentTop - 8
+                                     : renderer.getScreenHeight() - contentTop - metrics.buttonHintsHeight -
+                                           metrics.verticalSpacing;
 
   // After a long-press has fired, swallow input until Confirm is physically released
   // (so the release doesn't also open the book; re-arm only once the button is up).
@@ -155,10 +167,14 @@ void RecentBooksActivity::render(RenderLock&&) {
   const auto pageHeight = renderer.getScreenHeight();
   const auto& metrics = UITheme::getInstance().getMetrics();
 
-  GUI.drawHeader(renderer, Rect{0, metrics.topPadding, pageWidth, metrics.headerHeight}, tr(STR_MENU_RECENT_BOOKS));
+  const bool inkPoint = InkPointShell::enabled(renderer);
+  if (inkPoint) InkPointShell::drawHeader(renderer, "Library");
+  else GUI.drawHeader(renderer, Rect{0, metrics.topPadding, pageWidth, metrics.headerHeight}, tr(STR_MENU_RECENT_BOOKS));
 
-  const int contentTop = metrics.topPadding + metrics.headerHeight + metrics.verticalSpacing;
-  const int contentHeight = pageHeight - contentTop - metrics.buttonHintsHeight - metrics.verticalSpacing;
+  const int contentTop = inkPoint ? InkPointShell::kContentTop
+                                  : metrics.topPadding + metrics.headerHeight + metrics.verticalSpacing;
+  const int contentHeight = inkPoint ? InkPointShell::kFooterTop - contentTop - 8
+                                     : pageHeight - contentTop - metrics.buttonHintsHeight - metrics.verticalSpacing;
 
   // Recent tab
   if (recentBooks.empty()) {
@@ -171,8 +187,12 @@ void RecentBooksActivity::render(RenderLock&&) {
   }
 
   // Help text
-  const auto labels = mappedInput.mapLabels(tr(STR_HOME), tr(STR_OPEN), tr(STR_DIR_UP), tr(STR_DIR_DOWN));
-  GUI.drawButtonHints(renderer, labels.btn1, labels.btn2, labels.btn3, labels.btn4);
+  if (inkPoint) {
+    InkPointShell::drawFooter(renderer, InkPointShell::Destination::Library);
+  } else {
+    const auto labels = mappedInput.mapLabels(tr(STR_HOME), tr(STR_OPEN), tr(STR_DIR_UP), tr(STR_DIR_DOWN));
+    GUI.drawButtonHints(renderer, labels.btn1, labels.btn2, labels.btn3, labels.btn4);
+  }
 
   renderer.displayBuffer();
 }

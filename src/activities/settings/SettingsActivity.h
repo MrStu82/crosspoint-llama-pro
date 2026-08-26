@@ -60,7 +60,9 @@ struct SettingInfo {
   std::function<uint8_t()> valueGetter;
   std::function<void(uint8_t)> valueSetter;
   std::function<std::string()> stringGetter;
-  std::function<void(const std::string&)> stringSetter;
+  // Returns false when the value could not be durably applied. Web settings
+  // propagates that failure instead of claiming success.
+  std::function<bool(const std::string&)> stringSetter;
 
   SettingInfo& withObfuscated() {
     obfuscated = true;
@@ -142,7 +144,7 @@ struct SettingInfo {
   }
 
   static SettingInfo DynamicString(StrId nameId, std::function<std::string()> getter,
-                                   std::function<void(const std::string&)> setter, const char* key = nullptr,
+                                   std::function<bool(const std::string&)> setter, const char* key = nullptr,
                                    StrId category = StrId::STR_NONE_OPT) {
     SettingInfo s;
     s.nameId = nameId;

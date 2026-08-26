@@ -20,7 +20,7 @@ class HardcoverCredentialStore : public PersistableStore<HardcoverCredentialStor
   bool fromJson(JsonVariantConst doc);
   const std::string& getToken() const { return token; }
   bool hasToken() const { return !token.empty(); }
-  void setToken(const std::string& value);
+  bool replaceTokenAtomic(const std::string& value);
   bool saveAtomic();
   bool forget();
   static bool isValidToken(const std::string& value);

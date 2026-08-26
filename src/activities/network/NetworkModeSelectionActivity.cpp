@@ -5,6 +5,7 @@
 
 #include "MappedInputManager.h"
 #include "components/UITheme.h"
+#include "components/InkPointShell.h"
 #include "fontIds.h"
 
 namespace {
@@ -24,6 +25,12 @@ void NetworkModeSelectionActivity::onEnter() {
 void NetworkModeSelectionActivity::onExit() { Activity::onExit(); }
 
 void NetworkModeSelectionActivity::loop() {
+  if (InkPointShell::enabled(renderer)) {
+    if (const auto destination = InkPointShell::tappedDestination(mappedInput)) {
+      InkPointShell::navigate(*destination);
+      return;
+    }
+  }
   auto selectCurrent = [this] {
     NetworkMode mode = NetworkMode::JOIN_NETWORK;
     if (selectedIndex == 1) {
@@ -47,9 +54,12 @@ void NetworkModeSelectionActivity::loop() {
   }
 
   const auto& metrics = UITheme::getInstance().getMetrics();
-  const int contentTop = metrics.topPadding + metrics.headerHeight + metrics.verticalSpacing;
-  const int contentHeight =
-      renderer.getScreenHeight() - contentTop - metrics.buttonHintsHeight - metrics.verticalSpacing * 2;
+  const bool inkPoint = InkPointShell::enabled(renderer);
+  const int contentTop = inkPoint ? InkPointShell::kContentTop
+                                  : metrics.topPadding + metrics.headerHeight + metrics.verticalSpacing;
+  const int contentHeight = inkPoint ? InkPointShell::kFooterTop - contentTop - 8
+                                     : renderer.getScreenHeight() - contentTop - metrics.buttonHintsHeight -
+                                           metrics.verticalSpacing * 2;
   switch (handleListTouch(selectedIndex, MENU_ITEM_COUNT, contentTop, contentHeight, true)) {
     case ListTouchResult::Activated:
       selectCurrent();
@@ -79,10 +89,14 @@ void NetworkModeSelectionActivity::render(RenderLock&&) {
   const auto pageWidth = renderer.getScreenWidth();
   const auto pageHeight = renderer.getScreenHeight();
 
-  GUI.drawHeader(renderer, Rect{0, metrics.topPadding, pageWidth, metrics.headerHeight}, tr(STR_FILE_TRANSFER));
+  const bool inkPoint = InkPointShell::enabled(renderer);
+  if (inkPoint) InkPointShell::drawHeader(renderer, "Transfer");
+  else GUI.drawHeader(renderer, Rect{0, metrics.topPadding, pageWidth, metrics.headerHeight}, tr(STR_FILE_TRANSFER));
 
-  const int contentTop = metrics.topPadding + metrics.headerHeight + metrics.verticalSpacing;
-  const int contentHeight = pageHeight - contentTop - metrics.buttonHintsHeight - metrics.verticalSpacing * 2;
+  const int contentTop = inkPoint ? InkPointShell::kContentTop
+                                  : metrics.topPadding + metrics.headerHeight + metrics.verticalSpacing;
+  const int contentHeight = inkPoint ? InkPointShell::kFooterTop - contentTop - 8
+                                     : pageHeight - contentTop - metrics.buttonHintsHeight - metrics.verticalSpacing * 2;
   // Menu items and descriptions
   static constexpr StrId menuItems[MENU_ITEM_COUNT] = {StrId::STR_JOIN_NETWORK, StrId::STR_CALIBRE_WIRELESS,
                                                        StrId::STR_CREATE_HOTSPOT};
@@ -96,8 +110,12 @@ void NetworkModeSelectionActivity::render(RenderLock&&) {
       [](int index) { return std::string(I18N.get(menuDescs[index])); }, [](int index) { return menuIcons[index]; });
 
   // Draw help text at bottom
-  const auto labels = mappedInput.mapLabels(tr(STR_BACK), tr(STR_SELECT), tr(STR_DIR_UP), tr(STR_DIR_DOWN));
-  GUI.drawButtonHints(renderer, labels.btn1, labels.btn2, labels.btn3, labels.btn4);
+  if (inkPoint) {
+    InkPointShell::drawFooter(renderer, InkPointShell::Destination::Transfer);
+  } else {
+    const auto labels = mappedInput.mapLabels(tr(STR_BACK), tr(STR_SELECT), tr(STR_DIR_UP), tr(STR_DIR_DOWN));
+    GUI.drawButtonHints(renderer, labels.btn1, labels.btn2, labels.btn3, labels.btn4);
+  }
 
   renderer.displayBuffer();
 }

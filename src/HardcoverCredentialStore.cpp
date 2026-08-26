@@ -5,6 +5,7 @@
 #include <cctype>
 
 #include "activities/reader/ProgressFile.h"
+#include "util/AtomicCredentialUpdate.h"
 
 namespace {
 constexpr size_t kMaxTokenBytes = 512;
@@ -30,12 +31,9 @@ bool HardcoverCredentialStore::fromJson(JsonVariantConst doc) {
   return true;
 }
 
-void HardcoverCredentialStore::setToken(const std::string& value) {
-  if (value.empty()) {
-    token.clear();
-  } else if (isValidToken(value)) {
-    token = value;
-  }
+bool HardcoverCredentialStore::replaceTokenAtomic(const std::string& value) {
+  if (!value.empty() && !isValidToken(value)) return false;
+  return AtomicCredentialUpdate::replace(token, value, [this] { return saveAtomic(); });
 }
 
 bool HardcoverCredentialStore::isValidToken(const std::string& value) {
@@ -56,9 +54,5 @@ bool HardcoverCredentialStore::saveAtomic() {
 }
 
 bool HardcoverCredentialStore::forget() {
-  const std::string previous = token;
-  token.clear();
-  if (saveAtomic()) return true;
-  token = previous;
-  return false;
+  return replaceTokenAtomic("");
 }

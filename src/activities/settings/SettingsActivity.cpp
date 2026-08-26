@@ -30,6 +30,7 @@
 #include "activities/network/WifiSelectionActivity.h"
 #include "activities/util/IntervalSelectionActivity.h"
 #include "components/UITheme.h"
+#include "components/InkPointShell.h"
 #include "fontIds.h"
 
 const StrId SettingsActivity::categoryNames[categoryCount] = {StrId::STR_CAT_DISPLAY, StrId::STR_CAT_READER,
@@ -149,6 +150,14 @@ void SettingsActivity::onExit() {
 void SettingsActivity::loop() {
   if (optionPopup.handleInput(mappedInput, [this] { requestUpdate(); })) return;
 
+  const bool inkPoint = InkPointShell::enabled(renderer);
+  if (inkPoint) {
+    if (const auto destination = InkPointShell::tappedDestination(mappedInput)) {
+      InkPointShell::navigate(*destination);
+      return;
+    }
+  }
+
   bool hasChangedCategory = false;
 
   auto applyCategorySelection = [this] {
@@ -196,11 +205,15 @@ void SettingsActivity::loop() {
   const auto& metrics = UITheme::getInstance().getMetrics();
   int tx = 0;
   int ty = 0;
-  const int tabTop = metrics.topPadding + metrics.headerHeight;
-  const int listTop = metrics.topPadding + metrics.headerHeight + metrics.tabBarHeight + metrics.verticalSpacing;
-  const int listHeight =
-      renderer.getScreenHeight() - (metrics.topPadding + metrics.headerHeight + metrics.tabBarHeight +
-                                    metrics.buttonHintsHeight + metrics.verticalSpacing * 2);
+  const int tabTop = inkPoint ? InkPointShell::kHeaderBottom : metrics.topPadding + metrics.headerHeight;
+  const int tabHeight = inkPoint ? 44 : metrics.tabBarHeight;
+  const int listTop = inkPoint ? tabTop + tabHeight + 8
+                               : metrics.topPadding + metrics.headerHeight + metrics.tabBarHeight +
+                                     metrics.verticalSpacing;
+  const int listHeight = inkPoint ? InkPointShell::kFooterTop - listTop - 8
+                                  : renderer.getScreenHeight() -
+                                        (metrics.topPadding + metrics.headerHeight + metrics.tabBarHeight +
+                                         metrics.buttonHintsHeight + metrics.verticalSpacing * 2);
   auto buildTabs = [&]() {
     std::vector<TabInfo> tabs;
     tabs.reserve(categoryCount);
@@ -227,7 +240,7 @@ void SettingsActivity::loop() {
   if (mappedInput.wasScreenTouchDown(tx, ty)) {
     int touchedCategory = -1;
     const auto tabs = buildTabs();
-    if (GUI.tabIndexFromPoint(renderer, Rect{0, tabTop, renderer.getScreenWidth(), metrics.tabBarHeight}, tabs, tx, ty,
+    if (GUI.tabIndexFromPoint(renderer, Rect{0, tabTop, renderer.getScreenWidth(), tabHeight}, tabs, tx, ty,
                               touchedCategory)) {
       if (selectedCategoryIndex != touchedCategory || selectedSettingIndex != 0) {
         selectedCategoryIndex = touchedCategory;
@@ -251,7 +264,7 @@ void SettingsActivity::loop() {
   if (mappedInput.wasScreenTapped(tx, ty)) {
     int tappedCategory = -1;
     const auto tabs = buildTabs();
-    if (GUI.tabIndexFromPoint(renderer, Rect{0, tabTop, renderer.getScreenWidth(), metrics.tabBarHeight}, tabs, tx, ty,
+    if (GUI.tabIndexFromPoint(renderer, Rect{0, tabTop, renderer.getScreenWidth(), tabHeight}, tabs, tx, ty,
                               tappedCategory)) {
       selectedCategoryIndex = tappedCategory;
       selectedSettingIndex = 0;
@@ -274,9 +287,11 @@ void SettingsActivity::loop() {
 
   // Handle navigation
   const auto& navMetrics = UITheme::getInstance().getMetrics();
-  const int settingsListHeight =
-      renderer.getScreenHeight() - (navMetrics.topPadding + navMetrics.headerHeight + navMetrics.tabBarHeight +
-                                    navMetrics.buttonHintsHeight + navMetrics.verticalSpacing * 2);
+  const int settingsListHeight = inkPoint
+                                     ? InkPointShell::kFooterTop - (InkPointShell::kHeaderBottom + 44 + 8) - 8
+                                     : renderer.getScreenHeight() -
+                                           (navMetrics.topPadding + navMetrics.headerHeight + navMetrics.tabBarHeight +
+                                            navMetrics.buttonHintsHeight + navMetrics.verticalSpacing * 2);
   const int settingsPageItems = GUI.getListPageItems(settingsListHeight, false);
   const auto swipe = mappedInput.wasSwipe();
   if (swipe == MappedInputManager::SwipeDir::Up) {
@@ -526,23 +541,41 @@ void SettingsActivity::render(RenderLock&&) {
 
   const auto& metrics = UITheme::getInstance().getMetrics();
 
-  GUI.drawHeader(renderer, Rect{0, metrics.topPadding, pageWidth, metrics.headerHeight}, tr(STR_SETTINGS_TITLE),
-                 CROSSPOINT_VERSION);
+  const bool inkPoint = InkPointShell::enabled(renderer);
+  if (inkPoint) InkPointShell::drawHeader(renderer, "Settings");
+  else GUI.drawHeader(renderer, Rect{0, metrics.topPadding, pageWidth, metrics.headerHeight}, tr(STR_SETTINGS_TITLE),
+                      CROSSPOINT_VERSION);
 
   std::vector<TabInfo> tabs;
   tabs.reserve(categoryCount);
   for (int i = 0; i < categoryCount; i++) {
     tabs.push_back({I18N.get(categoryNames[i]), selectedCategoryIndex == i});
   }
-  GUI.drawTabBar(renderer, Rect{0, metrics.topPadding + metrics.headerHeight, pageWidth, metrics.tabBarHeight}, tabs,
-                 selectedSettingIndex == 0);
+  const int tabTop = inkPoint ? InkPointShell::kHeaderBottom : metrics.topPadding + metrics.headerHeight;
+  const int tabHeight = inkPoint ? 44 : metrics.tabBarHeight;
+  if (inkPoint) {
+    const int tabWidth = pageWidth / categoryCount;
+    for (int i = 0; i < categoryCount; ++i) {
+      const bool selected = i == selectedCategoryIndex;
+      if (selected) renderer.fillRoundedRect(i * tabWidth + 4, tabTop + 4, tabWidth - 8, tabHeight - 8, 5,
+                                             Color::Black);
+      const char* label = I18N.get(categoryNames[i]);
+      const int x = i * tabWidth + (tabWidth - renderer.getTextWidth(UI_12_FONT_ID, label)) / 2;
+      renderer.drawText(UI_12_FONT_ID, x, tabTop + 12, label, !selected);
+    }
+  } else {
+    GUI.drawTabBar(renderer, Rect{0, tabTop, pageWidth, tabHeight}, tabs, selectedSettingIndex == 0);
+  }
 
   const auto& settings = *currentSettings;
   GUI.drawList(
       renderer,
-      Rect{0, metrics.topPadding + metrics.headerHeight + metrics.tabBarHeight + metrics.verticalSpacing, pageWidth,
-           pageHeight - (metrics.topPadding + metrics.headerHeight + metrics.tabBarHeight + metrics.buttonHintsHeight +
-                         metrics.verticalSpacing * 2)},
+      inkPoint ? Rect{8, tabTop + tabHeight + 8, pageWidth - 16,
+                      InkPointShell::kFooterTop - (tabTop + tabHeight + 8) - 8}
+               : Rect{0, metrics.topPadding + metrics.headerHeight + metrics.tabBarHeight + metrics.verticalSpacing,
+                      pageWidth,
+                      pageHeight - (metrics.topPadding + metrics.headerHeight + metrics.tabBarHeight +
+                                    metrics.buttonHintsHeight + metrics.verticalSpacing * 2)},
       settingsCount, selectedSettingIndex - 1,
       [&settings](int index) { return std::string(I18N.get(settings[index].nameId)); }, nullptr, nullptr,
       [&settings](int i) {
@@ -587,8 +620,12 @@ void SettingsActivity::render(RenderLock&&) {
                  ? tr(STR_SELECT)
                  : tr(STR_TOGGLE));
 
-  const auto labels = mappedInput.mapLabels(tr(STR_BACK), confirmLabel, tr(STR_DIR_UP), tr(STR_DIR_DOWN));
-  GUI.drawButtonHints(renderer, labels.btn1, labels.btn2, labels.btn3, labels.btn4);
+  if (inkPoint) {
+    InkPointShell::drawFooter(renderer, InkPointShell::Destination::Settings);
+  } else {
+    const auto labels = mappedInput.mapLabels(tr(STR_BACK), confirmLabel, tr(STR_DIR_UP), tr(STR_DIR_DOWN));
+    GUI.drawButtonHints(renderer, labels.btn1, labels.btn2, labels.btn3, labels.btn4);
+  }
 
   // Always use standard refresh for settings screen
   renderer.displayBuffer();

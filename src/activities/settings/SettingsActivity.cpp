@@ -205,7 +205,7 @@ void SettingsActivity::loop() {
   const auto& metrics = UITheme::getInstance().getMetrics();
   int tx = 0;
   int ty = 0;
-  const int tabTop = inkPoint ? InkPointShell::kHeaderBottom : metrics.topPadding + metrics.headerHeight;
+  const int tabTop = inkPoint ? InkPointShell::kContentTop : metrics.topPadding + metrics.headerHeight;
   const int tabHeight = inkPoint ? 44 : metrics.tabBarHeight;
   const int listTop = inkPoint ? tabTop + tabHeight + 8
                                : metrics.topPadding + metrics.headerHeight + metrics.tabBarHeight +
@@ -288,7 +288,7 @@ void SettingsActivity::loop() {
   // Handle navigation
   const auto& navMetrics = UITheme::getInstance().getMetrics();
   const int settingsListHeight = inkPoint
-                                     ? InkPointShell::kFooterTop - (InkPointShell::kHeaderBottom + 44 + 8) - 8
+                                     ? InkPointShell::kFooterTop - (InkPointShell::kContentTop + 44 + 8) - 8
                                      : renderer.getScreenHeight() -
                                            (navMetrics.topPadding + navMetrics.headerHeight + navMetrics.tabBarHeight +
                                             navMetrics.buttonHintsHeight + navMetrics.verticalSpacing * 2);
@@ -551,7 +551,7 @@ void SettingsActivity::render(RenderLock&&) {
   for (int i = 0; i < categoryCount; i++) {
     tabs.push_back({I18N.get(categoryNames[i]), selectedCategoryIndex == i});
   }
-  const int tabTop = inkPoint ? InkPointShell::kHeaderBottom : metrics.topPadding + metrics.headerHeight;
+  const int tabTop = inkPoint ? InkPointShell::kContentTop : metrics.topPadding + metrics.headerHeight;
   const int tabHeight = inkPoint ? 44 : metrics.tabBarHeight;
   if (inkPoint) {
     const int tabWidth = pageWidth / categoryCount;

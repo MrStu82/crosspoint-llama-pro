@@ -73,6 +73,9 @@ def main() -> None:
     parser.add_argument("--unavailable", type=Path, required=True)
     parser.add_argument("--long", type=Path, required=True)
     parser.add_argument("--small-cover", type=Path, required=True)
+    # INK-04 is global, so it is proven on a second screen whose content starts
+    # highest: Settings puts its tab strip immediately under the heading.
+    parser.add_argument("--settings", type=Path, required=True)
     args = parser.parse_args()
 
     populated = Bmp(args.populated)
@@ -87,6 +90,8 @@ def main() -> None:
     # between that row and kContentTop must be clear of any screen content.
     title_gap = populated.ink_count(RIGHT_X, HEADER_BOTTOM + 1, RIGHT_EDGE, CONTENT_TOP - 1)
     assert title_gap == 0, f"content ink inside the heading's descender band: {title_gap}"
+    settings_gap = Bmp(args.settings).ink_count(0, HEADER_BOTTOM + 1, PANEL_WIDTH, CONTENT_TOP - 1)
+    assert settings_gap == 0, f"Settings content inside the heading's descender band: {settings_gap}"
 
     # INK-02: the whole title has to live in the widened right column, with no
     # ink escaping its right edge into the bezel margin.

@@ -236,3 +236,11 @@ Plans:
 **Constraint:** Existing partition table, dual OTA, rollback and SPIFFS remain unchanged. One implementation build only; simulator proof, then one Pixel/Gauge gate. No implementation starts while the rating source is undecided.
 **Plan:** `.planning/INKPOINTX_HOME_IMPLEMENTATION_BRIEF.md`.
 **Status:** Implementation in progress; provider isolated, atomic last-good cache and simulator gate underway.
+
+### Phase 17 corrective — real-device Home defects (2026-08-26)
+- [x] Maximal aspect-fit cover within approved lane, centred without crop/stretch.
+- [x] Bound title/author metadata to the 130px right column; wrap hard tokens and ellipsise metadata.
+- [x] Always render all three stat values; use `—` when unavailable.
+- [x] Replace hard-coded quote with audited 366-record Project Gutenberg fiction pack and deterministic yearly shuffled deck.
+- [x] Host gate: 177/177.
+- [ ] One X4 build, eight-state simulator evidence, Gauge functional PASS, Pixel exact-screenshot PASS.

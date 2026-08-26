@@ -29,6 +29,7 @@
 #include "network/HardcoverRating.h"
 #include "util/BookProgressBadge.h"
 #include "util/BookReadingStats.h"
+#include "util/DailyQuote.h"
 
 namespace {
 const Rect kInkCover{20, 99, 290, 438};
@@ -71,22 +72,48 @@ std::vector<std::string> wrapWords(const GfxRenderer& renderer, const int fontId
                                    const EpdFontFamily::Style style = EpdFontFamily::REGULAR) {
   std::vector<std::string> lines;
   std::string line;
+  auto appendWord = [&](std::string word) {
+    while (!word.empty()) {
+      std::string candidate = line.empty() ? word : line + " " + word;
+      if (renderer.getTextWidth(fontId, candidate.c_str(), style) <= maxWidth) {
+        line = std::move(candidate);
+        return;
+      }
+      if (!line.empty()) {
+        lines.push_back(line);
+        line.clear();
+        if (lines.size() == maxLines) return;
+        continue;
+      }
+      size_t count = 1;
+      while (count < word.size() && renderer.getTextWidth(fontId, word.substr(0, count + 1).c_str(), style) <= maxWidth)
+        ++count;
+      line = word.substr(0, count);
+      word.erase(0, count);
+      if (!word.empty()) {
+        lines.push_back(line);
+        line.clear();
+        if (lines.size() == maxLines) return;
+      }
+    }
+  };
   size_t start = 0;
   while (start < text.size() && lines.size() < maxLines) {
     const size_t end = text.find(' ', start);
-    const std::string word = text.substr(start, end == std::string::npos ? std::string::npos : end - start);
-    const std::string candidate = line.empty() ? word : line + " " + word;
-    if (!line.empty() && renderer.getTextWidth(fontId, candidate.c_str(), style) > maxWidth) {
-      lines.push_back(line);
-      line = word;
-    } else {
-      line = candidate;
-    }
-    if (end == std::string::npos) break;
+    appendWord(text.substr(start, end == std::string::npos ? std::string::npos : end - start));
+    if (end == std::string::npos || lines.size() == maxLines) break;
     start = end + 1;
   }
   if (!line.empty() && lines.size() < maxLines) lines.push_back(line);
   return lines;
+}
+
+std::string fitText(const GfxRenderer& renderer, int fontId, std::string value, int maxWidth,
+                    EpdFontFamily::Style style = EpdFontFamily::REGULAR) {
+  if (renderer.getTextWidth(fontId, value.c_str(), style) <= maxWidth) return value;
+  while (!value.empty() && renderer.getTextWidth(fontId, (value + "...").c_str(), style) > maxWidth)
+    value.pop_back();
+  return value + "...";
 }
 }  // namespace
 
@@ -528,6 +555,8 @@ void HomeActivity::renderInkPointHome() {
   bool coverDrawn = false;
   int coverW = kInkCover.width;
   int coverH = kInkCover.height;
+  int coverX = kInkCover.x;
+  int coverY = kInkCover.y;
   if (book && !book->coverBmpPath.empty()) {
     const auto& metrics = UITheme::getInstance().getMetrics();
     const std::string thumbPath = UITheme::getCoverThumbPath(book->coverBmpPath, metrics.homeCoverHeight);
@@ -537,7 +566,11 @@ void HomeActivity::renderInkPointHome() {
       if (bitmap.parseHeaders() == BmpReaderError::Ok) {
         coverW = std::min(kInkCover.width, (kInkCover.height * bitmap.getWidth()) / bitmap.getHeight());
         coverH = std::min(kInkCover.height, (coverW * bitmap.getHeight()) / bitmap.getWidth());
-        renderer.drawBitmap(bitmap, kInkCover.x, kInkCover.y, coverW, coverH);
+        // Maximal aspect-fit inside the approved lane, centred rather than
+        // leaving the unused sliver on one edge.
+        coverX = kInkCover.x + (kInkCover.width - coverW) / 2;
+        coverY = kInkCover.y + (kInkCover.height - coverH) / 2;
+        renderer.drawBitmap(bitmap, coverX, coverY, coverW, coverH);
         coverDrawn = true;
       }
     }
@@ -562,38 +595,27 @@ void HomeActivity::renderInkPointHome() {
   }
 
   // Thin progress bar is physically attached to the cover's lower edge.
-  const int progressY = kInkCover.y + coverH;
-  renderer.drawRect(kInkCover.x, progressY, coverW, 4);
+  const int progressY = coverY + coverH;
+  renderer.drawRect(coverX, progressY, coverW, 4);
   if (book && book->progressPercent >= 0) {
-    renderer.fillRect(kInkCover.x + 1, progressY + 1,
+    renderer.fillRect(coverX + 1, progressY + 1,
                       std::max(0, std::min(coverW - 2, (coverW - 2) * book->progressPercent / 100)), 2);
   }
 
+  const int rightX = 330;
+  constexpr int rightWidth = 130;
   if (book) {
-    const int rightX = 330;
     const std::string title = upper(book->title);
     // Narrow-column title: wrap by words rather than clipping. UI face remains
     // deliberately separate from Caveat's heading/accent role.
-    std::vector<std::string> lines;
-    std::string line;
-    size_t start = 0;
-    while (start < title.size() && lines.size() < 4) {
-      size_t end = title.find(' ', start);
-      std::string word = title.substr(start, end == std::string::npos ? std::string::npos : end - start);
-      std::string candidate = line.empty() ? word : line + " " + word;
-      if (!line.empty() && renderer.getTextWidth(NOTOSANS_14_FONT_ID, candidate.c_str(), EpdFontFamily::BOLD) > 130) {
-        lines.push_back(line); line = word;
-      } else line = candidate;
-      if (end == std::string::npos) break;
-      start = end + 1;
-    }
-    if (!line.empty() && lines.size() < 4) lines.push_back(line);
+    const auto lines = wrapWords(renderer, NOTOSANS_14_FONT_ID, title, rightWidth, 4, EpdFontFamily::BOLD);
     int y = 103;
     for (const auto& titleLine : lines) {
       renderer.drawText(NOTOSANS_14_FONT_ID, rightX, y, titleLine.c_str(), true, EpdFontFamily::BOLD);
       y += 31;
     }
-    renderer.drawText(UI_10_FONT_ID, rightX, y + 5, book->author.c_str());
+    const auto fittedAuthor = fitText(renderer, UI_10_FONT_ID, book->author, rightWidth);
+    renderer.drawText(UI_10_FONT_ID, rightX, y + 5, fittedAuthor.c_str());
     if (rating && rating->publicationYear > 0) {
       char year[8]; std::snprintf(year, sizeof(year), "%d", rating->publicationYear);
       renderer.drawText(UI_10_FONT_ID, rightX, y + 27, year);
@@ -604,8 +626,12 @@ void HomeActivity::renderInkPointHome() {
       for (int i = 0; i < 5; ++i) drawStar(renderer, rightX + 11 + i * 24, y + 62, i < whole, i == whole && fraction > 0);
     }
 
-    constexpr const char* labels[3] = {"TIME READ", "CHAPTER LEFT", "BOOK LEFT"};
-    char timeRead[16], chapterLeft[16] = "\xe2\x80\x94", bookLeft[16] = "\xe2\x80\x94";
+  }
+
+  // Values are never omitted: unavailable data uses a deliberate em dash.
+  constexpr const char* labels[3] = {"TIME READ", "CHAPTER LEFT", "BOOK LEFT"};
+  char timeRead[16] = "\xe2\x80\x94", chapterLeft[16] = "\xe2\x80\x94", bookLeft[16] = "\xe2\x80\x94";
+  if (book) {
     const uint32_t minutes = bookStats.totalSeconds / 60;
     std::snprintf(timeRead, sizeof(timeRead), "%luh %02lum", static_cast<unsigned long>(minutes / 60),
                   static_cast<unsigned long>(minutes % 60));
@@ -616,25 +642,37 @@ void HomeActivity::renderInkPointHome() {
       std::snprintf(bookLeft, sizeof(bookLeft), "%luh %02lum", static_cast<unsigned long>(leftMinutes / 60),
                     static_cast<unsigned long>(leftMinutes % 60));
     }
-    const char* values[3] = {timeRead, chapterLeft, bookLeft};
-    for (int i = 0; i < 3; ++i) {
-      const int statY = 326 + i * 66;
-      renderer.drawText(UI_10_FONT_ID, rightX, statY, labels[i]);
-      renderer.drawText(CAVEAT_18_FONT_ID, rightX, statY + 20, values[i]);
-    }
+  }
+  const char* values[3] = {timeRead, chapterLeft, bookLeft};
+  for (int i = 0; i < 3; ++i) {
+    const int statY = 326 + i * 66;
+    renderer.drawText(UI_10_FONT_ID, rightX, statY, labels[i]);
+    renderer.drawText(CAVEAT_18_FONT_ID, rightX, statY + 20, values[i]);
   }
 
-  // Accepted two-line quote and one-line attribution, vertically balanced in
-  // the band below the cover and above persistent navigation.
-  drawCentered(renderer, CAVEAT_15_FONT_ID, 240, 601,
-               "Eliminate all other factors, and");
-  drawCentered(renderer, CAVEAT_15_FONT_ID, 240, 626,
-               "the one which remains must be the truth.");
-  drawCentered(renderer, SMALL_FONT_ID, 240, 653,
-               "Sherlock Holmes, The Sign of the Four, Arthur Conan Doyle");
+  // The local-date quote is selected from a 366-record audited shuffled deck.
+  const auto& daily = DailyQuote::localToday();
+  const auto quoteLines = wrapWords(renderer, CAVEAT_15_FONT_ID, daily.quote, 400, 3);
+  const std::string attribution = std::string(daily.character) + ", " + daily.title + ", " + daily.author;
+  const auto attributionLines = wrapWords(renderer, SMALL_FONT_ID, attribution, 400, 2);
+  constexpr int quoteStep = 25;
+  constexpr int attributionStep = 18;
+  constexpr int quoteToAttribution = 16;
+  const int blockHeight = static_cast<int>(quoteLines.size()) * quoteStep + quoteToAttribution +
+                          static_cast<int>(attributionLines.size()) * attributionStep;
+  int quoteBaseline = 551 + (168 - blockHeight) / 2 + 20;
+  for (const auto& line : quoteLines) {
+    drawCentered(renderer, CAVEAT_15_FONT_ID, 240, quoteBaseline, line.c_str());
+    quoteBaseline += quoteStep;
+  }
+  int attributionBaseline = quoteBaseline + quoteToAttribution - 4;
+  for (const auto& line : attributionLines) {
+    drawCentered(renderer, SMALL_FONT_ID, 240, attributionBaseline, line.c_str());
+    attributionBaseline += attributionStep;
+  }
 
   InkPointShell::drawFooter(renderer, InkPointShell::Destination::Home, inkPointFocus - 1);
-  if (inkPointFocus == 0 && book) renderer.drawRect(kInkCover.x - 3, kInkCover.y - 3, coverW + 6, coverH + 10, 2, true);
+  if (inkPointFocus == 0 && book) renderer.drawRect(coverX - 3, coverY - 3, coverW + 6, coverH + 10, 2, true);
 
   renderer.displayBuffer(cleanInitialRefresh && !firstRenderDone ? HalDisplay::HALF_REFRESH : HalDisplay::FAST_REFRESH);
   firstRenderDone = true;

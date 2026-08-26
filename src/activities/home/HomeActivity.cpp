@@ -608,11 +608,11 @@ void HomeActivity::renderInkPointHome() {
     const std::string title = upper(book->title);
     // Narrow-column title: wrap by words rather than clipping. UI face remains
     // deliberately separate from Caveat's heading/accent role.
-    const auto lines = wrapWords(renderer, NOTOSANS_14_FONT_ID, title, rightWidth, 4, EpdFontFamily::BOLD);
+    const auto lines = wrapWords(renderer, NOTOSANS_12_FONT_ID, title, rightWidth, 5, EpdFontFamily::BOLD);
     int y = 103;
     for (const auto& titleLine : lines) {
-      renderer.drawText(NOTOSANS_14_FONT_ID, rightX, y, titleLine.c_str(), true, EpdFontFamily::BOLD);
-      y += 31;
+      renderer.drawText(NOTOSANS_12_FONT_ID, rightX, y, titleLine.c_str(), true, EpdFontFamily::BOLD);
+      y += 27;
     }
     const auto fittedAuthor = fitText(renderer, UI_10_FONT_ID, book->author, rightWidth);
     renderer.drawText(UI_10_FONT_ID, rightX, y + 5, fittedAuthor.c_str());
@@ -628,26 +628,31 @@ void HomeActivity::renderInkPointHome() {
 
   }
 
-  // Values are never omitted: unavailable data uses a deliberate em dash.
+  // Values are never omitted. Caveat lacks an em-dash glyph, so unavailable
+  // values use a small vector dash in the same value lane.
   constexpr const char* labels[3] = {"TIME READ", "CHAPTER LEFT", "BOOK LEFT"};
-  char timeRead[16] = "\xe2\x80\x94", chapterLeft[16] = "\xe2\x80\x94", bookLeft[16] = "\xe2\x80\x94";
+  char timeRead[16] = {}, chapterLeft[16] = {}, bookLeft[16] = {};
+  bool valueAvailable[3] = {false, false, false};
   if (book && bookStats.available) {
     const uint32_t minutes = bookStats.totalSeconds / 60;
     std::snprintf(timeRead, sizeof(timeRead), "%luh %02lum", static_cast<unsigned long>(minutes / 60),
                   static_cast<unsigned long>(minutes % 60));
+    valueAvailable[0] = true;
     if (bookStats.etaConfident() && book->progressPercent > 0 && book->progressPercent < 100) {
       const uint32_t totalPagesEstimate = bookStats.forwardPages * 100U / static_cast<uint32_t>(book->progressPercent);
       const uint32_t remainingPages = totalPagesEstimate > bookStats.forwardPages ? totalPagesEstimate - bookStats.forwardPages : 0;
       const uint32_t leftMinutes = remainingPages * bookStats.secondsPerPage() / 60;
       std::snprintf(bookLeft, sizeof(bookLeft), "%luh %02lum", static_cast<unsigned long>(leftMinutes / 60),
                     static_cast<unsigned long>(leftMinutes % 60));
+      valueAvailable[2] = true;
     }
   }
   const char* values[3] = {timeRead, chapterLeft, bookLeft};
   for (int i = 0; i < 3; ++i) {
     const int statY = 326 + i * 66;
     renderer.drawText(UI_10_FONT_ID, rightX, statY, labels[i]);
-    renderer.drawText(CAVEAT_18_FONT_ID, rightX, statY + 20, values[i]);
+    if (valueAvailable[i]) renderer.drawText(CAVEAT_18_FONT_ID, rightX, statY + 20, values[i]);
+    else renderer.drawLine(rightX, statY + 31, rightX + 20, statY + 31, 3, true);
   }
 
   // The local-date quote is selected from a 366-record audited shuffled deck.

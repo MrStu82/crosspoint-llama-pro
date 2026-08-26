@@ -49,6 +49,7 @@ TEST(HardcoverRating, ErrorsMissingRatingsAndNearMatchesStayUnresolved) {
 }
 
 TEST(BookReadingStats, EtaNeedsMeaningfulBookSpecificSample) {
+  EXPECT_FALSE(BookReadingStatsValue{}.available);
   EXPECT_FALSE((BookReadingStatsValue{299, 5}).etaConfident());
   EXPECT_FALSE((BookReadingStatsValue{300, 4}).etaConfident());
   const BookReadingStatsValue confident{600, 10};

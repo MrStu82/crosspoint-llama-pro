@@ -631,7 +631,7 @@ void HomeActivity::renderInkPointHome() {
   // Values are never omitted: unavailable data uses a deliberate em dash.
   constexpr const char* labels[3] = {"TIME READ", "CHAPTER LEFT", "BOOK LEFT"};
   char timeRead[16] = "\xe2\x80\x94", chapterLeft[16] = "\xe2\x80\x94", bookLeft[16] = "\xe2\x80\x94";
-  if (book) {
+  if (book && bookStats.available) {
     const uint32_t minutes = bookStats.totalSeconds / 60;
     std::snprintf(timeRead, sizeof(timeRead), "%luh %02lum", static_cast<unsigned long>(minutes / 60),
                   static_cast<unsigned long>(minutes % 60));

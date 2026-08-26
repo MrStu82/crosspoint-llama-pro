@@ -37,6 +37,7 @@ BookReadingStatsValue read(const std::string& bookPath) {
   Stored stored{};
   if (file.read(reinterpret_cast<uint8_t*>(&stored), sizeof(stored)) != sizeof(stored) || stored.version != kVersion)
     return result;
+  result.available = true;
   result.totalSeconds = stored.totalSeconds;
   result.forwardPages = stored.forwardPages;
   return result;

@@ -6,6 +6,7 @@
 struct BookReadingStatsValue {
   uint32_t totalSeconds = 0;
   uint32_t forwardPages = 0;
+  bool available = false;
 
   bool etaConfident() const { return totalSeconds >= 300 && forwardPages >= 5; }
   uint32_t secondsPerPage() const { return forwardPages == 0 ? 0 : totalSeconds / forwardPages; }

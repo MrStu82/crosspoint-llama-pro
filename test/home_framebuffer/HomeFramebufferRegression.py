@@ -2,13 +2,28 @@
 """Pixel-level guards for the X4 Pro Home acceptance fixtures.
 
 The simulator writes a 32-bit bottom-up BMP.  These checks deliberately avoid
-OCR and third-party image packages: they assert the visible ink that previously
-regressed (three unavailable-value markers and the three whole title words).
+OCR and third-party image packages: they assert the visible ink for the defects
+that have actually regressed here -- a cover stretched to its lane, a middle
+stat no code path could populate, a missing Stats affordance, and metadata
+clipped by a too-narrow right column.
 """
 
 import argparse
 import struct
 from pathlib import Path
+
+# Layout constants mirrored from HomeActivity.cpp / InkPointShell.h.  Kept
+# named rather than inlined so a future layout change reads as a deliberate
+# edit here instead of a magic-number hunt.
+CONTENT_TOP = 104
+COVER_LANE = (20, CONTENT_TOP, 220, 434)  # x, y, w, h -- the maximum, not the frame
+COVER_RIGHT = 240
+RIGHT_X = 260
+RIGHT_EDGE = 460
+STAT_LABEL_TOP = 334
+STAT_STEP = 58
+STAT_VALUE_OFFSET = 20
+CHEVRON_CY = 520
 
 
 class Bmp:
@@ -37,42 +52,79 @@ class Bmp:
         return count
 
 
+def stat_value_box(row: int) -> tuple:
+    top = STAT_LABEL_TOP + row * STAT_STEP + STAT_VALUE_OFFSET
+    return (RIGHT_X, top, RIGHT_X + 110, top + 26)
+
+
 def main() -> None:
     parser = argparse.ArgumentParser()
     parser.add_argument("--populated", type=Path, required=True)
     parser.add_argument("--unavailable", type=Path, required=True)
     parser.add_argument("--long", type=Path, required=True)
+    parser.add_argument("--small-cover", type=Path, required=True)
     args = parser.parse_args()
 
     populated = Bmp(args.populated)
     unavailable = Bmp(args.unavailable)
     long_title = Bmp(args.long)
-    for image in (populated, unavailable, long_title):
+    small_cover = Bmp(args.small_cover)
+    for image in (populated, unavailable, long_title, small_cover):
         assert image.width >= 470 and image.height >= 790, (image.width, image.height)
 
-    # DUNGEON / CRAWLER / CARL must be three intact whole-word ink bands in
-    # the 130px right column, rather than a clipped or hard-split title.
-    title_bands = ((100, 135), (131, 169), (162, 203))
-    title_counts = [populated.ink_count(327, top, 462, bottom) for top, bottom in title_bands]
-    assert all(count >= 35 for count in title_counts), title_counts
-    assert populated.ink_count(462, 100, 476, 203) == 0, "title ink crossed right-column edge"
+    # INK-04: the Caveat page title owns everything above kContentTop, so no
+    # screen content may sit in its descenders.
+    title_gap = populated.ink_count(RIGHT_X, 94, RIGHT_EDGE, CONTENT_TOP - 1)
+    assert title_gap == 0, f"content ink inside the heading's descender band: {title_gap}"
 
-    # With no reading-stat file, each value row must still contain a visible
-    # UI-font em dash. Labels sit above these narrow value-only regions.
-    placeholder_counts = [
-        unavailable.ink_count(327, 344 + row * 66, 370, 380 + row * 66)
-        for row in range(3)
-    ]
-    assert all(count >= 8 for count in placeholder_counts), placeholder_counts
+    # INK-02: the whole title has to live in the widened right column, with no
+    # ink escaping its right edge into the bezel margin.
+    title_ink = populated.ink_count(RIGHT_X, CONTENT_TOP, RIGHT_EDGE, 230)
+    assert title_ink >= 120, title_ink
+    assert populated.ink_count(RIGHT_EDGE, CONTENT_TOP, 480, 230) == 0, "title ink crossed right-column edge"
+    assert long_title.ink_count(RIGHT_EDGE, CONTENT_TOP, 480, 260) == 0, "long title crossed right-column edge"
+    long_bands = [long_title.ink_count(RIGHT_X, top, RIGHT_EDGE, top + 22) for top in range(CONTENT_TOP, 240, 22)]
+    assert sum(count >= 20 for count in long_bands) >= 3, long_bands
 
-    # Malformed metadata may contain one over-wide token. The renderer must
-    # bound that token while retaining later whole words on their own lines,
-    # with no ink escaping the right column.
-    long_bands = [long_title.ink_count(327, top, 462, top + 24) for top in range(100, 220, 22)]
-    assert sum(count >= 20 for count in long_bands) >= 2, long_bands
-    assert long_title.ink_count(462, 96, 476, 230) == 0, "long title crossed right-column edge"
+    # INK-02/INK-05: with reading stats and progress present, TIME READ and
+    # PROGRESS both carry a real numeric value.  An em dash is a single thin
+    # rule, so a genuine value is several times its ink -- which is precisely
+    # the difference the old CHAPTER LEFT row could never show.
+    dashes = [unavailable.ink_count(*stat_value_box(row)) for row in range(3)]
+    assert all(8 <= count <= 60 for count in dashes), dashes
+    values = [populated.ink_count(*stat_value_box(row)) for row in range(2)]
+    assert all(count > max(dashes) * 2 for count in values), (values, dashes)
 
-    print(f"PASS title_bands={title_counts} unavailable_markers={placeholder_counts} long_bands={long_bands}")
+    # INK-03: three right-pointing triangles beneath the stat block, hard
+    # right-aligned, and nothing else on that row.
+    chevron = populated.ink_count(424, CHEVRON_CY - 8, RIGHT_EDGE + 4, CHEVRON_CY + 8)
+    assert chevron >= 60, chevron
+    assert populated.ink_count(RIGHT_X, CHEVRON_CY - 8, 420, CHEVRON_CY + 8) == 0, "stray ink left of the chevron"
+
+    # INK-01: a cover smaller than the lane is drawn at its own size, hard
+    # right-aligned to the lane's right edge, with its focus ring hugging it.
+    # The lane to its left and below it must be empty -- that emptiness is the
+    # whole defect: it used to be filled by a stretched cover.
+    small_w, small_h = 120, 180
+    drawn_left = COVER_RIGHT - small_w
+    cover_ink = small_cover.ink_count(drawn_left, CONTENT_TOP, COVER_RIGHT, CONTENT_TOP + small_h)
+    assert cover_ink >= 200, cover_ink
+    left_slack = small_cover.ink_count(COVER_LANE[0], CONTENT_TOP, drawn_left - 4, COVER_LANE[1] + COVER_LANE[3])
+    assert left_slack == 0, f"ink in the lane left of the drawn cover: {left_slack}"
+    below_slack = small_cover.ink_count(drawn_left - 4, CONTENT_TOP + small_h + 14, COVER_RIGHT + 4, 540)
+    assert below_slack == 0, f"ink in the lane below the drawn cover: {below_slack}"
+    # Both rings are derived from the drawn size, so their left stroke reports
+    # it: the full-size cover still fills the lane's width (ring at x=17), the
+    # small one does not (ring at x=117).  A fit-down, not a blanket shrink.
+    wide_ring = populated.ink_count(COVER_LANE[0] - 3, 200, COVER_LANE[0] - 1, 300)
+    assert wide_ring >= 90, f"full-size cover no longer fills the lane width: {wide_ring}"
+    small_ring = small_cover.ink_count(drawn_left - 3, 150, drawn_left - 1, 250)
+    assert small_ring >= 90, f"small cover's frame is not hugging it: {small_ring}"
+
+    print(
+        f"PASS title_ink={title_ink} long_bands={long_bands} dashes={dashes} "
+        f"values={values} chevron={chevron} cover_ink={cover_ink}"
+    )
 
 
 if __name__ == "__main__":

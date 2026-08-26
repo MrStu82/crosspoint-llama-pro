@@ -63,7 +63,8 @@ void drawHeader(const GfxRenderer& renderer, const char* title) {
   std::snprintf(battery, sizeof(battery), "%u%%", static_cast<unsigned>(powerManager.getBatteryPercentage()));
   renderer.drawText(SMALL_FONT_ID, 460 - renderer.getTextWidth(SMALL_FONT_ID, battery), 2, battery);
   // Caveat 30 has the same measured on-panel ink height as the approved 42px prototype token.
-  // Keeping it in y=20..74 prevents font ascenders/descenders from entering content.
+  // Drawn from y=23, its descenders reach y=94 (kHeaderBottom); kContentTop sits
+  // clear of that, so no screen's content can collide with the heading.
   renderer.drawText(CAVEAT_30_FONT_ID, 20, 23, title);
 }
 

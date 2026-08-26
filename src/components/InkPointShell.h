@@ -10,8 +10,12 @@ namespace InkPointShell {
 enum class Destination : int { Home = 0, Library, Files, Games, Transfer, Settings };
 
 constexpr int kStatusBottom = 18;
-constexpr int kHeaderBottom = 82;
-constexpr int kContentTop = 88;
+// The Caveat heading's ink reaches y=94 on panel once descenders are counted,
+// so the previous 88px content top sat inside the title. Every InkPoint screen
+// derives its content top from this one constant, which makes the breathing
+// room below the page title global rather than per-screen.
+constexpr int kHeaderBottom = 94;
+constexpr int kContentTop = 104;
 constexpr int kFooterTop = 728;
 constexpr int kFooterHeight = 60;
 

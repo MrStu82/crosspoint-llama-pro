@@ -32,10 +32,35 @@
 #include "util/DailyQuote.h"
 
 namespace {
-const Rect kInkCover{20, 99, 290, 438};
+// The cover's right edge sits on the screen centre; everything to the right of
+// it is the metadata gutter. The lane is the maximum the cover may occupy, not
+// a frame drawn around it -- see renderInkPointHome.
+constexpr int kInkCoverRight = 240;
+const Rect kInkCoverLane{20, InkPointShell::kContentTop, 220, 434};
+// Stats block and its ">>>" chevron form a single target for the Stats screen.
+// Kept clear of the cover lane to its left and the footer tabs below.
+const Rect kInkStats{252, 326, 208, 208};
+constexpr int kInkStatsX = 260;
+constexpr int kInkStatsWidth = 200;
+constexpr int kInkStatsStep = 58;
+constexpr int kInkChevronY = 520;
 const Rect kInkFooter{14, 728, 452, 60};
 constexpr int kInkTabWidth = 72;
 constexpr int kInkTabGap = 4;
+
+// Three 8x8 right-pointing triangles, the same glyph and size the menu scroll
+// indicator uses, right-aligned under the stat block. No new asset.
+void drawStatsChevron(const GfxRenderer& renderer) {
+  constexpr int kRight = 460;
+  constexpr int kStep = 12;
+  const int cy = kInkChevronY;
+  for (int i = 0; i < 3; ++i) {
+    const int cx = kRight - 4 - (2 - i) * kStep;
+    const int xPoints[3] = {cx - 4, cx - 4, cx + 4};
+    const int yPoints[3] = {cy - 4, cy + 4, cy};
+    renderer.fillPolygon(xPoints, yPoints, 3, true);
+  }
+}
 
 int textTop(const GfxRenderer& renderer, int fontId, int baseline) {
   return baseline - renderer.getFontAscenderSize(fontId);
@@ -583,8 +608,8 @@ void HomeActivity::loopInkPointHome() {
     }
   }
 
-  buttonNavigator.onNext([this] { inkPointFocus = ButtonNavigator::nextIndex(inkPointFocus, 7); requestUpdate(); });
-  buttonNavigator.onPrevious([this] { inkPointFocus = ButtonNavigator::previousIndex(inkPointFocus, 7); requestUpdate(); });
+  buttonNavigator.onNext([this] { inkPointFocus = ButtonNavigator::nextIndex(inkPointFocus, 8); requestUpdate(); });
+  buttonNavigator.onPrevious([this] { inkPointFocus = ButtonNavigator::previousIndex(inkPointFocus, 8); requestUpdate(); });
 
   auto activate = [this](int target) {
     switch (target) {
@@ -595,14 +620,21 @@ void HomeActivity::loopInkPointHome() {
       case 4: onGamesOpen(); break;
       case 5: onFileTransferOpen(); break;
       case 6: onSettingsOpen(); break;
+      case 7: onStatsOpen(); break;  // Stat block and its chevron.
     }
   };
 
   int x = 0, y = 0;
   if (mappedInput.wasScreenTapped(x, y)) {
-    if (!recentBooks.empty() && x >= kInkCover.x && x < kInkCover.x + kInkCover.width &&
-        y >= kInkCover.y && y < kInkCover.y + kInkCover.height) {
+    if (!recentBooks.empty() && x >= kInkCoverLane.x && x < kInkCoverRight &&
+        y >= kInkCoverLane.y && y < kInkCoverLane.y + kInkCoverLane.height) {
       activate(0);
+      return;
+    }
+    if (x >= kInkStats.x && x < kInkStats.x + kInkStats.width && y >= kInkStats.y &&
+        y < kInkStats.y + kInkStats.height) {
+      inkPointFocus = 7;
+      activate(7);
       return;
     }
     if (y >= kInkFooter.y && y < kInkFooter.y + kInkFooter.height) {
@@ -622,44 +654,49 @@ void HomeActivity::renderInkPointHome() {
 
   const RecentBook* book = recentBooks.empty() ? nullptr : &recentBooks.front();
   bool coverDrawn = false;
-  int coverW = kInkCover.width;
-  int coverH = kInkCover.height;
-  int coverX = kInkCover.x;
-  int coverY = kInkCover.y;
+  int coverW = kInkCoverLane.width;
+  int coverH = kInkCoverLane.height;
+  int coverX = kInkCoverRight - coverW;
+  int coverY = kInkCoverLane.y;
   if (book && !book->coverBmpPath.empty()) {
-    const auto& metrics = UITheme::getInstance().getMetrics();
-    const std::string thumbPath = UITheme::getCoverThumbPath(book->coverBmpPath, metrics.homeCoverHeight);
+    // Thumbnails are cached per requested height, so ask for the lane height:
+    // a smaller thumb cannot be enlarged (drawBitmap only ever scales down) and
+    // would float inside an oversized frame.
+    const std::string thumbPath = UITheme::getCoverThumbPath(book->coverBmpPath, kInkCoverLane.height);
     HalFile file;
     if (Storage.openFileForRead("HOME", thumbPath, file)) {
       Bitmap bitmap(file);
-      if (bitmap.parseHeaders() == BmpReaderError::Ok) {
-        coverW = std::min(kInkCover.width, (kInkCover.height * bitmap.getWidth()) / bitmap.getHeight());
-        coverH = std::min(kInkCover.height, (coverW * bitmap.getHeight()) / bitmap.getWidth());
-        // Maximal aspect-fit inside the approved lane, centred rather than
-        // leaving the unused sliver on one edge.
-        coverX = kInkCover.x + (kInkCover.width - coverW) / 2;
-        coverY = kInkCover.y + (kInkCover.height - coverH) / 2;
+      const int bitmapW = bitmap.parseHeaders() == BmpReaderError::Ok ? bitmap.getWidth() : 0;
+      const int bitmapH = bitmap.getHeight();
+      if (bitmapW > 0 && bitmapH > 0) {
+        // The drawn size is the fit-down size, never larger than the source.
+        // Frame, progress bar and focus ring are all derived from it, so they
+        // hug the cover instead of the lane.
+        coverW = std::min(bitmapW, std::min(kInkCoverLane.width, (kInkCoverLane.height * bitmapW) / bitmapH));
+        coverH = std::min(bitmapH, std::min(kInkCoverLane.height, (coverW * bitmapH) / bitmapW));
+        coverX = kInkCoverRight - coverW;
+        coverY = kInkCoverLane.y;
         renderer.drawBitmap(bitmap, coverX, coverY, coverW, coverH);
         coverDrawn = true;
       }
     }
   }
   if (!coverDrawn) {
-    renderer.drawRect(kInkCover.x, kInkCover.y, coverW, coverH, 2, true);
+    renderer.drawRect(coverX, coverY, coverW, coverH, 2, true);
     if (book) {
-      const int cx = kInkCover.x + coverW / 2;
+      const int cx = coverX + coverW / 2;
       const auto titleLines = wrapWords(renderer, NOTOSERIF_18_FONT_ID, book->title, coverW - 36, 4,
                                         EpdFontFamily::BOLD);
-      const int firstBaseline = kInkCover.y + 165 - static_cast<int>(titleLines.size() - 1) * 16;
+      const int firstBaseline = coverY + 165 - static_cast<int>(titleLines.size() - 1) * 16;
       for (size_t i = 0; i < titleLines.size(); ++i)
         drawCentered(renderer, NOTOSERIF_18_FONT_ID, cx, firstBaseline + static_cast<int>(i) * 32,
                      titleLines[i].c_str(), true, EpdFontFamily::BOLD);
       const auto authorLines = wrapWords(renderer, UI_12_FONT_ID, book->author, coverW - 36, 2);
       for (size_t i = 0; i < authorLines.size(); ++i)
-        drawCentered(renderer, UI_12_FONT_ID, cx, kInkCover.y + 235 + static_cast<int>(i) * 24,
+        drawCentered(renderer, UI_12_FONT_ID, cx, coverY + 235 + static_cast<int>(i) * 24,
                      authorLines[i].c_str());
     } else {
-      drawCentered(renderer, UI_12_FONT_ID, kInkCover.x + coverW / 2, kInkCover.y + 210, "No recent book");
+      drawCentered(renderer, UI_12_FONT_ID, coverX + coverW / 2, coverY + 210, "No recent book");
     }
   }
 
@@ -671,8 +708,8 @@ void HomeActivity::renderInkPointHome() {
                       std::max(0, std::min(coverW - 2, (coverW - 2) * book->progressPercent / 100)), 2);
   }
 
-  const int rightX = 330;
-  constexpr int rightWidth = 130;
+  constexpr int rightX = kInkStatsX;
+  constexpr int rightWidth = kInkStatsWidth;
   if (book) {
     const std::string title = upper(book->title);
     // Choose the largest readable UI face that fits the complete title using
@@ -700,13 +737,17 @@ void HomeActivity::renderInkPointHome() {
     // remaining whole words on subsequent lines.
     if (!titleFits)
       lines = wrapBoundedTitle(renderer, UI_10_FONT_ID, title, rightWidth, 6, EpdFontFamily::BOLD);
-    int y = 103;
+    int y = InkPointShell::kContentTop;
     for (const auto& titleLine : lines) {
       renderer.drawText(titleFont, rightX, y, titleLine.c_str(), true, EpdFontFamily::BOLD);
       y += titleStep;
     }
-    const auto fittedAuthor = fitText(renderer, UI_10_FONT_ID, book->author, rightWidth);
-    renderer.drawText(UI_10_FONT_ID, rightX, y + 5, fittedAuthor.c_str());
+    // The wider column makes truncation unnecessary for all but absurd names,
+    // so wrap onto a second line instead of ellipsising a real author.
+    const auto authorLines = wrapWords(renderer, UI_10_FONT_ID, book->author, rightWidth, 2);
+    for (size_t i = 0; i < authorLines.size(); ++i)
+      renderer.drawText(UI_10_FONT_ID, rightX, y + 5 + static_cast<int>(i) * 18, authorLines[i].c_str());
+    y += static_cast<int>(authorLines.size() > 1 ? authorLines.size() - 1 : 0) * 18;
     if (rating && rating->publicationYear > 0) {
       char year[8]; std::snprintf(year, sizeof(year), "%d", rating->publicationYear);
       renderer.drawText(UI_10_FONT_ID, rightX, y + 27, year);
@@ -721,13 +762,24 @@ void HomeActivity::renderInkPointHome() {
 
   // Values are never omitted. Placeholders use the readable UI face, whose
   // em-dash coverage is guaranteed; Caveat remains for actual numeric values.
-  constexpr const char* labels[3] = {"TIME READ", "CHAPTER LEFT", "BOOK LEFT"};
-  char timeRead[16] = {}, chapterLeft[16] = {}, bookLeft[16] = {};
+  // "Chapter left" was never populated by any code path, so it always rendered
+  // an em-dash. Progress is a fact we already hold, so it replaces it.
+  constexpr const char* labels[3] = {"TIME READ", "PROGRESS", "BOOK LEFT"};
+  char timeRead[16] = {}, progress[16] = {}, bookLeft[16] = {};
   bool valueAvailable[3] = {false, false, false};
+  if (book && book->progressPercent >= 0) {
+    std::snprintf(progress, sizeof(progress), "%d%%", book->progressPercent);
+    valueAvailable[1] = true;
+  }
   if (book && bookStats.available) {
     const uint32_t minutes = bookStats.totalSeconds / 60;
-    std::snprintf(timeRead, sizeof(timeRead), "%luh %02lum", static_cast<unsigned long>(minutes / 60),
-                  static_cast<unsigned long>(minutes % 60));
+    // Hours are noise below the hour mark, and a bare "0h 00m" reads as broken
+    // for a book only just opened.
+    if (minutes == 0) std::snprintf(timeRead, sizeof(timeRead), "<1m");
+    else if (minutes < 60) std::snprintf(timeRead, sizeof(timeRead), "%lum", static_cast<unsigned long>(minutes));
+    else
+      std::snprintf(timeRead, sizeof(timeRead), "%luh %02lum", static_cast<unsigned long>(minutes / 60),
+                    static_cast<unsigned long>(minutes % 60));
     valueAvailable[0] = true;
     if (bookStats.etaConfident() && book->progressPercent > 0 && book->progressPercent < 100) {
       const uint32_t totalPagesEstimate = bookStats.forwardPages * 100U / static_cast<uint32_t>(book->progressPercent);
@@ -738,13 +790,14 @@ void HomeActivity::renderInkPointHome() {
       valueAvailable[2] = true;
     }
   }
-  const char* values[3] = {timeRead, chapterLeft, bookLeft};
+  const char* values[3] = {timeRead, progress, bookLeft};
   for (int i = 0; i < 3; ++i) {
-    const int statY = 326 + i * 66;
+    const int statY = 334 + i * kInkStatsStep;
     renderer.drawText(UI_10_FONT_ID, rightX, statY, labels[i]);
     if (valueAvailable[i]) renderer.drawText(CAVEAT_18_FONT_ID, rightX, statY + 20, values[i]);
     else renderer.drawText(UI_12_FONT_ID, rightX, statY + 20, "\xE2\x80\x94");
   }
+  drawStatsChevron(renderer);
 
   // The local-date quote is selected from a 366-record audited shuffled deck.
   const auto& daily = DailyQuote::localToday();
@@ -769,7 +822,19 @@ void HomeActivity::renderInkPointHome() {
 
   InkPointShell::drawFooter(renderer, InkPointShell::Destination::Home, inkPointFocus - 1);
   if (inkPointFocus == 0 && book) renderer.drawRect(coverX - 3, coverY - 3, coverW + 6, coverH + 10, 2, true);
+  if (inkPointFocus == 7)
+    renderer.drawRect(kInkStats.x, kInkStats.y, kInkStats.width, kInkStats.height, 2, true);
 
   renderer.displayBuffer(cleanInitialRefresh && !firstRenderDone ? HalDisplay::HALF_REFRESH : HalDisplay::FAST_REFRESH);
-  firstRenderDone = true;
+
+  // Thumbnails are cached per requested height, and this layout asks for a
+  // height the classic Home never requests, so the first InkPoint render has to
+  // generate them itself or the cover silently stays absent forever.
+  if (!firstRenderDone) {
+    firstRenderDone = true;
+    requestUpdate();
+  } else if (!recentsLoaded && !recentsLoading) {
+    recentsLoading = true;
+    loadRecentCovers(kInkCoverLane.height);
+  }
 }

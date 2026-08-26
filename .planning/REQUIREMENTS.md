@@ -39,6 +39,13 @@
 - [x] **TAMA-01**: Real Tamagotchi care-loop mechanics researched and implemented — hunger/happiness/energy meters (RTC-time-driven decay), egg→baby→child→adult life stages, care-mistake-gated evolution, sickness, poop, death/neglect, attention-call system. Shipped `79122d7`, `a8f0793`, `5737a5b`. **Gap remaining** (see Phase 6 gap analysis): discipline is an action only, not a tracked stat; evolution is strictly linear, no branching on care-quality history; no real sleep-state machine (Light icon is an instant energy top-up, not a day/night cycle).
 - [ ] **TAMA-02**: UI restyled to match Tamagotchi Uni specifically (screen layout, icon row, sprite proportions, palette), whole game UI reorganised to that shape. Partial progress only: sprite-based pet + icon rendering shipped (`9852b3f`) and layout defects fixed (`c8babe9`), but the Care Menu is still a generic 4-column icon grid with heart-pip meters, not yet restyled to Tamagotchi Uni's specific screen shape.
 
+## InkPointX Home defect fixes (2026-08-26)
+
+- [x] **INK-01**: The Now Reading cover is drawn at its own fit-down size — never upscaled past the source bitmap — right-aligned to x=240 with its native aspect preserved. The progress bar, fallback frame and focus ring derive from the drawn size, so they hug the cover instead of an empty lane. The first InkPoint render generates thumbnails at the lane height it actually asks for.
+- [x] **INK-02**: The middle stat is `PROGRESS` (percent read), replacing `CHAPTER LEFT`, which no code path ever populated and which therefore always rendered an em-dash. `TIME READ` renders `<1m` / `45m` / `3h 05m` rather than `0h 00m`. The right column starts at x=260 and is 200px wide; the author wraps to two lines instead of being ellipsised.
+- [x] **INK-03**: A `>>>` affordance sits beneath the three-stat block, made of three 8×8 right-pointing triangles right-aligned to x=460 at y=520 — the same `fillPolygon` glyph and size the menu scroll indicator uses, no second asset. The three-stat block **and** the chevron form one tap region (`kInkStats`, 208×208 at 252,326, well above the 44×44 minimum), which opens `StatsActivity`. It is also physical-focus index 7, so the ring is drawn around the same rect and Confirm activates it. The rect is kept clear of the cover lane to its left (x ≥ 252 vs cover ≤ 240) and the footer tabs below (y ≤ 534 vs footer at 728).
+- [x] **INK-04**: Content top is a single shared constant. `InkPointShell::kHeaderBottom`/`kContentTop` moved to 94/104 because the Caveat heading's descenders reach y=94; every InkPoint screen derives its content top from it, so the breathing room below the page title is global rather than per-screen.
+
 ## v2 Requirements
 
 Deferred, not in this dispatch.

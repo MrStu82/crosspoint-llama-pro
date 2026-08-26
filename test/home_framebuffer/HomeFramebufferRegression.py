@@ -17,6 +17,7 @@ from pathlib import Path
 # edit here instead of a magic-number hunt.
 PANEL_WIDTH = 480
 PANEL_HEIGHT = 800
+HEADER_BOTTOM = 94
 CONTENT_TOP = 104
 COVER_LANE = (20, CONTENT_TOP, 220, 434)  # x, y, w, h -- the maximum, not the frame
 COVER_RIGHT = 240
@@ -81,9 +82,10 @@ def main() -> None:
     for image in (populated, unavailable, long_title, small_cover):
         assert image.width >= 470 and image.height >= 790, (image.width, image.height)
 
-    # INK-04: the Caveat page title owns everything above kContentTop, so no
-    # screen content may sit in its descenders.
-    title_gap = populated.ink_count(RIGHT_X, 94, RIGHT_EDGE, CONTENT_TOP - 1)
+    # INK-04: the Caveat page title owns everything up to and including
+    # kHeaderBottom (its lowest descender row, measured at y=94), so the band
+    # between that row and kContentTop must be clear of any screen content.
+    title_gap = populated.ink_count(RIGHT_X, HEADER_BOTTOM + 1, RIGHT_EDGE, CONTENT_TOP - 1)
     assert title_gap == 0, f"content ink inside the heading's descender band: {title_gap}"
 
     # INK-02: the whole title has to live in the widened right column, with no

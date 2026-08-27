@@ -324,7 +324,7 @@
     {"I don’t go looking for trouble. Trouble usually finds me!", "", "Harry Potter and the Prisoner of Azkaban", "J. K. Rowling"},
     {"Droll thing life is — that mysterious arrangement of merciless logic for a futile purpose.", "", "Heart of Darkness", "Joseph Conrad"},
     {"I can’t choose my nature, but I can choose what I do.", "", "His Dark Materials", "Philip Pullman"},
-    {"As if the perception of the animalesque regression was clear to all.", "Interviewer", "If This Is a Man", "Primo Levi"},
+    {"As if the perception of the animalesque regression was clear to all.", "", "If This Is a Man", "Primo Levi"},
     {"Who knows but that, on the lower frequencies, I speak for you?", "", "Invisible Man", "Ralph Ellison"},
     {"He made me love him without looking at me.", "", "Jane Eyre", "Charlotte Brontë"},
     {"Anyone who falls in love is searching for missing pieces of themselves.", "", "Kafka on the Shore", "Haruki Murakami"},

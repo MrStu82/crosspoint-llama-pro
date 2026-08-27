@@ -647,7 +647,7 @@ cited revision; per-record source_url/revision_id/retrieved_at in docs/daily-quo
 322. I can’t choose my nature, but I can choose what I do.
      -- His Dark Materials, Philip Pullman
 323. As if the perception of the animalesque regression was clear to all.
-     -- Interviewer, If This Is a Man, Primo Levi
+     -- If This Is a Man, Primo Levi
 324. Who knows but that, on the lower frequencies, I speak for you?
      -- Invisible Man, Ralph Ellison
 325. He made me love him without looking at me.

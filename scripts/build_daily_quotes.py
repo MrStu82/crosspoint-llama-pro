@@ -391,7 +391,7 @@ def cmd_candidates(_args) -> int:
                         "author": rec["author"],
                         "era": rec["era"],
                         "region": rec["region"],
-                        "character": speaker,
+                        "character": "",  # Speaker labels are inconsistent across works; attribution is work + author only.
                         "quote": text,
                     }
                 )

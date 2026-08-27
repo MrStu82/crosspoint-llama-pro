@@ -15,7 +15,7 @@ constexpr int kStatusBottom = 18;
 // derives its content top from this one constant, which makes the breathing
 // room below the page title global rather than per-screen.
 constexpr int kHeaderBottom = 94;
-constexpr int kContentTop = 104;
+constexpr int kContentTop = 114;
 constexpr int kFooterTop = 728;
 constexpr int kFooterHeight = 60;
 

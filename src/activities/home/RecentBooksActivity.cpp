@@ -5,11 +5,14 @@
 #include <I18n.h>
 
 #include <algorithm>
+#include <ctime>
 #include <memory>
 
 #include "MappedInputManager.h"
 #include "RecentBooksStore.h"
 #include "activities/util/ConfirmationActivity.h"
+#include "activities/network/WifiSelectionActivity.h"
+#include "network/HardcoverRating.h"
 #include "components/UITheme.h"
 #include "components/InkPointShell.h"
 #include "fontIds.h"
@@ -17,9 +20,59 @@
 namespace {
 // Hold threshold for the long-press "remove from list" action (firmware convention).
 constexpr unsigned long LONG_PRESS_MS = 1000;
+constexpr unsigned long HARD_COVER_SYNC_DELAY_MS = 1250;
 }  // namespace
 
 void RecentBooksActivity::loadRecentBooks() { recentBooks = RECENT_BOOKS.getBooks(); }
+
+void RecentBooksActivity::promptMetadataSync() {
+  // The sync owns connectivity: returning from Wi-Fi is the only route that
+  // starts network work, so Library never assumes a radio is already usable.
+  startActivityForResult(
+      std::make_unique<ConfirmationActivity>(renderer, mappedInput, "Sync Hardcover metadata",
+                                             "Connect to Wi-Fi and update every Library book?"),
+      [this](const ActivityResult& confirmation) {
+        if (confirmation.isCancelled) return;
+        startActivityForResult(std::make_unique<WifiSelectionActivity>(renderer, mappedInput, false),
+                               [this](const ActivityResult& wifi) {
+          if (wifi.isCancelled) {
+            syncState = SyncState::Cancelled;
+            syncStatus = "Wi-Fi cancelled; nothing synced";
+            requestUpdate();
+            return;
+          }
+          beginMetadataSync();
+        });
+      });
+}
+
+void RecentBooksActivity::beginMetadataSync() {
+  syncState = SyncState::Running;
+  syncIndex = syncUpdated = syncSkipped = 0;
+  nextSyncAtMs = 0;
+  syncStatus = "Preparing Library sync";
+  requestUpdate(true);
+}
+
+void RecentBooksActivity::runOneMetadataSync() {
+  if (syncState != SyncState::Running || millis() < nextSyncAtMs) return;
+  if (syncIndex >= recentBooks.size()) {
+    syncState = SyncState::Complete;
+    syncStatus = "Sync complete: " + std::to_string(syncUpdated) + " updated, " +
+                 std::to_string(syncSkipped) + " skipped";
+    requestUpdate(true);
+    return;
+  }
+  const auto& book = recentBooks[syncIndex];
+  const auto now = static_cast<int64_t>(std::time(nullptr));
+  if (now > 0 && HardcoverRating::refresh({book.path, book.isbn, book.title, book.author}, now)) ++syncUpdated;
+  else ++syncSkipped;
+  ++syncIndex;
+  syncStatus = "Syncing " + std::to_string(syncIndex) + "/" + std::to_string(recentBooks.size()) +
+               "  (" + std::to_string(syncSkipped) + " skipped)";
+  nextSyncAtMs = millis() + HARD_COVER_SYNC_DELAY_MS;
+  requestUpdate();
+}
 
 void RecentBooksActivity::onEnter() {
   Activity::onEnter();
@@ -34,6 +87,8 @@ void RecentBooksActivity::onEnter() {
   loadRecentBooks();
 
   selectorIndex = 0;
+  syncState = SyncState::Idle;
+  syncStatus.clear();
   requestUpdate();
 }
 
@@ -49,6 +104,8 @@ void RecentBooksActivity::loop() {
       return;
     }
   }
+  runOneMetadataSync();
+
   const int pageItems = InkPointShell::enabled(renderer)
                             ? GUI.getListPageItems(InkPointShell::kFooterTop - InkPointShell::kContentTop - 8, true)
                             : UITheme::getInstance().getNumberOfItemsPerPage(renderer, true, false, true, true);
@@ -72,38 +129,50 @@ void RecentBooksActivity::loop() {
   // Long-press Confirm on the selected book: prompt to remove it from the list.
   // Fires when the hold times out while still held (firmware hold-to-act pattern,
   // cf. FileBrowserActivity BACK long-press).
-  if (!recentBooks.empty() && selectorIndex < recentBooks.size() &&
+  if (!isSyncCommandSelected() && selectorIndex <= recentBooks.size() &&
       mappedInput.isPressed(MappedInputManager::Button::Confirm) && mappedInput.getHeldTime() >= LONG_PRESS_MS) {
     longPressFired = true;
-    promptRemoveBook(recentBooks[selectorIndex].path, recentBooks[selectorIndex].title);
+    promptRemoveBook(recentBooks[selectorIndex - 1].path, recentBooks[selectorIndex - 1].title);
     return;
   }
 
   if (mappedInput.wasReleased(MappedInputManager::Button::Confirm)) {
-    if (!recentBooks.empty() && selectorIndex < static_cast<int>(recentBooks.size())) {
-      LOG_DBG("RBA", "Selected recent book: %s", recentBooks[selectorIndex].path.c_str());
-      onSelectBook(recentBooks[selectorIndex].path);
+    if (isSyncCommandSelected()) {
+      promptMetadataSync();
+      return;
+    }
+    if (selectorIndex <= recentBooks.size()) {
+      LOG_DBG("RBA", "Selected recent book: %s", recentBooks[selectorIndex - 1].path.c_str());
+      onSelectBook(recentBooks[selectorIndex - 1].path);
       return;
     }
   }
 
   int touchSel = static_cast<int>(selectorIndex);
   const auto listTouch =
-      handleListTouch(touchSel, static_cast<int>(recentBooks.size()), contentTop, contentHeight, true);
+      handleListTouch(touchSel, entryCount(), contentTop, contentHeight, true);
   if (listTouch != ListTouchResult::None) {
     selectorIndex = static_cast<size_t>(touchSel);
     if (listTouch == ListTouchResult::Activated) {
-      LOG_DBG("RBA", "Tapped recent book: %s", recentBooks[selectorIndex].path.c_str());
-      onSelectBook(recentBooks[selectorIndex].path);
+      if (isSyncCommandSelected()) promptMetadataSync();
+      else {
+        LOG_DBG("RBA", "Tapped recent book: %s", recentBooks[selectorIndex - 1].path.c_str());
+        onSelectBook(recentBooks[selectorIndex - 1].path);
+      }
     }
     return;
   }
 
   if (mappedInput.wasReleased(MappedInputManager::Button::Back)) {
-    onGoHome();
+    if (syncState == SyncState::Running) {
+      syncState = SyncState::Cancelled;
+      syncStatus = "Sync cancelled: " + std::to_string(syncIndex) + "/" +
+                   std::to_string(recentBooks.size()) + " kept";
+      requestUpdate(true);
+    } else onGoHome();
   }
 
-  int listSize = static_cast<int>(recentBooks.size());
+  int listSize = entryCount();
   const auto swipe = mappedInput.wasSwipe();
   if (swipe == MappedInputManager::SwipeDir::Up) {
     selectorIndex = ButtonNavigator::nextPageIndex(static_cast<int>(selectorIndex), listSize, pageItems);
@@ -176,14 +245,24 @@ void RecentBooksActivity::render(RenderLock&&) {
   const int contentHeight = inkPoint ? InkPointShell::kFooterTop - contentTop - 8
                                      : pageHeight - contentTop - metrics.buttonHintsHeight - metrics.verticalSpacing;
 
-  // Recent tab
-  if (recentBooks.empty()) {
+  // The explicit command stays visible even for an empty Library.
+  if (recentBooks.empty())
     renderer.drawText(UI_10_FONT_ID, metrics.contentSidePadding, contentTop + 20, tr(STR_NO_RECENT_BOOKS));
-  } else {
+  {
     GUI.drawList(
-        renderer, Rect{0, contentTop, pageWidth, contentHeight}, recentBooks.size(), selectorIndex,
-        [this](int index) { return recentBooks[index].title; }, [this](int index) { return recentBooks[index].author; },
-        [this](int index) { return UITheme::getFileIcon(recentBooks[index].path); });
+        renderer, Rect{0, contentTop, pageWidth, contentHeight}, entryCount(), selectorIndex,
+        [this](int index) { return index == 0 ? std::string("Sync Hardcover metadata") : recentBooks[index - 1].title; },
+        [this](int index) {
+          if (index != 0) return recentBooks[index - 1].author;
+          return syncStatus.empty() ? std::string("Connect Wi-Fi, then update every Library book") : syncStatus;
+        },
+        [this](int index) { return index == 0 ? UIIcon::Wifi : UITheme::getFileIcon(recentBooks[index - 1].path); });
+    if (syncState == SyncState::Running) {
+      const int barY = InkPointShell::enabled(renderer) ? InkPointShell::kFooterTop - 14 : contentTop + contentHeight - 14;
+      const int total = std::max(1, static_cast<int>(recentBooks.size()));
+      renderer.drawRect(20, barY, pageWidth - 40, 6);
+      renderer.fillRect(21, barY + 1, (pageWidth - 42) * static_cast<int>(syncIndex) / total, 4);
+    }
   }
 
   // Help text

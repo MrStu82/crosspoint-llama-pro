@@ -41,11 +41,10 @@ constexpr int kInkCoverRight = 240;
 const Rect kInkCoverLane{20, InkPointShell::kContentTop, 220, 434};
 // Stats block and its ">>>" chevron form a single target for the Stats screen.
 // Kept clear of the cover lane to its left and the footer tabs below.
-const Rect kInkStats{252, 326, 208, 208};
+const Rect kInkStats{252, 300, 208, 250};
 constexpr int kInkStatsX = 260;
 constexpr int kInkStatsWidth = 200;
 constexpr int kInkStatsStep = 58;
-constexpr int kInkChevronY = 520;
 // Progress bar under the cover: 1px clear of the cover, thick enough to read as
 // a bar rather than a hairline.
 constexpr int kInkProgressGap = 1;
@@ -64,8 +63,7 @@ constexpr int kInkChevronLeft = kInkChevronRight - 2 * kInkChevronStep - 2 * kIn
 constexpr int kInkChevronRuleGap = 5;
 constexpr int kInkChevronRuleHeight = 2;
 
-void drawStatsChevron(const GfxRenderer& renderer) {
-  const int cy = kInkChevronY;
+void drawStatsChevron(const GfxRenderer& renderer, const int cy) {
   const int rightCx = kInkChevronRight - kInkChevronHalf;
   for (int i = 0; i < 3; ++i) {
     const int cx = rightCx - (2 - i) * kInkChevronStep;
@@ -610,20 +608,6 @@ bool HomeActivity::usesInkPointHome() const {
 }
 
 void HomeActivity::loopInkPointHome() {
-  if (firstRenderDone && !ratingRefreshAttempted && !recentBooks.empty()) {
-    ratingRefreshAttempted = true;
-    const auto now = static_cast<int64_t>(std::time(nullptr));
-    const bool stale = !rating || now <= 0 || rating->fetchedAt <= 0 || now - rating->fetchedAt >= 24 * 60 * 60;
-    if (stale) {
-      const auto& book = recentBooks.front();
-      auto refreshed = HardcoverRating::refresh({book.path, book.isbn, book.title, book.author}, now);
-      if (refreshed) {
-        rating = std::move(refreshed);
-        requestUpdate();
-      }
-    }
-  }
-
   buttonNavigator.onNext([this] { inkPointFocus = ButtonNavigator::nextIndex(inkPointFocus, 8); requestUpdate(); });
   buttonNavigator.onPrevious([this] { inkPointFocus = ButtonNavigator::previousIndex(inkPointFocus, 8); requestUpdate(); });
 
@@ -673,7 +657,7 @@ void HomeActivity::renderInkPointHome() {
   int coverW = kInkCoverLane.width;
   int coverH = kInkCoverLane.height;
   int coverX = kInkCoverRight - coverW;
-  int coverY = kInkCoverLane.y;
+  int coverY = kInkCoverLane.y + 2;
   if (book && !book->coverBmpPath.empty()) {
     // Thumbnails are cached per requested height, so ask for the lane height:
     // a smaller thumb cannot be enlarged (drawBitmap only ever scales down) and
@@ -691,7 +675,7 @@ void HomeActivity::renderInkPointHome() {
         coverW = std::min(bitmapW, std::min(kInkCoverLane.width, (kInkCoverLane.height * bitmapW) / bitmapH));
         coverH = std::min(bitmapH, std::min(kInkCoverLane.height, (coverW * bitmapH) / bitmapW));
         coverX = kInkCoverRight - coverW;
-        coverY = kInkCoverLane.y;
+        coverY = kInkCoverLane.y + 2;
         renderer.drawBitmap(bitmap, coverX, coverY, coverW, coverH);
         coverDrawn = true;
       }
@@ -721,13 +705,16 @@ void HomeActivity::renderInkPointHome() {
   const int progressY = coverY + coverH + kInkProgressGap;
   renderer.drawRect(coverX, progressY, coverW, kInkProgressHeight);
   if (book && book->progressPercent >= 0) {
-    renderer.fillRect(coverX + 1, progressY + 1,
+    constexpr int kFillHeight = 3;
+    const int fillY = progressY + (kInkProgressHeight - kFillHeight) / 2;
+    renderer.fillRect(coverX + 1, fillY,
                       std::max(0, std::min(coverW - 2, (coverW - 2) * book->progressPercent / 100)),
-                      kInkProgressHeight - 2);
+                      kFillHeight);
   }
 
   constexpr int rightX = kInkStatsX;
   constexpr int rightWidth = kInkStatsWidth;
+  int metadataBottom = InkPointShell::kContentTop;
   if (book) {
     const std::string title = upper(book->title);
     // Choose the largest readable UI face that fits the complete title using
@@ -774,9 +761,19 @@ void HomeActivity::renderInkPointHome() {
       const int whole = rating->valueX100 / 100;
       const int fraction = rating->valueX100 % 100;
       for (int i = 0; i < 5; ++i) drawStar(renderer, rightX + 11 + i * 24, y + 62, i < whole, i == whole && fraction > 0);
+      metadataBottom = y + 74;
+    } else {
+      metadataBottom = y + 18;
     }
-
   }
+
+  // Keep the entire right gutter flowing from the metadata above it. Cap its
+  // start so even a six-line title leaves the stat link above the footer.
+  constexpr int kStatsToChevronGap = 20;
+  constexpr int kChevronSafeBottom = InkPointShell::kFooterTop - 14;
+  const int statsHeight = 2 * kInkStatsStep + 20 + kStatsToChevronGap +
+                          kInkChevronHalf + kInkChevronRuleGap + kInkChevronRuleHeight;
+  const int statStart = std::min(metadataBottom + 24, kChevronSafeBottom - statsHeight);
 
   // Values are never omitted. Placeholders use the readable UI face, whose
   // em-dash coverage is guaranteed; Caveat remains for actual numeric values.
@@ -813,12 +810,12 @@ void HomeActivity::renderInkPointHome() {
   }
   const char* values[3] = {timeRead, chapterLeft, bookLeft};
   for (int i = 0; i < 3; ++i) {
-    const int statY = 334 + i * kInkStatsStep;
+    const int statY = statStart + i * kInkStatsStep;
     renderer.drawText(UI_10_FONT_ID, rightX, statY, labels[i]);
     if (valueAvailable[i]) renderer.drawText(CAVEAT_18_FONT_ID, rightX, statY + 20, values[i]);
     else renderer.drawText(UI_12_FONT_ID, rightX, statY + 20, "\xE2\x80\x94");
   }
-  drawStatsChevron(renderer);
+  drawStatsChevron(renderer, statStart + 2 * kInkStatsStep + 20 + kStatsToChevronGap);
 
   // The local-date quote is selected from a 366-record audited shuffled deck.
   // The day comes from the same RTC-plus-user-offset date the stats tracker

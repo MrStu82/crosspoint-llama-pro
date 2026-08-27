@@ -22,8 +22,21 @@ class RecentBooksActivity final : public Activity {
   // Recent tab state
   std::vector<RecentBook> recentBooks;
 
+  enum class SyncState { Idle, Running, Complete, Cancelled };
+  SyncState syncState = SyncState::Idle;
+  size_t syncIndex = 0;
+  size_t syncUpdated = 0;
+  size_t syncSkipped = 0;
+  unsigned long nextSyncAtMs = 0;
+  std::string syncStatus;
+
   // Data loading
   void loadRecentBooks();
+  void promptMetadataSync();
+  void beginMetadataSync();
+  void runOneMetadataSync();
+  int entryCount() const { return static_cast<int>(recentBooks.size()) + 1; };
+  bool isSyncCommandSelected() const { return selectorIndex == 0; }
 
   // Show an OK/Cancel prompt to remove the given book from the Recent Books list.
   void promptRemoveBook(const std::string& path, const std::string& title);

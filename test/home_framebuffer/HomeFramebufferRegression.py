@@ -27,6 +27,14 @@ STAT_LABEL_TOP = 334
 STAT_STEP = 58
 STAT_VALUE_OFFSET = 20
 CHEVRON_CY = 520
+# Mirrors kInkChevron* in HomeActivity.cpp: three triangles right-aligned to
+# x=458 on a 15px pitch, with a 2px rule 5px under them.
+CHEVRON_LEFT = 416
+CHEVRON_RIGHT = 458
+CHEVRON_RULE_TOP = 531
+CHEVRON_RULE_BOTTOM = 533
+# Mirrors kInkProgressGap/kInkProgressHeight plus the focus ring's 3px skirt.
+PROGRESS_EXTENT = 1 + 7 + 4
 
 
 class Bmp:
@@ -102,20 +110,28 @@ def main() -> None:
     long_bands = [long_title.ink_count(RIGHT_X, top, RIGHT_EDGE, top + 22) for top in range(CONTENT_TOP, 240, 22)]
     assert sum(count >= 20 for count in long_bands) >= 3, long_bands
 
-    # INK-02/INK-05: with reading stats and progress present, TIME READ and
-    # PROGRESS both carry a real numeric value.  An em dash is a single thin
-    # rule, so a genuine value is several times its ink -- which is precisely
-    # the difference the old CHAPTER LEFT row could never show.
+    # INK-02/INK-05: with no stats at all, every row falls back to an em dash --
+    # a single thin rule, so a genuine value is several times its ink.
     dashes = [unavailable.ink_count(*stat_value_box(row)) for row in range(3)]
     assert all(8 <= count <= 60 for count in dashes), dashes
-    values = [populated.ink_count(*stat_value_box(row)) for row in range(2)]
-    assert all(count > max(dashes) * 2 for count in values), (values, dashes)
+    time_read = populated.ink_count(*stat_value_box(0))
+    assert time_read > max(dashes) * 2, (time_read, dashes)
+    # CHAPTER LEFT is best effort by design: it is read from the reader's own
+    # progress.bin, which a fixture need not carry.  What must never happen
+    # again is the row going blank or being quietly swapped for an easier
+    # metric, so assert only that it draws something -- a value or the dash.
+    chapter_left = populated.ink_count(*stat_value_box(1))
+    assert chapter_left >= 8, chapter_left
 
     # INK-03: three right-pointing triangles beneath the stat block, hard
-    # right-aligned, and nothing else on that row.
-    chevron = populated.ink_count(424, CHEVRON_CY - 8, RIGHT_EDGE + 4, CHEVRON_CY + 8)
-    assert chevron >= 60, chevron
-    assert populated.ink_count(RIGHT_X, CHEVRON_CY - 8, 420, CHEVRON_CY + 8) == 0, "stray ink left of the chevron"
+    # right-aligned, underlined, and nothing else on that row.
+    chevron = populated.ink_count(CHEVRON_LEFT - 2, CHEVRON_CY - 8, CHEVRON_RIGHT + 2, CHEVRON_CY + 8)
+    assert chevron >= 150, chevron
+    rule = populated.ink_count(CHEVRON_LEFT, CHEVRON_RULE_TOP, CHEVRON_RIGHT, CHEVRON_RULE_BOTTOM + 1)
+    assert rule >= 60, f"chevron underline missing or short: {rule}"
+    assert populated.ink_count(RIGHT_X, CHEVRON_CY - 8, CHEVRON_LEFT - 4, CHEVRON_RULE_BOTTOM + 1) == 0, (
+        "stray ink left of the chevron"
+    )
 
     # INK-01: a cover smaller than the lane is drawn at its own size, hard
     # right-aligned to the lane's right edge, with its focus ring hugging it.
@@ -127,7 +143,11 @@ def main() -> None:
     assert cover_ink >= 200, cover_ink
     left_slack = small_cover.ink_count(COVER_LANE[0], CONTENT_TOP, drawn_left - 4, COVER_LANE[1] + COVER_LANE[3])
     assert left_slack == 0, f"ink in the lane left of the drawn cover: {left_slack}"
-    below_slack = small_cover.ink_count(drawn_left - 4, CONTENT_TOP + small_h + 14, COVER_RIGHT + 4, 540)
+    # The progress bar and the focus ring legitimately sit under the cover, so
+    # the empty band starts below their combined extent.
+    below_slack = small_cover.ink_count(
+        drawn_left - 4, CONTENT_TOP + small_h + PROGRESS_EXTENT + 2, COVER_RIGHT + 4, 540
+    )
     assert below_slack == 0, f"ink in the lane below the drawn cover: {below_slack}"
     # Both rings are derived from the drawn size, so their left stroke reports
     # it: the full-size cover still fills the lane's width (ring at x=17), the
@@ -139,7 +159,8 @@ def main() -> None:
 
     print(
         f"PASS title_ink={title_ink} long_bands={long_bands} dashes={dashes} "
-        f"values={values} chevron={chevron} cover_ink={cover_ink}"
+        f"time_read={time_read} chapter_left={chapter_left} chevron={chevron} "
+        f"rule={rule} cover_ink={cover_ink}"
     )
 
 

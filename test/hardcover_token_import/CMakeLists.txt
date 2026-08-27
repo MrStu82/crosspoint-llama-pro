@@ -1,0 +1,6 @@
+add_executable(hardcover_token_import_test
+  HardcoverTokenImportTest.cpp
+)
+target_include_directories(hardcover_token_import_test PRIVATE ${REPO_ROOT}/src)
+target_link_libraries(hardcover_token_import_test PRIVATE GTest::gtest_main crosspoint_test_common)
+gtest_discover_tests(hardcover_token_import_test)

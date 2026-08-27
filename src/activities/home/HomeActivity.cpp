@@ -23,12 +23,14 @@
 #include "MappedInputManager.h"
 #include "OpdsServerStore.h"
 #include "RecentBooksStore.h"
+#include "StatsManager.h"
 #include "components/UITheme.h"
 #include "components/InkPointShell.h"
 #include "fontIds.h"
 #include "network/HardcoverRating.h"
 #include "util/BookProgressBadge.h"
 #include "util/BookReadingStats.h"
+#include "util/ChapterProgress.h"
 #include "util/DailyQuote.h"
 
 namespace {
@@ -44,22 +46,35 @@ constexpr int kInkStatsX = 260;
 constexpr int kInkStatsWidth = 200;
 constexpr int kInkStatsStep = 58;
 constexpr int kInkChevronY = 520;
+// Progress bar under the cover: 1px clear of the cover, thick enough to read as
+// a bar rather than a hairline.
+constexpr int kInkProgressGap = 1;
+constexpr int kInkProgressHeight = 7;
 const Rect kInkFooter{14, 728, 452, 60};
 constexpr int kInkTabWidth = 72;
 constexpr int kInkTabGap = 4;
 
-// Three 8x8 right-pointing triangles, the same glyph and size the menu scroll
-// indicator uses, right-aligned under the stat block. No new asset.
+// Three right-pointing triangles, the same glyph the menu scroll indicator
+// uses, right-aligned under the stat block and underlined so the group reads as
+// a link rather than as decoration. No new asset.
+constexpr int kInkChevronHalf = 6;   // half-height/half-width of one triangle
+constexpr int kInkChevronStep = 15;  // pitch between triangle centres
+constexpr int kInkChevronRight = 458;
+constexpr int kInkChevronLeft = kInkChevronRight - 2 * kInkChevronStep - 2 * kInkChevronHalf;
+constexpr int kInkChevronRuleGap = 5;
+constexpr int kInkChevronRuleHeight = 2;
+
 void drawStatsChevron(const GfxRenderer& renderer) {
-  constexpr int kRight = 460;
-  constexpr int kStep = 12;
   const int cy = kInkChevronY;
+  const int rightCx = kInkChevronRight - kInkChevronHalf;
   for (int i = 0; i < 3; ++i) {
-    const int cx = kRight - 4 - (2 - i) * kStep;
-    const int xPoints[3] = {cx - 4, cx - 4, cx + 4};
-    const int yPoints[3] = {cy - 4, cy + 4, cy};
+    const int cx = rightCx - (2 - i) * kInkChevronStep;
+    const int xPoints[3] = {cx - kInkChevronHalf, cx - kInkChevronHalf, cx + kInkChevronHalf};
+    const int yPoints[3] = {cy - kInkChevronHalf, cy + kInkChevronHalf, cy};
     renderer.fillPolygon(xPoints, yPoints, 3, true);
   }
+  renderer.fillRect(kInkChevronLeft, cy + kInkChevronHalf + kInkChevronRuleGap,
+                    kInkChevronRight - kInkChevronLeft, kInkChevronRuleHeight);
 }
 
 int textTop(const GfxRenderer& renderer, int fontId, int baseline) {
@@ -313,6 +328,7 @@ void HomeActivity::onEnter() {
     const auto& book = recentBooks.front();
     rating = HardcoverRating::loadLastGood({book.path, book.isbn, book.title, book.author});
     bookStats = BookReadingStats::read(book.path);
+    chapterProgress = ChapterProgress::read(book.path);
   }
 
   const auto base = static_cast<int>(recentBooks.size());
@@ -700,12 +716,14 @@ void HomeActivity::renderInkPointHome() {
     }
   }
 
-  // Thin progress bar is physically attached to the cover's lower edge.
-  const int progressY = coverY + coverH;
-  renderer.drawRect(coverX, progressY, coverW, 4);
+  // Progress bar sits one pixel clear of the cover's lower edge, so it reads as
+  // its own element rather than as part of the cover's frame.
+  const int progressY = coverY + coverH + kInkProgressGap;
+  renderer.drawRect(coverX, progressY, coverW, kInkProgressHeight);
   if (book && book->progressPercent >= 0) {
     renderer.fillRect(coverX + 1, progressY + 1,
-                      std::max(0, std::min(coverW - 2, (coverW - 2) * book->progressPercent / 100)), 2);
+                      std::max(0, std::min(coverW - 2, (coverW - 2) * book->progressPercent / 100)),
+                      kInkProgressHeight - 2);
   }
 
   constexpr int rightX = kInkStatsX;
@@ -762,35 +780,38 @@ void HomeActivity::renderInkPointHome() {
 
   // Values are never omitted. Placeholders use the readable UI face, whose
   // em-dash coverage is guaranteed; Caveat remains for actual numeric values.
-  // "Chapter left" was never populated by any code path, so it always rendered
-  // an em-dash. Progress is a fact we already hold, so it replaces it.
-  constexpr const char* labels[3] = {"TIME READ", "PROGRESS", "BOOK LEFT"};
-  char timeRead[16] = {}, progress[16] = {}, bookLeft[16] = {};
+  constexpr const char* labels[3] = {"TIME READ", "CHAPTER LEFT", "BOOK LEFT"};
+  char timeRead[16] = {}, chapterLeft[16] = {}, bookLeft[16] = {};
   bool valueAvailable[3] = {false, false, false};
-  if (book && book->progressPercent >= 0) {
-    std::snprintf(progress, sizeof(progress), "%d%%", book->progressPercent);
-    valueAvailable[1] = true;
-  }
-  if (book && bookStats.available) {
-    const uint32_t minutes = bookStats.totalSeconds / 60;
-    // Hours are noise below the hour mark, and a bare "0h 00m" reads as broken
-    // for a book only just opened.
-    if (minutes == 0) std::snprintf(timeRead, sizeof(timeRead), "<1m");
-    else if (minutes < 60) std::snprintf(timeRead, sizeof(timeRead), "%lum", static_cast<unsigned long>(minutes));
+  // Hours are noise below the hour mark, and a bare "0h 00m" reads as broken
+  // for a book only just opened.
+  const auto formatMinutes = [](char* out, size_t len, uint32_t minutes) {
+    if (minutes == 0) std::snprintf(out, len, "<1m");
+    else if (minutes < 60) std::snprintf(out, len, "%lum", static_cast<unsigned long>(minutes));
     else
-      std::snprintf(timeRead, sizeof(timeRead), "%luh %02lum", static_cast<unsigned long>(minutes / 60),
+      std::snprintf(out, len, "%luh %02lum", static_cast<unsigned long>(minutes / 60),
                     static_cast<unsigned long>(minutes % 60));
+  };
+  if (book && bookStats.available) {
+    formatMinutes(timeRead, sizeof(timeRead), bookStats.totalSeconds / 60);
     valueAvailable[0] = true;
+    // Chapter left is bounded by the reader's own spine-item pagination: the
+    // pages it has left in the section it stopped in, priced at the reader's
+    // measured seconds-per-page. Best effort -- an em-dash if either the page
+    // count or the pace is missing, never a different metric wearing this label.
+    if (chapterProgress.available && bookStats.secondsPerPage() > 0) {
+      formatMinutes(chapterLeft, sizeof(chapterLeft),
+                    static_cast<uint32_t>(chapterProgress.pagesLeft()) * bookStats.secondsPerPage() / 60);
+      valueAvailable[1] = true;
+    }
     if (bookStats.etaConfident() && book->progressPercent > 0 && book->progressPercent < 100) {
       const uint32_t totalPagesEstimate = bookStats.forwardPages * 100U / static_cast<uint32_t>(book->progressPercent);
       const uint32_t remainingPages = totalPagesEstimate > bookStats.forwardPages ? totalPagesEstimate - bookStats.forwardPages : 0;
-      const uint32_t leftMinutes = remainingPages * bookStats.secondsPerPage() / 60;
-      std::snprintf(bookLeft, sizeof(bookLeft), "%luh %02lum", static_cast<unsigned long>(leftMinutes / 60),
-                    static_cast<unsigned long>(leftMinutes % 60));
+      formatMinutes(bookLeft, sizeof(bookLeft), remainingPages * bookStats.secondsPerPage() / 60);
       valueAvailable[2] = true;
     }
   }
-  const char* values[3] = {timeRead, progress, bookLeft};
+  const char* values[3] = {timeRead, chapterLeft, bookLeft};
   for (int i = 0; i < 3; ++i) {
     const int statY = 334 + i * kInkStatsStep;
     renderer.drawText(UI_10_FONT_ID, rightX, statY, labels[i]);
@@ -800,7 +821,13 @@ void HomeActivity::renderInkPointHome() {
   drawStatsChevron(renderer);
 
   // The local-date quote is selected from a 366-record audited shuffled deck.
-  const auto& daily = DailyQuote::localToday();
+  // The day comes from the same RTC-plus-user-offset date the stats tracker
+  // rolls over on -- libc time() is only set as a side effect of an NTP sync and
+  // reverts to 1970 on reboot, so localtime() served a stale quote indefinitely.
+  const int today = READING_STATS.getCurrentDate();
+  const int quoteDay = today > 0 ? DailyQuote::dayOfYearFromYmd(today) : -1;
+  const auto& daily =
+      quoteDay >= 0 ? DailyQuote::select(today / 10000, quoteDay) : DailyQuote::select(2026, 0);
   const auto quoteLines = wrapWords(renderer, CAVEAT_15_FONT_ID, daily.quote, 400, 3);
   const std::string attribution = std::string(daily.character) + ", " + daily.title + ", " + daily.author;
   const auto attributionLines = wrapWords(renderer, SMALL_FONT_ID, attribution, 400, 2);
@@ -821,7 +848,11 @@ void HomeActivity::renderInkPointHome() {
   }
 
   InkPointShell::drawFooter(renderer, InkPointShell::Destination::Home, inkPointFocus - 1);
-  if (inkPointFocus == 0 && book) renderer.drawRect(coverX - 3, coverY - 3, coverW + 6, coverH + 10, 2, true);
+  // The ring encloses the cover and the progress bar beneath it: 3px above the
+  // cover, and clear of the bar's new lower edge.
+  if (inkPointFocus == 0 && book)
+    renderer.drawRect(coverX - 3, coverY - 3, coverW + 6, coverH + 6 + kInkProgressGap + kInkProgressHeight + 3, 2,
+                      true);
   if (inkPointFocus == 7)
     renderer.drawRect(kInkStats.x, kInkStats.y, kInkStats.width, kInkStats.height, 2, true);
 

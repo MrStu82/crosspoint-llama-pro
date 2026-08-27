@@ -2,7 +2,6 @@
 
 #include <array>
 #include <cstdint>
-#include <ctime>
 
 namespace {
 constexpr DailyQuoteRecord kQuotes[] = {
@@ -39,9 +38,17 @@ size_t indexFor(int year, int dayOfYear) {
 namespace DailyQuote {
 const DailyQuoteRecord& select(int year, int dayOfYear) { return kQuotes[indexFor(year, dayOfYear)]; }
 
-const DailyQuoteRecord& localToday() {
-  const std::time_t now = std::time(nullptr);
-  const std::tm* local = now > 0 ? std::localtime(&now) : nullptr;
-  return select(local ? local->tm_year + 1900 : 2026, local ? local->tm_yday : 0);
+int dayOfYearFromYmd(int yyyymmdd) {
+  const int year = yyyymmdd / 10000;
+  const int month = (yyyymmdd / 100) % 100;
+  const int day = yyyymmdd % 100;
+  if (year < 1 || month < 1 || month > 12 || day < 1) return -1;
+  const bool leap = (year % 4 == 0 && year % 100 != 0) || year % 400 == 0;
+  static constexpr int kDaysInMonth[12] = {31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31};
+  const int monthDays = kDaysInMonth[month - 1] + (leap && month == 2 ? 1 : 0);
+  if (day > monthDays) return -1;
+  int dayOfYear = day - 1;
+  for (int m = 1; m < month; ++m) dayOfYear += kDaysInMonth[m - 1] + (leap && m == 2 ? 1 : 0);
+  return dayOfYear;
 }
 }  // namespace DailyQuote

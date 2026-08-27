@@ -25,6 +25,7 @@
 #include "SettingsList.h"
 #include "UsbTransferActivity.h"
 #include "activities/util/ConfirmationActivity.h"
+#include "util/HardcoverTokenImport.h"
 #include "StatusBarSettingsActivity.h"
 #include "TextSettingsActivity.h"
 #include "activities/network/WifiSelectionActivity.h"
@@ -35,6 +36,49 @@
 
 const StrId SettingsActivity::categoryNames[categoryCount] = {StrId::STR_CAT_DISPLAY, StrId::STR_CAT_READER,
                                                               StrId::STR_CAT_CONTROLS, StrId::STR_CAT_SYSTEM};
+
+namespace {
+StrId hardcoverImportStatusString(const HardcoverTokenImport::Status status) {
+  switch (status) {
+    case HardcoverTokenImport::Status::Accepted:
+      return StrId::STR_HARDCOVER_IMPORT_OK;
+    case HardcoverTokenImport::Status::StoredNotWiped:
+      return StrId::STR_HARDCOVER_IMPORT_NOT_WIPED;
+    case HardcoverTokenImport::Status::Unreadable:
+      return StrId::STR_HARDCOVER_IMPORT_UNREADABLE;
+    case HardcoverTokenImport::Status::Invalid:
+      return StrId::STR_HARDCOVER_IMPORT_INVALID;
+    case HardcoverTokenImport::Status::StoreFailed:
+      return StrId::STR_HARDCOVER_IMPORT_SAVE_FAILED;
+    case HardcoverTokenImport::Status::NoFile:
+      break;
+  }
+  return StrId::STR_HARDCOVER_IMPORT_NO_FILE;
+}
+
+// The InkPoint shell draws the category strip as equal-width cells, but
+// BaseTheme::tabIndexFromPoint hit-tests a text-width-packed strip anchored at
+// contentSidePadding. The two geometries disagree, which is why the headers read
+// as fiddly: the touchable band for a tab sits nowhere near the label drawn for
+// it. One function owns the cell now, and both the renderer and the hit test ask
+// it.
+constexpr int kInkPointTabWidth(const int pageWidth, const int categoryCount) {
+  return pageWidth / categoryCount;
+}
+
+bool inkPointTabIndexFromPoint(const int pageWidth, const int categoryCount, const Rect strip, const int x,
+                               const int y, int& index) {
+  if (categoryCount <= 0 || y < strip.y || y >= strip.y + strip.height) return false;
+  if (x < 0 || x >= pageWidth) return false;
+  const int tabWidth = kInkPointTabWidth(pageWidth, categoryCount);
+  if (tabWidth <= 0) return false;
+  const int hit = x / tabWidth;
+  // The trailing remainder of an inexact division belongs to the last cell,
+  // which is what the renderer's final label occupies.
+  index = hit >= categoryCount ? categoryCount - 1 : hit;
+  return true;
+}
+}  // namespace
 
 void SettingsActivity::rebuildSettingsLists() {
   displaySettings.clear();
@@ -93,6 +137,10 @@ void SettingsActivity::rebuildSettingsLists() {
     systemSettings.push_back(SettingInfo::Action(StrId::STR_USB_TRANSFER, SettingAction::UsbTransfer));
   }
   #endif
+  // Always offered: the import row is the only way a token can ever reach this
+  // device, so hiding it when no file is present would make the feature look
+  // absent at exactly the moment someone goes looking for it.
+  systemSettings.push_back(SettingInfo::Action(StrId::STR_HARDCOVER_IMPORT_TOKEN, SettingAction::HardcoverImport));
   if (HARDCOVER_STORE.hasToken()) {
     systemSettings.push_back(SettingInfo::Action(StrId::STR_HARDCOVER_FORGET_TOKEN, SettingAction::HardcoverForget));
   }
@@ -145,6 +193,8 @@ void SettingsActivity::onExit() {
   Activity::onExit();
 
   UITheme::getInstance().reload();  // Re-apply theme in case it was changed
+  // The import result describes one action, not a persistent device state.
+  hardcoverStatus.clear();
 }
 
 void SettingsActivity::loop() {
@@ -240,8 +290,10 @@ void SettingsActivity::loop() {
   if (mappedInput.wasScreenTouchDown(tx, ty)) {
     int touchedCategory = -1;
     const auto tabs = buildTabs();
-    if (GUI.tabIndexFromPoint(renderer, Rect{0, tabTop, renderer.getScreenWidth(), tabHeight}, tabs, tx, ty,
-                              touchedCategory)) {
+    const Rect tabStrip{0, tabTop, renderer.getScreenWidth(), tabHeight};
+    if (inkPoint ? inkPointTabIndexFromPoint(renderer.getScreenWidth(), categoryCount, tabStrip, tx, ty,
+                                             touchedCategory)
+                 : GUI.tabIndexFromPoint(renderer, tabStrip, tabs, tx, ty, touchedCategory)) {
       if (selectedCategoryIndex != touchedCategory || selectedSettingIndex != 0) {
         selectedCategoryIndex = touchedCategory;
         selectedSettingIndex = 0;
@@ -264,8 +316,10 @@ void SettingsActivity::loop() {
   if (mappedInput.wasScreenTapped(tx, ty)) {
     int tappedCategory = -1;
     const auto tabs = buildTabs();
-    if (GUI.tabIndexFromPoint(renderer, Rect{0, tabTop, renderer.getScreenWidth(), tabHeight}, tabs, tx, ty,
-                              tappedCategory)) {
+    const Rect tabStrip{0, tabTop, renderer.getScreenWidth(), tabHeight};
+    if (inkPoint ? inkPointTabIndexFromPoint(renderer.getScreenWidth(), categoryCount, tabStrip, tx, ty,
+                                             tappedCategory)
+                 : GUI.tabIndexFromPoint(renderer, tabStrip, tabs, tx, ty, tappedCategory)) {
       selectedCategoryIndex = tappedCategory;
       selectedSettingIndex = 0;
       applyCategorySelection();
@@ -438,6 +492,12 @@ void SettingsActivity::toggleCurrentSetting() {
       case SettingAction::UsbTransfer:
         startActivityForResult(std::make_unique<UsbTransferActivity>(renderer, mappedInput), resultHandler);
         break;
+      case SettingAction::HardcoverImport: {
+        hardcoverStatus = I18N.get(hardcoverImportStatusString(HardcoverTokenImport::run()));
+        // A successful import makes the Forget row eligible for the first time.
+        rebuildSettingsLists();
+        break;
+      }
       case SettingAction::HardcoverForget:
         startActivityForResult(
             std::make_unique<ConfirmationActivity>(renderer, mappedInput, tr(STR_HARDCOVER_FORGET_TOKEN),
@@ -554,7 +614,7 @@ void SettingsActivity::render(RenderLock&&) {
   const int tabTop = inkPoint ? InkPointShell::kContentTop : metrics.topPadding + metrics.headerHeight;
   const int tabHeight = inkPoint ? 44 : metrics.tabBarHeight;
   if (inkPoint) {
-    const int tabWidth = pageWidth / categoryCount;
+    const int tabWidth = kInkPointTabWidth(pageWidth, categoryCount);
     for (int i = 0; i < categoryCount; ++i) {
       const bool selected = i == selectedCategoryIndex;
       if (selected) renderer.fillRoundedRect(i * tabWidth + 4, tabTop + 4, tabWidth - 8, tabHeight - 8, 5,
@@ -567,15 +627,22 @@ void SettingsActivity::render(RenderLock&&) {
     GUI.drawTabBar(renderer, Rect{0, tabTop, pageWidth, tabHeight}, tabs, selectedSettingIndex == 0);
   }
 
-  const auto& settings = *currentSettings;
-  GUI.drawList(
-      renderer,
+  // The Hardcover import result is the only feedback the user gets that a token
+  // was accepted or why it wasn't, so it takes a band out of the list rather
+  // than overdrawing the last row.
+  const int statusHeight = hardcoverStatus.empty() ? 0 : 22;
+  const Rect listRect =
       inkPoint ? Rect{8, tabTop + tabHeight + 8, pageWidth - 16,
-                      InkPointShell::kFooterTop - (tabTop + tabHeight + 8) - 8}
+                      InkPointShell::kFooterTop - (tabTop + tabHeight + 8) - 8 - statusHeight}
                : Rect{0, metrics.topPadding + metrics.headerHeight + metrics.tabBarHeight + metrics.verticalSpacing,
                       pageWidth,
                       pageHeight - (metrics.topPadding + metrics.headerHeight + metrics.tabBarHeight +
-                                    metrics.buttonHintsHeight + metrics.verticalSpacing * 2)},
+                                    metrics.buttonHintsHeight + metrics.verticalSpacing * 2) -
+                          statusHeight};
+
+  const auto& settings = *currentSettings;
+  GUI.drawList(
+      renderer, listRect,
       settingsCount, selectedSettingIndex - 1,
       [&settings](int index) { return std::string(I18N.get(settings[index].nameId)); }, nullptr, nullptr,
       [&settings](int i) {
@@ -611,6 +678,12 @@ void SettingsActivity::render(RenderLock&&) {
         return valueText;
       },
       true);
+
+  if (statusHeight > 0) {
+    const int textWidth = renderer.getTextWidth(UI_12_FONT_ID, hardcoverStatus.c_str());
+    renderer.drawText(UI_12_FONT_ID, (pageWidth - textWidth) / 2, listRect.y + listRect.height + 4,
+                      hardcoverStatus.c_str());
+  }
 
   // Draw help text
   const auto confirmLabel =

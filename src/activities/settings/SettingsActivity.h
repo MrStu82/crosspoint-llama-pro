@@ -28,6 +28,7 @@ enum class SettingAction {
   TextSettings,
   Frontlight,
   UsbTransfer,
+  HardcoverImport,
   HardcoverForget,
   DebugPanel,
 };
@@ -175,6 +176,10 @@ class SettingsActivity final : public Activity {
   bool quickResumeTimeoutAutoEnabled = false;
 
   OptionPopup optionPopup;
+
+  // One-line outcome of the most recent Hardcover token import, drawn under the
+  // list until the screen is left. Never holds any part of the token.
+  std::string hardcoverStatus;
 
   static constexpr int categoryCount = 4;
   static const StrId categoryNames[categoryCount];

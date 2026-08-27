@@ -16,6 +16,8 @@
 #include "RecentBooksStore.h"
 #include "StatsManager.h"
 #include "util/BookProgressBadge.h"
+#include "util/ChapterProgress.h"
+#include "components/InkPointShell.h"
 #include "components/UITheme.h"
 #include "fontIds.h"
 
@@ -87,8 +89,11 @@ void StatsActivity::render(RenderLock&&) {
   const int screenWidth = renderer.getScreenWidth();
   const auto& metrics = UITheme::getInstance().getMetrics();
 
-  // Title
-  GUI.drawHeader(renderer, Rect{0, metrics.topPadding, screenWidth, metrics.headerHeight}, tr(STR_READING_STATS));
+  // Title. On the InkPoint shell every other screen draws the shared header, so
+  // drawing the generic one here was the only place the frame changed shape
+  // between screens.
+  if (InkPointShell::enabled(renderer)) InkPointShell::drawHeader(renderer, tr(STR_READING_STATS));
+  else GUI.drawHeader(renderer, Rect{0, metrics.topPadding, screenWidth, metrics.headerHeight}, tr(STR_READING_STATS));
 
   // Every other coordinate on this screen comes from a pixel spec expressed as text
   // baselines, but drawText()/getFontAscenderSize() work in top-edge y. Convert once
@@ -194,22 +199,8 @@ void StatsActivity::render(RenderLock&&) {
   // progress.bin has no book-level percent field to fall back to. data[6] here is byte 0 of
   // the optional visibleTextOffset, not a percent; reading it as one produced the "181%" bug.
   // Only chapter progress (page/pageCount, data[2-5]) is legitimately derivable from this file.
-  if (FsHelpers::hasEpubExtension(currentBookPath)) {
-    std::string cachePath = "/.crosspoint/epub_" + std::to_string(std::hash<std::string>{}(currentBookPath));
-    HalFile f;
-    if (Storage.openFileForRead("STATS", cachePath + "/progress.bin", f)) {
-      uint8_t data[6];
-      if (f.read(data, 6) >= 6) {
-        int currentPage = data[2] | (data[3] << 8);
-        int pageCount = data[4] | (data[5] << 8);
-        if (pageCount > 0) {
-          currentChapterProgress = (currentPage * 100) / pageCount;
-        } else {
-          currentChapterProgress = 0;
-        }
-      }
-    }
-  }
+  const ChapterProgressValue chapter = ChapterProgress::read(currentBookPath);
+  if (chapter.available) currentChapterProgress = (chapter.currentPage * 100) / chapter.pageCount;
 
   // Badge cache miss: a book already in progress when BookProgressBadge shipped (or one
   // whose reader hasn't re-saved since) has no book_progress.bin yet. Approximate the

@@ -8,6 +8,7 @@
 #include "network/HardcoverRating.h"
 #include "util/BookReadingStats.h"
 #include "util/ButtonNavigator.h"
+#include "util/ChapterProgress.h"
 
 struct RecentBook;
 struct Rect;
@@ -24,6 +25,7 @@ class HomeActivity final : public Activity {
   int inkPointFocus = 0;  // 0=cover, 1..6=persistent footer destinations
   std::optional<RatingSnapshot> rating;
   BookReadingStatsValue bookStats;
+  ChapterProgressValue chapterProgress;
   bool coverBufferStored = false;  // Track if cover buffer is stored
   // Home can be entered while Back is still held (e.g. leaving Settings with
   // Back): ignore that stale release until a fresh press is seen here.

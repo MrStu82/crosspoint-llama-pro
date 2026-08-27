@@ -34,3 +34,4 @@ lib/EpdFont/scripts/output/
 sdkconfig.sticky
 version.txt
 flake.*
+docs/.quote-cache/

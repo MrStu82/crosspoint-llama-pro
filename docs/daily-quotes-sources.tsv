@@ -1,367 +1,367 @@
-record	quote_sha256	character	title	author	source	source_sentence_index
-0	3e5aefeb4e5cab5cb95dee868c6f0b93b724983891903bc40bc9fe4e9f33daf3	Narrator	Alice’s Adventures in Wonderland	Lewis Carroll	https://www.gutenberg.org/ebooks/11	0
-1	800dfe5261ffe70d1caa50f06693eb43063d08d21a3b40e03b99853750d615cf	Narrator	Alice’s Adventures in Wonderland	Lewis Carroll	https://www.gutenberg.org/ebooks/11	3
-2	95463ee29af9f2039f0b2c7c2a8cab4bcb0bdced6eb5b40b1114314f58a1619b	Narrator	Alice’s Adventures in Wonderland	Lewis Carroll	https://www.gutenberg.org/ebooks/11	7
-3	e5bf8d35f448cbaa62abb9edf6f362cee03385cfbc0b12c8d66b1618142d72a1	Narrator	Alice’s Adventures in Wonderland	Lewis Carroll	https://www.gutenberg.org/ebooks/11	10
-4	15fc26586ef48956ffd04e416c0068d9dd36c9bca716ba260977245875f98ceb	Narrator	Alice’s Adventures in Wonderland	Lewis Carroll	https://www.gutenberg.org/ebooks/11	13
-5	6a05feba8adc38153f8667124d4be9158004ba29f328ea6fb4d2635b5748909c	Narrator	Alice’s Adventures in Wonderland	Lewis Carroll	https://www.gutenberg.org/ebooks/11	17
-6	2f67fb3901d580622d882dd968c670ad5c2206dc6cfbd379a4e216ae7467a5ed	Narrator	Alice’s Adventures in Wonderland	Lewis Carroll	https://www.gutenberg.org/ebooks/11	20
-7	e0449c5ffcc71e7611e4734ceeff59d4f2449fd0b4722dc7063aa1820cfa4020	Narrator	Alice’s Adventures in Wonderland	Lewis Carroll	https://www.gutenberg.org/ebooks/11	23
-8	2f243f1491e5416cb09e6ae77292640dc519387a0ceceb83c4360bf821cea2c5	Narrator	Alice’s Adventures in Wonderland	Lewis Carroll	https://www.gutenberg.org/ebooks/11	27
-9	f4821effd34cab5c42bf6b888a11b4f3edf4fc7b003246cf1c1702cee5b62d30	Narrator	Alice’s Adventures in Wonderland	Lewis Carroll	https://www.gutenberg.org/ebooks/11	30
-10	08740932a48d1416465aef54920357ae85cfdcd13e52e6cd221ab64d69227a35	Narrator	Alice’s Adventures in Wonderland	Lewis Carroll	https://www.gutenberg.org/ebooks/11	33
-11	aa2294863448192716b9121eb1e5d21ddf9192a7d4c666d7054f1f97efff4fcc	Narrator	Alice’s Adventures in Wonderland	Lewis Carroll	https://www.gutenberg.org/ebooks/11	36
-12	ffd41cb182785de07c8deb72b920e67e530f745203cebe9ce3f0143326b34abe	Narrator	Alice’s Adventures in Wonderland	Lewis Carroll	https://www.gutenberg.org/ebooks/11	40
-13	de6abb8b4a360cccb0744ff2f487d0fb2b9b857c4562b2a60e857615b304823f	Narrator	Alice’s Adventures in Wonderland	Lewis Carroll	https://www.gutenberg.org/ebooks/11	43
-14	81ac93c680bf94c0c4a093766cb3e1931468afc47f7266ebbdb80a6239c1d56d	Narrator	Alice’s Adventures in Wonderland	Lewis Carroll	https://www.gutenberg.org/ebooks/11	46
-15	e4518e799afa7672da2a5cdc6380e523c9886d3c2d09fca50270b1bfce0fdd02	Narrator	Alice’s Adventures in Wonderland	Lewis Carroll	https://www.gutenberg.org/ebooks/11	50
-16	277faec234893e571d2b817c130cd7a3c6206b6ef877c6f1b001c0cc1a81ea5c	Narrator	Alice’s Adventures in Wonderland	Lewis Carroll	https://www.gutenberg.org/ebooks/11	53
-17	9f875462c7750b31860bab505c224a3039d829a55c656b0220469a4a33f7cffb	Narrator	Alice’s Adventures in Wonderland	Lewis Carroll	https://www.gutenberg.org/ebooks/11	56
-18	d78e9ad12668c30c4be9121e812b7f0144859fc265b5caaf27ed45a006a1cc14	Narrator	Alice’s Adventures in Wonderland	Lewis Carroll	https://www.gutenberg.org/ebooks/11	60
-19	69882897188297affd60b2383938ab9f33e21bbf45674daf637781e46715db22	Narrator	Alice’s Adventures in Wonderland	Lewis Carroll	https://www.gutenberg.org/ebooks/11	63
-20	5ba74bf578b0b1709b93b7022b6747fb2b45cd8417aaa27fc0c10ca825ef7184	Narrator	Alice’s Adventures in Wonderland	Lewis Carroll	https://www.gutenberg.org/ebooks/11	66
-21	9c51fc753eea727ffcf2de35148cba766658c3a1919f44ac7b87f110bab14c64	Narrator	Alice’s Adventures in Wonderland	Lewis Carroll	https://www.gutenberg.org/ebooks/11	70
-22	4c941c9f8ae2ef89aeb966d4ead2f952f286a94a521be884f918affb2a317518	Narrator	Alice’s Adventures in Wonderland	Lewis Carroll	https://www.gutenberg.org/ebooks/11	73
-23	ae3b3f07cced1e85f6c8933c4d388dd8fe29d997c519b17bef30fda552b141ad	Narrator	Alice’s Adventures in Wonderland	Lewis Carroll	https://www.gutenberg.org/ebooks/11	76
-24	98daf7e91ec3dde01594175faa655b32f00989f77d9a134e9e2b319e6c62745d	Narrator	Alice’s Adventures in Wonderland	Lewis Carroll	https://www.gutenberg.org/ebooks/11	80
-25	69c5232ef559e7c450971880bf034edd9c59f4b5dde51b42a73688831546ce2a	Narrator	Alice’s Adventures in Wonderland	Lewis Carroll	https://www.gutenberg.org/ebooks/11	83
-26	eec2921582199ae2288ca9bbdb91f0e47a334efa82b0fdeae21eb50e67acc5a6	Narrator	Alice’s Adventures in Wonderland	Lewis Carroll	https://www.gutenberg.org/ebooks/11	86
-27	77ed27f010071c1feb63a5ea1c0677fb7a534cd457c1b44c7e2cb2d6c24a2df1	Narrator	Alice’s Adventures in Wonderland	Lewis Carroll	https://www.gutenberg.org/ebooks/11	90
-28	acec0d3d5d82d64d5f80ac981d103348e232e0f9a02dff1a31ae76e8cb708b77	Narrator	Alice’s Adventures in Wonderland	Lewis Carroll	https://www.gutenberg.org/ebooks/11	93
-29	a1e176c6d3c71898f42171f0955d04bf7c527470a21022af8a8fd8d518f05f2d	Narrator	Alice’s Adventures in Wonderland	Lewis Carroll	https://www.gutenberg.org/ebooks/11	96
-30	65874e211c5ea7f846ac81212099ee3bf1137e057005f4272764851c06a282d1	Narrator	Alice’s Adventures in Wonderland	Lewis Carroll	https://www.gutenberg.org/ebooks/11	100
-31	0810badf2656c7d32886fbc4c6c243585a53a0c2d08d3a3a0c39521b819e0a94	Narrator	Alice’s Adventures in Wonderland	Lewis Carroll	https://www.gutenberg.org/ebooks/11	103
-32	1bebbdfbbd3a6e91c35eb25993b53c538c9ac35dfbf8e46181f99cbc593f722c	Narrator	Alice’s Adventures in Wonderland	Lewis Carroll	https://www.gutenberg.org/ebooks/11	106
-33	87fd4726f2ccdc0c538f0ec2b9dfb913025f3671e5555db03ed0995223747842	Narrator	Alice’s Adventures in Wonderland	Lewis Carroll	https://www.gutenberg.org/ebooks/11	109
-34	42c9b3f6621981db21f3d47183da8000d9c329d6342fb77362ed3ad60a78cded	Narrator	Alice’s Adventures in Wonderland	Lewis Carroll	https://www.gutenberg.org/ebooks/11	113
-35	a25fa6c6b5c323bd3aa9e0ad3ed4fc3ea618d728220981ba37e4c38f7595b933	Narrator	Alice’s Adventures in Wonderland	Lewis Carroll	https://www.gutenberg.org/ebooks/11	116
-36	cc272205ee50eafa00f1bab517928e0119d849ffb0216e6bb8af56c284a328b1	Narrator	Alice’s Adventures in Wonderland	Lewis Carroll	https://www.gutenberg.org/ebooks/11	119
-37	e52634bcc757897cc4ca31430d6d7a8f56a4cbfef39a9a94f2992321006c60cf	Narrator	Alice’s Adventures in Wonderland	Lewis Carroll	https://www.gutenberg.org/ebooks/11	123
-38	4f414fd7d613f84072835d82278d4b8c34cbb75fc5b607125b86218f11cfd154	Narrator	Alice’s Adventures in Wonderland	Lewis Carroll	https://www.gutenberg.org/ebooks/11	126
-39	cb6a8a2e86e29fa147e33b060d2aea6619a6ab31ebe066f23d1c89fc20376e25	Narrator	Alice’s Adventures in Wonderland	Lewis Carroll	https://www.gutenberg.org/ebooks/11	129
-40	d481bf7e4ec69d3861a06005ebe8fc4667697b29781c54920b4f9b3c8892c759	Narrator	Alice’s Adventures in Wonderland	Lewis Carroll	https://www.gutenberg.org/ebooks/11	133
-41	f5d533ebdfdcea9c5f67e38290f3d903bcd58b9a25a1899249cfeae74bff785c	Narrator	Alice’s Adventures in Wonderland	Lewis Carroll	https://www.gutenberg.org/ebooks/11	136
-42	c7a770a4e6e659fabee9dcadf3a057c0bb8bb21c23c61d26a143a018e4539555	Narrator	Alice’s Adventures in Wonderland	Lewis Carroll	https://www.gutenberg.org/ebooks/11	139
-43	61b456ec7b3b0c872848c09310b43a60601b9b7dd55b24cf17e61d6aaf33a5b1	Narrator	Alice’s Adventures in Wonderland	Lewis Carroll	https://www.gutenberg.org/ebooks/11	143
-44	e0cec93beccc6ed2c0db1904e9c3c6ebf9764c75ad5a4b8b75fe840f7a6a536c	Narrator	Alice’s Adventures in Wonderland	Lewis Carroll	https://www.gutenberg.org/ebooks/11	146
-45	c926af50e00d14e5aa847db0395f7c9ae51c26a21c55ca3ec18e93f7e67f39c6	Narrator	Alice’s Adventures in Wonderland	Lewis Carroll	https://www.gutenberg.org/ebooks/11	149
-46	ffb924e9aeed8cb90be31e2ab4cdd5d922e84372c0fafde2e8b33f0aa50a39a1	Narrator	Alice’s Adventures in Wonderland	Lewis Carroll	https://www.gutenberg.org/ebooks/11	153
-47	fd3179dee60fe668ec7290f8d286e54e7bc9193ccdab1e5c8086e19fbf804bb9	Narrator	Alice’s Adventures in Wonderland	Lewis Carroll	https://www.gutenberg.org/ebooks/11	156
-48	e39cc3037f8fe996c12a60d2491e01182caeacb6225bde1bc23b516c1db3d6dc	Narrator	Alice’s Adventures in Wonderland	Lewis Carroll	https://www.gutenberg.org/ebooks/11	159
-49	20192a157d0d3482794b3ae469d79201aad0ac347b44593a8fed7c0e45376845	Narrator	Alice’s Adventures in Wonderland	Lewis Carroll	https://www.gutenberg.org/ebooks/11	163
-50	64c385b41e36d32a4c18eb0feea606fd9e889de03fcb8051c3c6a51f4649a13a	Narrator	Alice’s Adventures in Wonderland	Lewis Carroll	https://www.gutenberg.org/ebooks/11	166
-51	5411ce5cb38f27412cd7fd0fc425dafe2c7dbab19cfa4e03b68922a866c3c7fa	Narrator	Alice’s Adventures in Wonderland	Lewis Carroll	https://www.gutenberg.org/ebooks/11	169
-52	28af23c5eb3ecd137f5d7f633ad39b637ab9c4fcfafe18b9767f838c52a6e802	Narrator	Alice’s Adventures in Wonderland	Lewis Carroll	https://www.gutenberg.org/ebooks/11	172
-53	6758384844b608530e5458663fcd4510af98c635685d0aaf480b7d62285f12a0	Narrator	Alice’s Adventures in Wonderland	Lewis Carroll	https://www.gutenberg.org/ebooks/11	176
-54	0aa8194f1d7d8356c5aa563daeeb03ff1a7cc120cbd8113e6099afc2861cbfdf	Narrator	Alice’s Adventures in Wonderland	Lewis Carroll	https://www.gutenberg.org/ebooks/11	179
-55	c482b1259b619c68aea1814c0b727dc2bffb91eaf4fa92f40a6f4f9cf711d07f	Narrator	Alice’s Adventures in Wonderland	Lewis Carroll	https://www.gutenberg.org/ebooks/11	182
-56	a0621a3545a30a442203a8138747ead4f278d254f32456b721d83959105b0cb2	Narrator	Alice’s Adventures in Wonderland	Lewis Carroll	https://www.gutenberg.org/ebooks/11	186
-57	948132b02c2b269dd935b2aa61669b384f1784daae4acbd97eda21dad0fed8db	Narrator	Alice’s Adventures in Wonderland	Lewis Carroll	https://www.gutenberg.org/ebooks/11	189
-58	4b90c071177af3efb1f8db39f4da1b32197a9e6bcb0fd6cee768e0c1faee1e00	Narrator	Alice’s Adventures in Wonderland	Lewis Carroll	https://www.gutenberg.org/ebooks/11	192
-59	b86dba4bea70b2144d9c66b227bbb7964de94d71f74aef96db61bbbbde7ba802	Narrator	Alice’s Adventures in Wonderland	Lewis Carroll	https://www.gutenberg.org/ebooks/11	196
-60	0a39ed7889592282ca83354aa4b44a9069f8ea232de04108444abbcf5633645b	Narrator	Alice’s Adventures in Wonderland	Lewis Carroll	https://www.gutenberg.org/ebooks/11	199
-61	1153418dfc09ef5694cf3e795f3630be47f686f6174233a7d23ced1522184da0	Narrator	Pride and Prejudice	Jane Austen	https://www.gutenberg.org/ebooks/1342	0
-62	959beb9d6103016326ce611cb1295d0f1f81aac1b298a4fdbfe39a0a946b0f1d	Narrator	Pride and Prejudice	Jane Austen	https://www.gutenberg.org/ebooks/1342	24
-63	b2eae77dab0d8327694772207291ec34826f55417cf907dd0479d5e5f2ff541a	Narrator	Pride and Prejudice	Jane Austen	https://www.gutenberg.org/ebooks/1342	48
-64	93c246e1be0061a6fca652082f79460023623849d046de4fc7f6d723ee738bb0	Narrator	Pride and Prejudice	Jane Austen	https://www.gutenberg.org/ebooks/1342	72
-65	85cb5ea64e6a1361a0548b70c7e2d2838cfc2caa5e9dd121507c9c55a272051d	Narrator	Pride and Prejudice	Jane Austen	https://www.gutenberg.org/ebooks/1342	96
-66	34bb16f6863273dcb844b81c57e1844aef087f1dc12b77335547c4e93af7791b	Narrator	Pride and Prejudice	Jane Austen	https://www.gutenberg.org/ebooks/1342	120
-67	4b088d063b8a099326a5d94229ec2cc9bd977281046172e37c669142b7c3039e	Narrator	Pride and Prejudice	Jane Austen	https://www.gutenberg.org/ebooks/1342	145
-68	39ac34d7380f149afddf3487de4a2372880885f3a5f3e218300890761d617c81	Narrator	Pride and Prejudice	Jane Austen	https://www.gutenberg.org/ebooks/1342	169
-69	c3024b9848eefb2f2a592fa3fbc39a82a6560299735123d78cb246712efa6744	Narrator	Pride and Prejudice	Jane Austen	https://www.gutenberg.org/ebooks/1342	193
-70	168d47a0665802ae1840322f1b3b3ea6c35dbb4f20335a8f06c30893ea6f2fe7	Narrator	Pride and Prejudice	Jane Austen	https://www.gutenberg.org/ebooks/1342	217
-71	8b05c240a6fb067e3cb4bd17dafcb7bfffe7242e3bb670481291fa9d8846e8fd	Narrator	Pride and Prejudice	Jane Austen	https://www.gutenberg.org/ebooks/1342	241
-72	dffbc080bab43edd9cebe269132715a13a1c03a8335a7c8cc7ffce887ed670b3	Narrator	Pride and Prejudice	Jane Austen	https://www.gutenberg.org/ebooks/1342	265
-73	c37cf66323d80ddb9e9b1bd0a60bffeb45c9e45310b3bb642beb538d31ad39e5	Narrator	Pride and Prejudice	Jane Austen	https://www.gutenberg.org/ebooks/1342	289
-74	87b85af941f32ce69489f52a09168fd1fa4c5b5b7bcb52d90a99609bc4e1aeba	Narrator	Pride and Prejudice	Jane Austen	https://www.gutenberg.org/ebooks/1342	313
-75	07dd603da75f1f5d6a2709cd558d1c3e962cbdac3b483eb455b83b361355c04d	Narrator	Pride and Prejudice	Jane Austen	https://www.gutenberg.org/ebooks/1342	337
-76	5eabfc5dccf56c1ed8f4f0feccfaf81da0f6793f84e91813820b418109aae552	Narrator	Pride and Prejudice	Jane Austen	https://www.gutenberg.org/ebooks/1342	362
-77	a7ead72827586c0ea004c1fcada90ba7fa672d49977ad8884a1208e6b431c65c	Narrator	Pride and Prejudice	Jane Austen	https://www.gutenberg.org/ebooks/1342	386
-78	7be0a7093a8b2330d86faacf6f2dbd51576706f3018dd6713a30c2f669e44e8d	Narrator	Pride and Prejudice	Jane Austen	https://www.gutenberg.org/ebooks/1342	410
-79	682673afe085e469730fedf04e35f2455486453b6771b7b24a665988b7e6c17f	Narrator	Pride and Prejudice	Jane Austen	https://www.gutenberg.org/ebooks/1342	434
-80	16e333eadac36c4ddc2b1a7fcf471e3f3f47fddd0edcd6a245191abf7d2677a8	Narrator	Pride and Prejudice	Jane Austen	https://www.gutenberg.org/ebooks/1342	458
-81	122c8b6796f8f5cd683469e296445d701e1b1c246fcbdfdba52902ca08342698	Narrator	Pride and Prejudice	Jane Austen	https://www.gutenberg.org/ebooks/1342	482
-82	4d16863b004fdccfe08d36974a06dacd4f8c51bfa86da2504ac6dac6e5bc9706	Narrator	Pride and Prejudice	Jane Austen	https://www.gutenberg.org/ebooks/1342	506
-83	b10d8a345dff218fa18047c770df10b56783931da232b20efb31e23b6e00a9a7	Narrator	Pride and Prejudice	Jane Austen	https://www.gutenberg.org/ebooks/1342	530
-84	39e2d7422d8de6a8b2fc180a2e62a6f4c071e4edbe6f8a8926808eab39e27366	Narrator	Pride and Prejudice	Jane Austen	https://www.gutenberg.org/ebooks/1342	554
-85	6394a1522b9b2499dadfb31ecf62af30edd6f6b4ef56c2d1318ea4f280c6d41f	Narrator	Pride and Prejudice	Jane Austen	https://www.gutenberg.org/ebooks/1342	578
-86	479c0279f94452e3ad192a28823b129acb99b603519bca1ecd5a57a1a61b6e9a	Narrator	Pride and Prejudice	Jane Austen	https://www.gutenberg.org/ebooks/1342	602
-87	edf6ed7db4f37ef446cd0a9a73b4dc78951728288092fedde0b97fd524c80353	Narrator	Pride and Prejudice	Jane Austen	https://www.gutenberg.org/ebooks/1342	627
-88	7df98fa553ee13b639725726eac70d9c0344caa06118f299cb4a37bf7898e110	Narrator	Pride and Prejudice	Jane Austen	https://www.gutenberg.org/ebooks/1342	651
-89	97eec6070f75af094cac25162b0e055ac4b116300b545c41ae04ca9b29532c54	Narrator	Pride and Prejudice	Jane Austen	https://www.gutenberg.org/ebooks/1342	675
-90	dace9093c96e62fde6f897ab4875a1605acfe4f6958e948242ad37d8a3d1f3f3	Narrator	Pride and Prejudice	Jane Austen	https://www.gutenberg.org/ebooks/1342	699
-91	b258d99095b549c051eb4511c4d08ffe82c9a4588b43a4b6c169e2149af13a75	Narrator	Pride and Prejudice	Jane Austen	https://www.gutenberg.org/ebooks/1342	723
-92	30ec44fb7ee43403e33492bf64917dd4ce1c0e1c119b50b3aa2a7c205c2ac848	Narrator	Pride and Prejudice	Jane Austen	https://www.gutenberg.org/ebooks/1342	747
-93	9689ed4bb150d2dce617ca68e6f56e65e8581385af3b8fc647c61be7fda9864a	Narrator	Pride and Prejudice	Jane Austen	https://www.gutenberg.org/ebooks/1342	771
-94	bf7e20d8fdb0b4842f77bfbbc15f8e56d93c5e2732f9c43bbab1211c27e929c7	Narrator	Pride and Prejudice	Jane Austen	https://www.gutenberg.org/ebooks/1342	795
-95	48f4f4c28e1eaaf6ac1a0e2b8d4b3a271fdcfdfb451ceafe5271ac386115962a	Narrator	Pride and Prejudice	Jane Austen	https://www.gutenberg.org/ebooks/1342	819
-96	b34ddb05caaf21790741e92f8771d120a29497de615ceabd97cc0434472d3c06	Narrator	Pride and Prejudice	Jane Austen	https://www.gutenberg.org/ebooks/1342	844
-97	c5f7a333b380c3e6df73c9fa14d0b67ec52c6168b2b93072a548dc307eaa2d27	Narrator	Pride and Prejudice	Jane Austen	https://www.gutenberg.org/ebooks/1342	868
-98	714ce2e101431c28dbe65a5b22a827a57ebc37ed39125df3b86be7d7028ffc9f	Narrator	Pride and Prejudice	Jane Austen	https://www.gutenberg.org/ebooks/1342	892
-99	c6865a1a552fdc17a2bcac58f642f72e12ee1d8fcd0d32bf897640a89efce538	Narrator	Pride and Prejudice	Jane Austen	https://www.gutenberg.org/ebooks/1342	916
-100	8b03982f50366720f5017979f3db30507e5b3938e963f7ae14f56407196c0b5d	Narrator	Pride and Prejudice	Jane Austen	https://www.gutenberg.org/ebooks/1342	940
-101	75714b02910a418f9032250d44842cc113110ef593f8cf63f5c0d04e9b759629	Narrator	Pride and Prejudice	Jane Austen	https://www.gutenberg.org/ebooks/1342	964
-102	782aae2cd9841ec084bb395df6f2ed0f4727254e11fa4d0fbcf802c752239562	Narrator	Pride and Prejudice	Jane Austen	https://www.gutenberg.org/ebooks/1342	988
-103	e7a7e2cae744c4b8250f106fb2e9484a6fcb31a59655171412c48a4cec070699	Narrator	Pride and Prejudice	Jane Austen	https://www.gutenberg.org/ebooks/1342	1012
-104	8f129352942d0c8512bcbf651445582db93b0dc372813425d0ee1f762d5afb0e	Narrator	Pride and Prejudice	Jane Austen	https://www.gutenberg.org/ebooks/1342	1036
-105	cf1f88e0e301da3d450cff46fd6837c20edf6ceceeadae8647f4e24887e0d476	Narrator	Pride and Prejudice	Jane Austen	https://www.gutenberg.org/ebooks/1342	1060
-106	f2b9d60af969858fbe67dd26ba0e3e9bb71afa5d5bab8ab8b9614ef748d2d530	Narrator	Pride and Prejudice	Jane Austen	https://www.gutenberg.org/ebooks/1342	1084
-107	ba1f15a5ea95a0293114a8ae7a28c70fdb338401b80e0132db7a58b6b7f011c1	Narrator	Pride and Prejudice	Jane Austen	https://www.gutenberg.org/ebooks/1342	1109
-108	03fbe4454530a5cd712faa3052fcd97d3302a41bb168ca125d29db6351d4390b	Narrator	Pride and Prejudice	Jane Austen	https://www.gutenberg.org/ebooks/1342	1133
-109	d67243d4d90ec2d8bf5cadd9b4330bc74a5e2a6c3cbc5bef5846fb4f307c9cc3	Narrator	Pride and Prejudice	Jane Austen	https://www.gutenberg.org/ebooks/1342	1157
-110	c9fe67ec1a8536560de7d2c4e18de54c967b7920afe33f284ef19500e75eec2c	Narrator	Pride and Prejudice	Jane Austen	https://www.gutenberg.org/ebooks/1342	1181
-111	cb68155c6ebd6981cc08147eb46a183e17d697c26b3f3fc1728fc331fa81284a	Narrator	Pride and Prejudice	Jane Austen	https://www.gutenberg.org/ebooks/1342	1205
-112	37b6c8c032943abd503d0dbc402ee248bd1a94e36a49f00f33a4cbcbce7fca8b	Narrator	Pride and Prejudice	Jane Austen	https://www.gutenberg.org/ebooks/1342	1229
-113	f6a40eda4381e009838eb8dcd8d09d62858ed60f902c7c8c5be54423b9ceb2a8	Narrator	Pride and Prejudice	Jane Austen	https://www.gutenberg.org/ebooks/1342	1253
-114	2015f1df9d1fccb948b224ab68f3c1a51dc55ea6f8c60007fb27be7426af234b	Narrator	Pride and Prejudice	Jane Austen	https://www.gutenberg.org/ebooks/1342	1277
-115	eb726fe27bb488b2ef7475cc0a9b0cd05198dad4a6f537643d5a1b6f26b643a0	Narrator	Pride and Prejudice	Jane Austen	https://www.gutenberg.org/ebooks/1342	1301
-116	194e4c4358ec07a9910551a6a7974317a4c7d79b08f4d24321168242512f453a	Narrator	Pride and Prejudice	Jane Austen	https://www.gutenberg.org/ebooks/1342	1326
-117	1600522b23e2ca371f0d689afedc973d50bce6733add94d606ef7355b72383fe	Narrator	Pride and Prejudice	Jane Austen	https://www.gutenberg.org/ebooks/1342	1350
-118	57a8c72d4d6ca983ffcd9e303cc48d1a4ef3916d0ebe8645f6b958dc4585b40c	Narrator	Pride and Prejudice	Jane Austen	https://www.gutenberg.org/ebooks/1342	1374
-119	9d59c84bf237142ee350e0cd96a8f225700bbb95883c82b561c5aa26828c4ac1	Narrator	Pride and Prejudice	Jane Austen	https://www.gutenberg.org/ebooks/1342	1398
-120	1e5a82b525a9fc783a36fbe37ca5fa789f1b846d27a2abd6b245307d5ba14923	Narrator	Pride and Prejudice	Jane Austen	https://www.gutenberg.org/ebooks/1342	1422
-121	ad5754f5c9964460d8eaae17c5cc6d9144cd4e84938f854a4b518f18869e2b32	Narrator	Pride and Prejudice	Jane Austen	https://www.gutenberg.org/ebooks/1342	1446
-122	7c6dccfa60355df45ff39250727a90df65362238d956ca45eba22af52b704075	Narrator	Frankenstein	Mary Shelley	https://www.gutenberg.org/ebooks/84	0
-123	faf59a657ecfdf4355092a701f9ee113c9e93cd37f06f8f04ee176122a99b4a5	Narrator	Frankenstein	Mary Shelley	https://www.gutenberg.org/ebooks/84	15
-124	8930e46f4d1e78acdb387ea1b364b453226b9fec44b19ff19c60d1fe485120d6	Narrator	Frankenstein	Mary Shelley	https://www.gutenberg.org/ebooks/84	29
-125	190ce1d41eaa72be099318030f41026a05de4e7a621f6e680d999a3ac1780feb	Narrator	Frankenstein	Mary Shelley	https://www.gutenberg.org/ebooks/84	44
-126	2183168babe4e041f401eae702882f83de6c5bf7977d18b282b4ed20e0c1eef2	Narrator	Frankenstein	Mary Shelley	https://www.gutenberg.org/ebooks/84	58
-127	1e90bb95085032a9509ab6d9f44e4cef2fd9612bb71f08bf856e313893f8e8c7	Narrator	Frankenstein	Mary Shelley	https://www.gutenberg.org/ebooks/84	73
-128	e5adc4d90f08826cce52dcdb129c269cdb633b2218d8b496ab925f4c7b6b7c46	Narrator	Frankenstein	Mary Shelley	https://www.gutenberg.org/ebooks/84	88
-129	057081cab749d95b5123e791ef7e142a675e7d952bdcdd0374782e18f9bea754	Narrator	Frankenstein	Mary Shelley	https://www.gutenberg.org/ebooks/84	102
-130	58d547033e3bb6a7a22c89441b3b0e05cd605268323418a45b71f252ad23f902	Narrator	Frankenstein	Mary Shelley	https://www.gutenberg.org/ebooks/84	117
-131	349d6398a0d8f2c699ef6c439476aacdf770550a5ef693e66ce7a15deae5fed2	Narrator	Frankenstein	Mary Shelley	https://www.gutenberg.org/ebooks/84	132
-132	83e5235230c2ec7bcd899830115edfdd5913871e59ec4fdd5420f46f2f9b26dc	Narrator	Frankenstein	Mary Shelley	https://www.gutenberg.org/ebooks/84	146
-133	99dedf1e3cbd02a50368af450ddf3259b9d8329e0dc634ef4114d1205f3e78c1	Narrator	Frankenstein	Mary Shelley	https://www.gutenberg.org/ebooks/84	161
-134	2de3cafdbeffce2dfa9d2b6617900ec324321e2b40d1da8ba35bb3c29dca3426	Narrator	Frankenstein	Mary Shelley	https://www.gutenberg.org/ebooks/84	175
-135	528d48b8202fe0b045ac09f8e39df8017627686c460396d55b6e772e935eec8d	Narrator	Frankenstein	Mary Shelley	https://www.gutenberg.org/ebooks/84	190
-136	18431950a9db7c10f97dac579eb261a86c302e16b829a8b4e4e002081c310a8a	Narrator	Frankenstein	Mary Shelley	https://www.gutenberg.org/ebooks/84	205
-137	3b2414cd94aa49a1e62f1cafaf61727409dab9404db1e8f077ebeb8de62c4072	Narrator	Frankenstein	Mary Shelley	https://www.gutenberg.org/ebooks/84	219
-138	db69153e4c4353268cd79f2350ddf5a58ee5afc3847010356b7c0d51e331e364	Narrator	Frankenstein	Mary Shelley	https://www.gutenberg.org/ebooks/84	234
-139	276096c03014dad3a6c67e055814c0fe79981747df51b28733e211304c3baa38	Narrator	Frankenstein	Mary Shelley	https://www.gutenberg.org/ebooks/84	248
-140	d893232a012a6af59e3cc8ba707f5ea5fb166acdaa956490103a4bd877a6f9f3	Narrator	Frankenstein	Mary Shelley	https://www.gutenberg.org/ebooks/84	263
-141	a11ee4fa5a02a24c0ac4d2645df5d33df88907bd1ec5fd8c62ba9e0801245690	Narrator	Frankenstein	Mary Shelley	https://www.gutenberg.org/ebooks/84	278
-142	1786430bf75be34a7964bd9530d2687e7e992b216f83a6612aeabae281122aff	Narrator	Frankenstein	Mary Shelley	https://www.gutenberg.org/ebooks/84	292
-143	1d1c9509e4e818f74b99b4a125be7d5d5a2bd634d3b296c6b83293f613db0425	Narrator	Frankenstein	Mary Shelley	https://www.gutenberg.org/ebooks/84	307
-144	2fcb7d29b5e57bd76b81279b4426cab38b837de3767ea69035f472f2fc7f1f33	Narrator	Frankenstein	Mary Shelley	https://www.gutenberg.org/ebooks/84	322
-145	af0848728ee0c5f160197d64a46b8ccd12649706aff2a22282f4d2dd23925d92	Narrator	Frankenstein	Mary Shelley	https://www.gutenberg.org/ebooks/84	336
-146	f9fc8ad52f66dca0e684884668ebbff38ae0dd25dad42a05e13b80b0a5b870a5	Narrator	Frankenstein	Mary Shelley	https://www.gutenberg.org/ebooks/84	351
-147	35a8c25be0d2a6077e97ae3c0a7d40e90b95019a0090ab44f631986a4bd937fd	Narrator	Frankenstein	Mary Shelley	https://www.gutenberg.org/ebooks/84	365
-148	eed826d2f9f6e989da93383abccf93e6cac345f683306a41367f365c8645ce32	Narrator	Frankenstein	Mary Shelley	https://www.gutenberg.org/ebooks/84	380
-149	34690a73b82789f6e66cc93517869af49bedd3a7444ed8fcb7b10e291576a2d1	Narrator	Frankenstein	Mary Shelley	https://www.gutenberg.org/ebooks/84	395
-150	4a1640d1873f1261b71f8deece41ab4b9e89975b30c48df233ca42ef2235a24f	Narrator	Frankenstein	Mary Shelley	https://www.gutenberg.org/ebooks/84	409
-151	814101318ab85886e9024a21200d22ca9c3b598610790aa27f3330e558f45e93	Narrator	Frankenstein	Mary Shelley	https://www.gutenberg.org/ebooks/84	424
-152	b1cf2564854e2185c8431d22fc94bf8c5c3edb97798f7d9607ba130a12783420	Narrator	Frankenstein	Mary Shelley	https://www.gutenberg.org/ebooks/84	438
-153	77bab0753016951779b77ab947908509a5f3173741f69062b05e818e15098ae7	Narrator	Frankenstein	Mary Shelley	https://www.gutenberg.org/ebooks/84	453
-154	a7cd1504e710dae051f6d364ffe9c2573251bcafae01b17225c6a8d6790a2662	Narrator	Frankenstein	Mary Shelley	https://www.gutenberg.org/ebooks/84	468
-155	0adecf8f869ad8eb30b6c56e91d92982a827a000c3971aaa7849457e2dac4833	Narrator	Frankenstein	Mary Shelley	https://www.gutenberg.org/ebooks/84	482
-156	0ced40a064b3327cef9dfe47c4af50de77393425b6b6d0eecc7ed786b3ed2c9a	Narrator	Frankenstein	Mary Shelley	https://www.gutenberg.org/ebooks/84	497
-157	0b6f343bbbbafb419160b8d6e12300d5134b5ceb7e50daa53a563b0eb9e3d675	Narrator	Frankenstein	Mary Shelley	https://www.gutenberg.org/ebooks/84	512
-158	9c335bc0aa1e380d12f03aa2b32729d18b1c59dea38b71349113fa3fa911eeb5	Narrator	Frankenstein	Mary Shelley	https://www.gutenberg.org/ebooks/84	526
-159	528ec31589ae71a97ff58e9b85d81e87db03a520379079b006a022062f0bed20	Narrator	Frankenstein	Mary Shelley	https://www.gutenberg.org/ebooks/84	541
-160	c26b9adc20154dad2f77e1c2433a4af46a6e4a82993f3ddb611774a1539ab2a2	Narrator	Frankenstein	Mary Shelley	https://www.gutenberg.org/ebooks/84	555
-161	929f8ef4dcaa1dfd1aa5deac471a787310d33a82208433b32f6b7d2575bd9d84	Narrator	Frankenstein	Mary Shelley	https://www.gutenberg.org/ebooks/84	570
-162	1be83d6e43c4e6fe2897d7d1a26dbf5507970d75484df5e3bc5333bff4bbd714	Narrator	Frankenstein	Mary Shelley	https://www.gutenberg.org/ebooks/84	585
-163	7dff7e4a24d1c8ecf240ea5dc343941ac626be6603b0af7d0243663f1b2a4a39	Narrator	Frankenstein	Mary Shelley	https://www.gutenberg.org/ebooks/84	599
-164	a3872af965c2f0392b3bf4930f1941105184a6750ee7562f8f081148c38267f3	Narrator	Frankenstein	Mary Shelley	https://www.gutenberg.org/ebooks/84	614
-165	e6c6b3e77f888ccd6c6f653f2fda48eca9a46d119456a68a321bec5178b1663f	Narrator	Frankenstein	Mary Shelley	https://www.gutenberg.org/ebooks/84	629
-166	f3e527f7f014f5b89aaf688b0a1333f4fb5f886a7fedd1e631a18f191b9c022e	Narrator	Frankenstein	Mary Shelley	https://www.gutenberg.org/ebooks/84	643
-167	bac11be946bb1df2b7fa5d3752c9ab05376c4af14aee94a1e2656c91902e0cfd	Narrator	Frankenstein	Mary Shelley	https://www.gutenberg.org/ebooks/84	658
-168	5a85d399cdee5417986fb08bce3f4e70cb8840f869ed77f3f82ea4521556acfa	Narrator	Frankenstein	Mary Shelley	https://www.gutenberg.org/ebooks/84	672
-169	edc36e83ff3f30f9da127b7f27671d3860a56f65feabc8bc0d2b028a5d4e3f6d	Narrator	Frankenstein	Mary Shelley	https://www.gutenberg.org/ebooks/84	687
-170	a8e702985c80a9263c7b75894681edbd4a26629d3fd3404ddd1329458eed840b	Narrator	Frankenstein	Mary Shelley	https://www.gutenberg.org/ebooks/84	702
-171	87c42f8e7ca821fcf2b4a9183e5483106afc46635003452e897702c5011cfdfd	Narrator	Frankenstein	Mary Shelley	https://www.gutenberg.org/ebooks/84	716
-172	cff6a02b00089c85d5df6e81c2a44c2290f98fad202c236cfc80fcba0d5f07a6	Narrator	Frankenstein	Mary Shelley	https://www.gutenberg.org/ebooks/84	731
-173	ed1b2cc0a5b826d7839068c2a72688c56bbb99dfb597d605fbaab5391db85583	Narrator	Frankenstein	Mary Shelley	https://www.gutenberg.org/ebooks/84	745
-174	85d9c2d5c940fdb5d65eb83bdbee54da0aaf2e0f5539044bb9a558c235e6dc54	Narrator	Frankenstein	Mary Shelley	https://www.gutenberg.org/ebooks/84	760
-175	92f3829b2fdd74f997b306efd3fd91d6bf434af7f3a162fec4db46710605c2a4	Narrator	Frankenstein	Mary Shelley	https://www.gutenberg.org/ebooks/84	775
-176	edc50d8bcd51feb0c73e547f4bb02b1784ff39faef35241d47f5cd897e12df24	Narrator	Frankenstein	Mary Shelley	https://www.gutenberg.org/ebooks/84	789
-177	a87d640b4081cc6d73485e7ab2b0e3a15ecf8058cfaf79e4b4a147597ccde60e	Narrator	Frankenstein	Mary Shelley	https://www.gutenberg.org/ebooks/84	804
-178	bb12a214fe1ee32a57f7ddbf827eeb3313e8a7d82098118d4530a772698a2cb7	Narrator	Frankenstein	Mary Shelley	https://www.gutenberg.org/ebooks/84	819
-179	36a01fac96b58efa9cdb2c0ecdcc0f647270bdc4f1c49ea6af93a2cdc1803b6c	Narrator	Frankenstein	Mary Shelley	https://www.gutenberg.org/ebooks/84	833
-180	36dd00b72ca8a6099408fe4989d98aa87e0c6e31e49a97abce6c1ca485ca490a	Narrator	Frankenstein	Mary Shelley	https://www.gutenberg.org/ebooks/84	848
-181	5cb46be83149eed3bb94f5aa0fb07661dc4eb1194b704fe5d2b85ec373b14850	Narrator	Frankenstein	Mary Shelley	https://www.gutenberg.org/ebooks/84	862
-182	0df870bfe296d74a9de183d8adbbf8f28938972d03fa91069340c90f48e122cd	Narrator	Frankenstein	Mary Shelley	https://www.gutenberg.org/ebooks/84	877
-183	e0148d6d32650af0eaa88b1b4ca3c61aedc5f3c1f132cfe6acb31fe23aea29b4	Narrator	The Sign of the Four	Arthur Conan Doyle	https://www.gutenberg.org/ebooks/2097	0
-184	d922014d8e2e18531af3be3f2eadc27601b2d7b0d07bcdf4fe4ae0576323ddb3	Narrator	The Sign of the Four	Arthur Conan Doyle	https://www.gutenberg.org/ebooks/2097	15
-185	9b6ce2f0217eb95e6191f53f6810291d405d2d93e3dd10e08cbb77eb3a5d2637	Narrator	The Sign of the Four	Arthur Conan Doyle	https://www.gutenberg.org/ebooks/2097	29
-186	b7cddff52b6364d3df9668db12444af1ee3073cfb4a7526705ef020fe4de4a1d	Narrator	The Sign of the Four	Arthur Conan Doyle	https://www.gutenberg.org/ebooks/2097	44
-187	7da9804138efde6b4c2ca8130faf4b26b8e63845ccf3c43034036fd2d0e16e79	Narrator	The Sign of the Four	Arthur Conan Doyle	https://www.gutenberg.org/ebooks/2097	58
-188	73a5de075846214eece83d78479a315a82c599f3b79943c999eaf181ba2b97fb	Narrator	The Sign of the Four	Arthur Conan Doyle	https://www.gutenberg.org/ebooks/2097	73
-189	ac47ed2b725b728f10aec50d2aa6eabd03b2eb65977c545a179541fbfd847d4a	Narrator	The Sign of the Four	Arthur Conan Doyle	https://www.gutenberg.org/ebooks/2097	88
-190	5bad044c177c9ce37a10e0964bfd5976d28bc97f9fc53b6d272ce45ea0c650e4	Narrator	The Sign of the Four	Arthur Conan Doyle	https://www.gutenberg.org/ebooks/2097	102
-191	eb78023080823a2ba4d97541e58c3c45d32686117e4ee52b0bc8f0c5fcbc4703	Narrator	The Sign of the Four	Arthur Conan Doyle	https://www.gutenberg.org/ebooks/2097	117
-192	4fb1293efce4ca3c706c4901fc74e4b3537bf2a5dfcbc7869f6868ae773c2ff9	Narrator	The Sign of the Four	Arthur Conan Doyle	https://www.gutenberg.org/ebooks/2097	132
-193	e23df0a581eda13513291d19352aa891d31eec2525e6f2455fa3f705cc3385e2	Narrator	The Sign of the Four	Arthur Conan Doyle	https://www.gutenberg.org/ebooks/2097	146
-194	fa5509dee30541547df04301e2951fb64d624d248255377a0319d82146ae433a	Narrator	The Sign of the Four	Arthur Conan Doyle	https://www.gutenberg.org/ebooks/2097	161
-195	867191e1acba63581f04aa377c39b3156fa48e15f9165cf2f8e1fc1ad8b920a6	Narrator	The Sign of the Four	Arthur Conan Doyle	https://www.gutenberg.org/ebooks/2097	175
-196	efe3a9cf24f02d40b36af96cad7318e4dc3a71286b88391ad6d9f11f50756756	Narrator	The Sign of the Four	Arthur Conan Doyle	https://www.gutenberg.org/ebooks/2097	190
-197	b1a45b9de0e682227c763a0c70dc9cdc09acc4d60ce1717f7928cff1c6ea9eb8	Narrator	The Sign of the Four	Arthur Conan Doyle	https://www.gutenberg.org/ebooks/2097	205
-198	0ad644be3bca495eb6484dc9dd35fd8408016dc5c6025679c22d2fbcfbc8dc45	Narrator	The Sign of the Four	Arthur Conan Doyle	https://www.gutenberg.org/ebooks/2097	219
-199	6e248e3ad4ddf91dd180aa1d1f1dd0e473f905f26ade460f4a8de5d6615cd154	Narrator	The Sign of the Four	Arthur Conan Doyle	https://www.gutenberg.org/ebooks/2097	234
-200	6112dd1ebbb119508b8a1386a61c3714a246e767c9c4f49f4d3c7e414a04892e	Narrator	The Sign of the Four	Arthur Conan Doyle	https://www.gutenberg.org/ebooks/2097	248
-201	0f25315188b23fa43177800ca256afa078aca0d1205c91967c0ef96aed06d496	Narrator	The Sign of the Four	Arthur Conan Doyle	https://www.gutenberg.org/ebooks/2097	263
-202	5d194780b30b60f77a851f07723ee21cdf5113c61d9a662d85186b60131ded74	Narrator	The Sign of the Four	Arthur Conan Doyle	https://www.gutenberg.org/ebooks/2097	278
-203	bbdd63e7afa3982b7219937531406e0a3b9abe0ee2a993fdb7ad3cef36717648	Narrator	The Sign of the Four	Arthur Conan Doyle	https://www.gutenberg.org/ebooks/2097	292
-204	a851247b2b71e0fdf14a2ab4c3796ca0da2d0b944d313245ce1fd080d33ed4d6	Narrator	The Sign of the Four	Arthur Conan Doyle	https://www.gutenberg.org/ebooks/2097	307
-205	a69dc25d2a1c84056775efc1b40bd8463bac97f86d463c074e0aa6efc5e152fd	Narrator	The Sign of the Four	Arthur Conan Doyle	https://www.gutenberg.org/ebooks/2097	322
-206	95d545312c9459ef2f08637f78d3c98fb74a8387f16efdf7be6283cc0a11f733	Narrator	The Sign of the Four	Arthur Conan Doyle	https://www.gutenberg.org/ebooks/2097	336
-207	deba89a419cb144b76ce54d227980a2bcb38d4c0a43a181ae0882d6268c65acd	Narrator	The Sign of the Four	Arthur Conan Doyle	https://www.gutenberg.org/ebooks/2097	351
-208	6dd353b6aba3e8335bd48514b642767d0f2f23af87dac1f7eca7169ceb68c19b	Narrator	The Sign of the Four	Arthur Conan Doyle	https://www.gutenberg.org/ebooks/2097	365
-209	24a6603c20884a3994648bb9fdb611fadb8dadda73b62405b0d9fcfb944c694b	Narrator	The Sign of the Four	Arthur Conan Doyle	https://www.gutenberg.org/ebooks/2097	380
-210	686bd0c9c416308a26fc3840aeb2645255adcbf1359c8232de37625ccc6cbad0	Narrator	The Sign of the Four	Arthur Conan Doyle	https://www.gutenberg.org/ebooks/2097	395
-211	29a9154f12aa046c7a239e93577e1fc99d545699d526275a3cd38d2311454462	Narrator	The Sign of the Four	Arthur Conan Doyle	https://www.gutenberg.org/ebooks/2097	409
-212	f2ea0855b187b1db35619c9d5527856a79aec2c73cd27e517d29333b2daf5fb0	Narrator	The Sign of the Four	Arthur Conan Doyle	https://www.gutenberg.org/ebooks/2097	424
-213	80487a6ac4b17a6a7de185719c82ef029041e93f772cf2796ad276fc90662591	Narrator	The Sign of the Four	Arthur Conan Doyle	https://www.gutenberg.org/ebooks/2097	438
-214	b3e798463a05b7fc03d6e177bc2c9d8930601f999b249efdfb2f0a0d4ab0b237	Narrator	The Sign of the Four	Arthur Conan Doyle	https://www.gutenberg.org/ebooks/2097	453
-215	ff884f5c658672d84926d42e74153fe85368dc77862e9d0f8d05ef3b34748f07	Narrator	The Sign of the Four	Arthur Conan Doyle	https://www.gutenberg.org/ebooks/2097	468
-216	6176be20c99420bbe02415917e3413371ff587232bd076ba7674af26cc222148	Narrator	The Sign of the Four	Arthur Conan Doyle	https://www.gutenberg.org/ebooks/2097	482
-217	ce793e748ee0739f5fa39dd02a8d5af986cdbd0206d434dd44c16cad9e9d37a0	Narrator	The Sign of the Four	Arthur Conan Doyle	https://www.gutenberg.org/ebooks/2097	497
-218	ce57a8051eb5c6ce4845ddcb56ee149c6ae82e5ac684a294e4e93249f8f2a32a	Narrator	The Sign of the Four	Arthur Conan Doyle	https://www.gutenberg.org/ebooks/2097	512
-219	4f5463e45c8e6151a8b0e5e732d9fd470f0d83f4f1fa65092340be7f41e1be8f	Narrator	The Sign of the Four	Arthur Conan Doyle	https://www.gutenberg.org/ebooks/2097	526
-220	7ecd943d85f4d11c42fbdbfec28856f64e188da04be7ed066bca3d952602f90f	Narrator	The Sign of the Four	Arthur Conan Doyle	https://www.gutenberg.org/ebooks/2097	541
-221	65e1a402e13f44191b59484b898839b4d5e736d68a3aece2cdc2e7150c7408fc	Narrator	The Sign of the Four	Arthur Conan Doyle	https://www.gutenberg.org/ebooks/2097	555
-222	5f191e24f1d69757176342573864ea879876f995ba89d37a64cf9d6b18558a20	Narrator	The Sign of the Four	Arthur Conan Doyle	https://www.gutenberg.org/ebooks/2097	570
-223	045ce868c0c64c4439ae19a0f722ebf717e6b06f622e205a649c5514fd195be4	Narrator	The Sign of the Four	Arthur Conan Doyle	https://www.gutenberg.org/ebooks/2097	585
-224	91d7d58da3c08eb624ac710b32e3279a6448750733c54e3e66d0f6a16b7fadea	Narrator	The Sign of the Four	Arthur Conan Doyle	https://www.gutenberg.org/ebooks/2097	599
-225	6dde992257b91af3e2b38b8fbf21f4cbe0626e1a13d6c3d0eff32673c3659b23	Narrator	The Sign of the Four	Arthur Conan Doyle	https://www.gutenberg.org/ebooks/2097	614
-226	9adada42a1d24e25269bbe54c37e18c115d535f424c25871a532955ecf5f3d4d	Narrator	The Sign of the Four	Arthur Conan Doyle	https://www.gutenberg.org/ebooks/2097	629
-227	7b367d7ff11f604ea84149feba98a319571f331dd8afa9fc45da8d202200b802	Narrator	The Sign of the Four	Arthur Conan Doyle	https://www.gutenberg.org/ebooks/2097	643
-228	33edb091094cf01552541cafe874623533869d9141ec74734f3dff2a49b3214b	Narrator	The Sign of the Four	Arthur Conan Doyle	https://www.gutenberg.org/ebooks/2097	658
-229	9fc9d7b23449aa6b0537000ee9a4cd97ac434d97cf2c22e5d7a57e62c9bfdf31	Narrator	The Sign of the Four	Arthur Conan Doyle	https://www.gutenberg.org/ebooks/2097	672
-230	57de7559db81a76ddd6f6c345373c55408f40e29cda328a124ca1eec7fccce79	Narrator	The Sign of the Four	Arthur Conan Doyle	https://www.gutenberg.org/ebooks/2097	687
-231	779dede0677bb603c73e4106dbc3954a141fa0e76524d063f75beca01496ce2c	Narrator	The Sign of the Four	Arthur Conan Doyle	https://www.gutenberg.org/ebooks/2097	702
-232	5fcfafb9232595179de4fbf0469732d78847f9d71f5ec4687c780afb5e437718	Narrator	The Sign of the Four	Arthur Conan Doyle	https://www.gutenberg.org/ebooks/2097	716
-233	6ba03cd51214f1d4e8473bc6499e9a1414f67b4ebe1bab36681087e0bf8ff314	Narrator	The Sign of the Four	Arthur Conan Doyle	https://www.gutenberg.org/ebooks/2097	731
-234	7d374add4fd4ea1cf66e4183b205af3d411c30cb6e82bd4776cc54a31996aade	Narrator	The Sign of the Four	Arthur Conan Doyle	https://www.gutenberg.org/ebooks/2097	745
-235	999bb7f343765edb55391935566a81f38253bd4d8ad944ee6b5fd7585f77cbb9	Narrator	The Sign of the Four	Arthur Conan Doyle	https://www.gutenberg.org/ebooks/2097	760
-236	62c26005b9fd424006ecf868ce4b67a567e46658aa6a23381e46a64fc573543b	Narrator	The Sign of the Four	Arthur Conan Doyle	https://www.gutenberg.org/ebooks/2097	775
-237	2659e46f2e6c080bfc1fbd0f123c131c81805537458e460f299ab7b614ae38d6	Narrator	The Sign of the Four	Arthur Conan Doyle	https://www.gutenberg.org/ebooks/2097	789
-238	0923364b7d820c21dd244b63257c77b7e0d36bef1317c23c95e6158d71a58fdf	Narrator	The Sign of the Four	Arthur Conan Doyle	https://www.gutenberg.org/ebooks/2097	804
-239	cdd1b0e3f23edd6a13d7425c8d6d132714b3bd1314999cef723924398b75e47c	Narrator	The Sign of the Four	Arthur Conan Doyle	https://www.gutenberg.org/ebooks/2097	819
-240	78cb43f21d3990f8b4aa761baa34c83dc286068de961bb8a393e3691aa1aca12	Narrator	The Sign of the Four	Arthur Conan Doyle	https://www.gutenberg.org/ebooks/2097	833
-241	61052bce31b52ad038b485935b916bdc356d0c2ac3748dc42d372a3c73f40c51	Narrator	The Sign of the Four	Arthur Conan Doyle	https://www.gutenberg.org/ebooks/2097	848
-242	979ddc854dec752692a0bac657cbf0ab84b3d77c88ed98f7f3e9ba2cded496b4	Narrator	The Sign of the Four	Arthur Conan Doyle	https://www.gutenberg.org/ebooks/2097	862
-243	995770c8f9ed01651b21e9fd41394bda36d9ed14573415dbd6566c4bf342d8ab	Narrator	The Sign of the Four	Arthur Conan Doyle	https://www.gutenberg.org/ebooks/2097	877
-244	401b0c69ef97f48c49749a467476550677e02b3e02417681fd095c986a8e587d	Narrator	A Tale of Two Cities	Charles Dickens	https://www.gutenberg.org/ebooks/98	0
-245	8f4c18e5abe7d61a1f26ca9d91c52c88fa33ef90bcb5710bd533b1ed4e05e1eb	Narrator	A Tale of Two Cities	Charles Dickens	https://www.gutenberg.org/ebooks/98	28
-246	3332e2230a9433fa2aa5eb783dc419abec3fcf885270d523a8183b7bc57cf0f5	Narrator	A Tale of Two Cities	Charles Dickens	https://www.gutenberg.org/ebooks/98	55
-247	50466fb7ea681388f1246cfaf730b78662a49f8da241d55280751e636d3169c4	Narrator	A Tale of Two Cities	Charles Dickens	https://www.gutenberg.org/ebooks/98	83
-248	be28763c2d6222ed3d0a2af407c23cf1d365d34654109a1838bd3d512a0f7623	Narrator	A Tale of Two Cities	Charles Dickens	https://www.gutenberg.org/ebooks/98	111
-249	96e7efa1ca5c1cc9aed3fa78de189c322c7fb34855aaf80f0d80e8c20dee7db6	Narrator	A Tale of Two Cities	Charles Dickens	https://www.gutenberg.org/ebooks/98	138
-250	4699f31284963a6c1f5520e3bb4ffab1f4ec7d09bb51e10d2fec06b972381979	Narrator	A Tale of Two Cities	Charles Dickens	https://www.gutenberg.org/ebooks/98	166
-251	fe48f249e4a2291690737eb5f3e23f8f1c9a6a544628c7409ba7683582079bb9	Narrator	A Tale of Two Cities	Charles Dickens	https://www.gutenberg.org/ebooks/98	194
-252	01bbec1c95ec54a9f05a284ae48b8735c2ac96f4563daa952dda7c4782ce84b1	Narrator	A Tale of Two Cities	Charles Dickens	https://www.gutenberg.org/ebooks/98	221
-253	663be1f1abedfbb40df6201e2095c2510af687d0d76f77c7282176e0a7a2cb50	Narrator	A Tale of Two Cities	Charles Dickens	https://www.gutenberg.org/ebooks/98	249
-254	a507854137aefb9ae031f925f951b119e63ce8b8f84bd472bff78d47482a05d4	Narrator	A Tale of Two Cities	Charles Dickens	https://www.gutenberg.org/ebooks/98	277
-255	df6bf8bac14376e97bcd1d7e35bb3acb824142e3c2edfba4516f21a70a07b51d	Narrator	A Tale of Two Cities	Charles Dickens	https://www.gutenberg.org/ebooks/98	305
-256	62ad25cdfec89c67e1176da8343f99f02140ffd90d7310ba86bad2fb42fd2278	Narrator	A Tale of Two Cities	Charles Dickens	https://www.gutenberg.org/ebooks/98	332
-257	91abac81e66b31c91cce89673baea236f54584308cac60d99548d4232bb963c2	Narrator	A Tale of Two Cities	Charles Dickens	https://www.gutenberg.org/ebooks/98	360
-258	51a316e728dcc8ce0c4d948e6088b4720a7ce717bd8ad30496ff91ef4a36718f	Narrator	A Tale of Two Cities	Charles Dickens	https://www.gutenberg.org/ebooks/98	388
-259	72c5347f637fceba5cd5cda779ad99a73ee65c8856c343fca0fdf2e40f1dc01b	Narrator	A Tale of Two Cities	Charles Dickens	https://www.gutenberg.org/ebooks/98	415
-260	0620e8eb0e122089bdc50034ff70c4f5ad558196337310a1b7e0290e9fc8886b	Narrator	A Tale of Two Cities	Charles Dickens	https://www.gutenberg.org/ebooks/98	443
-261	cf8d40fbe31aab176dd25496c94d34efe9b1cccec2cb986b8f48e4a0b4e3055a	Narrator	A Tale of Two Cities	Charles Dickens	https://www.gutenberg.org/ebooks/98	471
-262	9dd3139d16f2306add471bbef9d2121ae79abb2d8db1bce367fa7981cd2a3992	Narrator	A Tale of Two Cities	Charles Dickens	https://www.gutenberg.org/ebooks/98	498
-263	5028d0ecb8f9dc8a91b55364706fd8f48868c043b2a2660ff2c7cc3fab48e881	Narrator	A Tale of Two Cities	Charles Dickens	https://www.gutenberg.org/ebooks/98	526
-264	c9ea738a09660f7e601d81976dc3db058c8a3a17448a18d6bbeb62377db51a73	Narrator	A Tale of Two Cities	Charles Dickens	https://www.gutenberg.org/ebooks/98	554
-265	9404612e471c239a2d81b59f47f40a13b7b60d65a58f1fed5186079affc897c7	Narrator	A Tale of Two Cities	Charles Dickens	https://www.gutenberg.org/ebooks/98	581
-266	38ed8a2485b62a200bcd4ef369f14223f930765d4a933cc5954c8669551f0d3f	Narrator	A Tale of Two Cities	Charles Dickens	https://www.gutenberg.org/ebooks/98	609
-267	4375a787eb345f7b76a8f28ef90dee09b1e04eeb008887bf626658628d99fc78	Narrator	A Tale of Two Cities	Charles Dickens	https://www.gutenberg.org/ebooks/98	637
-268	fd1366f87cfea27e1a9dc1f1b1c20b18ed5f5fdbd7b52662a50aee8fc8e112bd	Narrator	A Tale of Two Cities	Charles Dickens	https://www.gutenberg.org/ebooks/98	664
-269	842f662b34b44a56dac9beea83d748bf984411740d73d99c1541a8cf0a6bf902	Narrator	A Tale of Two Cities	Charles Dickens	https://www.gutenberg.org/ebooks/98	692
-270	8e21dc74151b5c0bf8724055687fb7aaf0d20129236c8e8eb671ce3e46a32dfa	Narrator	A Tale of Two Cities	Charles Dickens	https://www.gutenberg.org/ebooks/98	720
-271	b883f3bf5f193d9e39dde619615ee4f025d6c5c1d11ac17ebec3289ebcbe6007	Narrator	A Tale of Two Cities	Charles Dickens	https://www.gutenberg.org/ebooks/98	747
-272	07aee3512fe5e1bc979cbb30c849bf76d04fab2405af750b69c23e89d8df3682	Narrator	A Tale of Two Cities	Charles Dickens	https://www.gutenberg.org/ebooks/98	775
-273	5563f65c58ff3e28d9e5b0ce9f56e18b012e0ede7b490c538719a4609a00179b	Narrator	A Tale of Two Cities	Charles Dickens	https://www.gutenberg.org/ebooks/98	803
-274	733dcc77c7c5397b1fc5832ce25fa3f83c7fe792fca9776517b491c9fd89bbfb	Narrator	A Tale of Two Cities	Charles Dickens	https://www.gutenberg.org/ebooks/98	830
-275	19cc618ce43a18793353212a90d63486318687f0bee051febe16ef146a192eaa	Narrator	A Tale of Two Cities	Charles Dickens	https://www.gutenberg.org/ebooks/98	858
-276	85e120f1e53bd20ab15df7687ad0012d1542f90d5299a9c27f428de53766f82a	Narrator	A Tale of Two Cities	Charles Dickens	https://www.gutenberg.org/ebooks/98	886
-277	c068d742088de2ae4a03f5c59781e06331e4ae8b389bcabeb3568c9a7fb6098a	Narrator	A Tale of Two Cities	Charles Dickens	https://www.gutenberg.org/ebooks/98	914
-278	edb8b5b3bffe77ee9551f4d34a2c1446af993d6f899fba016928b6fc49c559ac	Narrator	A Tale of Two Cities	Charles Dickens	https://www.gutenberg.org/ebooks/98	941
-279	ff41a143db0c10d403f84a6591fb7820e314f6f297b0b9bd8f22ff7a86fa583b	Narrator	A Tale of Two Cities	Charles Dickens	https://www.gutenberg.org/ebooks/98	969
-280	d51c58b07844c5f4551de9ee32c9a684c4baf2b1a92216bd5253ad7b2173336e	Narrator	A Tale of Two Cities	Charles Dickens	https://www.gutenberg.org/ebooks/98	997
-281	88d14feb02ec6ae0cf801e80dd7efd9388736e0bb4d70d4d10724fad426fb4cf	Narrator	A Tale of Two Cities	Charles Dickens	https://www.gutenberg.org/ebooks/98	1024
-282	c6a456c51e120dd43a19209206e863c0ade33009f62d6096114d9c28cc2a4191	Narrator	A Tale of Two Cities	Charles Dickens	https://www.gutenberg.org/ebooks/98	1052
-283	0656de4539fcaae7a3f6fa4f870c1b49fe47624a54a668571fed0c135c1f5b2d	Narrator	A Tale of Two Cities	Charles Dickens	https://www.gutenberg.org/ebooks/98	1080
-284	85d842f6edd7736744492568fe8b662c734ee60f2e92a8bc13a4819e403aeaf4	Narrator	A Tale of Two Cities	Charles Dickens	https://www.gutenberg.org/ebooks/98	1107
-285	3191ee038238031eb05c02ef0e696449b37d65034877c74319dcae17015c48c2	Narrator	A Tale of Two Cities	Charles Dickens	https://www.gutenberg.org/ebooks/98	1135
-286	962ad5ee501dffca5ac0dbf5f24a8af26529825387b1f72079e66c3ed39ab7ea	Narrator	A Tale of Two Cities	Charles Dickens	https://www.gutenberg.org/ebooks/98	1163
-287	03517814750abdff4f778f433c8a78e2c43795061fa50b1cb94fcc4fd33a185b	Narrator	A Tale of Two Cities	Charles Dickens	https://www.gutenberg.org/ebooks/98	1190
-288	5877b8f0c8a91a679def820518dc025d886ecb3a4f0f1b9c6199d7a762fd99a9	Narrator	A Tale of Two Cities	Charles Dickens	https://www.gutenberg.org/ebooks/98	1218
-289	2ba9811d4e8a55e258d1818f26e1d3c76b5e42d4a289dd581b6e3e983e818143	Narrator	A Tale of Two Cities	Charles Dickens	https://www.gutenberg.org/ebooks/98	1246
-290	26980c728eb339ca89a57ce6bff5d6e4d3cdc022cfe41a176e906e0031bc802e	Narrator	A Tale of Two Cities	Charles Dickens	https://www.gutenberg.org/ebooks/98	1273
-291	1d91b202e7fe26c07c4823d308dd0354f49484d6d7c72795db6300e78aede689	Narrator	A Tale of Two Cities	Charles Dickens	https://www.gutenberg.org/ebooks/98	1301
-292	8db430d4bc467d9bb371cc11d65d635b6a450c50564fa00bb3ef18c8316dd48a	Narrator	A Tale of Two Cities	Charles Dickens	https://www.gutenberg.org/ebooks/98	1329
-293	bd86ea288e2f37f3f8fb7a8494a5022beee740d29cdd973961ff7e11cf2742d4	Narrator	A Tale of Two Cities	Charles Dickens	https://www.gutenberg.org/ebooks/98	1356
-294	71295c74ad49ea22bfbeefea24906ea7923d7d595cb8113ebceec3c393cb2bf4	Narrator	A Tale of Two Cities	Charles Dickens	https://www.gutenberg.org/ebooks/98	1384
-295	8c8c0e9d66f21f4831b5ac2bd82d82d190f416f2044d370f1d8d87f3e102a5d2	Narrator	A Tale of Two Cities	Charles Dickens	https://www.gutenberg.org/ebooks/98	1412
-296	ada0633abadf2438591fcc83c2d4c5e6d93c3ccfe10951879bb02621b3b2e8f5	Narrator	A Tale of Two Cities	Charles Dickens	https://www.gutenberg.org/ebooks/98	1440
-297	0c25bbf1114c051b17e9c2315c2984b892454739d53ce79835c7f92060a5bcb8	Narrator	A Tale of Two Cities	Charles Dickens	https://www.gutenberg.org/ebooks/98	1467
-298	2730eda086fa752943c26e89394dadf971c4ab03937479d2d7a0eccc3ce24e90	Narrator	A Tale of Two Cities	Charles Dickens	https://www.gutenberg.org/ebooks/98	1495
-299	9c6f7a599f4c40eb8c89b208d21aa0e209b5e70229759e1cd374bf6f7e6d24fc	Narrator	A Tale of Two Cities	Charles Dickens	https://www.gutenberg.org/ebooks/98	1523
-300	3ef431305285ec470079449cf648dedee80e74901484402d4b6c49f9030ccc18	Narrator	A Tale of Two Cities	Charles Dickens	https://www.gutenberg.org/ebooks/98	1550
-301	bf682243434142efebdbe0e5cf3df4b3f64db464d8be6d044d8a12a68ce691ff	Narrator	A Tale of Two Cities	Charles Dickens	https://www.gutenberg.org/ebooks/98	1578
-302	eacfdd33afb405b20c9c80accb30c1493238d1c7f4d5f0e5f6dc7fab5e56ec93	Narrator	A Tale of Two Cities	Charles Dickens	https://www.gutenberg.org/ebooks/98	1606
-303	c1ef6f577effcbba0ff1f2591506158c61f8dba016390603ab7117d47640f070	Narrator	A Tale of Two Cities	Charles Dickens	https://www.gutenberg.org/ebooks/98	1633
-304	ef88cf7959f03709ac94249bace90fcc9ee41e6f47a8e55ae9787549749e4415	Narrator	A Tale of Two Cities	Charles Dickens	https://www.gutenberg.org/ebooks/98	1661
-305	a9d6c4a504d97d46f024ddc1b3390c8a0c544672335b61f912a9bfe54e722a56	Narrator	Great Expectations	Charles Dickens	https://www.gutenberg.org/ebooks/1400	0
-306	a5c23b94eb5bebe2c961c0cab971089415c7a64754e681063df087388fbb802e	Narrator	Great Expectations	Charles Dickens	https://www.gutenberg.org/ebooks/1400	33
-307	dcbb66bf707d6dd3d45561596adff1539f20615f882651f60bf57b95ac16e719	Narrator	Great Expectations	Charles Dickens	https://www.gutenberg.org/ebooks/1400	67
-308	3b8a6f543061ffa5026aa9bf5e4e23f27ab55fabda78b346fbf2dfd5c3ffba60	Narrator	Great Expectations	Charles Dickens	https://www.gutenberg.org/ebooks/1400	100
-309	a8b364a5084171b1910b40dae461b3d2726ebfb4ceb9a21115bfe03b523a00b8	Narrator	Great Expectations	Charles Dickens	https://www.gutenberg.org/ebooks/1400	133
-310	7a562d2f298230a78d85e1c73296a1673f6d136df0da267b0052434a3fddbe6f	Narrator	Great Expectations	Charles Dickens	https://www.gutenberg.org/ebooks/1400	167
-311	5b0814af4a1256ac02bc8c787d52504b714ca5df07f73a40f3927471c9254d25	Narrator	Great Expectations	Charles Dickens	https://www.gutenberg.org/ebooks/1400	200
-312	a2ea801087cee57daa7fc81ab87f6f9acd0e71a4c5074b9b0808be9fb4931a38	Narrator	Great Expectations	Charles Dickens	https://www.gutenberg.org/ebooks/1400	233
-313	dd9e47d99fad53274547db9c5f89871c9e0d081823ac829e388e08f1821c8e5e	Narrator	Great Expectations	Charles Dickens	https://www.gutenberg.org/ebooks/1400	267
-314	f51a70912e15c82f4ac262dcc9858b9ee6be9851e3fb3173a19a5011bbcced74	Narrator	Great Expectations	Charles Dickens	https://www.gutenberg.org/ebooks/1400	300
-315	50f29a2238fbc228cdc0cb3c4076636ea7c5fb96912ac669bc4d390e244ab1d3	Narrator	Great Expectations	Charles Dickens	https://www.gutenberg.org/ebooks/1400	334
-316	6451ef49fec578b3d2e3cddd8309e5f83c8ab4e096b2235eabbd5882cbfa8e8c	Narrator	Great Expectations	Charles Dickens	https://www.gutenberg.org/ebooks/1400	367
-317	83f5e0af98b4705358efae1e8e3f10b07b14a0e25dfb71603cd9936c4473d589	Narrator	Great Expectations	Charles Dickens	https://www.gutenberg.org/ebooks/1400	400
-318	0ef9030fdf698cd35f0b0fddd43dc2ca9cd0b63591a4ea8d1e679affa5de8336	Narrator	Great Expectations	Charles Dickens	https://www.gutenberg.org/ebooks/1400	434
-319	22a4804b0368266c2163cc2e50fa703fbec96c6908f0221aea5051b1e35d3457	Narrator	Great Expectations	Charles Dickens	https://www.gutenberg.org/ebooks/1400	467
-320	88b30daada175ddbf672fec6c0560268ff9ff1fac84b76ac8eefd6023189d0a0	Narrator	Great Expectations	Charles Dickens	https://www.gutenberg.org/ebooks/1400	500
-321	32997fb77326e281710fab6b83c74ec271d7036270c9aba2250843e438896a5e	Narrator	Great Expectations	Charles Dickens	https://www.gutenberg.org/ebooks/1400	534
-322	48cc001ac26a983817fca7576c10848e91d6150fbe1921c625c40050f77d2fe2	Narrator	Great Expectations	Charles Dickens	https://www.gutenberg.org/ebooks/1400	567
-323	08576b76210563e64bc1d07f385356a83d9449eb66fa661cb5ff7d6295db4a79	Narrator	Great Expectations	Charles Dickens	https://www.gutenberg.org/ebooks/1400	600
-324	4791d2a064677b4e4531c8f939b88a5b166e8fcda4b9a73bd6ea2e358b996440	Narrator	Great Expectations	Charles Dickens	https://www.gutenberg.org/ebooks/1400	634
-325	8f4c00d5f7787c43a5c95ed9422edf19e01d355a6705a44357d83c3657e53d06	Narrator	Great Expectations	Charles Dickens	https://www.gutenberg.org/ebooks/1400	667
-326	ee1e524a76ab39f7e7e602ab389c85f820d1205ca049129e7da53ea7bf8b9333	Narrator	Great Expectations	Charles Dickens	https://www.gutenberg.org/ebooks/1400	700
-327	b88268d88efab0eaab4efb5062999d797fa36a7ee32e6800b2ee66b58cd83254	Narrator	Great Expectations	Charles Dickens	https://www.gutenberg.org/ebooks/1400	734
-328	ed1140c506640c3de1ddf67ddb345a3470444293994f4537fca6e195d4045dc0	Narrator	Great Expectations	Charles Dickens	https://www.gutenberg.org/ebooks/1400	767
-329	2006e900dd56e61543ddeff90533a0be10b81c21c45b005678671b35082f2c09	Narrator	Great Expectations	Charles Dickens	https://www.gutenberg.org/ebooks/1400	800
-330	20f83c3aa8dd78fd3f1fd70e38d09ce452b5688d28945923b4ac13ef8d50ce92	Narrator	Great Expectations	Charles Dickens	https://www.gutenberg.org/ebooks/1400	834
-331	0d3b3aaa7c3c4049dd9828b8b094ccc794f54e65b280b2b2bb734f9b57fe6b0c	Narrator	Great Expectations	Charles Dickens	https://www.gutenberg.org/ebooks/1400	867
-332	52c5fc57439508f431c47a3cc5f2e34c5d8cd769fd7358659ca5797823d82a9c	Narrator	Great Expectations	Charles Dickens	https://www.gutenberg.org/ebooks/1400	900
-333	332958730385ee825e529b9e74d09c5bb1e1766f67933736aa301945fafdb51e	Narrator	Great Expectations	Charles Dickens	https://www.gutenberg.org/ebooks/1400	934
-334	3810689c454a2b3590131523293cde6c07f59db8526782afed587f7ac35be4a3	Narrator	Great Expectations	Charles Dickens	https://www.gutenberg.org/ebooks/1400	967
-335	97723772505a67fd67d5bbd0ad1e0e3656617a3accab44e54ca24762ece8cfd4	Narrator	Great Expectations	Charles Dickens	https://www.gutenberg.org/ebooks/1400	1000
-336	cb646783910f1e560fb5f720bca516dda38c7e40a18e8e4ac974be78fe8b8f80	Narrator	Great Expectations	Charles Dickens	https://www.gutenberg.org/ebooks/1400	1034
-337	8e42a2497b881de1b30139fcfd7cdb38eec6a2e1f2f426ba43c0a666df37c89d	Narrator	Great Expectations	Charles Dickens	https://www.gutenberg.org/ebooks/1400	1067
-338	220c98b7f8ecc0158fbb27f6e46bc2e6c5c495d92bc74ca3cf446a42c7fd3202	Narrator	Great Expectations	Charles Dickens	https://www.gutenberg.org/ebooks/1400	1101
-339	2b40cdaf1d21d5e2565526df00665d79d184c37c8a2a3466f466f4ea310cbeae	Narrator	Great Expectations	Charles Dickens	https://www.gutenberg.org/ebooks/1400	1134
-340	7564bb3d50d0437603f67766c344637ab989b97ba4bdd42348ea468cf30ed48a	Narrator	Great Expectations	Charles Dickens	https://www.gutenberg.org/ebooks/1400	1167
-341	be716770e48c1ddd9858381125fa67e004c62999da6e0e9131d6bf793bbed279	Narrator	Great Expectations	Charles Dickens	https://www.gutenberg.org/ebooks/1400	1201
-342	b895e86a69cd66b5242b371fb281b0d9e43c79e08cfe6c167267a32fcec1f5c6	Narrator	Great Expectations	Charles Dickens	https://www.gutenberg.org/ebooks/1400	1234
-343	e8fc7751e39bf21d20d35335c38dce41757f2fe9bad3634676e21bb7726054b4	Narrator	Great Expectations	Charles Dickens	https://www.gutenberg.org/ebooks/1400	1267
-344	8c7d1ced54c61737ce9e3f3378152a177ab4846d806de8daa4799e1b5ebf2e6e	Narrator	Great Expectations	Charles Dickens	https://www.gutenberg.org/ebooks/1400	1301
-345	6b885c42291a634b3af9c60793f3d2b8b88fbd837f5adb64198eb0175afcbec1	Narrator	Great Expectations	Charles Dickens	https://www.gutenberg.org/ebooks/1400	1334
-346	478539e2aa0473af103fde2119c7b1c53815faffa1beef543e1a6a407e8279fb	Narrator	Great Expectations	Charles Dickens	https://www.gutenberg.org/ebooks/1400	1367
-347	aa3b6e012468654a72cf559d52af9b89bdbb86c556cc13a41000c73fe90c3af5	Narrator	Great Expectations	Charles Dickens	https://www.gutenberg.org/ebooks/1400	1401
-348	2c1caae6cce5f0d496971fc8850461c56a33517fc0659aa363d4f1487b957838	Narrator	Great Expectations	Charles Dickens	https://www.gutenberg.org/ebooks/1400	1434
-349	38b88805706ef7c32cd835c0b5084783308675801849a25f847990896f7b3210	Narrator	Great Expectations	Charles Dickens	https://www.gutenberg.org/ebooks/1400	1467
-350	03696c03114ad27d2f7fb925a9468f2bd1dbb9d2f475800a0804a85f82bd9cf3	Narrator	Great Expectations	Charles Dickens	https://www.gutenberg.org/ebooks/1400	1501
-351	62367bb87f2ae7cc3fefdc121a492a344d9c1938389c89f0f8b17efda218a374	Narrator	Great Expectations	Charles Dickens	https://www.gutenberg.org/ebooks/1400	1534
-352	0d310c502d4f93f1e44ba0fbb6b33536dc49e3f7b09ab2c179e7e211f8c4c26e	Narrator	Great Expectations	Charles Dickens	https://www.gutenberg.org/ebooks/1400	1567
-353	63cf186a506b45ef325a9bcc2dcb6ca71b587b857d4ca250e547a1aaa0b5ed9e	Narrator	Great Expectations	Charles Dickens	https://www.gutenberg.org/ebooks/1400	1601
-354	1f2917743f8f136fa53645cb976e43c8ed15aa0c18a31c364bc2152647edba41	Narrator	Great Expectations	Charles Dickens	https://www.gutenberg.org/ebooks/1400	1634
-355	64696da978867a0cb066eff5c4758bcd6966666ef0742de6ccfea3c434359427	Narrator	Great Expectations	Charles Dickens	https://www.gutenberg.org/ebooks/1400	1668
-356	5f109151b00cfb6636281882d140a87f8e8acdf9ef59ecc0d1e44fcfebb9a1d7	Narrator	Great Expectations	Charles Dickens	https://www.gutenberg.org/ebooks/1400	1701
-357	e1fafe7515f7d6d84a8cd1ab78e48b1de488917eb4ccac61a337cf628c6ac0e6	Narrator	Great Expectations	Charles Dickens	https://www.gutenberg.org/ebooks/1400	1734
-358	ece6de217585d5b82edbe8f098a12a8c0c58e8e20a74314df3326b030378edfd	Narrator	Great Expectations	Charles Dickens	https://www.gutenberg.org/ebooks/1400	1768
-359	e9f2a7ac99581c60637dd0c2ec859ff95db3c3f064e32569b7dc3e6856269566	Narrator	Great Expectations	Charles Dickens	https://www.gutenberg.org/ebooks/1400	1801
-360	f23ff58bd37751fdb82fe901365be3964818fee96e84a14f132be0378bfa8fcb	Narrator	Great Expectations	Charles Dickens	https://www.gutenberg.org/ebooks/1400	1834
-361	b17195c5c80bc91338b1c1e165bcdcc3fef0d499fe991e141178a5f6a4c7481b	Narrator	Great Expectations	Charles Dickens	https://www.gutenberg.org/ebooks/1400	1868
-362	dcdc5bfac40df62cffbe5a8aa1f9f6ee5cf54494ac7998f0b45da429c5778c41	Narrator	Great Expectations	Charles Dickens	https://www.gutenberg.org/ebooks/1400	1901
-363	bc143208eddbde945a252196f85e9321042f3ff88525a79610a58e0582dd6bc3	Narrator	Great Expectations	Charles Dickens	https://www.gutenberg.org/ebooks/1400	1934
-364	9351304e063ebfcb389b42045876046cfed8575b82443e13ddc78f79f1e86e61	Narrator	Great Expectations	Charles Dickens	https://www.gutenberg.org/ebooks/1400	1968
-365	cc3eeb7589a76501e618bbebfa26825755699ecc47dd84d321cd32837d24b0ef	Narrator	Great Expectations	Charles Dickens	https://www.gutenberg.org/ebooks/1400	2001
+record	quote	character	title	author	source_url	revision_id	retrieved_at
+0	It always comes down to just two choices. Get busy living or get busy dying.		11/22/63	Stephen King	https://en.wikiquote.org/w/index.php?title=Stephen_King&oldid=3890651	3890651	2026-08-27T11:33:36+00:00
+1	"With the breakdown of the Medieval system, the gods of Chaos, Lunacy, and Bad Taste gained ascendancy."		A Confederacy of Dunces	John Kennedy Toole	https://en.wikiquote.org/w/index.php?title=John_Kennedy_Toole&oldid=3965377	3965377	2026-08-27T11:34:13+00:00
+2	Personal relations are the important thing for ever and ever and not this outer life of telegrams and anger.		A Passage to India	E. M. Forster	https://en.wikiquote.org/w/index.php?title=E._M._Forster&oldid=3947410	3947410	2026-08-27T11:33:17+00:00
+3	When the soul of a man is born in this country there are nets flung at it to hold it back from flight.		A Portrait of the Artist as a Young Man	James Joyce	https://en.wikiquote.org/w/index.php?title=A_Portrait_of_the_Artist_as_a_Young_Man&oldid=3588414	3588414	2026-08-27T11:33:25+00:00
+4	I have always depended on the kindness of strangers.		A Streetcar Named Desire	Tennessee Williams	https://en.wikiquote.org/w/index.php?title=A_Streetcar_Named_Desire_(1951_film)&oldid=3718334	3718334	2026-08-27T11:34:09+00:00
+5	Ten hostages is terrorism; A million, and it's strategy.		A Suitable Boy	Vikram Seth	https://en.wikiquote.org/w/index.php?title=Vikram_Seth&oldid=3851083	3851083	2026-08-27T11:33:51+00:00
+6	Death is Nature's remedy for all things, and why not Legislation's?		A Tale of Two Cities	Charles Dickens	https://en.wikiquote.org/w/index.php?title=A_Tale_of_Two_Cities&oldid=3945673	3945673	2026-08-27T11:33:17+00:00
+7	Just because we don't understand doesn't mean that the explanation doesn't exist.		A Wrinkle in Time	Madeleine L'Engle	https://en.wikiquote.org/w/index.php?title=Madeleine_L'Engle&oldid=3932636	3932636	2026-08-27T11:34:16+00:00
+8	Everything's got a moral, if only you can find it.		Alice's Adventures in Wonderland	Lewis Carroll	https://en.wikiquote.org/w/index.php?title=Alice's_Adventures_in_Wonderland&oldid=3952630	3952630	2026-08-27T11:33:21+00:00
+9	Ideas are more difficult to kill than people, but they can be killed, in the end.		American Gods	Neil Gaiman	https://en.wikiquote.org/w/index.php?title=American_Gods&oldid=3915400	3915400	2026-08-27T11:33:25+00:00
+10	“Show a people as one thing, only one thing, over and over again, and that is what they become.”		Americanah	Chimamanda Ngozi Adichie	https://en.wikiquote.org/w/index.php?title=Chimamanda_Ngozi_Adichie&oldid=3978725	3978725	2026-08-27T11:33:39+00:00
+11	ALL ANIMALS ARE EQUAL, BUT SOME ANIMALS ARE MORE EQUAL THAN OTHERS.		Animal Farm	George Orwell	https://en.wikiquote.org/w/index.php?title=Animal_Farm&oldid=3952611	3952611	2026-08-27T11:28:56+00:00
+12	Happy families are all alike; every unhappy family is unhappy in its own way.		Anna Karenina	Leo Tolstoy	https://en.wikiquote.org/w/index.php?title=Anna_Karenina&oldid=3952640	3952640	2026-08-27T11:33:39+00:00
+13	Oh, this is the most tragical thing that has ever happened to me!		Anne of Green Gables	L. M. Montgomery	https://en.wikiquote.org/w/index.php?title=Anne_of_Green_Gables&oldid=3952638	3952638	2026-08-27T11:33:36+00:00
+14	The Earth does not want new continents, but new men.		Around the World in Eighty Days	Jules Verne	https://en.wikiquote.org/w/index.php?title=Jules_Verne&oldid=3703573	3703573	2026-08-27T11:33:43+00:00
+15	Behaviour that's admiredis the path to power among people everywhere.		Beowulf	Anonymous	https://en.wikiquote.org/w/index.php?title=Beowulf&oldid=3924672	3924672	2026-08-27T11:34:09+00:00
+16	The one great principle of the English law is to make business for itself.		Bleak House	Charles Dickens	https://en.wikiquote.org/w/index.php?title=Bleak_House&oldid=3940783	3940783	2026-08-27T11:33:17+00:00
+17	He never sleeps, the judge. He is dancing, dancing. He says that he will never die.		Blood Meridian	Cormac McCarthy	https://en.wikiquote.org/w/index.php?title=Blood_Meridian&oldid=3965838	3965838	2026-08-27T11:33:32+00:00
+18	I want God, I want poetry, I want real danger, I want freedom, I want goodness.		Brave New World	Aldous Huxley	https://en.wikiquote.org/w/index.php?title=Brave_New_World&oldid=3915179	3915179	2026-08-27T11:28:57+00:00
+19	To know and love one other human being is the root of all wisdom.		Brideshead Revisited	Evelyn Waugh	https://en.wikiquote.org/w/index.php?title=Evelyn_Waugh&oldid=3912500	3912500	2026-08-27T11:33:17+00:00
+20	"Excellently observed," answered Candide; "but let us cultivate our garden."		Candide	Voltaire	https://en.wikiquote.org/w/index.php?title=Candide&oldid=3611571	3611571	2026-08-27T11:33:43+00:00
+21	As Bokonon says: "Peculiar travel suggestions are dancing lessons from God."		Cat's Cradle	Kurt Vonnegut	https://en.wikiquote.org/w/index.php?title=Cat's_Cradle&oldid=3948378	3948378	2026-08-27T11:33:32+00:00
+22	Orr would be crazy to fly more missions and sane if he didn't, but if he was sane, he had to fly them.		Catch-22	Joseph Heller	https://en.wikiquote.org/w/index.php?title=Catch-22&oldid=3791053	3791053	2026-08-27T11:33:32+00:00
+23	In addition, one of these children shall receive a special prize beyond anything you could ever imagine.		Charlie and the Chocolate Factory	Roald Dahl	https://en.wikiquote.org/w/index.php?title=Charlie_and_the_Chocolate_Factory_(film)&oldid=3990990	3990990	2026-08-27T11:29:03+00:00
+24	After all, what's a life, anyway? We're born, we live a little while, we die.		Charlotte's Web	E. B. White	https://en.wikiquote.org/w/index.php?title=Charlotte's_Web_(book)&oldid=2584031	2584031	2026-08-27T11:34:16+00:00
+25	In an individual, selfishness uglifies the soul; for the human species, selfishness is extinction.		Cloud Atlas	David Mitchell	https://en.wikiquote.org/w/index.php?title=Cloud_Atlas_(novel)&oldid=3941785	3941785	2026-08-27T11:33:21+00:00
+26	Be clever, Miss. Even if you win, she'll never let you go.	Sweet Ghost Girl	Coraline	Neil Gaiman	https://en.wikiquote.org/w/index.php?title=Coraline_(film)&oldid=3926212	3926212	2026-08-27T11:29:04+00:00
+27	To go wrong in one's own way is better than to go right in someone else's.		Crime and Punishment	Fyodor Dostoevsky	https://en.wikiquote.org/w/index.php?title=Crime_and_Punishment&oldid=3952642	3952642	2026-08-27T11:33:39+00:00
+28	Annual income twenty pounds, annual expenditure nineteen nineteen and six, result happiness.		David Copperfield	Charles Dickens	https://en.wikiquote.org/w/index.php?title=David_Copperfield&oldid=3940782	3940782	2026-08-27T11:33:17+00:00
+29	It is no use to blame the looking glass if your face is awry.		Dead Souls	Nikolai Gogol	https://en.wikiquote.org/w/index.php?title=Nikolai_Gogol&oldid=3929350	3929350	2026-08-27T11:33:43+00:00
+30	Attention, attention must be finally paid to such a person.		Death of a Salesman	Arthur Miller	https://en.wikiquote.org/w/index.php?title=Arthur_Miller&oldid=3890238	3890238	2026-08-27T11:34:09+00:00
+31	Come, Death, and snatch me from disgrace.		Disgrace	J. M. Coetzee	https://en.wikiquote.org/w/index.php?title=Disgrace&oldid=2655455	2655455	2026-08-27T11:33:39+00:00
+32	Reality is that which, when you stop believing in it, doesn’t go away.		Do Androids Dream of Electric Sheep?	Philip K. Dick	https://en.wikiquote.org/w/index.php?title=Philip_K._Dick&oldid=3992844	3992844	2026-08-27T11:33:36+00:00
+33	Finally, from so little sleeping and so much reading, his brain dried up and he went completely out of his mind.		Don Quixote	Miguel de Cervantes	https://en.wikiquote.org/w/index.php?title=Miguel_de_Cervantes&oldid=3976497	3976497	2026-08-27T11:33:39+00:00
+34	The Last Voyage of the Demeter, a 2023 film written by Bragi F.		Dracula	Bram Stoker	https://en.wikiquote.org/w/index.php?title=Dracula&oldid=3530129	3530129	2026-08-27T11:33:17+00:00
+35	I must not fear. Fear is the mind-killer. Fear is the little-death that brings total obliteration...		Dune	Frank Herbert	https://en.wikiquote.org/w/index.php?title=Dune&oldid=3914593	3914593	2026-08-27T11:33:32+00:00
+36	It is always attacked and never destroyed — because Thou mayest.		East of Eden	John Steinbeck	https://en.wikiquote.org/w/index.php?title=East_of_Eden_(novel)&oldid=3898220	3898220	2026-08-27T11:33:28+00:00
+37	One half of the world cannot understand the pleasures of the other.		Emma	Jane Austen	https://en.wikiquote.org/w/index.php?title=Emma_(novel)&oldid=3952621	3952621	2026-08-27T11:28:58+00:00
+38	“The essence of training is to allow error without consequence.”		Ender's Game	Orson Scott Card	https://en.wikiquote.org/w/index.php?title=Ender's_Game&oldid=3881768	3881768	2026-08-27T11:33:36+00:00
+39	Everyone must leave something behind when he dies, my grandfather said.		Fahrenheit 451	Ray Bradbury	https://en.wikiquote.org/w/index.php?title=Fahrenheit_451&oldid=3940352	3940352	2026-08-27T11:33:28+00:00
+40	You are not a beautiful and unique snowflake.		Fight Club	Chuck Palahniuk	https://en.wikiquote.org/w/index.php?title=Fight_Club_(novel)&oldid=3737377	3737377	2026-08-27T11:33:36+00:00
+41	The people who have brains and courage come through and the ones who haven't are winnowed out.		Gone with the Wind	Margaret Mitchell	https://en.wikiquote.org/w/index.php?title=Gone_with_the_Wind_(novel)&oldid=3336302	3336302	2026-08-27T11:34:09+00:00
+42	It wasn't a dark and stormy night. It should have been, but that's the weather for you.		Good Omens	Terry Pratchett and Neil Gaiman	https://en.wikiquote.org/w/index.php?title=Good_Omens&oldid=3887523	3887523	2026-08-27T11:33:25+00:00
+43	Pip, dear old chap, life is made of ever so many partings welded together...		Great Expectations	Charles Dickens	https://en.wikiquote.org/w/index.php?title=Great_Expectations&oldid=3952639	3952639	2026-08-27T11:33:17+00:00
+44	I wrote for their amendment, and not their approbation.		Gulliver's Travels	Jonathan Swift	https://en.wikiquote.org/w/index.php?title=Gulliver's_Travels&oldid=3942835	3942835	2026-08-27T11:33:21+00:00
+45	This was love: a string of coincidences that gathered significance and became miracles.		Half of a Yellow Sun	Chimamanda Ngozi Adichie	https://en.wikiquote.org/w/index.php?title=Half_of_a_Yellow_Sun&oldid=3553033	3553033	2026-08-27T11:33:39+00:00
+46	To be, or not to be, — that is the question...		Hamlet	William Shakespeare	https://en.wikiquote.org/w/index.php?title=Hamlet&oldid=3952082	3952082	2026-08-27T11:33:51+00:00
+47	To the well-organized mind, death is but the next great adventure.		Harry Potter and the Philosopher's Stone	J. K. Rowling	https://en.wikiquote.org/w/index.php?title=Harry_Potter_and_the_Philosopher's_Stone&oldid=3717956	3717956	2026-08-27T11:33:25+00:00
+48	I solemnly swear that I am up to no good.		Harry Potter and the Prisoner of Azkaban	J. K. Rowling	https://en.wikiquote.org/w/index.php?title=Harry_Potter_and_the_Prisoner_of_Azkaban&oldid=3887534	3887534	2026-08-27T11:33:25+00:00
+49	I don't like work — no man does — but I like what is in work — the chance to find yourself.		Heart of Darkness	Joseph Conrad	https://en.wikiquote.org/w/index.php?title=Heart_of_Darkness&oldid=3987647	3987647	2026-08-27T11:33:17+00:00
+50	Human beings can’t see anything without wanting to destroy it, Lyra. That’s original sin.		His Dark Materials	Philip Pullman	https://en.wikiquote.org/w/index.php?title=Philip_Pullman&oldid=3980081	3980081	2026-08-27T11:33:25+00:00
+51	You cannot be trusted with your own survival.		I, Robot	Isaac Asimov	https://en.wikiquote.org/w/index.php?title=I,_Robot_(film)&oldid=3959505	3959505	2026-08-27T11:33:32+00:00
+52	It happened, therefore it can happen again: this is the core of what we have to say.		If This Is a Man	Primo Levi	https://en.wikiquote.org/w/index.php?title=Primo_Levi&oldid=3907842	3907842	2026-08-27T11:33:47+00:00
+53	I am invisible, understand, simply because people refuse to see me.		Invisible Man	Ralph Ellison	https://en.wikiquote.org/w/index.php?title=Ralph_Ellison&oldid=3632470	3632470	2026-08-27T11:33:32+00:00
+54	Monsters are real. Ghosts are too. They live inside of us, and sometimes, they win.		It	Stephen King	https://en.wikiquote.org/w/index.php?title=Stephen_King&oldid=3890651	3890651	2026-08-27T11:33:36+00:00
+55	Conventionality is not morality. Self-righteousness is not religion. To attack the first is not to assail the last.		Jane Eyre	Charlotte Brontë	https://en.wikiquote.org/w/index.php?title=Charlotte_Brontë&oldid=3945880	3945880	2026-08-27T11:28:59+00:00
+56	Sometimes fate is like a small sandstorm that keeps changing directions.		Kafka on the Shore	Haruki Murakami	https://en.wikiquote.org/w/index.php?title=Kafka_on_the_Shore&oldid=3780267	3780267	2026-08-27T11:33:47+00:00
+57	How sharper than a serpent's tooth it isTo have a thankless child!		King Lear	William Shakespeare	https://en.wikiquote.org/w/index.php?title=King_Lear&oldid=3952631	3952631	2026-08-27T11:33:51+00:00
+58	Seeing, hearing, feeling, are miracles, and each part and tag of me is a miracle.		Leaves of Grass	Walt Whitman	https://en.wikiquote.org/w/index.php?title=Leaves_of_Grass&oldid=3985858	3985858	2026-08-27T11:34:09+00:00
+59	I must say a word about fear. It is life's only true opponent. Only fear can defeat life.		Life of Pi	Yann Martel	https://en.wikiquote.org/w/index.php?title=Yann_Martel&oldid=3915533	3915533	2026-08-27T11:33:36+00:00
+60	I'm not afraid of storms, for I'm learning how to sail my ship.		Little Women	Louisa May Alcott	https://en.wikiquote.org/w/index.php?title=Louisa_May_Alcott&oldid=3957259	3957259	2026-08-27T11:33:28+00:00
+61	Lolita, light of my life, fire of my loins. My sin, my soul.		Lolita	Vladimir Nabokov	https://en.wikiquote.org/w/index.php?title=Lolita&oldid=3952644	3952644	2026-08-27T11:33:32+00:00
+62	There is nothing more enticing, disenchanting, and enslaving than the life at sea.		Lord Jim	Joseph Conrad	https://en.wikiquote.org/w/index.php?title=Lord_Jim&oldid=3547629	3547629	2026-08-27T11:33:17+00:00
+63	The forest was very still. They listened, and the loudest noise was the buzzing of the flies over the spilled guts.		Lord of the Flies	William Golding	https://en.wikiquote.org/w/index.php?title=William_Golding&oldid=3915239	3915239	2026-08-27T11:33:17+00:00
+64	“Shoot me,” he said, with his hand on his chest. “There is no greater glory than to die for love.”		Love in the Time of Cholera	Gabriel García Márquez	https://en.wikiquote.org/w/index.php?title=Love_in_the_Time_of_Cholera&oldid=3685969	3685969	2026-08-27T11:33:39+00:00
+65	It is a taleTold by an idiot, full of sound and fury,Signifying nothing.		Macbeth	William Shakespeare	https://en.wikiquote.org/w/index.php?title=Macbeth&oldid=3898665	3898665	2026-08-27T11:33:51+00:00
+66	We shouldn't maltreat our idols: the gilt comes off on our hands.		Madame Bovary	Gustave Flaubert	https://en.wikiquote.org/w/index.php?title=Madame_Bovary&oldid=3922710	3922710	2026-08-27T11:33:43+00:00
+67	There are two tragedies in life. One is not to get your heart's desire. The other is to get it.		Man and Superman	George Bernard Shaw	https://en.wikiquote.org/w/index.php?title=Man_and_Superman&oldid=3721599	3721599	2026-08-27T11:34:09+00:00
+68	It is not down on any map; true places never are.		Moby-Dick	Herman Melville	https://en.wikiquote.org/w/index.php?title=Moby-Dick&oldid=3962897	3962897	2026-08-27T11:33:28+00:00
+69	History always has a few tricks up its frayed sleeve. It's been around a long time.		Mort	Terry Pratchett	https://en.wikiquote.org/w/index.php?title=Mort&oldid=3551286	3551286	2026-08-27T11:33:25+00:00
+70	The sky above the port was the color of television, tuned to a dead channel.		Neuromancer	William Gibson	https://en.wikiquote.org/w/index.php?title=Sprawl_trilogy&oldid=3956712	3956712	2026-08-27T11:33:36+00:00
+71	It was a bright cold day in April, and the clocks were striking thirteen.		Nineteen Eighty-Four	George Orwell	https://en.wikiquote.org/w/index.php?title=Nineteen_Eighty-Four&oldid=3949875	3949875	2026-08-27T11:28:56+00:00
+72	Books ain't no good. A guy needs somebody — to be near him. A guy goes nuts if he ain't got nobody.		Of Mice and Men	John Steinbeck	https://en.wikiquote.org/w/index.php?title=John_Steinbeck&oldid=3964388	3964388	2026-08-27T11:33:28+00:00
+73	Dead men never repent; dead men never bring awkward stories to light.		Oliver Twist	Charles Dickens	https://en.wikiquote.org/w/index.php?title=Oliver_Twist&oldid=3940388	3940388	2026-08-27T11:33:17+00:00
+74	Our battered suitcases were piled on the sidewalk again; we had longer ways to go. But no matter, the road is life.		On the Road	Jack Kerouac	https://en.wikiquote.org/w/index.php?title=On_the_Road&oldid=3915216	3915216	2026-08-27T11:33:32+00:00
+75	The world was so recent that many things lacked names, and in order to indicate them it was necessary to point.		One Hundred Years of Solitude	Gabriel García Márquez	https://en.wikiquote.org/w/index.php?title=One_Hundred_Years_of_Solitude&oldid=3863702	3863702	2026-08-27T11:33:39+00:00
+76	Curiously enough, one cannot read a book: one can only reread it.		Pale Fire	Vladimir Nabokov	https://en.wikiquote.org/w/index.php?title=Vladimir_Nabokov&oldid=3995255	3995255	2026-08-27T11:33:32+00:00
+77	The mind is its own place, and in itself Can make a heav'n of hell, a hell of heav'n.		Paradise Lost	John Milton	https://en.wikiquote.org/w/index.php?title=Paradise_Lost&oldid=3943843	3943843	2026-08-27T11:34:09+00:00
+78	The State is the curse of the individual.		Peer Gynt	Henrik Ibsen	https://en.wikiquote.org/w/index.php?title=Henrik_Ibsen&oldid=3682496	3682496	2026-08-27T11:34:09+00:00
+79	To die will be an awfully big adventure.		Peter Pan	J. M. Barrie	https://en.wikiquote.org/w/index.php?title=Peter_Pan&oldid=3952628	3952628	2026-08-27T11:33:21+00:00
+80	She is tolerable; but not handsome enough to tempt me.		Pride and Prejudice	Jane Austen	https://en.wikiquote.org/w/index.php?title=Pride_and_Prejudice&oldid=3940795	3940795	2026-08-27T11:28:57+00:00
+81	Fear of danger is ten thousand times more terrifying than danger itself.		Robinson Crusoe	Daniel Defoe	https://en.wikiquote.org/w/index.php?title=Daniel_Defoe&oldid=3935737	3935737	2026-08-27T11:33:21+00:00
+82	But, soft! what light through yonder window breaks?It is the east, and Juliet is the sun!		Romeo and Juliet	William Shakespeare	https://en.wikiquote.org/w/index.php?title=Romeo_and_Juliet&oldid=3961930	3961930	2026-08-27T11:33:51+00:00
+83	Know your own happiness. You want nothing but patience; or give it a more fascinating name: call it hope.		Sense and Sensibility	Jane Austen	https://en.wikiquote.org/w/index.php?title=Sense_and_Sensibility&oldid=3952623	3952623	2026-08-27T11:28:58+00:00
+84	Listen: Billy Pilgrim has come unstuck in time.		Slaughterhouse-Five	Kurt Vonnegut	https://en.wikiquote.org/w/index.php?title=Slaughterhouse-Five&oldid=3732011	3732011	2026-08-27T11:33:32+00:00
+85	Plans can break down. You cannot plan the future. Only presumptuous fools plan. The wise man steers.		Small Gods	Terry Pratchett	https://en.wikiquote.org/w/index.php?title=Discworld&oldid=3952185	3952185	2026-08-27T11:33:25+00:00
+86	When you are wrestling for possession of a sword, the man with the handle always wins.		Snow Crash	Neal Stephenson	https://en.wikiquote.org/w/index.php?title=Snow_Crash&oldid=3499277	3499277	2026-08-27T11:33:36+00:00
+87	Solitude is independence. It had been my wish and with the years I had attained it. It was cold.		Steppenwolf	Hermann Hesse	https://en.wikiquote.org/w/index.php?title=Steppenwolf&oldid=3665502	3665502	2026-08-27T11:33:47+00:00
+88	Love is that condition in which the happiness of another person is essential to your own.		Stranger in a Strange Land	Robert A. Heinlein	https://en.wikiquote.org/w/index.php?title=Stranger_in_a_Strange_Land&oldid=3831774	3831774	2026-08-27T11:33:32+00:00
+89	The Tao that can be described is not the enduring and unchanging Tao.		Tao Te Ching	Laozi	https://en.wikiquote.org/w/index.php?title=Tao_Te_Ching&oldid=3865813	3865813	2026-08-27T11:33:51+00:00
+90	I don’t ask you to love me always like this, but I ask you to remember.		Tender Is the Night	F. Scott Fitzgerald	https://en.wikiquote.org/w/index.php?title=Tender_is_the_Night&oldid=3923992	3923992	2026-08-27T11:33:28+00:00
+91	I studied a minute, sort of holding my breath, and then says to myself, "All right, then, I'll go to hell."		The Adventures of Huckleberry Finn	Mark Twain	https://en.wikiquote.org/w/index.php?title=Mark_Twain&oldid=3992852	3992852	2026-08-27T11:33:28+00:00
+92	He was not the Model Boy of the village. He knew the model boy very well though—and loathed him.		The Adventures of Tom Sawyer	Mark Twain	https://en.wikiquote.org/w/index.php?title=The_Adventures_of_Tom_Sawyer&oldid=3941053	3941053	2026-08-27T11:33:28+00:00
+93	When you want something, all the universe conspires in helping you to achieve it.		The Alchemist	Paulo Coelho	https://en.wikiquote.org/w/index.php?title=The_Alchemist_(novel)&oldid=3940074	3940074	2026-08-27T11:33:51+00:00
+94	To subdue the enemy without fighting is the acme of skill.		The Art of War	Sun Tzu	https://en.wikiquote.org/w/index.php?title=Sun_Tzu&oldid=3950339	3950339	2026-08-27T11:33:51+00:00
+95	I saw my life branching out before me like the green fig tree in the story.		The Bell Jar	Sylvia Plath	https://en.wikiquote.org/w/index.php?title=Sylvia_Plath&oldid=3943370	3943370	2026-08-27T11:33:32+00:00
+96	Here is a small fact: You are going to die.		The Book Thief	Markus Zusak	https://en.wikiquote.org/w/index.php?title=The_Book_Thief&oldid=3132363	3132363	2026-08-27T11:33:36+00:00
+97	He was a verray, parfit gentil knyght. He was a very perfect, gentle knight.		The Canterbury Tales	Geoffrey Chaucer	https://en.wikiquote.org/w/index.php?title=The_Canterbury_Tales&oldid=3981531	3981531	2026-08-27T11:34:09+00:00
+98	Don't ever tell anybody anything. If you do, you start missing everybody.		The Catcher in the Rye	J. D. Salinger	https://en.wikiquote.org/w/index.php?title=The_Catcher_in_the_Rye&oldid=3643918	3643918	2026-08-27T11:33:28+00:00
+99	Once a King or Queen in Narnia, always a King or Queen.		The Chronicles of Narnia	C. S. Lewis	https://en.wikiquote.org/w/index.php?title=The_Chronicles_of_Narnia&oldid=3625229	3625229	2026-08-27T11:33:25+00:00
+100	All human wisdom is contained in these words: Wait and hope!		The Count of Monte Cristo	Alexandre Dumas	https://en.wikiquote.org/w/index.php?title=The_Count_of_Monte_Cristo&oldid=3941068	3941068	2026-08-27T11:33:43+00:00
+101	I keep my ideals, because in spite of everything I still believe that people are really good at heart.		The Diary of a Young Girl	Anne Frank	https://en.wikiquote.org/w/index.php?title=Anne_Frank&oldid=3896685	3896685	2026-08-27T11:33:47+00:00
+102	To be whole is to be part;true voyage is return.		The Dispossessed	Ursula K. Le Guin	https://en.wikiquote.org/w/index.php?title=Ursula_K._Le_Guin&oldid=3932563	3932563	2026-08-27T11:33:36+00:00
+103	Per me si va ne la città dolente,per me si va ne l'etterno dolore,per me si va tra la perduta gente.		The Divine Comedy	Dante Alighieri	https://en.wikiquote.org/w/index.php?title=Divine_Comedy&oldid=3961693	3961693	2026-08-27T11:33:47+00:00
+104	We are the real countries, not the boundaries drawn on maps with the names of powerful men.		The English Patient	Michael Ondaatje	https://en.wikiquote.org/w/index.php?title=The_English_Patient&oldid=3893478	3893478	2026-08-27T11:33:39+00:00
+105	I fell in love with him the way you fall asleep: Slowly, and then all at once.		The Fault in Our Stars	John Green	https://en.wikiquote.org/w/index.php?title=The_Fault_in_Our_Stars&oldid=3938198	3938198	2026-08-27T11:34:13+00:00
+106	The worst part of holding the memories is not the pain. It's the loneliness of it. Memories need to be shared.		The Giver	Lois Lowry	https://en.wikiquote.org/w/index.php?title=The_Giver&oldid=3889227	3889227	2026-08-27T11:34:16+00:00
+107	They considered their Games a path from Becoming to Being, from potentiality to reality.		The Glass Bead Game	Hermann Hesse	https://en.wikiquote.org/w/index.php?title=The_Glass_Bead_Game&oldid=3054916	3054916	2026-08-27T11:33:47+00:00
+108	The secret of the Great Stories is that they have no secrets.		The God of Small Things	Arundhati Roy	https://en.wikiquote.org/w/index.php?title=Arundhati_Roy&oldid=3635916	3635916	2026-08-27T11:33:51+00:00
+109	In the souls of the people the grapes of wrath are filling and growing heavy, growing heavy for the vintage.		The Grapes of Wrath	John Steinbeck	https://en.wikiquote.org/w/index.php?title=The_Grapes_of_Wrath&oldid=3809001	3809001	2026-08-27T11:33:28+00:00
+110	Gatsby believed in the green light, the orgastic future that year by year recedes before us.		The Great Gatsby	F. Scott Fitzgerald	https://en.wikiquote.org/w/index.php?title=The_Great_Gatsby&oldid=3952643	3952643	2026-08-27T11:29:05+00:00
+111	Apathetic bloody planet, I've no sympathy at all.		The Hitchhiker's Guide to the Galaxy	Douglas Adams	https://en.wikiquote.org/w/index.php?title=The_Hitchhiker's_Guide_to_the_Galaxy&oldid=3883300	3883300	2026-08-27T11:33:25+00:00
+112	Thief, thief, thief! Baggins! We hates it, we hates it, we hates it for ever!		The Hobbit	J. R. R. Tolkien	https://en.wikiquote.org/w/index.php?title=The_Hobbit&oldid=3674093	3674093	2026-08-27T11:33:25+00:00
+113	Quand on voulut le détacher du squelette qu'il embrassait, il tomba en poussière.		The Hunchback of Notre-Dame	Victor Hugo	https://en.wikiquote.org/w/index.php?title=The_Hunchback_of_Notre-Dame&oldid=3916259	3916259	2026-08-27T11:33:43+00:00
+114	I wish I could freeze this moment, right here, right now, and live in it forever.		The Hunger Games	Suzanne Collins	https://en.wikiquote.org/w/index.php?title=Suzanne_Collins&oldid=3877429	3877429	2026-08-27T11:34:16+00:00
+115	A man's heart is a wretched, wretched thing.		The Kite Runner	Khaled Hosseini	https://en.wikiquote.org/w/index.php?title=Khaled_Hosseini&oldid=3867286	3867286	2026-08-27T11:29:10+00:00
+116	Things will have to change in order that they remain the same.		The Leopard	Giuseppe Tomasi di Lampedusa	https://en.wikiquote.org/w/index.php?title=The_Leopard&oldid=2853216	2853216	2026-08-27T11:33:47+00:00
+117	Though the Witch knew the Deep Magic, there is a magic deeper still which she did not know...		The Lion, the Witch and the Wardrobe	C. S. Lewis	https://en.wikiquote.org/w/index.php?title=The_Chronicles_of_Narnia&oldid=3625229	3625229	2026-08-27T11:33:25+00:00
+118	It is only with the heart that one can see rightly; What is essential is invisible to the eye.		The Little Prince	Antoine de Saint-Exupéry	https://en.wikiquote.org/w/index.php?title=The_Little_Prince&oldid=3968326	3968326	2026-08-27T11:33:43+00:00
+119	Endlessly imitated, it never has been surpassed.		The Lord of the Rings	J. R. R. Tolkien	https://en.wikiquote.org/w/index.php?title=The_Lord_of_the_Rings&oldid=3981483	3981483	2026-08-27T11:33:25+00:00
+120	We Earth Men have a talent for ruining big, beautiful things.		The Martian Chronicles	Ray Bradbury	https://en.wikiquote.org/w/index.php?title=The_Martian_Chronicles&oldid=3798455	3798455	2026-08-27T11:33:28+00:00
+121	I am the Water of Life,Out of myself I grow.The more you drink of me,The fuller I will flow.		The Neverending Story	Michael Ende	https://en.wikiquote.org/w/index.php?title=The_Neverending_Story&oldid=3849301	3849301	2026-08-27T11:33:47+00:00
+122	Don't look for gods in men; you'll always be disappointed.		The Odyssey	Homer	https://en.wikiquote.org/w/index.php?title=The_Odyssey_(2026_film)&oldid=3993920	3993920	2026-08-27T11:33:51+00:00
+123	The best thing for being sad…is to learn something.		The Once and Future King	T. H. White	https://en.wikiquote.org/w/index.php?title=The_Once_and_Future_King&oldid=3677527	3677527	2026-08-27T11:33:25+00:00
+124	“Charlie, we accept the love we think we deserve.”		The Perks of Being a Wallflower	Stephen Chbosky	https://en.wikiquote.org/w/index.php?title=The_Perks_of_Being_a_Wallflower&oldid=3000107	3000107	2026-08-27T11:34:13+00:00
+125	Expect everything, I always say, and the unexpected never happens.		The Phantom Tollbooth	Norton Juster	https://en.wikiquote.org/w/index.php?title=The_Phantom_Tollbooth&oldid=2914778	2914778	2026-08-27T11:34:16+00:00
+126	There is no such thing as a moral or an immoral book. Books are well written, or badly written. That is all.		The Picture of Dorian Gray	Oscar Wilde	https://en.wikiquote.org/w/index.php?title=The_Picture_of_Dorian_Gray&oldid=3952625	3952625	2026-08-27T11:33:17+00:00
+127	There is no God and we are his prophets.		The Road	Cormac McCarthy	https://en.wikiquote.org/w/index.php?title=The_Road&oldid=3626092	3626092	2026-08-27T11:33:32+00:00
+128	What other dungeon is so dark as one's own heart! What jailer so inexorable as one's self!		The Scarlet Letter	Nathaniel Hawthorne	https://en.wikiquote.org/w/index.php?title=Nathaniel_Hawthorne&oldid=3976735	3976735	2026-08-27T11:33:28+00:00
+129	If you look the right way, you can see that the whole world is a garden.		The Secret Garden	Frances Hodgson Burnett	https://en.wikiquote.org/w/index.php?title=The_Secret_Garden_(1993_film)&oldid=3893883	3893883	2026-08-27T11:34:13+00:00
+130	Few things leave a deeper mark on a reader than the first book that finds its way into his heart.		The Shadow of the Wind	Carlos Ruiz Zafón	https://en.wikiquote.org/w/index.php?title=Carlos_Ruiz_Zafón&oldid=3364149	3364149	2026-08-27T11:33:39+00:00
+131	I am indeed but a wanderer, a pilgrim on earth. But are you anything more?		The Sorrows of Young Werther	Johann Wolfgang von Goethe	https://en.wikiquote.org/w/index.php?title=The_Sorrows_of_Young_Werther&oldid=3572996	3572996	2026-08-27T11:33:47+00:00
+132	Silent white light filled the world. And the righteous and unrighteous alike were consumed in that holy fire.		The Stand	Stephen King	https://en.wikiquote.org/w/index.php?title=Stephen_King&oldid=3890651	3890651	2026-08-27T11:33:36+00:00
+133	Real things in the darkness seem no realer than dreams.		The Tale of Genji	Murasaki Shikibu	https://en.wikiquote.org/w/index.php?title=Murasaki_Shikibu&oldid=3603307	3603307	2026-08-27T11:33:47+00:00
+134	We are such stuff As dreams are made on; and our little life Is rounded with a sleep.		The Tempest	William Shakespeare	https://en.wikiquote.org/w/index.php?title=The_Tempest&oldid=3956657	3956657	2026-08-27T11:33:51+00:00
+135	The Three Musketeers (2011 film), a 3D version of the film directed by Paul W.S.		The Three Musketeers	Alexandre Dumas	https://en.wikiquote.org/w/index.php?title=The_Three_Musketeers&oldid=3075145	3075145	2026-08-27T11:33:43+00:00
+136	Strength is the outcome of need; security sets a premium on feebleness.		The Time Machine	H. G. Wells	https://en.wikiquote.org/w/index.php?title=The_Time_Machine&oldid=3778033	3778033	2026-08-27T11:34:13+00:00
+137	The past is but the beginning of a beginning, and all that is or has been is but the twilight of the dawn.		The War of the Worlds	H. G. Wells	https://en.wikiquote.org/w/index.php?title=H._G._Wells&oldid=3929669	3929669	2026-08-27T11:34:13+00:00
+138	There is nothing — absolutely nothing — half so much worth doing as simply messing about in boats.		The Wind in the Willows	Kenneth Grahame	https://en.wikiquote.org/w/index.php?title=The_Wind_in_the_Willows&oldid=3882081	3882081	2026-08-27T11:33:21+00:00
+139	Until the lions have their own historians, the history of the hunt will always glorify the hunter.		Things Fall Apart	Chinua Achebe	https://en.wikiquote.org/w/index.php?title=Chinua_Achebe&oldid=3996243	3996243	2026-08-27T11:33:39+00:00
+140	Why, sometimes I've believed as many as six impossible things before breakfast.		Through the Looking-Glass	Lewis Carroll	https://en.wikiquote.org/w/index.php?title=Through_the_Looking-Glass&oldid=3952626	3952626	2026-08-27T11:29:02+00:00
+141	To Kill a Mockingbird (novel), the Pulitzer Prize-winning novel by Harper Lee.		To Kill a Mockingbird	Harper Lee	https://en.wikiquote.org/w/index.php?title=To_Kill_a_Mockingbird&oldid=2467222	2467222	2026-08-27T11:29:06+00:00
+142	Fifteen men on the dead man's chest — Yo-ho-ho, and a bottle of rum!		Treasure Island	Robert Louis Stevenson	https://en.wikiquote.org/w/index.php?title=Robert_Louis_Stevenson&oldid=3973220	3973220	2026-08-27T11:33:21+00:00
+143	Some are born great, some achieve greatness, and some have greatness thrust upon 'em.		Twelfth Night	William Shakespeare	https://en.wikiquote.org/w/index.php?title=Twelfth_Night&oldid=3447375	3447375	2026-08-27T11:33:51+00:00
+144	History, Stephen said, is a nightmare from which I am trying to awake.		Ulysses	James Joyce	https://en.wikiquote.org/w/index.php?title=Ulysses_(novel)&oldid=3962898	3962898	2026-08-27T11:33:25+00:00
+145	The world is a looking-glass, and gives back to every man the reflection of his own face.		Vanity Fair	William Makepeace Thackeray	https://en.wikiquote.org/w/index.php?title=Vanity_Fair_(novel)&oldid=3622218	3622218	2026-08-27T11:33:21+00:00
+146	Ever tried. Ever failed. No matter. Try again. Fail again. Fail better.		Waiting for Godot	Samuel Beckett	https://en.wikiquote.org/w/index.php?title=Samuel_Beckett&oldid=3771549	3771549	2026-08-27T11:33:28+00:00
+147	The mass of men lead lives of quiet desperation. What is called resignation is confirmed desperation.		Walden	Henry David Thoreau	https://en.wikiquote.org/w/index.php?title=Walden&oldid=3922179	3922179	2026-08-27T11:33:28+00:00
+148	There never was a good war or a bad peace.		War and Peace	Leo Tolstoy	https://en.wikiquote.org/w/index.php?title=War_and_peace&oldid=3954217	3954217	2026-08-27T11:33:39+00:00
+149	Happiness isn't always the best way to be happy.		Where the Wild Things Are	Maurice Sendak	https://en.wikiquote.org/w/index.php?title=Where_the_Wild_Things_Are&oldid=3984389	3984389	2026-08-27T11:34:16+00:00
+150	You can't stay in your corner of the forest waiting for others to come to you. You have to go to them sometimes.		Winnie-the-Pooh	A. A. Milne	https://en.wikiquote.org/w/index.php?title=A._A._Milne&oldid=3977428	3977428	2026-08-27T11:33:21+00:00
+151	My love for Heathcliff resembles the eternal rocks beneath: a source of little visible delight, but necessary.		Wuthering Heights	Emily Brontë	https://en.wikiquote.org/w/index.php?title=Wuthering_Heights&oldid=3952637	3952637	2026-08-27T11:28:59+00:00
+152	Every man has his folly, but the greatest folly of all ... is not to have one.		Zorba the Greek	Nikos Kazantzakis	https://en.wikiquote.org/w/index.php?title=Zorba_the_Greek&oldid=3915212	3915212	2026-08-27T11:33:51+00:00
+153	Remember, Hope is a good thing, maybe the best of things, and no good thing ever dies.		11/22/63	Stephen King	https://en.wikiquote.org/w/index.php?title=Stephen_King&oldid=3890651	3890651	2026-08-27T11:33:36+00:00
+154	"If they would rather die," said Scrooge, "they had better do it, and decrease the surplus population."		A Christmas Carol	Charles Dickens	https://en.wikiquote.org/w/index.php?title=A_Christmas_Carol&oldid=3976403	3976403	2026-08-27T11:33:17+00:00
+155	When Fortuna spins you downward, go out to a movie and get more out of life.		A Confederacy of Dunces	John Kennedy Toole	https://en.wikiquote.org/w/index.php?title=John_Kennedy_Toole&oldid=3965377	3965377	2026-08-27T11:34:13+00:00
+156	Only connect the prose and the passion, and both will be exalted, and human love will be seen at its height.		A Passage to India	E. M. Forster	https://en.wikiquote.org/w/index.php?title=E._M._Forster&oldid=3947410	3947410	2026-08-27T11:33:17+00:00
+157	Ireland is the old sow that eats her farrow.		A Portrait of the Artist as a Young Man	James Joyce	https://en.wikiquote.org/w/index.php?title=A_Portrait_of_the_Artist_as_a_Young_Man&oldid=3588414	3588414	2026-08-27T11:33:25+00:00
+158	Physical beauty is passing - a transitory possession.		A Streetcar Named Desire	Tennessee Williams	https://en.wikiquote.org/w/index.php?title=A_Streetcar_Named_Desire_(1951_film)&oldid=3718334	3718334	2026-08-27T11:34:09+00:00
+159	Is it not love that knows how to make smooth things rough and rough things smooth?		A Suitable Boy	Vikram Seth	https://en.wikiquote.org/w/index.php?title=Vikram_Seth&oldid=3851083	3851083	2026-08-27T11:33:51+00:00
+160	Maybe you have to know darkness before you can appreciate the light.		A Wrinkle in Time	Madeleine L'Engle	https://en.wikiquote.org/w/index.php?title=Madeleine_L'Engle&oldid=3932636	3932636	2026-08-27T11:34:16+00:00
+161	If you drink much from a bottle marked 'poison' it is almost certain to disagree with you, sooner or later.		Alice's Adventures in Wonderland	Lewis Carroll	https://en.wikiquote.org/w/index.php?title=Alice's_Adventures_in_Wonderland&oldid=3952630	3952630	2026-08-27T11:33:21+00:00
+162	If Hell is other people, thought Shadow, then Purgatory is airports.		American Gods	Neil Gaiman	https://en.wikiquote.org/w/index.php?title=American_Gods&oldid=3915400	3915400	2026-08-27T11:33:25+00:00
+163	Culture does not make people, people make culture.		Americanah	Chimamanda Ngozi Adichie	https://en.wikiquote.org/w/index.php?title=Chimamanda_Ngozi_Adichie&oldid=3978725	3978725	2026-08-27T11:33:39+00:00
+164	Man is the only creature that consumes without producing.		Animal Farm	George Orwell	https://en.wikiquote.org/w/index.php?title=Animal_Farm&oldid=3952611	3952611	2026-08-27T11:28:56+00:00
+165	If goodness has causes, it is not goodness; if it has effects, a reward, it is not goodness either.		Anna Karenina	Leo Tolstoy	https://en.wikiquote.org/w/index.php?title=Anna_Karenina&oldid=3952640	3952640	2026-08-27T11:33:39+00:00
+166	It would be terrible if we just skipped from September to November, wouldn't it?		Anne of Green Gables	L. M. Montgomery	https://en.wikiquote.org/w/index.php?title=Anne_of_Green_Gables&oldid=3952638	3952638	2026-08-27T11:33:36+00:00
+167	Poets are like proverbs: you can always find one to contradict another.		Around the World in Eighty Days	Jules Verne	https://en.wikiquote.org/w/index.php?title=Jules_Verne&oldid=3703573	3703573	2026-08-27T11:33:43+00:00
+168	Better is it for each one of us that he should avenge his friend, than greatly mourn.		Beowulf	Anonymous	https://en.wikiquote.org/w/index.php?title=Beowulf&oldid=3924672	3924672	2026-08-27T11:34:09+00:00
+169	You can find meanness in the least of creatures, but when God made man the devil was at his elbow.		Blood Meridian	Cormac McCarthy	https://en.wikiquote.org/w/index.php?title=Blood_Meridian&oldid=3965838	3965838	2026-08-27T11:33:32+00:00
+170	Sixty-two thousand four hundred repetitions make one truth.		Brave New World	Aldous Huxley	https://en.wikiquote.org/w/index.php?title=Brave_New_World&oldid=3915179	3915179	2026-08-27T11:28:57+00:00
+171	My theme is memory, that winged host that soared about me one grey morning of war-time.		Brideshead Revisited	Evelyn Waugh	https://en.wikiquote.org/w/index.php?title=Evelyn_Waugh&oldid=3912500	3912500	2026-08-27T11:33:17+00:00
+172	If this is the best of all possible worlds, what are the others?		Candide	Voltaire	https://en.wikiquote.org/w/index.php?title=Candide&oldid=3611571	3611571	2026-08-27T11:33:43+00:00
+173	All of the true things that I am about to tell you are shameless lies.		Cat's Cradle	Kurt Vonnegut	https://en.wikiquote.org/w/index.php?title=Cat's_Cradle&oldid=3948378	3948378	2026-08-27T11:33:32+00:00
+174	It was love at first sight. The first time Yossarian saw the chaplain, he fell madly in love with him.		Catch-22	Joseph Heller	https://en.wikiquote.org/w/index.php?title=Catch-22&oldid=3791053	3791053	2026-08-27T11:33:32+00:00
+175	Dear visitors, it is my great pleasure to welcome you to my humble factory.		Charlie and the Chocolate Factory	Roald Dahl	https://en.wikiquote.org/w/index.php?title=Charlie_and_the_Chocolate_Factory_(film)&oldid=3990990	3990990	2026-08-27T11:29:03+00:00
+176	People believe almost anything they see in print.		Charlotte's Web	E. B. White	https://en.wikiquote.org/w/index.php?title=Charlotte's_Web_(book)&oldid=2584031	2584031	2026-08-27T11:34:16+00:00
+177	Truth is singular. Its 'versions' are mistruths.		Cloud Atlas	David Mitchell	https://en.wikiquote.org/w/index.php?title=Cloud_Atlas_(novel)&oldid=3941785	3941785	2026-08-27T11:33:21+00:00
+178	They say even the proudest spirit can be broken, with love.		Coraline	Neil Gaiman	https://en.wikiquote.org/w/index.php?title=Coraline_(film)&oldid=3926212	3926212	2026-08-27T11:29:04+00:00
+179	You never reach any truth without making fourteen mistakes and very likely a hundred and fourteen.		Crime and Punishment	Fyodor Dostoevsky	https://en.wikiquote.org/w/index.php?title=Crime_and_Punishment&oldid=3952642	3952642	2026-08-27T11:33:39+00:00
+180	Oh troika, winged troika, tell me who invented you?		Dead Souls	Nikolai Gogol	https://en.wikiquote.org/w/index.php?title=Nikolai_Gogol&oldid=3929350	3929350	2026-08-27T11:33:43+00:00
+181	A salesman is got to dream, boy. It comes with the territory.		Death of a Salesman	Arthur Miller	https://en.wikiquote.org/w/index.php?title=Arthur_Miller&oldid=3890238	3890238	2026-08-27T11:34:09+00:00
+182	Disgrace is immortal, and living even when one thinks it dead.		Disgrace	J. M. Coetzee	https://en.wikiquote.org/w/index.php?title=Disgrace&oldid=2655455	2655455	2026-08-27T11:33:39+00:00
+183	It is sometimes an appropriate response to reality to go insane.		Do Androids Dream of Electric Sheep?	Philip K. Dick	https://en.wikiquote.org/w/index.php?title=Philip_K._Dick&oldid=3992844	3992844	2026-08-27T11:33:36+00:00
+184	Take care, Your Worship, those things over there are not giants but windmills.		Don Quixote	Miguel de Cervantes	https://en.wikiquote.org/w/index.php?title=Miguel_de_Cervantes&oldid=3976497	3976497	2026-08-27T11:33:39+00:00
+185	Nosferatu, a 1922 German silent film loosely based on Stoker's novel, directed by F.		Dracula	Bram Stoker	https://en.wikiquote.org/w/index.php?title=Dracula&oldid=3530129	3530129	2026-08-27T11:33:17+00:00
+186	The mystery of life isn't a problem to solve, but a reality to experience.		Dune	Frank Herbert	https://en.wikiquote.org/w/index.php?title=Dune&oldid=3914593	3914593	2026-08-27T11:33:32+00:00
+187	This I believe: that the free, exploring mind of the individual human is the most valuable thing in the world.		East of Eden	John Steinbeck	https://en.wikiquote.org/w/index.php?title=East_of_Eden_(novel)&oldid=3898220	3898220	2026-08-27T11:33:28+00:00
+188	Better be without sense, than misapply it as you do.		Emma	Jane Austen	https://en.wikiquote.org/w/index.php?title=Emma_(novel)&oldid=3952621	3952621	2026-08-27T11:28:58+00:00
+189	No one but the enemy will tell you what the enemy is going to do.		Ender's Game	Orson Scott Card	https://en.wikiquote.org/w/index.php?title=Ender's_Game&oldid=3881768	3881768	2026-08-27T11:33:36+00:00
+190	If you don't want a man unhappy politically, don't give him two sides to a question to worry him; give him one.		Fahrenheit 451	Ray Bradbury	https://en.wikiquote.org/w/index.php?title=Fahrenheit_451&oldid=3940352	3940352	2026-08-27T11:33:28+00:00
+191	This is your life, and it's ending one minute at a time.		Fight Club	Chuck Palahniuk	https://en.wikiquote.org/w/index.php?title=Fight_Club_(novel)&oldid=3737377	3737377	2026-08-27T11:33:36+00:00
+192	Southerners can never resist a losing cause.		Gone with the Wind	Margaret Mitchell	https://en.wikiquote.org/w/index.php?title=Gone_with_the_Wind_(novel)&oldid=3336302	3336302	2026-08-27T11:34:09+00:00
+193	A butterfly flaps its wings in the Amazonian jungle, and subsequently a storm ravages half of Europe.		Good Omens	Terry Pratchett and Neil Gaiman	https://en.wikiquote.org/w/index.php?title=Good_Omens&oldid=3887523	3887523	2026-08-27T11:33:25+00:00
+194	For a man may be allowed to keep poisons in his closet, but not to vend them about for cordials.		Gulliver's Travels	Jonathan Swift	https://en.wikiquote.org/w/index.php?title=Gulliver's_Travels&oldid=3942835	3942835	2026-08-27T11:33:21+00:00
+195	You must never behave as if your life belongs to a man.		Half of a Yellow Sun	Chimamanda Ngozi Adichie	https://en.wikiquote.org/w/index.php?title=Half_of_a_Yellow_Sun&oldid=3553033	3553033	2026-08-27T11:33:39+00:00
+196	It takes a great deal of bravery to stand up to our enemies, but just as much to stand up to our friends.		Harry Potter and the Philosopher's Stone	J. K. Rowling	https://en.wikiquote.org/w/index.php?title=Harry_Potter_and_the_Philosopher's_Stone&oldid=3717956	3717956	2026-08-27T11:33:25+00:00
+197	You think the dead we loved ever truly leave us?		Harry Potter and the Prisoner of Azkaban	J. K. Rowling	https://en.wikiquote.org/w/index.php?title=Harry_Potter_and_the_Prisoner_of_Azkaban&oldid=3887534	3887534	2026-08-27T11:33:25+00:00
+198	The mind of man is capable of anything — because everything is in it, all the past as well as all the future.		Heart of Darkness	Joseph Conrad	https://en.wikiquote.org/w/index.php?title=Heart_of_Darkness&oldid=3987647	3987647	2026-08-27T11:33:17+00:00
+199	You cannot change what you are, only what you do.		His Dark Materials	Philip Pullman	https://en.wikiquote.org/w/index.php?title=Philip_Pullman&oldid=3980081	3980081	2026-08-27T11:33:25+00:00
+200	To protect Humanity, some humans must be sacrificed.		I, Robot	Isaac Asimov	https://en.wikiquote.org/w/index.php?title=I,_Robot_(film)&oldid=3959505	3959505	2026-08-27T11:33:32+00:00
+201	Those who deny Auschwitz would be ready to remake it.		If This Is a Man	Primo Levi	https://en.wikiquote.org/w/index.php?title=Primo_Levi&oldid=3907842	3907842	2026-08-27T11:33:47+00:00
+202	I was looking for myself and asking everyone except myself questions which I, and only I, could answer.		Invisible Man	Ralph Ellison	https://en.wikiquote.org/w/index.php?title=Ralph_Ellison&oldid=3632470	3632470	2026-08-27T11:33:32+00:00
+203	Do you think, because I am poor, obscure, plain, and little, I am soulless and heartless?		Jane Eyre	Charlotte Brontë	https://en.wikiquote.org/w/index.php?title=Charlotte_Brontë&oldid=3945880	3945880	2026-08-27T11:28:59+00:00
+204	In everybody’s life there’s a point of no return.		Kafka on the Shore	Haruki Murakami	https://en.wikiquote.org/w/index.php?title=Kafka_on_the_Shore&oldid=3780267	3780267	2026-08-27T11:33:47+00:00
+205	Nothing can happen more beautiful than death.		Leaves of Grass	Walt Whitman	https://en.wikiquote.org/w/index.php?title=Leaves_of_Grass&oldid=3985858	3985858	2026-08-27T11:34:09+00:00
+206	To choose doubt as a philosophy of life is akin to choosing immobility as a means of transportation.		Life of Pi	Yann Martel	https://en.wikiquote.org/w/index.php?title=Yann_Martel&oldid=3915533	3915533	2026-08-27T11:33:36+00:00
+207	"Christmas won't be Christmas without any presents," grumbled Jo, lying on the rug.		Little Women	Louisa May Alcott	https://en.wikiquote.org/w/index.php?title=Louisa_May_Alcott&oldid=3957259	3957259	2026-08-27T11:33:28+00:00
+208	Lo-lee-ta: the tip of the tongue taking a trip of three steps down the palate to tap, at three, on the teeth.		Lolita	Vladimir Nabokov	https://en.wikiquote.org/w/index.php?title=Lolita&oldid=3952644	3952644	2026-08-27T11:33:32+00:00
+209	They wanted facts. Facts! They demanded facts from him, as if facts could explain anything.		Lord Jim	Joseph Conrad	https://en.wikiquote.org/w/index.php?title=Lord_Jim&oldid=3547629	3547629	2026-08-27T11:33:17+00:00
+210	If you're scared of someone you hate him but you can't stop thinking about him.		Lord of the Flies	William Golding	https://en.wikiquote.org/w/index.php?title=William_Golding&oldid=3915239	3915239	2026-08-27T11:33:17+00:00
+211	A man knows when he is growing old because he begins to look like his father.		Love in the Time of Cholera	Gabriel García Márquez	https://en.wikiquote.org/w/index.php?title=Love_in_the_Time_of_Cholera&oldid=3685969	3685969	2026-08-27T11:33:39+00:00
+212	She wanted to die. And she wanted to live in Paris.		Madame Bovary	Gustave Flaubert	https://en.wikiquote.org/w/index.php?title=Madame_Bovary&oldid=3922710	3922710	2026-08-27T11:33:43+00:00
+213	He who can, does. He who cannot, teaches.		Man and Superman	George Bernard Shaw	https://en.wikiquote.org/w/index.php?title=Man_and_Superman&oldid=3721599	3721599	2026-08-27T11:34:09+00:00
+214	Better sleep with a sober cannibal than a drunken Christian.		Moby-Dick	Herman Melville	https://en.wikiquote.org/w/index.php?title=Moby-Dick&oldid=3962897	3962897	2026-08-27T11:33:28+00:00
+215	History has a habit of changing the people who think they are changing it.		Mort	Terry Pratchett	https://en.wikiquote.org/w/index.php?title=Mort&oldid=3551286	3551286	2026-08-27T11:33:25+00:00
+216	Case fell into the prison of his own flesh.		Neuromancer	William Gibson	https://en.wikiquote.org/w/index.php?title=Sprawl_trilogy&oldid=3956712	3956712	2026-08-27T11:33:36+00:00
+217	WAR IS PEACE, FREEDOM IS SLAVERY, IGNORANCE IS STRENGTH.		Nineteen Eighty-Four	George Orwell	https://en.wikiquote.org/w/index.php?title=Nineteen_Eighty-Four&oldid=3949875	3949875	2026-08-27T11:28:56+00:00
+218	It’s so much darker when a light goes out than it would have been if it had never shone.		Of Mice and Men	John Steinbeck	https://en.wikiquote.org/w/index.php?title=John_Steinbeck&oldid=3964388	3964388	2026-08-27T11:33:28+00:00
+219	Whither goest thou, America, in thy shiny car in the night?		On the Road	Jack Kerouac	https://en.wikiquote.org/w/index.php?title=On_the_Road&oldid=3915216	3915216	2026-08-27T11:33:32+00:00
+220	Races condemned to one hundred years of solitude did not have a second opportunity on earth.		One Hundred Years of Solitude	Gabriel García Márquez	https://en.wikiquote.org/w/index.php?title=One_Hundred_Years_of_Solitude&oldid=3863702	3863702	2026-08-27T11:33:39+00:00
+221	My loathings are simple: stupidity, oppression, crime, cruelty, soft music.		Pale Fire	Vladimir Nabokov	https://en.wikiquote.org/w/index.php?title=Vladimir_Nabokov&oldid=3995255	3995255	2026-08-27T11:33:32+00:00
+222	Better to reign in Hell, than serve in Heaven.		Paradise Lost	John Milton	https://en.wikiquote.org/w/index.php?title=Paradise_Lost&oldid=3943843	3943843	2026-08-27T11:34:09+00:00
+223	You see, the point is that the strongest man in the world is he who stands most alone.		Peer Gynt	Henrik Ibsen	https://en.wikiquote.org/w/index.php?title=Henrik_Ibsen&oldid=3682496	3682496	2026-08-27T11:34:09+00:00
+224	To live would be an awfully big adventure!		Peter Pan	J. M. Barrie	https://en.wikiquote.org/w/index.php?title=Peter_Pan&oldid=3952628	3952628	2026-08-27T11:33:21+00:00
+225	For what do we live, but to make sport for our neighbours, and laugh at them in our turn?		Pride and Prejudice	Jane Austen	https://en.wikiquote.org/w/index.php?title=Pride_and_Prejudice&oldid=3940795	3940795	2026-08-27T11:28:57+00:00
+226	All our discontents about what we want appeared to me to spring from the want of thankfulness for what we have.		Robinson Crusoe	Daniel Defoe	https://en.wikiquote.org/w/index.php?title=Daniel_Defoe&oldid=3935737	3935737	2026-08-27T11:33:21+00:00
+227	Shyness is only the effect of a sense of inferiority in some way or other.		Sense and Sensibility	Jane Austen	https://en.wikiquote.org/w/index.php?title=Sense_and_Sensibility&oldid=3952623	3952623	2026-08-27T11:28:58+00:00
+228	Everything was beautiful, and nothing hurt.		Slaughterhouse-Five	Kurt Vonnegut	https://en.wikiquote.org/w/index.php?title=Slaughterhouse-Five&oldid=3732011	3732011	2026-08-27T11:33:32+00:00
+229	Creators aren't gods. They make places, which is quite hard. It's men that make gods. This explains a lot.		Small Gods	Terry Pratchett	https://en.wikiquote.org/w/index.php?title=Discworld&oldid=3952185	3952185	2026-08-27T11:33:25+00:00
+230	The franchise and the virus work on the same principle: what thrives in one place will thrive in another.		Snow Crash	Neal Stephenson	https://en.wikiquote.org/w/index.php?title=Snow_Crash&oldid=3499277	3499277	2026-08-27T11:33:36+00:00
+231	Harry, the thinker, is a hundred years old, but Harry, the dancer, is scarcely half a day old.		Steppenwolf	Hermann Hesse	https://en.wikiquote.org/w/index.php?title=Steppenwolf&oldid=3665502	3665502	2026-08-27T11:33:47+00:00
+232	A prude is a person who thinks that his own rules of propriety are natural laws.		Stranger in a Strange Land	Robert A. Heinlein	https://en.wikiquote.org/w/index.php?title=Stranger_in_a_Strange_Land&oldid=3831774	3831774	2026-08-27T11:33:32+00:00
+233	The sage wears coarse clothing over his shoulders, but carries jade within his bosom.		Tao Te Ching	Laozi	https://en.wikiquote.org/w/index.php?title=Tao_Te_Ching&oldid=3865813	3865813	2026-08-27T11:33:51+00:00
+234	Sometimes it is harder to deprive oneself of a pain than of a pleasure.		Tender Is the Night	F. Scott Fitzgerald	https://en.wikiquote.org/w/index.php?title=Tender_is_the_Night&oldid=3923992	3923992	2026-08-27T11:33:28+00:00
+235	If you tell the truth you don't have to remember anything.		The Adventures of Huckleberry Finn	Mark Twain	https://en.wikiquote.org/w/index.php?title=Mark_Twain&oldid=3992852	3992852	2026-08-27T11:33:28+00:00
+236	To promise not to do a thing is the surest way in the world to make a body want to go and do that very thing.		The Adventures of Tom Sawyer	Mark Twain	https://en.wikiquote.org/w/index.php?title=The_Adventures_of_Tom_Sawyer&oldid=3941053	3941053	2026-08-27T11:33:28+00:00
+237	Tell your heart that the fear of suffering is worse than the suffering itself.		The Alchemist	Paulo Coelho	https://en.wikiquote.org/w/index.php?title=The_Alchemist_(novel)&oldid=3940074	3940074	2026-08-27T11:33:51+00:00
+238	Victorious warriors win first and then go to war, while defeated warriors go to war first and then seek to win.		The Art of War	Sun Tzu	https://en.wikiquote.org/w/index.php?title=Sun_Tzu&oldid=3950339	3950339	2026-08-27T11:33:51+00:00
+239	I took a deep breath and listened to the old brag of my heart: I am, I am, I am.		The Bell Jar	Sylvia Plath	https://en.wikiquote.org/w/index.php?title=Sylvia_Plath&oldid=3943370	3943370	2026-08-27T11:33:32+00:00
+240	I see their ugly and their beauty, and I wonder how the same thing can be both.		The Book Thief	Markus Zusak	https://en.wikiquote.org/w/index.php?title=The_Book_Thief&oldid=3132363	3132363	2026-08-27T11:33:36+00:00
+241	The smyler with the knyf under the cloke.		The Canterbury Tales	Geoffrey Chaucer	https://en.wikiquote.org/w/index.php?title=The_Canterbury_Tales&oldid=3981531	3981531	2026-08-27T11:34:09+00:00
+242	Anyway, I keep picturing all these little kids playing some game in this big field of rye and all.		The Catcher in the Rye	J. D. Salinger	https://en.wikiquote.org/w/index.php?title=The_Catcher_in_the_Rye&oldid=3643918	3643918	2026-08-27T11:33:28+00:00
+243	There was once a boy named Eustace Clarence Scrubb, and he almost deserved it.		The Chronicles of Narnia	C. S. Lewis	https://en.wikiquote.org/w/index.php?title=The_Chronicles_of_Narnia&oldid=3625229	3625229	2026-08-27T11:33:25+00:00
+244	He who has felt the deepest grief is best able to experience supreme happiness.		The Count of Monte Cristo	Alexandre Dumas	https://en.wikiquote.org/w/index.php?title=The_Count_of_Monte_Cristo&oldid=3941068	3941068	2026-08-27T11:33:43+00:00
+245	How wonderful it is that no one has to wait, but can start right now to gradually change the world!		The Diary of a Young Girl	Anne Frank	https://en.wikiquote.org/w/index.php?title=Anne_Frank&oldid=3896685	3896685	2026-08-27T11:33:47+00:00
+246	To make a thief, make an owner; to create crime, create laws.		The Dispossessed	Ursula K. Le Guin	https://en.wikiquote.org/w/index.php?title=Ursula_K._Le_Guin&oldid=3932563	3932563	2026-08-27T11:33:36+00:00
+247	Nel mezzo del cammin di nostra vita,mi ritrovai per una selva oscura,ché la diritta via era smarrita.		The Divine Comedy	Dante Alighieri	https://en.wikiquote.org/w/index.php?title=Divine_Comedy&oldid=3961693	3961693	2026-08-27T11:33:47+00:00
+248	New lovers are nervous and tender, but smash everything.		The English Patient	Michael Ondaatje	https://en.wikiquote.org/w/index.php?title=The_English_Patient&oldid=3893478	3893478	2026-08-27T11:33:39+00:00
+249	That's a thing about pain. It demands to be felt.		The Fault in Our Stars	John Green	https://en.wikiquote.org/w/index.php?title=The_Fault_in_Our_Stars&oldid=3938198	3938198	2026-08-27T11:34:13+00:00
+250	If everything's the same, then there aren't any choices! I want to wake up in the morning and decide things!		The Giver	Lois Lowry	https://en.wikiquote.org/w/index.php?title=The_Giver&oldid=3889227	3889227	2026-08-27T11:34:16+00:00
+251	They longed for philosophy, for synthesis.		The Glass Bead Game	Hermann Hesse	https://en.wikiquote.org/w/index.php?title=The_Glass_Bead_Game&oldid=3054916	3054916	2026-08-27T11:33:47+00:00
+252	In the way that you know that one day you will die, you live as though you won't.		The God of Small Things	Arundhati Roy	https://en.wikiquote.org/w/index.php?title=Arundhati_Roy&oldid=3635916	3635916	2026-08-27T11:33:51+00:00
+253	It happens that every man in a bank hates what the bank does, and yet the bank does it.		The Grapes of Wrath	John Steinbeck	https://en.wikiquote.org/w/index.php?title=The_Grapes_of_Wrath&oldid=3809001	3809001	2026-08-27T11:33:28+00:00
+254	It eluded us then, but that’s no matter — tomorrow we will run faster, stretch out our arms farther....		The Great Gatsby	F. Scott Fitzgerald	https://en.wikiquote.org/w/index.php?title=The_Great_Gatsby&oldid=3952643	3952643	2026-08-27T11:29:05+00:00
+255	On no account allow a Vogon to read poetry at you.		The Hitchhiker's Guide to the Galaxy	Douglas Adams	https://en.wikiquote.org/w/index.php?title=The_Hitchhiker's_Guide_to_the_Galaxy&oldid=3883300	3883300	2026-08-27T11:33:25+00:00
+256	In a hole in the ground there lived a hobbit.		The Hobbit	J. R. R. Tolkien	https://en.wikiquote.org/w/index.php?title=The_Hobbit&oldid=3674093	3674093	2026-08-27T11:33:25+00:00
+257	The students crowded into the window, saluted them as they passed with sarcasms and ironical applause.		The Hunchback of Notre-Dame	Victor Hugo	https://en.wikiquote.org/w/index.php?title=The_Hunchback_of_Notre-Dame&oldid=3916259	3916259	2026-08-27T11:33:43+00:00
+258	Even a little tedious after more than twenty years.But there are much worse games to play.		The Hunger Games	Suzanne Collins	https://en.wikiquote.org/w/index.php?title=Suzanne_Collins&oldid=3877429	3877429	2026-08-27T11:34:16+00:00
+259	Laila: Tell your secrets to the wind but don't blame it for telling the trees.		The Kite Runner	Khaled Hosseini	https://en.wikiquote.org/w/index.php?title=Khaled_Hosseini&oldid=3867286	3867286	2026-08-27T11:29:10+00:00
+260	I belong to an unlucky generation, astride between two worlds and ill-at-ease in both.		The Leopard	Giuseppe Tomasi di Lampedusa	https://en.wikiquote.org/w/index.php?title=The_Leopard&oldid=2853216	2853216	2026-08-27T11:33:47+00:00
+261	You become responsible, forever, for what you have tamed.		The Little Prince	Antoine de Saint-Exupéry	https://en.wikiquote.org/w/index.php?title=The_Little_Prince&oldid=3968326	3968326	2026-08-27T11:33:43+00:00
+262	We develop only by going against opposition and facing our shadow.		The Lord of the Rings	J. R. R. Tolkien	https://en.wikiquote.org/w/index.php?title=The_Lord_of_the_Rings&oldid=3981483	3981483	2026-08-27T11:33:25+00:00
+263	They knew how to blend art into their living.		The Martian Chronicles	Ray Bradbury	https://en.wikiquote.org/w/index.php?title=The_Martian_Chronicles&oldid=3798455	3798455	2026-08-27T11:33:28+00:00
+264	It means that you must do what you really and truly want. And nothing is more difficult.		The Neverending Story	Michael Ende	https://en.wikiquote.org/w/index.php?title=The_Neverending_Story&oldid=3849301	3849301	2026-08-27T11:33:47+00:00
+265	The clearest view of a man is from below.		The Odyssey	Homer	https://en.wikiquote.org/w/index.php?title=The_Odyssey_(2026_film)&oldid=3993920	3993920	2026-08-27T11:33:51+00:00
+266	Don't ever let anybody teach you to think, Lance: it is the curse of the world.		The Once and Future King	T. H. White	https://en.wikiquote.org/w/index.php?title=The_Once_and_Future_King&oldid=3677527	3677527	2026-08-27T11:33:25+00:00
+267	You see things. You keep quiet about them. And you understand. You're a wallflower.		The Perks of Being a Wallflower	Stephen Chbosky	https://en.wikiquote.org/w/index.php?title=The_Perks_of_Being_a_Wallflower&oldid=3000107	3000107	2026-08-27T11:34:13+00:00
+268	Many of the things which can never be, often are.		The Phantom Tollbooth	Norton Juster	https://en.wikiquote.org/w/index.php?title=The_Phantom_Tollbooth&oldid=2914778	2914778	2026-08-27T11:34:16+00:00
+269	The only excuse for making a useless thing is that one admires it intensely.All art is quite useless.		The Picture of Dorian Gray	Oscar Wilde	https://en.wikiquote.org/w/index.php?title=The_Picture_of_Dorian_Gray&oldid=3952625	3952625	2026-08-27T11:33:17+00:00
+270	They are gone and I am left and they have taken with them the world.		The Road	Cormac McCarthy	https://en.wikiquote.org/w/index.php?title=The_Road&oldid=3626092	3626092	2026-08-27T11:33:32+00:00
+271	The world owes all its onward impulses to men ill at ease.		The Scarlet Letter	Nathaniel Hawthorne	https://en.wikiquote.org/w/index.php?title=Nathaniel_Hawthorne&oldid=3976735	3976735	2026-08-27T11:33:28+00:00
+272	I've stolen a garden. But it may already be dead, I don't know.		The Secret Garden	Frances Hodgson Burnett	https://en.wikiquote.org/w/index.php?title=The_Secret_Garden_(1993_film)&oldid=3893883	3893883	2026-08-27T11:34:13+00:00
+273	Fools talk, cowards are silent, wise men listen.		The Shadow of the Wind	Carlos Ruiz Zafón	https://en.wikiquote.org/w/index.php?title=Carlos_Ruiz_Zafón&oldid=3364149	3364149	2026-08-27T11:33:39+00:00
+274	This inhuman place makes human monsters.		The Shining	Stephen King	https://en.wikiquote.org/w/index.php?title=Stephen_King&oldid=3890651	3890651	2026-08-27T11:33:36+00:00
+275	The human race is but a monotonous affair.		The Sorrows of Young Werther	Johann Wolfgang von Goethe	https://en.wikiquote.org/w/index.php?title=The_Sorrows_of_Young_Werther&oldid=3572996	3572996	2026-08-27T11:33:47+00:00
+276	Life was such a wheel that no man could stand upon it for long.		The Stand	Stephen King	https://en.wikiquote.org/w/index.php?title=Stephen_King&oldid=3890651	3890651	2026-08-27T11:33:36+00:00
+277	It is in general the unexplored that attracts us.		The Tale of Genji	Murasaki Shikibu	https://en.wikiquote.org/w/index.php?title=Murasaki_Shikibu&oldid=3603307	3603307	2026-08-27T11:33:47+00:00
+278	There is no intelligence where there is no change and no need of change.		The Time Machine	H. G. Wells	https://en.wikiquote.org/w/index.php?title=The_Time_Machine&oldid=3778033	3778033	2026-08-27T11:34:13+00:00
+279	Human history becomes more and more a race between education and catastrophe...		The War of the Worlds	H. G. Wells	https://en.wikiquote.org/w/index.php?title=H._G._Wells&oldid=3929669	3929669	2026-08-27T11:34:13+00:00
+280	The Mole had been working very hard all the morning, spring-cleaning his little home.		The Wind in the Willows	Kenneth Grahame	https://en.wikiquote.org/w/index.php?title=The_Wind_in_the_Willows&oldid=3882081	3882081	2026-08-27T11:33:21+00:00
+281	The world is like a Mask dancing. If you want to see it well, you do not stand in one place.		Things Fall Apart	Chinua Achebe	https://en.wikiquote.org/w/index.php?title=Chinua_Achebe&oldid=3996243	3996243	2026-08-27T11:33:39+00:00
+282	It's a poor sort of memory that only works backwards.		Through the Looking-Glass	Lewis Carroll	https://en.wikiquote.org/w/index.php?title=Through_the_Looking-Glass&oldid=3952626	3952626	2026-08-27T11:29:02+00:00
+283	To travel hopefully is a better thing than to arrive.		Treasure Island	Robert Louis Stevenson	https://en.wikiquote.org/w/index.php?title=Robert_Louis_Stevenson&oldid=3973220	3973220	2026-08-27T11:33:21+00:00
+284	A man of genius makes no mistakes. His errors are volitional and are the portals to discovery.		Ulysses	James Joyce	https://en.wikiquote.org/w/index.php?title=Ulysses_(novel)&oldid=3962898	3962898	2026-08-27T11:33:25+00:00
+285	I think I could be a good woman if I had five thousand a year.		Vanity Fair	William Makepeace Thackeray	https://en.wikiquote.org/w/index.php?title=Vanity_Fair_(novel)&oldid=3622218	3622218	2026-08-27T11:33:21+00:00
+286	Every word is like an unnecessary stain on silence and nothingness.		Waiting for Godot	Samuel Beckett	https://en.wikiquote.org/w/index.php?title=Samuel_Beckett&oldid=3771549	3771549	2026-08-27T11:33:28+00:00
+287	If a man does not keep pace with his companions, perhaps it is because he hears a different drummer.		Walden	Henry David Thoreau	https://en.wikiquote.org/w/index.php?title=Walden&oldid=3922179	3922179	2026-08-27T11:33:28+00:00
+288	Peace cannot be kept by force. It can only be achieved by understanding.		War and Peace	Leo Tolstoy	https://en.wikiquote.org/w/index.php?title=War_and_peace&oldid=3954217	3954217	2026-08-27T11:33:39+00:00
+289	He’s just a boy pretending to be a wolf. Pretending to be a king.		Where the Wild Things Are	Maurice Sendak	https://en.wikiquote.org/w/index.php?title=Where_the_Wild_Things_Are&oldid=3984389	3984389	2026-08-27T11:34:16+00:00
+290	"Good morning, Pooh Bear", said Eeyore gloomily. "If it is a good morning", he said. "Which I doubt", said he.		Winnie-the-Pooh	A. A. Milne	https://en.wikiquote.org/w/index.php?title=A._A._Milne&oldid=3977428	3977428	2026-08-27T11:33:21+00:00
+291	Be with me always — take any form — drive me mad!		Wuthering Heights	Emily Brontë	https://en.wikiquote.org/w/index.php?title=Wuthering_Heights&oldid=3952637	3952637	2026-08-27T11:28:59+00:00
+292	Wife; children; house; everything. The full catastrophe.		Zorba the Greek	Nikos Kazantzakis	https://en.wikiquote.org/w/index.php?title=Zorba_the_Greek&oldid=3915212	3915212	2026-08-27T11:33:51+00:00
+293	I do believe that I shall have another of these savories.		A Confederacy of Dunces	John Kennedy Toole	https://en.wikiquote.org/w/index.php?title=John_Kennedy_Toole&oldid=3965377	3965377	2026-08-27T11:34:13+00:00
+294	Death destroys a man, but the idea of death saves him.		A Passage to India	E. M. Forster	https://en.wikiquote.org/w/index.php?title=E._M._Forster&oldid=3947410	3947410	2026-08-27T11:33:17+00:00
+295	To live, to err, to fall, to triumph, to recreate life out of life!		A Portrait of the Artist as a Young Man	James Joyce	https://en.wikiquote.org/w/index.php?title=A_Portrait_of_the_Artist_as_a_Young_Man&oldid=3588414	3588414	2026-08-27T11:33:25+00:00
+296	Luck is believing you're lucky, that's all...		A Streetcar Named Desire	Tennessee Williams	https://en.wikiquote.org/w/index.php?title=A_Streetcar_Named_Desire_(1951_film)&oldid=3718334	3718334	2026-08-27T11:34:09+00:00
+297	What is the difference between my life and my love? One gets me low, the other lets me go.		A Suitable Boy	Vikram Seth	https://en.wikiquote.org/w/index.php?title=Vikram_Seth&oldid=3851083	3851083	2026-08-27T11:33:51+00:00
+298	An infinite question is often destroyed by finite answers.		A Wrinkle in Time	Madeleine L'Engle	https://en.wikiquote.org/w/index.php?title=Madeleine_L'Engle&oldid=3932636	3932636	2026-08-27T11:34:16+00:00
+299	I've often seen a cat without a grin,' thought Alice; 'but a grin without a cat!		Alice's Adventures in Wonderland	Lewis Carroll	https://en.wikiquote.org/w/index.php?title=Alice's_Adventures_in_Wonderland&oldid=3952630	3952630	2026-08-27T11:33:21+00:00
+300	Chicago happened slowly, like a migraine.		American Gods	Neil Gaiman	https://en.wikiquote.org/w/index.php?title=American_Gods&oldid=3915400	3915400	2026-08-27T11:33:25+00:00
+301	We teach girls to shrink themselves, to make themselves smaller.		Americanah	Chimamanda Ngozi Adichie	https://en.wikiquote.org/w/index.php?title=Chimamanda_Ngozi_Adichie&oldid=3978725	3978725	2026-08-27T11:33:39+00:00
+302	All men are enemies. All animals are comrades.		Animal Farm	George Orwell	https://en.wikiquote.org/w/index.php?title=Animal_Farm&oldid=3952611	3952611	2026-08-27T11:28:56+00:00
+303	It showed him the mistake men make in picturing to themselves happiness as the realization of their desires.		Anna Karenina	Leo Tolstoy	https://en.wikiquote.org/w/index.php?title=Anna_Karenina&oldid=3952640	3952640	2026-08-27T11:33:39+00:00
+304	I pity the people who aren't born yet for missing it.		Anne of Green Gables	L. M. Montgomery	https://en.wikiquote.org/w/index.php?title=Anne_of_Green_Gables&oldid=3952638	3952638	2026-08-27T11:33:36+00:00
+305	A man shut up between four walls soon loses the power to associate words and ideas together.		Around the World in Eighty Days	Jules Verne	https://en.wikiquote.org/w/index.php?title=Jules_Verne&oldid=3703573	3703573	2026-08-27T11:33:43+00:00
+306	Incline not to arrogance, famous warrior!		Beowulf	Anonymous	https://en.wikiquote.org/w/index.php?title=Beowulf&oldid=3924672	3924672	2026-08-27T11:34:09+00:00
+307	All progressions from a higher to a lower order are marked by ruins and mystery and a residue of nameless rage.		Blood Meridian	Cormac McCarthy	https://en.wikiquote.org/w/index.php?title=Blood_Meridian&oldid=3965838	3965838	2026-08-27T11:33:32+00:00
+308	The World State's motto: COMMUNITY, IDENTITY, STABILITY.		Brave New World	Aldous Huxley	https://en.wikiquote.org/w/index.php?title=Brave_New_World&oldid=3915179	3915179	2026-08-27T11:28:57+00:00
+309	Manners are especially the need of the plain. The pretty can get away with anything.		Brideshead Revisited	Evelyn Waugh	https://en.wikiquote.org/w/index.php?title=Evelyn_Waugh&oldid=3912500	3912500	2026-08-27T11:33:17+00:00
+310	In this country it is found requisite, now and then, to put an admiral to death, in order to encourage the others.		Candide	Voltaire	https://en.wikiquote.org/w/index.php?title=Candide&oldid=3611571	3611571	2026-08-27T11:33:43+00:00
+311	Beware of the man who works hard to learn something, learns it, and finds himself no wiser than before.		Cat's Cradle	Kurt Vonnegut	https://en.wikiquote.org/w/index.php?title=Cat's_Cradle&oldid=3948378	3948378	2026-08-27T11:33:32+00:00
+312	Outside the hospital the war was still going on. Men went mad and were rewarded with medals.		Catch-22	Joseph Heller	https://en.wikiquote.org/w/index.php?title=Catch-22&oldid=3791053	3791053	2026-08-27T11:33:32+00:00
+313	It is not often that someone comes along who is a true friend and a good writer.		Charlotte's Web	E. B. White	https://en.wikiquote.org/w/index.php?title=Charlotte's_Web_(book)&oldid=2584031	2584031	2026-08-27T11:34:16+00:00
+314	Once any tyranny becomes accepted as ordinary, according to Veronica, its victory is assured.		Cloud Atlas	David Mitchell	https://en.wikiquote.org/w/index.php?title=Cloud_Atlas_(novel)&oldid=3941785	3941785	2026-08-27T11:33:21+00:00
+315	You probably think this world is a dream come true… but you're wrong.	Cat	Coraline	Neil Gaiman	https://en.wikiquote.org/w/index.php?title=Coraline_(film)&oldid=3926212	3926212	2026-08-27T11:29:04+00:00
+316	Lying is man's only privilege over all other organisms.		Crime and Punishment	Fyodor Dostoevsky	https://en.wikiquote.org/w/index.php?title=Crime_and_Punishment&oldid=3952642	3952642	2026-08-27T11:33:39+00:00
+317	What are you laughing at? You are laughing at yourselves!		Dead Souls	Nikolai Gogol	https://en.wikiquote.org/w/index.php?title=Nikolai_Gogol&oldid=3929350	3929350	2026-08-27T11:33:43+00:00
+318	The only thing you got in this world is what you can sell.		Death of a Salesman	Arthur Miller	https://en.wikiquote.org/w/index.php?title=Arthur_Miller&oldid=3890238	3890238	2026-08-27T11:34:09+00:00
+319	Could he with reason murmur at his case,Himself sole author of his own disgrace?		Disgrace	J. M. Coetzee	https://en.wikiquote.org/w/index.php?title=Disgrace&oldid=2655455	2655455	2026-08-27T11:33:39+00:00
+320	The electric things have their life too. Paltry as those lives are.		Do Androids Dream of Electric Sheep?	Philip K. Dick	https://en.wikiquote.org/w/index.php?title=Philip_K._Dick&oldid=3992844	3992844	2026-08-27T11:33:36+00:00
+321	A bird in the hand is worth two in the bush.		Don Quixote	Miguel de Cervantes	https://en.wikiquote.org/w/index.php?title=Miguel_de_Cervantes&oldid=3976497	3976497	2026-08-27T11:33:39+00:00
+322	What do you despise? By this you are truly known.		Dune	Frank Herbert	https://en.wikiquote.org/w/index.php?title=Dune&oldid=3914593	3914593	2026-08-27T11:33:32+00:00
+323	I have to win this now, and for all time, or I'll fight it every day and it will get worse and worse.		Ender's Game	Orson Scott Card	https://en.wikiquote.org/w/index.php?title=Ender's_Game&oldid=3881768	3881768	2026-08-27T11:33:36+00:00
+324	The books are to remind us what asses and fools we are.		Fahrenheit 451	Ray Bradbury	https://en.wikiquote.org/w/index.php?title=Fahrenheit_451&oldid=3940352	3940352	2026-08-27T11:33:28+00:00
+325	"It's only after you've lost everything," Tyler says, "that you're free to do anything."		Fight Club	Chuck Palahniuk	https://en.wikiquote.org/w/index.php?title=Fight_Club_(novel)&oldid=3737377	3737377	2026-08-27T11:33:36+00:00
+326	There was a glamor to it, a perfection and a completeness and a symmetry to it like Grecian art.		Gone with the Wind	Margaret Mitchell	https://en.wikiquote.org/w/index.php?title=Gone_with_the_Wind_(novel)&oldid=3336302	3336302	2026-08-27T11:34:09+00:00
+327	Kids! Bringing about Armageddon can be dangerous. Do not attempt it in your own home.		Good Omens	Terry Pratchett and Neil Gaiman	https://en.wikiquote.org/w/index.php?title=Good_Omens&oldid=3887523	3887523	2026-08-27T11:33:25+00:00
+328	Poor Nations are hungry, and rich Nations are proud, and Pride and Hunger will ever be at Variance.		Gulliver's Travels	Jonathan Swift	https://en.wikiquote.org/w/index.php?title=Gulliver's_Travels&oldid=3942835	3942835	2026-08-27T11:33:21+00:00
+329	Education is a priority! How can we resist exploitation if we don’t have the tools to understand exploitation?		Half of a Yellow Sun	Chimamanda Ngozi Adichie	https://en.wikiquote.org/w/index.php?title=Half_of_a_Yellow_Sun&oldid=3553033	3553033	2026-08-27T11:33:39+00:00
+330	Fear of a name increases fear of the thing itself.		Harry Potter and the Philosopher's Stone	J. K. Rowling	https://en.wikiquote.org/w/index.php?title=Harry_Potter_and_the_Philosopher's_Stone&oldid=3717956	3717956	2026-08-27T11:33:25+00:00
+331	I don’t go looking for trouble. Trouble usually finds me!		Harry Potter and the Prisoner of Azkaban	J. K. Rowling	https://en.wikiquote.org/w/index.php?title=Harry_Potter_and_the_Prisoner_of_Azkaban&oldid=3887534	3887534	2026-08-27T11:33:25+00:00
+332	Droll thing life is — that mysterious arrangement of merciless logic for a futile purpose.		Heart of Darkness	Joseph Conrad	https://en.wikiquote.org/w/index.php?title=Heart_of_Darkness&oldid=3987647	3987647	2026-08-27T11:33:17+00:00
+333	I can’t choose my nature, but I can choose what I do.		His Dark Materials	Philip Pullman	https://en.wikiquote.org/w/index.php?title=Philip_Pullman&oldid=3980081	3980081	2026-08-27T11:33:25+00:00
+334	To ensure your freedom, some freedoms must be surrendered.		I, Robot	Isaac Asimov	https://en.wikiquote.org/w/index.php?title=I,_Robot_(film)&oldid=3959505	3959505	2026-08-27T11:33:32+00:00
+335	We who survived the Camps are not true witnesses.		If This Is a Man	Primo Levi	https://en.wikiquote.org/w/index.php?title=Primo_Levi&oldid=3907842	3907842	2026-08-27T11:33:47+00:00
+336	Who knows but that, on the lower frequencies, I speak for you?		Invisible Man	Ralph Ellison	https://en.wikiquote.org/w/index.php?title=Ralph_Ellison&oldid=3632470	3632470	2026-08-27T11:33:32+00:00
+337	You think wrong! — I have as much soul as you — and full as much heart!		Jane Eyre	Charlotte Brontë	https://en.wikiquote.org/w/index.php?title=Charlotte_Brontë&oldid=3945880	3945880	2026-08-27T11:28:59+00:00
+338	Anyone who falls in love is searching for missing pieces of themselves.		Kafka on the Shore	Haruki Murakami	https://en.wikiquote.org/w/index.php?title=Kafka_on_the_Shore&oldid=3780267	3780267	2026-08-27T11:33:47+00:00
+339	A morning-glory at my window satisfies me more than the metaphysics of books.		Leaves of Grass	Walt Whitman	https://en.wikiquote.org/w/index.php?title=Leaves_of_Grass&oldid=3985858	3985858	2026-08-27T11:34:09+00:00
+340	Life is so beautiful that death has fallen in love with it, a jealous, possessive love that grabs at what it can.		Life of Pi	Yann Martel	https://en.wikiquote.org/w/index.php?title=Yann_Martel&oldid=3915533	3915533	2026-08-27T11:33:36+00:00
+341	Love is the only thing that we can carry with us when we go, and it makes the end so easy.		Little Women	Louisa May Alcott	https://en.wikiquote.org/w/index.php?title=Louisa_May_Alcott&oldid=3957259	3957259	2026-08-27T11:33:28+00:00
+342	You can always count on a murderer for a fancy prose style.		Lolita	Vladimir Nabokov	https://en.wikiquote.org/w/index.php?title=Lolita&oldid=3952644	3952644	2026-08-27T11:33:32+00:00
+343	The real significance of crime is in its being a breach of faith with the community of mankind.		Lord Jim	Joseph Conrad	https://en.wikiquote.org/w/index.php?title=Lord_Jim&oldid=3547629	3547629	2026-08-27T11:33:17+00:00
+344	Sleep is when all unsorted stuff comes as from a dustbin upset in a high wind.		Lord of the Flies	William Golding	https://en.wikiquote.org/w/index.php?title=William_Golding&oldid=3915239	3915239	2026-08-27T11:33:17+00:00
+345	“No, not rich,” he said. “I am a poor man with money, which is not the same thing.”		Love in the Time of Cholera	Gabriel García Márquez	https://en.wikiquote.org/w/index.php?title=Love_in_the_Time_of_Cholera&oldid=3685969	3685969	2026-08-27T11:33:39+00:00
+346	The future was a pitch-black tunnel, ending in a locked door.		Madame Bovary	Gustave Flaubert	https://en.wikiquote.org/w/index.php?title=Madame_Bovary&oldid=3922710	3922710	2026-08-27T11:33:43+00:00
+347	Hell is full of musical amateurs. Music is the brandy of the damned.		Man and Superman	George Bernard Shaw	https://en.wikiquote.org/w/index.php?title=Man_and_Superman&oldid=3721599	3721599	2026-08-27T11:34:09+00:00
+348	Talk not to me of blasphemy, man; I'd strike the sun if it insulted me.		Moby-Dick	Herman Melville	https://en.wikiquote.org/w/index.php?title=Moby-Dick&oldid=3962897	3962897	2026-08-27T11:33:28+00:00
+349	It struck Mort with sudden, terrible poignancy that Death must be the loneliest creature in the universe.		Mort	Terry Pratchett	https://en.wikiquote.org/w/index.php?title=Mort&oldid=3551286	3551286	2026-08-27T11:33:25+00:00
+350	Lines of light ranged in the nonspace of the mind, clusters and constellations of data.		Neuromancer	William Gibson	https://en.wikiquote.org/w/index.php?title=Sprawl_trilogy&oldid=3956712	3956712	2026-08-27T11:33:36+00:00
+351	If you want a picture of the future, imagine a boot stamping on a human face — forever.		Nineteen Eighty-Four	George Orwell	https://en.wikiquote.org/w/index.php?title=Nineteen_Eighty-Four&oldid=3949875	3949875	2026-08-27T11:28:56+00:00
+352	Not courting talk — real straight talk about souls, for life is holy and every moment is precious.		On the Road	Jack Kerouac	https://en.wikiquote.org/w/index.php?title=On_the_Road&oldid=3915216	3915216	2026-08-27T11:33:32+00:00
+353	One minute of reconciliation is worth more than a whole life of friendship.		One Hundred Years of Solitude	Gabriel García Márquez	https://en.wikiquote.org/w/index.php?title=One_Hundred_Years_of_Solitude&oldid=3863702	3863702	2026-08-27T11:33:39+00:00
+354	Curiosity is insubordination in its purest form.		Pale Fire	Vladimir Nabokov	https://en.wikiquote.org/w/index.php?title=Vladimir_Nabokov&oldid=3995255	3995255	2026-08-27T11:33:32+00:00
+355	All is not lost; th’ unconquerable will, And study of revenge, immortal hate, And courage never to submit or yield.		Paradise Lost	John Milton	https://en.wikiquote.org/w/index.php?title=Paradise_Lost&oldid=3943843	3943843	2026-08-27T11:34:09+00:00
+356	If you take the life lie from an average man, you take away his happiness as well.		Peer Gynt	Henrik Ibsen	https://en.wikiquote.org/w/index.php?title=Henrik_Ibsen&oldid=3682496	3682496	2026-08-27T11:34:09+00:00
+357	"I'm youth, I'm joy, I'm a little bird that has broken out of the egg."		Peter Pan	J. M. Barrie	https://en.wikiquote.org/w/index.php?title=Peter_Pan&oldid=3952628	3952628	2026-08-27T11:33:21+00:00
+358	It is better to have a lion at the head of an army of sheep than a sheep at the head of an army of lions.		Robinson Crusoe	Daniel Defoe	https://en.wikiquote.org/w/index.php?title=Daniel_Defoe&oldid=3935737	3935737	2026-08-27T11:33:21+00:00
+359	All moments, past, present and future, always have existed, always will exist.		Slaughterhouse-Five	Kurt Vonnegut	https://en.wikiquote.org/w/index.php?title=Slaughterhouse-Five&oldid=3732011	3732011	2026-08-27T11:33:32+00:00
+360	Rumor is information distilled so finely that it can filter through anything.		Small Gods	Terry Pratchett	https://en.wikiquote.org/w/index.php?title=Discworld&oldid=3952185	3952185	2026-08-27T11:33:25+00:00
+361	The world is full of power and energy and a person can go far by just skimming off a tiny bit of it.		Snow Crash	Neal Stephenson	https://en.wikiquote.org/w/index.php?title=Snow_Crash&oldid=3499277	3499277	2026-08-27T11:33:36+00:00
+362	I am going to teach you to dance and play and smile, and still not be happy.		Steppenwolf	Hermann Hesse	https://en.wikiquote.org/w/index.php?title=Steppenwolf&oldid=3665502	3665502	2026-08-27T11:33:47+00:00
+363	Obscurity is the refuge of the incompetent.		Stranger in a Strange Land	Robert A. Heinlein	https://en.wikiquote.org/w/index.php?title=Stranger_in_a_Strange_Land&oldid=3831774	3831774	2026-08-27T11:33:32+00:00
+364	He who is satisfied with his lot is rich; he who goes on acting with energy has a (firm) will.		Tao Te Ching	Laozi	https://en.wikiquote.org/w/index.php?title=Tao_Te_Ching&oldid=3865813	3865813	2026-08-27T11:33:51+00:00
+365	"The strongest guard is placed at the gateway to nothing," he said.		Tender Is the Night	F. Scott Fitzgerald	https://en.wikiquote.org/w/index.php?title=Tender_is_the_Night&oldid=3923992	3923992	2026-08-27T11:33:28+00:00

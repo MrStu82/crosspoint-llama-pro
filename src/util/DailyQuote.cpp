@@ -51,4 +51,14 @@ int dayOfYearFromYmd(int yyyymmdd) {
   for (int m = 1; m < month; ++m) dayOfYear += kDaysInMonth[m - 1] + (leap && m == 2 ? 1 : 0);
   return dayOfYear;
 }
+
+std::string attributionLine(const DailyQuoteRecord& record) {
+  std::string line;
+  for (const char* field : {record.character, record.title, record.author}) {
+    if (field == nullptr || field[0] == '\0') continue;
+    if (!line.empty()) line += ", ";
+    line += field;
+  }
+  return line;
+}
 }  // namespace DailyQuote

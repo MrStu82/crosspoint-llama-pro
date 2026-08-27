@@ -829,7 +829,7 @@ void HomeActivity::renderInkPointHome() {
   const auto& daily =
       quoteDay >= 0 ? DailyQuote::select(today / 10000, quoteDay) : DailyQuote::select(2026, 0);
   const auto quoteLines = wrapWords(renderer, CAVEAT_15_FONT_ID, daily.quote, 400, 3);
-  const std::string attribution = std::string(daily.character) + ", " + daily.title + ", " + daily.author;
+  const std::string attribution = DailyQuote::attributionLine(daily);
   const auto attributionLines = wrapWords(renderer, SMALL_FONT_ID, attribution, 400, 2);
   constexpr int quoteStep = 25;
   constexpr int attributionStep = 18;

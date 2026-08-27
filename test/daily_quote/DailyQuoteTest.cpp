@@ -28,6 +28,26 @@ TEST(DailyQuote, LeapYearCycleHas366UniqueAuditedRecords) {
   EXPECT_EQ(quotes.size(), DailyQuote::kRecordCount);
 }
 
+// Pack 2 leaves character empty for narration rather than stamping a fake
+// speaker on it, so the attribution line has to collapse without a stray comma.
+TEST(DailyQuote, AttributionLineSkipsEmptyFields) {
+  const DailyQuoteRecord spoken{"q", "Gandalf", "The Fellowship of the Ring", "J. R. R. Tolkien"};
+  EXPECT_EQ(DailyQuote::attributionLine(spoken), "Gandalf, The Fellowship of the Ring, J. R. R. Tolkien");
+
+  const DailyQuoteRecord narration{"q", "", "Moby-Dick", "Herman Melville"};
+  EXPECT_EQ(DailyQuote::attributionLine(narration), "Moby-Dick, Herman Melville");
+}
+
+TEST(DailyQuote, EveryRecordRendersAnAttributionWithoutLeadingOrDoubleComma) {
+  for (int day = 0; day < 366; ++day) {
+    const std::string line = DailyQuote::attributionLine(DailyQuote::select(2028, day));
+    EXPECT_FALSE(line.empty());
+    EXPECT_NE(line.front(), ',');
+    EXPECT_EQ(line.find(", ,"), std::string::npos);
+    EXPECT_EQ(line.find(",,"), std::string::npos);
+  }
+}
+
 TEST(DailyQuote, YearRolloverReshuffles) {
   EXPECT_STRNE(DailyQuote::select(2026, 364).quote, DailyQuote::select(2027, 0).quote);
 }

@@ -1,736 +1,736 @@
-CrossPoint daily quote pack v2 - 366 records, 155 works, 117 authors
+CrossPoint daily quote pack v3 - 366 records, 149 works, 113 authors
 Source: English Wikiquote (CC BY-SA). Every line verified verbatim against the
 cited revision; per-record source_url/revision_id/retrieved_at in docs/daily-quotes-sources.tsv.
 
-  1. It always comes down to just two choices. Get busy living or get busy dying.
+  1. It told Jeremiah and Daniel and Amos and Abraham.
      -- 11/22/63, Stephen King
-  2. "With the breakdown of the Medieval system, the gods of Chaos, Lunacy, and Bad Taste gained ascendancy."
+  2. "Tell me why?" "I wear the chain I forged in life," replied the Ghost.
+     -- A Christmas Carol, Charles Dickens
+  3. "With the breakdown of the Medieval system, the gods of Chaos, Lunacy, and Bad Taste gained ascendancy."
      -- A Confederacy of Dunces, John Kennedy Toole
-  3. Personal relations are the important thing for ever and ever and not this outer life of telegrams and anger.
+  4. Personal relations are the important thing for ever and ever and not this outer life of telegrams and anger.
      -- A Passage to India, E. M. Forster
-  4. When the soul of a man is born in this country there are nets flung at it to hold it back from flight.
+  5. You talk to me of nationality, language, religion.
      -- A Portrait of the Artist as a Young Man, James Joyce
-  5. I have always depended on the kindness of strangers.
+  6. I have always depended on the kindness of strangers.
      -- A Streetcar Named Desire, Tennessee Williams
-  6. Ten hostages is terrorism; A million, and it's strategy.
+  7. What pastoral response acquits Those who made ovens for Auschwitz?
      -- A Suitable Boy, Vikram Seth
-  7. Death is Nature's remedy for all things, and why not Legislation's?
+  8. Death is Nature's remedy for all things, and why not Legislation's?
      -- A Tale of Two Cities, Charles Dickens
-  8. Just because we don't understand doesn't mean that the explanation doesn't exist.
+  9. Just because we don't understand doesn't mean that the explanation doesn't exist.
      -- A Wrinkle in Time, Madeleine L'Engle
-  9. Everything's got a moral, if only you can find it.
+ 10. "Will you walk a little faster?" said a whiting to a snail.
      -- Alice's Adventures in Wonderland, Lewis Carroll
- 10. Ideas are more difficult to kill than people, but they can be killed, in the end.
+ 11. Ideas are more difficult to kill than people, but they can be killed, in the end.
      -- American Gods, Neil Gaiman
- 11. “Show a people as one thing, only one thing, over and over again, and that is what they become.”
+ 12. “Show a people as one thing, only one thing, over and over again, and that is what they become.”
      -- Americanah, Chimamanda Ngozi Adichie
- 12. ALL ANIMALS ARE EQUAL, BUT SOME ANIMALS ARE MORE EQUAL THAN OTHERS.
+ 13. Much of this work was of a kind that the other animals were too ignorant to understand.
      -- Animal Farm, George Orwell
- 13. Happy families are all alike; every unhappy family is unhappy in its own way.
+ 14. Happy families are all alike; every unhappy family is unhappy in its own way.
      -- Anna Karenina, Leo Tolstoy
- 14. Oh, this is the most tragical thing that has ever happened to me!
+ 15. Oh, this is the most tragical thing that has ever happened to me!
      -- Anne of Green Gables, L. M. Montgomery
- 15. The Earth does not want new continents, but new men.
+ 16. The Earth does not want new continents, but new men.
      -- Around the World in Eighty Days, Jules Verne
- 16. Behaviour that's admiredis the path to power among people everywhere.
+ 17. Behaviour that's admired is the path to power among people everywhere.
      -- Beowulf, Anonymous
- 17. The one great principle of the English law is to make business for itself.
+ 18. The one great principle of the English law is to make business for itself.
      -- Bleak House, Charles Dickens
- 18. He never sleeps, the judge. He is dancing, dancing. He says that he will never die.
+ 19. He never sleeps, the judge. He is dancing, dancing. He says that he will never die.
      -- Blood Meridian, Cormac McCarthy
- 19. I want God, I want poetry, I want real danger, I want freedom, I want goodness.
+ 20. In a properly organized society like ours, nobody has any opportunities for being noble or heroic.
      -- Brave New World, Aldous Huxley
- 20. To know and love one other human being is the root of all wisdom.
+ 21. To know and love one other human being is the root of all wisdom.
      -- Brideshead Revisited, Evelyn Waugh
- 21. "Excellently observed," answered Candide; "but let us cultivate our garden."
+ 22. "Excellently observed," answered Candide; "but let us cultivate our garden."
      -- Candide, Voltaire
- 22. As Bokonon says: "Peculiar travel suggestions are dancing lessons from God."
+ 23. “She said his mind was turned to the biggest music there was, the music of the stars.”
      -- Cat's Cradle, Kurt Vonnegut
- 23. Orr would be crazy to fly more missions and sane if he didn't, but if he was sane, he had to fly them.
+ 24. "That's some catch, that Catch-22," he observed. "It's the best there is," Doc Daneeka agreed.
      -- Catch-22, Joseph Heller
- 24. In addition, one of these children shall receive a special prize beyond anything you could ever imagine.
-     -- Charlie and the Chocolate Factory, Roald Dahl
  25. After all, what's a life, anyway? We're born, we live a little while, we die.
      -- Charlotte's Web, E. B. White
- 26. In an individual, selfishness uglifies the soul; for the human species, selfishness is extinction.
+ 26. Books don't offer real escape but they can stop a mind scratching itself raw.
      -- Cloud Atlas, David Mitchell
- 27. Be clever, Miss. Even if you win, she'll never let you go.
-     -- Sweet Ghost Girl, Coraline, Neil Gaiman
- 28. To go wrong in one's own way is better than to go right in someone else's.
+ 27. To go wrong in one's own way is better than to go right in someone else's.
      -- Crime and Punishment, Fyodor Dostoevsky
- 29. Annual income twenty pounds, annual expenditure nineteen nineteen and six, result happiness.
+ 28. Annual income twenty pounds, annual expenditure nineteen nineteen and six, result happiness.
      -- David Copperfield, Charles Dickens
- 30. It is no use to blame the looking glass if your face is awry.
+ 29. I frequently see literary men; I'm on a very friendly footing with Pushkin.
      -- Dead Souls, Nikolai Gogol
- 31. Attention, attention must be finally paid to such a person.
+ 30. Attention, attention must be finally paid to such a person.
      -- Death of a Salesman, Arthur Miller
- 32. Come, Death, and snatch me from disgrace.
+ 31. Come, Death, and snatch me from disgrace.
      -- Disgrace, J. M. Coetzee
- 33. Reality is that which, when you stop believing in it, doesn’t go away.
+ 32. Not the aesthetic capacity but the capacity for indignation.
      -- Do Androids Dream of Electric Sheep?, Philip K. Dick
- 34. Finally, from so little sleeping and so much reading, his brain dried up and he went completely out of his mind.
+ 33. Finally, from so little sleeping and so much reading, his brain dried up and he went completely out of his mind.
      -- Don Quixote, Miguel de Cervantes
- 35. The Last Voyage of the Demeter, a 2023 film written by Bragi F.
-     -- Dracula, Bram Stoker
- 36. I must not fear. Fear is the mind-killer. Fear is the little-death that brings total obliteration...
+ 34. I must not fear. Fear is the mind-killer. Fear is the little-death that brings total obliteration...
      -- Dune, Frank Herbert
- 37. It is always attacked and never destroyed — because Thou mayest.
+ 35. It is always attacked and never destroyed — because Thou mayest.
      -- East of Eden, John Steinbeck
- 38. One half of the world cannot understand the pleasures of the other.
+ 36. One half of the world cannot understand the pleasures of the other.
      -- Emma, Jane Austen
- 39. “The essence of training is to allow error without consequence.”
+ 37. “The essence of training is to allow error without consequence.”
      -- Ender's Game, Orson Scott Card
- 40. Everyone must leave something behind when he dies, my grandfather said.
+ 38. Everyone must leave something behind when he dies, my grandfather said.
      -- Fahrenheit 451, Ray Bradbury
- 41. You are not a beautiful and unique snowflake.
+ 39. You are not a beautiful and unique snowflake.
      -- Fight Club, Chuck Palahniuk
- 42. The people who have brains and courage come through and the ones who haven't are winnowed out.
+ 40. The people who have brains and courage come through and the ones who haven't are winnowed out.
      -- Gone with the Wind, Margaret Mitchell
- 43. It wasn't a dark and stormy night. It should have been, but that's the weather for you.
+ 41. It wasn't a dark and stormy night. It should have been, but that's the weather for you.
      -- Good Omens, Terry Pratchett and Neil Gaiman
- 44. Pip, dear old chap, life is made of ever so many partings welded together...
+ 42. Pip, dear old chap, life is made of ever so many partings welded together...
      -- Great Expectations, Charles Dickens
- 45. I wrote for their amendment, and not their approbation.
+ 43. I wrote for their amendment, and not their approbation.
      -- Gulliver's Travels, Jonathan Swift
- 46. This was love: a string of coincidences that gathered significance and became miracles.
+ 44. This was love: a string of coincidences that gathered significance and became miracles.
      -- Half of a Yellow Sun, Chimamanda Ngozi Adichie
- 47. To be, or not to be, — that is the question...
+ 45. Hamlet Then I would you were so honest a man.
      -- Hamlet, William Shakespeare
- 48. To the well-organized mind, death is but the next great adventure.
+ 46. To the well-organized mind, death is but the next great adventure.
      -- Harry Potter and the Philosopher's Stone, J. K. Rowling
- 49. I solemnly swear that I am up to no good.
+ 47. I solemnly swear that I am up to no good.
      -- Harry Potter and the Prisoner of Azkaban, J. K. Rowling
- 50. I don't like work — no man does — but I like what is in work — the chance to find yourself.
+ 48. I don't like work — no man does — but I like what is in work — the chance to find yourself.
      -- Heart of Darkness, Joseph Conrad
- 51. Human beings can’t see anything without wanting to destroy it, Lyra. That’s original sin.
+ 49. Human beings can’t see anything without wanting to destroy it, Lyra. That’s original sin.
      -- His Dark Materials, Philip Pullman
- 52. You cannot be trusted with your own survival.
-     -- I, Robot, Isaac Asimov
- 53. It happened, therefore it can happen again: this is the core of what we have to say.
+ 50. It's not my fault if I live and breathe, Eat, drink, sleep and put on clothes.
      -- If This Is a Man, Primo Levi
- 54. I am invisible, understand, simply because people refuse to see me.
+ 51. I am invisible, understand, simply because people refuse to see me.
      -- Invisible Man, Ralph Ellison
- 55. Monsters are real. Ghosts are too. They live inside of us, and sometimes, they win.
+ 52. She had never dreamed there could be so much pain in a life when there was nothing physically wrong.
      -- It, Stephen King
- 56. Conventionality is not morality. Self-righteousness is not religion. To attack the first is not to assail the last.
+ 53. Conventionality is not morality. Self-righteousness is not religion. To attack the first is not to assail the last.
      -- Jane Eyre, Charlotte Brontë
- 57. Sometimes fate is like a small sandstorm that keeps changing directions.
+ 54. Sometimes fate is like a small sandstorm that keeps changing directions.
      -- Kafka on the Shore, Haruki Murakami
- 58. How sharper than a serpent's tooth it isTo have a thankless child!
+ 55. Truth's a dog must to kennel; he must be whipped out, when Lady the brach may stand by the fire and stink.
      -- King Lear, William Shakespeare
- 59. Seeing, hearing, feeling, are miracles, and each part and tag of me is a miracle.
+ 56. Seeing, hearing, feeling, are miracles, and each part and tag of me is a miracle.
      -- Leaves of Grass, Walt Whitman
- 60. I must say a word about fear. It is life's only true opponent. Only fear can defeat life.
+ 57. I must say a word about fear. It is life's only true opponent. Only fear can defeat life.
      -- Life of Pi, Yann Martel
- 61. I'm not afraid of storms, for I'm learning how to sail my ship.
+ 58. I'm not afraid of storms, for I'm learning how to sail my ship.
      -- Little Women, Louisa May Alcott
- 62. Lolita, light of my life, fire of my loins. My sin, my soul.
+ 59. Lolita, light of my life, fire of my loins. My sin, my soul.
      -- Lolita, Vladimir Nabokov
- 63. There is nothing more enticing, disenchanting, and enslaving than the life at sea.
+ 60. There is nothing more enticing, disenchanting, and enslaving than the life at sea.
      -- Lord Jim, Joseph Conrad
- 64. The forest was very still. They listened, and the loudest noise was the buzzing of the flies over the spilled guts.
+ 61. It seems to me that we do live in two worlds.
      -- Lord of the Flies, William Golding
- 65. “Shoot me,” he said, with his hand on his chest. “There is no greater glory than to die for love.”
+ 62. Florentino Ariza pensaba que sólo el terror peodía inducir a semejante indignidad.
      -- Love in the Time of Cholera, Gabriel García Márquez
- 66. It is a taleTold by an idiot, full of sound and fury,Signifying nothing.
+ 63. Stand not upon the order of your going, But go at once.
      -- Macbeth, William Shakespeare
- 67. We shouldn't maltreat our idols: the gilt comes off on our hands.
+ 64. We shouldn't maltreat our idols: the gilt comes off on our hands.
      -- Madame Bovary, Gustave Flaubert
- 68. There are two tragedies in life. One is not to get your heart's desire. The other is to get it.
+ 65. There are two tragedies in life. One is not to get your heart's desire. The other is to get it.
      -- Man and Superman, George Bernard Shaw
- 69. It is not down on any map; true places never are.
+ 66. It is not down on any map; true places never are.
      -- Moby-Dick, Herman Melville
- 70. History always has a few tricks up its frayed sleeve. It's been around a long time.
+ 67. History always has a few tricks up its frayed sleeve. It's been around a long time.
      -- Mort, Terry Pratchett
- 71. The sky above the port was the color of television, tuned to a dead channel.
+ 68. The sky above the port was the color of television, tuned to a dead channel.
      -- Neuromancer, William Gibson
- 72. It was a bright cold day in April, and the clocks were striking thirteen.
+ 69. It was a bright cold day in April, and the clocks were striking thirteen.
      -- Nineteen Eighty-Four, George Orwell
- 73. Books ain't no good. A guy needs somebody — to be near him. A guy goes nuts if he ain't got nobody.
+ 70. Books ain't no good. A guy needs somebody — to be near him. A guy goes nuts if he ain't got nobody.
      -- Of Mice and Men, John Steinbeck
- 74. Dead men never repent; dead men never bring awkward stories to light.
+ 71. Dead men never repent; dead men never bring awkward stories to light.
      -- Oliver Twist, Charles Dickens
- 75. Our battered suitcases were piled on the sidewalk again; we had longer ways to go. But no matter, the road is life.
+ 72. Our battered suitcases were piled on the sidewalk again; we had longer ways to go. But no matter, the road is life.
      -- On the Road, Jack Kerouac
- 76. The world was so recent that many things lacked names, and in order to indicate them it was necessary to point.
+ 73. The world was so recent that many things lacked names, and in order to indicate them it was necessary to point.
      -- One Hundred Years of Solitude, Gabriel García Márquez
- 77. Curiously enough, one cannot read a book: one can only reread it.
+ 74. Why then drag in such irrelevant matters as wasted dollars and power politics?
      -- Pale Fire, Vladimir Nabokov
- 78. The mind is its own place, and in itself Can make a heav'n of hell, a hell of heav'n.
+ 75. The mind is its own place, and in itself Can make a heav'n of hell, a hell of heav'n.
      -- Paradise Lost, John Milton
- 79. The State is the curse of the individual.
+ 76. The State is the curse of the individual.
      -- Peer Gynt, Henrik Ibsen
- 80. To die will be an awfully big adventure.
+ 77. To die will be an awfully big adventure.
      -- Peter Pan, J. M. Barrie
- 81. She is tolerable; but not handsome enough to tempt me.
+ 78. She is tolerable; but not handsome enough to tempt me.
      -- Pride and Prejudice, Jane Austen
- 82. Fear of danger is ten thousand times more terrifying than danger itself.
+ 79. Titles are shadows, crowns are empty things, The good of subjects is the end of kings.
      -- Robinson Crusoe, Daniel Defoe
- 83. But, soft! what light through yonder window breaks?It is the east, and Juliet is the sun!
+ 80. Nay, sit, nay, sit, good cousin Capulet; For you and I are past our dancing days.
      -- Romeo and Juliet, William Shakespeare
- 84. Know your own happiness. You want nothing but patience; or give it a more fascinating name: call it hope.
+ 81. Know your own happiness. You want nothing but patience; or give it a more fascinating name: call it hope.
      -- Sense and Sensibility, Jane Austen
- 85. Listen: Billy Pilgrim has come unstuck in time.
+ 82. Listen: Billy Pilgrim has come unstuck in time.
      -- Slaughterhouse-Five, Kurt Vonnegut
- 86. Plans can break down. You cannot plan the future. Only presumptuous fools plan. The wise man steers.
+ 83. Every organization needs at least one person who knows what’s going on, and why it’s happening, and who’s doing it.
      -- Small Gods, Terry Pratchett
- 87. When you are wrestling for possession of a sword, the man with the handle always wins.
+ 84. When you are wrestling for possession of a sword, the man with the handle always wins.
      -- Snow Crash, Neal Stephenson
- 88. Solitude is independence. It had been my wish and with the years I had attained it. It was cold.
+ 85. Solitude is independence. It had been my wish and with the years I had attained it. It was cold.
      -- Steppenwolf, Hermann Hesse
- 89. Love is that condition in which the happiness of another person is essential to your own.
+ 86. Love is that condition in which the happiness of another person is essential to your own.
      -- Stranger in a Strange Land, Robert A. Heinlein
- 90. The Tao that can be described is not the enduring and unchanging Tao.
+ 87. The Tao that can be described is not the enduring and unchanging Tao.
      -- Tao Te Ching, Laozi
- 91. I don’t ask you to love me always like this, but I ask you to remember.
+ 88. I don’t ask you to love me always like this, but I ask you to remember.
      -- Tender Is the Night, F. Scott Fitzgerald
- 92. I studied a minute, sort of holding my breath, and then says to myself, "All right, then, I'll go to hell."
+ 89. I studied a minute, sort of holding my breath, and then says to myself, "All right, then, I'll go to hell."
      -- The Adventures of Huckleberry Finn, Mark Twain
- 93. He was not the Model Boy of the village. He knew the model boy very well though—and loathed him.
+ 90. He was not the Model Boy of the village. He knew the model boy very well though—and loathed him.
      -- The Adventures of Tom Sawyer, Mark Twain
- 94. When you want something, all the universe conspires in helping you to achieve it.
+ 91. When you want something, all the universe conspires in helping you to achieve it.
      -- The Alchemist, Paulo Coelho
- 95. To subdue the enemy without fighting is the acme of skill.
+ 92. To subdue the enemy without fighting is the acme of skill.
      -- The Art of War, Sun Tzu
- 96. I saw my life branching out before me like the green fig tree in the story.
+ 93. I thought how strange it had never occurred to me before that I was only purely happy until I was nine years old.
      -- The Bell Jar, Sylvia Plath
- 97. Here is a small fact: You are going to die.
+ 94. Here is a small fact: You are going to die.
      -- The Book Thief, Markus Zusak
- 98. He was a verray, parfit gentil knyght. He was a very perfect, gentle knight.
+ 95. He was a verray, parfit gentil knyght. He was a very perfect, gentle knight.
      -- The Canterbury Tales, Geoffrey Chaucer
- 99. Don't ever tell anybody anything. If you do, you start missing everybody.
+ 96. Don't ever tell anybody anything. If you do, you start missing everybody.
      -- The Catcher in the Rye, J. D. Salinger
-100. Once a King or Queen in Narnia, always a King or Queen.
+ 97. Once a King or Queen in Narnia, always a King or Queen.
      -- The Chronicles of Narnia, C. S. Lewis
-101. All human wisdom is contained in these words: Wait and hope!
+ 98. We must have felt what it is to die, Morrel, that we may appreciate the enjoyments of life.
      -- The Count of Monte Cristo, Alexandre Dumas
-102. I keep my ideals, because in spite of everything I still believe that people are really good at heart.
+ 99. I keep my ideals, because in spite of everything I still believe that people are really good at heart.
      -- The Diary of a Young Girl, Anne Frank
-103. To be whole is to be part;true voyage is return.
+100. He brings this across the bridge between the dream-time and the world-time.
      -- The Dispossessed, Ursula K. Le Guin
-104. Per me si va ne la città dolente,per me si va ne l'etterno dolore,per me si va tra la perduta gente.
+101. Per me si va ne la città dolente, per me si va ne l'etterno dolore, per me si va tra la perduta gente.
      -- The Divine Comedy, Dante Alighieri
-105. We are the real countries, not the boundaries drawn on maps with the names of powerful men.
+102. We are the real countries, not the boundaries drawn on maps with the names of powerful men.
      -- The English Patient, Michael Ondaatje
-106. I fell in love with him the way you fall asleep: Slowly, and then all at once.
+103. I fell in love with him the way you fall asleep: Slowly, and then all at once.
      -- The Fault in Our Stars, John Green
-107. The worst part of holding the memories is not the pain. It's the loneliness of it. Memories need to be shared.
+104. The worst part of holding the memories is not the pain. It's the loneliness of it. Memories need to be shared.
      -- The Giver, Lois Lowry
-108. They considered their Games a path from Becoming to Being, from potentiality to reality.
+105. They considered their Games a path from Becoming to Being, from potentiality to reality.
      -- The Glass Bead Game, Hermann Hesse
-109. The secret of the Great Stories is that they have no secrets.
+106. Boundaries blur as tapioca fences take root and bloom.
      -- The God of Small Things, Arundhati Roy
-110. In the souls of the people the grapes of wrath are filling and growing heavy, growing heavy for the vintage.
+107. In the souls of the people the grapes of wrath are filling and growing heavy, growing heavy for the vintage.
      -- The Grapes of Wrath, John Steinbeck
-111. Gatsby believed in the green light, the orgastic future that year by year recedes before us.
+108. Eckleburg, which had just emerged, pale and enormous, from the dissolving night.
      -- The Great Gatsby, F. Scott Fitzgerald
-112. Apathetic bloody planet, I've no sympathy at all.
+109. Apathetic bloody planet, I've no sympathy at all.
      -- The Hitchhiker's Guide to the Galaxy, Douglas Adams
-113. Thief, thief, thief! Baggins! We hates it, we hates it, we hates it for ever!
+110. Thief, thief, thief! Baggins! We hates it, we hates it, we hates it for ever!
      -- The Hobbit, J. R. R. Tolkien
-114. Quand on voulut le détacher du squelette qu'il embrassait, il tomba en poussière.
+111. Quand on voulut le détacher du squelette qu'il embrassait, il tomba en poussière.
      -- The Hunchback of Notre-Dame, Victor Hugo
-115. I wish I could freeze this moment, right here, right now, and live in it forever.
+112. I wish I could freeze this moment, right here, right now, and live in it forever.
      -- The Hunger Games, Suzanne Collins
-116. A man's heart is a wretched, wretched thing.
+113. A man's heart is a wretched, wretched thing.
      -- The Kite Runner, Khaled Hosseini
-117. Things will have to change in order that they remain the same.
+114. Things will have to change in order that they remain the same.
      -- The Leopard, Giuseppe Tomasi di Lampedusa
-118. Though the Witch knew the Deep Magic, there is a magic deeper still which she did not know...
+115. Though the Witch knew the Deep Magic, there is a magic deeper still which she did not know...
      -- The Lion, the Witch and the Wardrobe, C. S. Lewis
-119. It is only with the heart that one can see rightly; What is essential is invisible to the eye.
+116. It is only with the heart that one can see rightly; What is essential is invisible to the eye.
      -- The Little Prince, Antoine de Saint-Exupéry
-120. Endlessly imitated, it never has been surpassed.
+117. Endlessly imitated, it never has been surpassed.
      -- The Lord of the Rings, J. R. R. Tolkien
-121. We Earth Men have a talent for ruining big, beautiful things.
+118. We Earth Men have a talent for ruining big, beautiful things.
      -- The Martian Chronicles, Ray Bradbury
-122. I am the Water of Life,Out of myself I grow.The more you drink of me,The fuller I will flow.
+119. I am the Water of Life, Out of myself I grow. The more you drink of me, The fuller I will flow.
      -- The Neverending Story, Michael Ende
-123. Don't look for gods in men; you'll always be disappointed.
+120. Don't look for gods in men; you'll always be disappointed.
      -- The Odyssey, Homer
-124. The best thing for being sad…is to learn something.
+121. "Castor and Pollux blow me to Bermuda!" he exclaimed, and immediately vanished with a frightful roar.
      -- The Once and Future King, T. H. White
-125. “Charlie, we accept the love we think we deserve.”
+122. “Charlie, we accept the love we think we deserve.”
      -- The Perks of Being a Wallflower, Stephen Chbosky
-126. Expect everything, I always say, and the unexpected never happens.
+123. Expect everything, I always say, and the unexpected never happens.
      -- The Phantom Tollbooth, Norton Juster
-127. There is no such thing as a moral or an immoral book. Books are well written, or badly written. That is all.
+124. There is no such thing as a moral or an immoral book. Books are well written, or badly written. That is all.
      -- The Picture of Dorian Gray, Oscar Wilde
-128. There is no God and we are his prophets.
-     -- The Road, Cormac McCarthy
-129. What other dungeon is so dark as one's own heart! What jailer so inexorable as one's self!
+125. The wrongdoing of one generation lives into the successive ones...
      -- The Scarlet Letter, Nathaniel Hawthorne
-130. If you look the right way, you can see that the whole world is a garden.
+126. If you look the right way, you can see that the whole world is a garden.
      -- The Secret Garden, Frances Hodgson Burnett
-131. Few things leave a deeper mark on a reader than the first book that finds its way into his heart.
+127. Few things leave a deeper mark on a reader than the first book that finds its way into his heart.
      -- The Shadow of the Wind, Carlos Ruiz Zafón
-132. I am indeed but a wanderer, a pilgrim on earth. But are you anything more?
+128. I am indeed but a wanderer, a pilgrim on earth. But are you anything more?
      -- The Sorrows of Young Werther, Johann Wolfgang von Goethe
-133. Silent white light filled the world. And the righteous and unrighteous alike were consumed in that holy fire.
+129. The fuses were not the same as the ones Trash had rigged to the fuel trucks, but they were very similar.
      -- The Stand, Stephen King
-134. Real things in the darkness seem no realer than dreams.
+130. I have finally realized how rarely you will find a flawless woman, one who is simply perfect.
      -- The Tale of Genji, Murasaki Shikibu
-135. We are such stuff As dreams are made on; and our little life Is rounded with a sleep.
+131. We are such stuff As dreams are made on; and our little life Is rounded with a sleep.
      -- The Tempest, William Shakespeare
-136. The Three Musketeers (2011 film), a 3D version of the film directed by Paul W.S.
-     -- The Three Musketeers, Alexandre Dumas
-137. Strength is the outcome of need; security sets a premium on feebleness.
+132. Strength is the outcome of need; security sets a premium on feebleness.
      -- The Time Machine, H. G. Wells
-138. The past is but the beginning of a beginning, and all that is or has been is but the twilight of the dawn.
+133. The past is but the beginning of a beginning, and all that is or has been is but the twilight of the dawn.
      -- The War of the Worlds, H. G. Wells
-139. There is nothing — absolutely nothing — half so much worth doing as simply messing about in boats.
+134. There is nothing — absolutely nothing — half so much worth doing as simply messing about in boats.
      -- The Wind in the Willows, Kenneth Grahame
-140. Until the lions have their own historians, the history of the hunt will always glorify the hunter.
+135. Until the lions have their own historians, the history of the hunt will always glorify the hunter.
      -- Things Fall Apart, Chinua Achebe
-141. Why, sometimes I've believed as many as six impossible things before breakfast.
+136. "That's the way it's done," the Queen said with great decision: "nobody can do two things at once, you know."
      -- Through the Looking-Glass, Lewis Carroll
-142. To Kill a Mockingbird (novel), the Pulitzer Prize-winning novel by Harper Lee.
-     -- To Kill a Mockingbird, Harper Lee
-143. Fifteen men on the dead man's chest — Yo-ho-ho, and a bottle of rum!
+137. Fifteen men on the dead man's chest — Yo-ho-ho, and a bottle of rum!
      -- Treasure Island, Robert Louis Stevenson
-144. Some are born great, some achieve greatness, and some have greatness thrust upon 'em.
+138. I am all the daughters of my father's house, And all the brothers too.
      -- Twelfth Night, William Shakespeare
-145. History, Stephen said, is a nightmare from which I am trying to awake.
+139. History, Stephen said, is a nightmare from which I am trying to awake.
      -- Ulysses, James Joyce
-146. The world is a looking-glass, and gives back to every man the reflection of his own face.
+140. The world is a looking-glass, and gives back to every man the reflection of his own face.
      -- Vanity Fair, William Makepeace Thackeray
-147. Ever tried. Ever failed. No matter. Try again. Fail again. Fail better.
+141. Ever tried. Ever failed. No matter. Try again. Fail again. Fail better.
      -- Waiting for Godot, Samuel Beckett
-148. The mass of men lead lives of quiet desperation. What is called resignation is confirmed desperation.
+142. The mass of men lead lives of quiet desperation. What is called resignation is confirmed desperation.
      -- Walden, Henry David Thoreau
-149. There never was a good war or a bad peace.
+143. Unless you wish to use such drastic measures, you must find a way of settling your disputes without resort to arms.
      -- War and Peace, Leo Tolstoy
-150. Happiness isn't always the best way to be happy.
+144. Happiness isn't always the best way to be happy.
      -- Where the Wild Things Are, Maurice Sendak
-151. You can't stay in your corner of the forest waiting for others to come to you. You have to go to them sometimes.
+145. Cottleston, cottleston, cottleston pie, A fly can't bird, but a bird can fly.
      -- Winnie-the-Pooh, A. A. Milne
-152. My love for Heathcliff resembles the eternal rocks beneath: a source of little visible delight, but necessary.
+146. My love for Heathcliff resembles the eternal rocks beneath: a source of little visible delight, but necessary.
      -- Wuthering Heights, Emily Brontë
-153. Every man has his folly, but the greatest folly of all ... is not to have one.
+147. Every man has his folly, but the greatest folly of all ... is not to have one.
      -- Zorba the Greek, Nikos Kazantzakis
-154. Remember, Hope is a good thing, maybe the best of things, and no good thing ever dies.
+148. The other three percent are people who do what they say they can do.
      -- 11/22/63, Stephen King
-155. "If they would rather die," said Scrooge, "they had better do it, and decrease the surplus population."
-     -- A Christmas Carol, Charles Dickens
-156. When Fortuna spins you downward, go out to a movie and get more out of life.
+149. When Fortuna spins you downward, go out to a movie and get more out of life.
      -- A Confederacy of Dunces, John Kennedy Toole
-157. Only connect the prose and the passion, and both will be exalted, and human love will be seen at its height.
+150. Only connect the prose and the passion, and both will be exalted, and human love will be seen at its height.
      -- A Passage to India, E. M. Forster
-158. Ireland is the old sow that eats her farrow.
+151. His mind, emptied of theory and courage, lapsed back into a listless peace.
      -- A Portrait of the Artist as a Young Man, James Joyce
-159. Physical beauty is passing - a transitory possession.
+152. Physical beauty is passing - a transitory possession.
      -- A Streetcar Named Desire, Tennessee Williams
-160. Is it not love that knows how to make smooth things rough and rough things smooth?
+153. The wedding-guests were gathered on the lawn. 'Hmm,' she said.
      -- A Suitable Boy, Vikram Seth
-161. Maybe you have to know darkness before you can appreciate the light.
+154. Maybe you have to know darkness before you can appreciate the light.
      -- A Wrinkle in Time, Madeleine L'Engle
-162. If you drink much from a bottle marked 'poison' it is almost certain to disagree with you, sooner or later.
+155. If you drink much from a bottle marked 'poison' it is almost certain to disagree with you, sooner or later.
      -- Alice's Adventures in Wonderland, Lewis Carroll
-163. If Hell is other people, thought Shadow, then Purgatory is airports.
+156. If Hell is other people, thought Shadow, then Purgatory is airports.
      -- American Gods, Neil Gaiman
-164. Culture does not make people, people make culture.
+157. Culture does not make people, people make culture.
      -- Americanah, Chimamanda Ngozi Adichie
-165. Man is the only creature that consumes without producing.
+158. Man is the only creature that consumes without producing.
      -- Animal Farm, George Orwell
-166. If goodness has causes, it is not goodness; if it has effects, a reward, it is not goodness either.
+159. If goodness has causes, it is not goodness; if it has effects, a reward, it is not goodness either.
      -- Anna Karenina, Leo Tolstoy
-167. It would be terrible if we just skipped from September to November, wouldn't it?
+160. “You mean, hateful boy!” she exclaimed passionately.
      -- Anne of Green Gables, L. M. Montgomery
-168. Poets are like proverbs: you can always find one to contradict another.
+161. Poets are like proverbs: you can always find one to contradict another.
      -- Around the World in Eighty Days, Jules Verne
-169. Better is it for each one of us that he should avenge his friend, than greatly mourn.
+162. Down off the moorlands' misting fells came Grendel stalking; God's brand was on him.
      -- Beowulf, Anonymous
-170. You can find meanness in the least of creatures, but when God made man the devil was at his elbow.
+163. You can find meanness in the least of creatures, but when God made man the devil was at his elbow.
      -- Blood Meridian, Cormac McCarthy
-171. Sixty-two thousand four hundred repetitions make one truth.
+164. Liberty to be inefficient and miserable.
      -- Brave New World, Aldous Huxley
-172. My theme is memory, that winged host that soared about me one grey morning of war-time.
+165. My theme is memory, that winged host that soared about me one grey morning of war-time.
      -- Brideshead Revisited, Evelyn Waugh
-173. If this is the best of all possible worlds, what are the others?
+166. If this is the best of all possible worlds, what are the others?
      -- Candide, Voltaire
-174. All of the true things that I am about to tell you are shameless lies.
+167. All of the true things that I am about to tell you are shameless lies.
      -- Cat's Cradle, Kurt Vonnegut
-175. It was love at first sight. The first time Yossarian saw the chaplain, he fell madly in love with him.
+168. It was love at first sight. The first time Yossarian saw the chaplain, he fell madly in love with him.
      -- Catch-22, Joseph Heller
-176. Dear visitors, it is my great pleasure to welcome you to my humble factory.
-     -- Charlie and the Chocolate Factory, Roald Dahl
-177. People believe almost anything they see in print.
+169. People believe almost anything they see in print.
      -- Charlotte's Web, E. B. White
-178. Truth is singular. Its 'versions' are mistruths.
+170. Truth is singular. Its 'versions' are mistruths.
      -- Cloud Atlas, David Mitchell
-179. They say even the proudest spirit can be broken, with love.
-     -- Coraline, Neil Gaiman
-180. You never reach any truth without making fourteen mistakes and very likely a hundred and fourteen.
+171. You never reach any truth without making fourteen mistakes and very likely a hundred and fourteen.
      -- Crime and Punishment, Fyodor Dostoevsky
-181. Oh troika, winged troika, tell me who invented you?
+172. There are people who exist in this world not like entities but like the speckles or spots on something.
      -- Dead Souls, Nikolai Gogol
-182. A salesman is got to dream, boy. It comes with the territory.
+173. A salesman is got to dream, boy. It comes with the territory.
      -- Death of a Salesman, Arthur Miller
-183. Disgrace is immortal, and living even when one thinks it dead.
+174. Disgrace is immortal, and living even when one thinks it dead.
      -- Disgrace, J. M. Coetzee
-184. It is sometimes an appropriate response to reality to go insane.
+175. If you're lucky you will get the second; but you can be certain of getting the first: that is the way it works.
      -- Do Androids Dream of Electric Sheep?, Philip K. Dick
-185. Take care, Your Worship, those things over there are not giants but windmills.
+176. Take care, Your Worship, those things over there are not giants but windmills.
      -- Don Quixote, Miguel de Cervantes
-186. Nosferatu, a 1922 German silent film loosely based on Stoker's novel, directed by F.
-     -- Dracula, Bram Stoker
-187. The mystery of life isn't a problem to solve, but a reality to experience.
+177. Make that the science of your tradition!
      -- Dune, Frank Herbert
-188. This I believe: that the free, exploring mind of the individual human is the most valuable thing in the world.
+178. This I believe: that the free, exploring mind of the individual human is the most valuable thing in the world.
      -- East of Eden, John Steinbeck
-189. Better be without sense, than misapply it as you do.
+179. Better be without sense, than misapply it as you do.
      -- Emma, Jane Austen
-190. No one but the enemy will tell you what the enemy is going to do.
+180. No one but the enemy will ever teach you how to destroy and conquer.
      -- Ender's Game, Orson Scott Card
-191. If you don't want a man unhappy politically, don't give him two sides to a question to worry him; give him one.
+181. If you don't want a man unhappy politically, don't give him two sides to a question to worry him; give him one.
      -- Fahrenheit 451, Ray Bradbury
-192. This is your life, and it's ending one minute at a time.
+182. This is your life, and it's ending one minute at a time.
      -- Fight Club, Chuck Palahniuk
-193. Southerners can never resist a losing cause.
+183. Southerners can never resist a losing cause.
      -- Gone with the Wind, Margaret Mitchell
-194. A butterfly flaps its wings in the Amazonian jungle, and subsequently a storm ravages half of Europe.
+184. A butterfly flaps its wings in the Amazonian jungle, and subsequently a storm ravages half of Europe.
      -- Good Omens, Terry Pratchett and Neil Gaiman
-195. For a man may be allowed to keep poisons in his closet, but not to vend them about for cordials.
+185. For a man may be allowed to keep poisons in his closet, but not to vend them about for cordials.
      -- Gulliver's Travels, Jonathan Swift
-196. You must never behave as if your life belongs to a man.
+186. You must never behave as if your life belongs to a man.
      -- Half of a Yellow Sun, Chimamanda Ngozi Adichie
-197. It takes a great deal of bravery to stand up to our enemies, but just as much to stand up to our friends.
+187. It takes a great deal of bravery to stand up to our enemies, but just as much to stand up to our friends.
      -- Harry Potter and the Philosopher's Stone, J. K. Rowling
-198. You think the dead we loved ever truly leave us?
+188. You think the dead we loved ever truly leave us?
      -- Harry Potter and the Prisoner of Azkaban, J. K. Rowling
-199. The mind of man is capable of anything — because everything is in it, all the past as well as all the future.
+189. The mind of man is capable of anything — because everything is in it, all the past as well as all the future.
      -- Heart of Darkness, Joseph Conrad
-200. You cannot change what you are, only what you do.
+190. You cannot change what you are, only what you do.
      -- His Dark Materials, Philip Pullman
-201. To protect Humanity, some humans must be sacrificed.
-     -- I, Robot, Isaac Asimov
-202. Those who deny Auschwitz would be ready to remake it.
+191. Those who deny Auschwitz would be ready to remake it.
      -- If This Is a Man, Primo Levi
-203. I was looking for myself and asking everyone except myself questions which I, and only I, could answer.
+192. I was looking for myself and asking everyone except myself questions which I, and only I, could answer.
      -- Invisible Man, Ralph Ellison
-204. Do you think, because I am poor, obscure, plain, and little, I am soulless and heartless?
+193. The human and fallible should not arrogate a power with which the divine and perfect alone can be safely intrusted.
      -- Jane Eyre, Charlotte Brontë
-205. In everybody’s life there’s a point of no return.
+194. In everybody’s life there’s a point of no return.
      -- Kafka on the Shore, Haruki Murakami
-206. Nothing can happen more beautiful than death.
+195. Nothing can happen more beautiful than death.
      -- Leaves of Grass, Walt Whitman
-207. To choose doubt as a philosophy of life is akin to choosing immobility as a means of transportation.
+196. To choose doubt as a philosophy of life is akin to choosing immobility as a means of transportation.
      -- Life of Pi, Yann Martel
-208. "Christmas won't be Christmas without any presents," grumbled Jo, lying on the rug.
+197. "Christmas won't be Christmas without any presents," grumbled Jo, lying on the rug.
      -- Little Women, Louisa May Alcott
-209. Lo-lee-ta: the tip of the tongue taking a trip of three steps down the palate to tap, at three, on the teeth.
+198. Lo-lee-ta: the tip of the tongue taking a trip of three steps down the palate to tap, at three, on the teeth.
      -- Lolita, Vladimir Nabokov
-210. They wanted facts. Facts! They demanded facts from him, as if facts could explain anything.
+199. They wanted facts. Facts! They demanded facts from him, as if facts could explain anything.
      -- Lord Jim, Joseph Conrad
-211. If you're scared of someone you hate him but you can't stop thinking about him.
+200. Even the tiny children went and did their best among the leaves and broken branches.
      -- Lord of the Flies, William Golding
-212. A man knows when he is growing old because he begins to look like his father.
+201. “No, not rich,” he said. “I am a poor man with money, which is not the same thing.”
      -- Love in the Time of Cholera, Gabriel García Márquez
-213. She wanted to die. And she wanted to live in Paris.
+202. She wanted to die. And she wanted to live in Paris.
      -- Madame Bovary, Gustave Flaubert
-214. He who can, does. He who cannot, teaches.
+203. He who can, does. He who cannot, teaches.
      -- Man and Superman, George Bernard Shaw
-215. Better sleep with a sober cannibal than a drunken Christian.
+204. Better sleep with a sober cannibal than a drunken Christian.
      -- Moby-Dick, Herman Melville
-216. History has a habit of changing the people who think they are changing it.
+205. History has a habit of changing the people who think they are changing it.
      -- Mort, Terry Pratchett
-217. Case fell into the prison of his own flesh.
+206. Case fell into the prison of his own flesh.
      -- Neuromancer, William Gibson
-218. WAR IS PEACE, FREEDOM IS SLAVERY, IGNORANCE IS STRENGTH.
+207. WAR IS PEACE, FREEDOM IS SLAVERY, IGNORANCE IS STRENGTH.
      -- Nineteen Eighty-Four, George Orwell
-219. It’s so much darker when a light goes out than it would have been if it had never shone.
+208. No man really knows about other human beings. The best he can do is to suppose that they are like himself.
      -- Of Mice and Men, John Steinbeck
-220. Whither goest thou, America, in thy shiny car in the night?
+209. Whither goest thou, America, in thy shiny car in the night?
      -- On the Road, Jack Kerouac
-221. Races condemned to one hundred years of solitude did not have a second opportunity on earth.
+210. Races condemned to one hundred years of solitude did not have a second opportunity on earth.
      -- One Hundred Years of Solitude, Gabriel García Márquez
-222. My loathings are simple: stupidity, oppression, crime, cruelty, soft music.
+211. I think like a genius, I write like a distinguished author, I speak like a child.
      -- Pale Fire, Vladimir Nabokov
-223. Better to reign in Hell, than serve in Heaven.
+212. Better to reign in Hell, than serve in Heaven.
      -- Paradise Lost, John Milton
-224. You see, the point is that the strongest man in the world is he who stands most alone.
+213. En skulde aldrig ha’ sine bedste buxer på, når en er ude og strider for frihed og sandhed.
      -- Peer Gynt, Henrik Ibsen
-225. To live would be an awfully big adventure!
+214. To live would be an awfully big adventure!
      -- Peter Pan, J. M. Barrie
-226. For what do we live, but to make sport for our neighbours, and laugh at them in our turn?
+215. For what do we live, but to make sport for our neighbours, and laugh at them in our turn?
      -- Pride and Prejudice, Jane Austen
-227. All our discontents about what we want appeared to me to spring from the want of thankfulness for what we have.
+216. All our discontents about what we want appeared to me to spring from the want of thankfulness for what we have.
      -- Robinson Crusoe, Daniel Defoe
-228. Shyness is only the effect of a sense of inferiority in some way or other.
+217. Shyness is only the effect of a sense of inferiority in some way or other.
      -- Sense and Sensibility, Jane Austen
-229. Everything was beautiful, and nothing hurt.
+218. When I saw those freshly shaved faces, it was a shock.
      -- Slaughterhouse-Five, Kurt Vonnegut
-230. Creators aren't gods. They make places, which is quite hard. It's men that make gods. This explains a lot.
+219. Creators aren't gods. They make places, which is quite hard. It's men that make gods. This explains a lot.
      -- Small Gods, Terry Pratchett
-231. The franchise and the virus work on the same principle: what thrives in one place will thrive in another.
+220. Juanita's going to hire him, right? — he slams the button for LAVATORY GRANDE ROYALE.
      -- Snow Crash, Neal Stephenson
-232. Harry, the thinker, is a hundred years old, but Harry, the dancer, is scarcely half a day old.
+221. Harry, the thinker, is a hundred years old, but Harry, the dancer, is scarcely half a day old.
      -- Steppenwolf, Hermann Hesse
-233. A prude is a person who thinks that his own rules of propriety are natural laws.
+222. A prude is a person who thinks that his own rules of propriety are natural laws.
      -- Stranger in a Strange Land, Robert A. Heinlein
-234. The sage wears coarse clothing over his shoulders, but carries jade within his bosom.
+223. The sage wears coarse clothing over his shoulders, but carries jade within his bosom.
      -- Tao Te Ching, Laozi
-235. Sometimes it is harder to deprive oneself of a pain than of a pleasure.
+224. Sometimes it is harder to deprive oneself of a pain than of a pleasure.
      -- Tender Is the Night, F. Scott Fitzgerald
-236. If you tell the truth you don't have to remember anything.
+225. If you tell the truth you don't have to remember anything.
      -- The Adventures of Huckleberry Finn, Mark Twain
-237. To promise not to do a thing is the surest way in the world to make a body want to go and do that very thing.
+226. That’s just like a girl—they’re so thin-skinned and chicken-hearted.
      -- The Adventures of Tom Sawyer, Mark Twain
-238. Tell your heart that the fear of suffering is worse than the suffering itself.
+227. Tell your heart that the fear of suffering is worse than the suffering itself.
      -- The Alchemist, Paulo Coelho
-239. Victorious warriors win first and then go to war, while defeated warriors go to war first and then seek to win.
+228. Victorious warriors win first and then go to war, while defeated warriors go to war first and then seek to win.
      -- The Art of War, Sun Tzu
-240. I took a deep breath and listened to the old brag of my heart: I am, I am, I am.
+229. To the person in the bell jar, blank and stopped as a dead baby, the world itself is the bad dream.
      -- The Bell Jar, Sylvia Plath
-241. I see their ugly and their beauty, and I wonder how the same thing can be both.
+230. I see their ugly and their beauty, and I wonder how the same thing can be both.
      -- The Book Thief, Markus Zusak
-242. The smyler with the knyf under the cloke.
+231. The smyler with the knyf under the cloke.
      -- The Canterbury Tales, Geoffrey Chaucer
-243. Anyway, I keep picturing all these little kids playing some game in this big field of rye and all.
+232. Anyway, I keep picturing all these little kids playing some game in this big field of rye and all.
      -- The Catcher in the Rye, J. D. Salinger
-244. There was once a boy named Eustace Clarence Scrubb, and he almost deserved it.
+233. "If you had felt yourself sufficient, it would have been a proof that you were not."
      -- The Chronicles of Narnia, C. S. Lewis
-245. He who has felt the deepest grief is best able to experience supreme happiness.
+234. "The sum of all human wisdom will be contained in these two words: Wait and hope."
      -- The Count of Monte Cristo, Alexandre Dumas
-246. How wonderful it is that no one has to wait, but can start right now to gradually change the world!
+235. How wonderful it is that no one has to wait, but can start right now to gradually change the world!
      -- The Diary of a Young Girl, Anne Frank
-247. To make a thief, make an owner; to create crime, create laws.
+236. Suffering is dysfunctional, except as a bodily warning against danger.
      -- The Dispossessed, Ursula K. Le Guin
-248. Nel mezzo del cammin di nostra vita,mi ritrovai per una selva oscura,ché la diritta via era smarrita.
+237. Nel mezzo del cammin di nostra vita, mi ritrovai per una selva oscura, ché la diritta via era smarrita.
      -- The Divine Comedy, Dante Alighieri
-249. New lovers are nervous and tender, but smash everything.
+238. New lovers are nervous and tender, but smash everything.
      -- The English Patient, Michael Ondaatje
-250. That's a thing about pain. It demands to be felt.
+239. That's a thing about pain. It demands to be felt.
      -- The Fault in Our Stars, John Green
-251. If everything's the same, then there aren't any choices! I want to wake up in the morning and decide things!
+240. If everything's the same, then there aren't any choices! I want to wake up in the morning and decide things!
      -- The Giver, Lois Lowry
-252. They longed for philosophy, for synthesis.
+241. They longed for philosophy, for synthesis.
      -- The Glass Bead Game, Hermann Hesse
-253. In the way that you know that one day you will die, you live as though you won't.
+242. You know how they end yet you listen as though you don't.
      -- The God of Small Things, Arundhati Roy
-254. It happens that every man in a bank hates what the bank does, and yet the bank does it.
+243. It happens that every man in a bank hates what the bank does, and yet the bank does it.
      -- The Grapes of Wrath, John Steinbeck
-255. It eluded us then, but that’s no matter — tomorrow we will run faster, stretch out our arms farther....
+244. Gatsby believed in the green light, the orgastic future that year by year recedes before us.
      -- The Great Gatsby, F. Scott Fitzgerald
-256. On no account allow a Vogon to read poetry at you.
+245. On no account allow a Vogon to read poetry at you.
      -- The Hitchhiker's Guide to the Galaxy, Douglas Adams
-257. In a hole in the ground there lived a hobbit.
+246. In a hole in the ground there lived a hobbit.
      -- The Hobbit, J. R. R. Tolkien
-258. The students crowded into the window, saluted them as they passed with sarcasms and ironical applause.
+247. The students crowded into the window, saluted them as they passed with sarcasms and ironical applause.
      -- The Hunchback of Notre-Dame, Victor Hugo
-259. Even a little tedious after more than twenty years.But there are much worse games to play.
+248. Even a little tedious after more than twenty years.
      -- The Hunger Games, Suzanne Collins
-260. Laila: Tell your secrets to the wind but don't blame it for telling the trees.
+249. Laila: Tell your secrets to the wind but don't blame it for telling the trees.
      -- The Kite Runner, Khaled Hosseini
-261. I belong to an unlucky generation, astride between two worlds and ill-at-ease in both.
+250. I belong to an unlucky generation, astride between two worlds and ill-at-ease in both.
      -- The Leopard, Giuseppe Tomasi di Lampedusa
-262. You become responsible, forever, for what you have tamed.
+251. You become responsible, forever, for what you have tamed.
      -- The Little Prince, Antoine de Saint-Exupéry
-263. We develop only by going against opposition and facing our shadow.
+252. We develop only by going against opposition and facing our shadow.
      -- The Lord of the Rings, J. R. R. Tolkien
-264. They knew how to blend art into their living.
+253. They knew how to blend art into their living.
      -- The Martian Chronicles, Ray Bradbury
-265. It means that you must do what you really and truly want. And nothing is more difficult.
+254. There is in Fantastica a certain place from which one can go anywhere and which can be reached from anywhere.
      -- The Neverending Story, Michael Ende
-266. The clearest view of a man is from below.
+255. The clearest view of a man is from below.
      -- The Odyssey, Homer
-267. Don't ever let anybody teach you to think, Lance: it is the curse of the world.
+256. After this, there was another time which was more painful.
      -- The Once and Future King, T. H. White
-268. You see things. You keep quiet about them. And you understand. You're a wallflower.
+257. You see things. You keep quiet about them. And you understand. You're a wallflower.
      -- The Perks of Being a Wallflower, Stephen Chbosky
-269. Many of the things which can never be, often are.
+258. Many of the things which can never be, often are.
      -- The Phantom Tollbooth, Norton Juster
-270. The only excuse for making a useless thing is that one admires it intensely.All art is quite useless.
+259. Those who go beneath the surface do so at their peril.
      -- The Picture of Dorian Gray, Oscar Wilde
-271. They are gone and I am left and they have taken with them the world.
+260. They are gone and I am left and they have taken with them the world.
      -- The Road, Cormac McCarthy
-272. The world owes all its onward impulses to men ill at ease.
+261. I have laughed, in bitterness and agony of heart, at the contrast between what I seem and what I am!
      -- The Scarlet Letter, Nathaniel Hawthorne
-273. I've stolen a garden. But it may already be dead, I don't know.
+262. I've stolen a garden. But it may already be dead, I don't know.
      -- The Secret Garden, Frances Hodgson Burnett
-274. Fools talk, cowards are silent, wise men listen.
+263. Fools talk, cowards are silent, wise men listen.
      -- The Shadow of the Wind, Carlos Ruiz Zafón
-275. This inhuman place makes human monsters.
+264. Nothing to do but bitch at his wife and nag at the kids and drink.
      -- The Shining, Stephen King
-276. The human race is but a monotonous affair.
+265. The human race is but a monotonous affair.
      -- The Sorrows of Young Werther, Johann Wolfgang von Goethe
-277. Life was such a wheel that no man could stand upon it for long.
+266. Adrenaline boiled through his body, and his eyes felt as if they were in danger of popping from his head.
      -- The Stand, Stephen King
-278. It is in general the unexplored that attracts us.
+267. Ceaseless as the interminable voices of the bell-cricket, all night till dawn my tears flow.
      -- The Tale of Genji, Murasaki Shikibu
-279. There is no intelligence where there is no change and no need of change.
+268. There is no intelligence where there is no change and no need of change.
      -- The Time Machine, H. G. Wells
-280. Human history becomes more and more a race between education and catastrophe...
+269. Human history becomes more and more a race between education and catastrophe...
      -- The War of the Worlds, H. G. Wells
-281. The Mole had been working very hard all the morning, spring-cleaning his little home.
+270. The Mole had been working very hard all the morning, spring-cleaning his little home.
      -- The Wind in the Willows, Kenneth Grahame
-282. The world is like a Mask dancing. If you want to see it well, you do not stand in one place.
+271. The world is like a Mask dancing. If you want to see it well, you do not stand in one place.
      -- Things Fall Apart, Chinua Achebe
-283. It's a poor sort of memory that only works backwards.
+272. "Besides, if I'm only a sort of thing in his dream, what are you, I should like to know?" "Ditto" said Tweedledum.
      -- Through the Looking-Glass, Lewis Carroll
-284. To travel hopefully is a better thing than to arrive.
+273. To travel hopefully is a better thing than to arrive.
      -- Treasure Island, Robert Louis Stevenson
-285. A man of genius makes no mistakes. His errors are volitional and are the portals to discovery.
+274. A man of genius makes no mistakes. His errors are volitional and are the portals to discovery.
      -- Ulysses, James Joyce
-286. I think I could be a good woman if I had five thousand a year.
+275. Mother is the name for God in the lips and hearts of little children.
      -- Vanity Fair, William Makepeace Thackeray
-287. Every word is like an unnecessary stain on silence and nothingness.
+276. Every word is like an unnecessary stain on silence and nothingness.
      -- Waiting for Godot, Samuel Beckett
-288. If a man does not keep pace with his companions, perhaps it is because he hears a different drummer.
+277. If a man does not keep pace with his companions, perhaps it is because he hears a different drummer.
      -- Walden, Henry David Thoreau
-289. Peace cannot be kept by force. It can only be achieved by understanding.
+278. Peace without Justice is a low estate,— A coward cringing to an iron Fate!
      -- War and Peace, Leo Tolstoy
-290. He’s just a boy pretending to be a wolf. Pretending to be a king.
+279. He’s just a boy pretending to be a wolf. Pretending to be a king.
      -- Where the Wild Things Are, Maurice Sendak
-291. "Good morning, Pooh Bear", said Eeyore gloomily. "If it is a good morning", he said. "Which I doubt", said he.
+280. It was just as if somebody inside him were saying, "Now then, Pooh, time for a little something."
      -- Winnie-the-Pooh, A. A. Milne
-292. Be with me always — take any form — drive me mad!
+281. Be with me always — take any form — drive me mad!
      -- Wuthering Heights, Emily Brontë
-293. Wife; children; house; everything. The full catastrophe.
+282. Wife; children; house; everything. The full catastrophe.
      -- Zorba the Greek, Nikos Kazantzakis
-294. I do believe that I shall have another of these savories.
+283. I do believe that I shall have another of these savories.
      -- A Confederacy of Dunces, John Kennedy Toole
-295. Death destroys a man, but the idea of death saves him.
+284. Death destroys a man, but the idea of death saves him.
      -- A Passage to India, E. M. Forster
-296. To live, to err, to fall, to triumph, to recreate life out of life!
+285. To live, to err, to fall, to triumph, to recreate life out of life!
      -- A Portrait of the Artist as a Young Man, James Joyce
-297. Luck is believing you're lucky, that's all...
+286. Luck is believing you're lucky, that's all...
      -- A Streetcar Named Desire, Tennessee Williams
-298. What is the difference between my life and my love? One gets me low, the other lets me go.
+287. Is it not love that knows how to make smooth things rough and rough things smooth?
      -- A Suitable Boy, Vikram Seth
-299. An infinite question is often destroyed by finite answers.
+288. An infinite question is often destroyed by finite answers.
      -- A Wrinkle in Time, Madeleine L'Engle
-300. I've often seen a cat without a grin,' thought Alice; 'but a grin without a cat!
+289. You know you say that things are 'much of a muchness' — did you ever see a drawing of a muchness?
      -- Alice's Adventures in Wonderland, Lewis Carroll
-301. Chicago happened slowly, like a migraine.
+290. Chicago happened slowly, like a migraine.
      -- American Gods, Neil Gaiman
-302. We teach girls to shrink themselves, to make themselves smaller.
+291. We teach girls to shrink themselves, to make themselves smaller.
      -- Americanah, Chimamanda Ngozi Adichie
-303. All men are enemies. All animals are comrades.
+292. All men are enemies. All animals are comrades.
      -- Animal Farm, George Orwell
-304. It showed him the mistake men make in picturing to themselves happiness as the realization of their desires.
+293. It showed him the mistake men make in picturing to themselves happiness as the realization of their desires.
      -- Anna Karenina, Leo Tolstoy
-305. I pity the people who aren't born yet for missing it.
+294. I pity the people who aren't born yet for missing it.
      -- Anne of Green Gables, L. M. Montgomery
-306. A man shut up between four walls soon loses the power to associate words and ideas together.
+295. A man shut up between four walls soon loses the power to associate words and ideas together.
      -- Around the World in Eighty Days, Jules Verne
-307. Incline not to arrogance, famous warrior!
+296. The spoiler meant to snatch away from the high hall some of human race.
      -- Beowulf, Anonymous
-308. All progressions from a higher to a lower order are marked by ruins and mystery and a residue of nameless rage.
+297. All progressions from a higher to a lower order are marked by ruins and mystery and a residue of nameless rage.
      -- Blood Meridian, Cormac McCarthy
-309. The World State's motto: COMMUNITY, IDENTITY, STABILITY.
+298. The World State's motto: COMMUNITY, IDENTITY, STABILITY.
      -- Brave New World, Aldous Huxley
-310. Manners are especially the need of the plain. The pretty can get away with anything.
+299. Manners are especially the need of the plain. The pretty can get away with anything.
      -- Brideshead Revisited, Evelyn Waugh
-311. In this country it is found requisite, now and then, to put an admiral to death, in order to encourage the others.
+300. In this country it is found requisite, now and then, to put an admiral to death, in order to encourage the others.
      -- Candide, Voltaire
-312. Beware of the man who works hard to learn something, learns it, and finds himself no wiser than before.
+301. Beware of the man who works hard to learn something, learns it, and finds himself no wiser than before.
      -- Cat's Cradle, Kurt Vonnegut
-313. Outside the hospital the war was still going on. Men went mad and were rewarded with medals.
+302. The colonel had really been investigated.
      -- Catch-22, Joseph Heller
-314. It is not often that someone comes along who is a true friend and a good writer.
+303. It is not often that someone comes along who is a true friend and a good writer.
      -- Charlotte's Web, E. B. White
-315. Once any tyranny becomes accepted as ordinary, according to Veronica, its victory is assured.
+304. We–by whom I mean anyone over sixty—commit two offenses just by existing.
      -- Cloud Atlas, David Mitchell
-316. You probably think this world is a dream come true… but you're wrong.
-     -- Cat, Coraline, Neil Gaiman
-317. Lying is man's only privilege over all other organisms.
+305. Lying is man's only privilege over all other organisms.
      -- Crime and Punishment, Fyodor Dostoevsky
-318. What are you laughing at? You are laughing at yourselves!
+306. The sergeant's widow told you a lie when she said I flogged her. I never flogged her. She flogged herself.
      -- Dead Souls, Nikolai Gogol
-319. The only thing you got in this world is what you can sell.
+307. The only thing you got in this world is what you can sell.
      -- Death of a Salesman, Arthur Miller
-320. Could he with reason murmur at his case,Himself sole author of his own disgrace?
+308. Could he with reason murmur at his case, Himself sole author of his own disgrace?
      -- Disgrace, J. M. Coetzee
-321. The electric things have their life too. Paltry as those lives are.
+309. It did not seem possible that Wendy Wright had been born out of blood and internal organs like other people.
      -- Do Androids Dream of Electric Sheep?, Philip K. Dick
-322. A bird in the hand is worth two in the bush.
+310. A bird in the hand is worth two in the bush.
      -- Don Quixote, Miguel de Cervantes
-323. What do you despise? By this you are truly known.
+311. If you are on the floor of a valley, you cannot see beyond your valley.
      -- Dune, Frank Herbert
-324. I have to win this now, and for all time, or I'll fight it every day and it will get worse and worse.
+312. I have to win this now, and for all time, or I'll fight it every day and it will get worse and worse.
      -- Ender's Game, Orson Scott Card
-325. The books are to remind us what asses and fools we are.
+313. The books are to remind us what asses and fools we are.
      -- Fahrenheit 451, Ray Bradbury
-326. "It's only after you've lost everything," Tyler says, "that you're free to do anything."
+314. "At the store, they have 100% recycled toilet paper," Marla says.
      -- Fight Club, Chuck Palahniuk
-327. There was a glamor to it, a perfection and a completeness and a symmetry to it like Grecian art.
+315. There was a glamor to it, a perfection and a completeness and a symmetry to it like Grecian art.
      -- Gone with the Wind, Margaret Mitchell
-328. Kids! Bringing about Armageddon can be dangerous. Do not attempt it in your own home.
+316. Kids! Bringing about Armageddon can be dangerous. Do not attempt it in your own home.
      -- Good Omens, Terry Pratchett and Neil Gaiman
-329. Poor Nations are hungry, and rich Nations are proud, and Pride and Hunger will ever be at Variance.
+317. Poor Nations are hungry, and rich Nations are proud, and Pride and Hunger will ever be at Variance.
      -- Gulliver's Travels, Jonathan Swift
-330. Education is a priority! How can we resist exploitation if we don’t have the tools to understand exploitation?
+318. Education is a priority! How can we resist exploitation if we don’t have the tools to understand exploitation?
      -- Half of a Yellow Sun, Chimamanda Ngozi Adichie
-331. Fear of a name increases fear of the thing itself.
+319. Fear of a name increases fear of the thing itself.
      -- Harry Potter and the Philosopher's Stone, J. K. Rowling
-332. I don’t go looking for trouble. Trouble usually finds me!
+320. I don’t go looking for trouble. Trouble usually finds me!
      -- Harry Potter and the Prisoner of Azkaban, J. K. Rowling
-333. Droll thing life is — that mysterious arrangement of merciless logic for a futile purpose.
+321. Droll thing life is — that mysterious arrangement of merciless logic for a futile purpose.
      -- Heart of Darkness, Joseph Conrad
-334. I can’t choose my nature, but I can choose what I do.
+322. I can’t choose my nature, but I can choose what I do.
      -- His Dark Materials, Philip Pullman
-335. To ensure your freedom, some freedoms must be surrendered.
-     -- I, Robot, Isaac Asimov
-336. We who survived the Camps are not true witnesses.
-     -- If This Is a Man, Primo Levi
-337. Who knows but that, on the lower frequencies, I speak for you?
+323. As if the perception of the animalesque regression was clear to all.
+     -- Interviewer, If This Is a Man, Primo Levi
+324. Who knows but that, on the lower frequencies, I speak for you?
      -- Invisible Man, Ralph Ellison
-338. You think wrong! — I have as much soul as you — and full as much heart!
+325. He made me love him without looking at me.
      -- Jane Eyre, Charlotte Brontë
-339. Anyone who falls in love is searching for missing pieces of themselves.
+326. Anyone who falls in love is searching for missing pieces of themselves.
      -- Kafka on the Shore, Haruki Murakami
-340. A morning-glory at my window satisfies me more than the metaphysics of books.
+327. A morning-glory at my window satisfies me more than the metaphysics of books.
      -- Leaves of Grass, Walt Whitman
-341. Life is so beautiful that death has fallen in love with it, a jealous, possessive love that grabs at what it can.
+328. Life is so beautiful that death has fallen in love with it, a jealous, possessive love that grabs at what it can.
      -- Life of Pi, Yann Martel
-342. Love is the only thing that we can carry with us when we go, and it makes the end so easy.
+329. Love is the only thing that we can carry with us when we go, and it makes the end so easy.
      -- Little Women, Louisa May Alcott
-343. You can always count on a murderer for a fancy prose style.
+330. You can always count on a murderer for a fancy prose style.
      -- Lolita, Vladimir Nabokov
-344. The real significance of crime is in its being a breach of faith with the community of mankind.
+331. The real significance of crime is in its being a breach of faith with the community of mankind.
      -- Lord Jim, Joseph Conrad
-345. Sleep is when all unsorted stuff comes as from a dustbin upset in a high wind.
+332. His voice was lower when he spoke again.
      -- Lord of the Flies, William Golding
-346. “No, not rich,” he said. “I am a poor man with money, which is not the same thing.”
+333. "I adore you because you made me a whore"
      -- Love in the Time of Cholera, Gabriel García Márquez
-347. The future was a pitch-black tunnel, ending in a locked door.
+334. The future was a pitch-black tunnel, ending in a locked door.
      -- Madame Bovary, Gustave Flaubert
-348. Hell is full of musical amateurs. Music is the brandy of the damned.
+335. Hell is full of musical amateurs. Music is the brandy of the damned.
      -- Man and Superman, George Bernard Shaw
-349. Talk not to me of blasphemy, man; I'd strike the sun if it insulted me.
+336. Talk not to me of blasphemy, man; I'd strike the sun if it insulted me.
      -- Moby-Dick, Herman Melville
-350. It struck Mort with sudden, terrible poignancy that Death must be the loneliest creature in the universe.
+337. It struck Mort with sudden, terrible poignancy that Death must be the loneliest creature in the universe.
      -- Mort, Terry Pratchett
-351. Lines of light ranged in the nonspace of the mind, clusters and constellations of data.
+338. Somewhere down in the Sprawl's ferro-concrete roots, a train drove a column of stale air through a tunnel.
      -- Neuromancer, William Gibson
-352. If you want a picture of the future, imagine a boot stamping on a human face — forever.
+339. There will be no curiosity, no enjoyment of the process of life.
      -- Nineteen Eighty-Four, George Orwell
-353. Not courting talk — real straight talk about souls, for life is holy and every moment is precious.
+340. Not courting talk — real straight talk about souls, for life is holy and every moment is precious.
      -- On the Road, Jack Kerouac
-354. One minute of reconciliation is worth more than a whole life of friendship.
+341. The world was reduced to the surface of her skin and her inner self was safe from all bitterness.
      -- One Hundred Years of Solitude, Gabriel García Márquez
-355. Curiosity is insubordination in its purest form.
+342. Curiosity is insubordination in its purest form.
      -- Pale Fire, Vladimir Nabokov
-356. All is not lost; th’ unconquerable will, And study of revenge, immortal hate, And courage never to submit or yield.
+343. All is not lost; th’ unconquerable will, And study of revenge, immortal hate, And courage never to submit or yield.
      -- Paradise Lost, John Milton
-357. If you take the life lie from an average man, you take away his happiness as well.
+344. If I might so put it, it's an agreement for the mutual forgiveness of sin.
      -- Peer Gynt, Henrik Ibsen
-358. "I'm youth, I'm joy, I'm a little bird that has broken out of the egg."
+345. "I'm youth, I'm joy, I'm a little bird that has broken out of the egg."
      -- Peter Pan, J. M. Barrie
-359. It is better to have a lion at the head of an army of sheep than a sheep at the head of an army of lions.
+346. It is better to have a lion at the head of an army of sheep than a sheep at the head of an army of lions.
      -- Robinson Crusoe, Daniel Defoe
-360. All moments, past, present and future, always have existed, always will exist.
+347. All there is to say about a massacre, things like "Poo-tee-weet?"
      -- Slaughterhouse-Five, Kurt Vonnegut
-361. Rumor is information distilled so finely that it can filter through anything.
+348. Rumor is information distilled so finely that it can filter through anything.
      -- Small Gods, Terry Pratchett
-362. The world is full of power and energy and a person can go far by just skimming off a tiny bit of it.
+349. The world is full of power and energy and a person can go far by just skimming off a tiny bit of it.
      -- Snow Crash, Neal Stephenson
-363. I am going to teach you to dance and play and smile, and still not be happy.
+350. I am going to teach you to dance and play and smile, and still not be happy.
      -- Steppenwolf, Hermann Hesse
-364. Obscurity is the refuge of the incompetent.
+351. Obscurity is the refuge of the incompetent.
      -- Stranger in a Strange Land, Robert A. Heinlein
-365. He who is satisfied with his lot is rich; he who goes on acting with energy has a (firm) will.
+352. He who is satisfied with his lot is rich; he who goes on acting with energy has a (firm) will.
      -- Tao Te Ching, Laozi
-366. "The strongest guard is placed at the gateway to nothing," he said.
+353. "The strongest guard is placed at the gateway to nothing," he said.
      -- Tender Is the Night, F. Scott Fitzgerald
+354. Reader, suppose you were an idiot. And suppose you were a member of Congress. But I repeat myself.
+     -- The Adventures of Huckleberry Finn, Mark Twain
+355. “Now I know you’ll tell me,” said the lady.
+     -- The Adventures of Tom Sawyer, Mark Twain
+356. “Because, wherever your heart is, that is where you’ll find your treasure.”
+     -- The Alchemist, Paulo Coelho
+357. Attack him where he is unprepared, appear where you are not expected.
+     -- The Art of War, Sun Tzu
+358. Our kind multiplies:We shall by morning Inherit the earth.
+     -- The Bell Jar, Sylvia Plath
+359. He collected her punches as if they were presents.
+     -- The Book Thief, Markus Zusak
+360. Gret swering is a thing abhominable, And false swering is yet more reprevable.
+     -- The Canterbury Tales, Geoffrey Chaucer
+361. I'm the most terrific liar you ever saw in your life.
+     -- The Catcher in the Rye, J. D. Salinger
+362. It didn't say this as if it were boasting, nor as if it were sorry, nor as if it were angry.
+     -- The Chronicles of Narnia, C. S. Lewis
+363. He who has felt the deepest grief is best able to experience supreme happiness.
+     -- The Count of Monte Cristo, Alexandre Dumas
+364. At such moments I don't think about all the misery, but about the beauty that still remains.
+     -- The Diary of a Young Girl, Anne Frank
+365. You must go somewhere else; you must have another goal; then you walk a different road.
+     -- The Dispossessed, Ursula K. Le Guin
+366. Superbia, invidia e avarizia sono le tre faville c'hanno i cuori accesi.
+     -- The Divine Comedy, Dante Alighieri

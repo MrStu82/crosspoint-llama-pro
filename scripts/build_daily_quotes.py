@@ -160,6 +160,10 @@ def cmd_fetch(args) -> int:
                 missing.append(f"{page}: no page")
                 continue
             rev = p["revisions"][0]
+            wikitext = rev["slots"]["main"]["content"]
+            if rejected_source_page(p["title"], wikitext):
+                missing.append(f"{page}: rejected navigation/disambiguation/non-literary page")
+                continue
             record = {
                 "requested_page": page,
                 "canonical_title": p["title"],
@@ -173,7 +177,7 @@ def cmd_fetch(args) -> int:
                 "author": w["author"],
                 "era": w["era"],
                 "region": w["region"],
-                "wikitext": rev["slots"]["main"]["content"],
+                "wikitext": wikitext,
             }
             (CACHE_DIR / f"{slug(page)}.json").write_text(
                 json.dumps(record, ensure_ascii=False), encoding="utf-8"
@@ -208,6 +212,9 @@ def strip_markup(text: str) -> str:
     s = re.sub(r"<!--.*?-->", "", s, flags=re.S)
     s = re.sub(r"<ref[^>/]*/>", "", s)
     s = re.sub(r"<ref.*?</ref>", "", s, flags=re.S)
+    # A line-break tag is word separation in a quotation, never deletion.
+    # Removing it concatenates words (e.g. "admiredis") and corrupts text.
+    s = re.sub(r"<br\s*/?>", " ", s, flags=re.I)
     s = re.sub(r"<[^>]+>", "", s)
     for lit, rep in TEMPLATE_LITERALS.items():
         s = s.replace(lit, rep)
@@ -225,12 +232,30 @@ def strip_markup(text: str) -> str:
     s = html.unescape(s)
     s = s.replace(" ", " ")
     s = re.sub(r"[ \t]+", " ", s)
+    s = re.sub(r"\s+", " ", s)
     return s.strip()
 
 
 def page_plaintext(wikitext: str) -> str:
     """The whole revision, stripped. The rail checks membership in this."""
     return strip_markup(wikitext)
+
+
+def rejected_source_page(canonical_title: str, wikitext: str) -> bool:
+    """Reject disambiguation/navigation and screen-adaptation sources.
+
+    The corpus is literary text. Wikiquote hub pages can look like valid quote
+    pages to a line extractor while their bullets are merely adaptation links.
+    Keep this test at both fetch and candidate time so stale cache never leaks
+    back into the pack.
+    """
+    low = wikitext.lower()
+    if "{{disambig" in low or canonical_title.lower().endswith("(film)"):
+        return True
+    bullets = [line.lstrip("* ").strip() for line in wikitext.splitlines()
+               if line.lstrip().startswith("*")]
+    nav = [b for b in bullets if re.fullmatch(r"\[\[[^\]]+\]\]", b)]
+    return len(bullets) >= 6 and len(nav) * 100 >= len(bullets) * 70
 
 
 # ---------------------------------------------------------------------------
@@ -344,7 +369,11 @@ def cmd_candidates(_args) -> int:
     for path in sorted(CACHE_DIR.glob("*.json")):
         if path.name == "candidates.json":
             continue
+        if path.stem not in works:  # do not revive stale cache after a page remap
+            continue
         rec = json.loads(path.read_text(encoding="utf-8"))
+        if rejected_source_page(rec["canonical_title"], rec["wikitext"]):
+            continue
         plain = page_plaintext(rec["wikitext"])
         seen: set[str] = set()
         for line in rec["wikitext"].splitlines():
@@ -470,7 +499,7 @@ def cmd_emit(args) -> int:
     OUT_INC.write_text("\n".join(inc) + "\n", encoding="utf-8")
     OUT_TSV.write_text("\n".join(tsv) + "\n", encoding="utf-8")
     OUT_REVIEW.write_text(
-        f"CrossPoint daily quote pack v2 - {len(chosen)} records, "
+        f"CrossPoint daily quote pack v3 - {len(chosen)} records, "
         f"{len(per_work)} works, {len(per_author)} authors\n"
         "Source: English Wikiquote (CC BY-SA). Every line verified verbatim against the\n"
         "cited revision; per-record source_url/revision_id/retrieved_at in "

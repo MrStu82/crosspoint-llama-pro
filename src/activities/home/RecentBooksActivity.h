@@ -6,6 +6,7 @@
 #include <vector>
 
 #include "RecentBooksStore.h"
+#include "network/HardcoverRating.h"
 #include "activities/Activity.h"
 #include "util/ButtonNavigator.h"
 
@@ -22,13 +23,18 @@ class RecentBooksActivity final : public Activity {
   // Recent tab state
   std::vector<RecentBook> recentBooks;
 
-  enum class SyncState { Idle, Running, Complete, Cancelled };
+  enum class SyncState { Idle, Running, Choosing, Complete, Cancelled };
   SyncState syncState = SyncState::Idle;
   size_t syncIndex = 0;
   size_t syncUpdated = 0;
-  size_t syncSkipped = 0;
+  size_t syncTokenMissing = 0;
+  size_t syncNetworkFailed = 0;
+  size_t syncNoMatch = 0;
   unsigned long nextSyncAtMs = 0;
   std::string syncStatus;
+  std::vector<HardcoverCandidate> syncCandidates;
+  size_t candidateIndex = 0;
+  void finishCandidateChoice(bool store);
 
   // Data loading
   void loadRecentBooks();

@@ -48,9 +48,24 @@ void RecentBooksActivity::promptMetadataSync() {
 
 void RecentBooksActivity::beginMetadataSync() {
   syncState = SyncState::Running;
-  syncIndex = syncUpdated = syncSkipped = 0;
+  syncIndex = syncUpdated = syncTokenMissing = syncNetworkFailed = syncNoMatch = 0;
   nextSyncAtMs = 0;
   syncStatus = "Preparing Library sync";
+  requestUpdate(true);
+}
+
+void RecentBooksActivity::finishCandidateChoice(bool store) {
+  if (store && candidateIndex < syncCandidates.size()) {
+    if (HardcoverRating::storeLastGood(syncCandidates[candidateIndex].snapshot)) ++syncUpdated;
+    else ++syncNetworkFailed;
+  } else {
+    ++syncNoMatch;
+  }
+  ++syncIndex;
+  syncCandidates.clear();
+  candidateIndex = 0;
+  syncState = SyncState::Running;
+  nextSyncAtMs = millis() + HARD_COVER_SYNC_DELAY_MS;
   requestUpdate(true);
 }
 
@@ -59,17 +74,33 @@ void RecentBooksActivity::runOneMetadataSync() {
   if (syncIndex >= recentBooks.size()) {
     syncState = SyncState::Complete;
     syncStatus = "Sync complete: " + std::to_string(syncUpdated) + " updated, " +
-                 std::to_string(syncSkipped) + " skipped";
+                 std::to_string(syncTokenMissing) + " token, " +
+                 std::to_string(syncNetworkFailed) + " network, " +
+                 std::to_string(syncNoMatch) + " no match";
     requestUpdate(true);
     return;
   }
   const auto& book = recentBooks[syncIndex];
   const auto now = static_cast<int64_t>(std::time(nullptr));
-  if (now > 0 && HardcoverRating::refresh({book.path, book.isbn, book.title, book.author}, now)) ++syncUpdated;
-  else ++syncSkipped;
+  const auto result = now > 0 ? HardcoverRating::refresh({book.path, book.isbn, book.title, book.author}, now)
+                               : HardcoverRating::HardcoverRefreshResult{HardcoverRefreshStatus::NetworkFailure, std::nullopt};
+  switch (result.status) {
+    case HardcoverRefreshStatus::Updated: ++syncUpdated; break;
+    case HardcoverRefreshStatus::TokenMissing: ++syncTokenMissing; break;
+    case HardcoverRefreshStatus::NetworkFailure: ++syncNetworkFailed; break;
+    case HardcoverRefreshStatus::NoMatch: ++syncNoMatch; break;
+    case HardcoverRefreshStatus::Ambiguous:
+      syncCandidates = result.candidates;
+      candidateIndex = 0;
+      syncState = SyncState::Choosing;
+      syncStatus = "Choose Hardcover match " + std::to_string(syncIndex + 1) + "/" + std::to_string(recentBooks.size());
+      requestUpdate(true);
+      return;
+  }
   ++syncIndex;
   syncStatus = "Syncing " + std::to_string(syncIndex) + "/" + std::to_string(recentBooks.size()) +
-               "  (" + std::to_string(syncSkipped) + " skipped)";
+               "  (" + std::to_string(syncUpdated) + " updated; " +
+               std::to_string(syncNoMatch) + " no match)";
   nextSyncAtMs = millis() + HARD_COVER_SYNC_DELAY_MS;
   requestUpdate();
 }
@@ -103,6 +134,14 @@ void RecentBooksActivity::loop() {
       InkPointShell::navigate(*destination);
       return;
     }
+  }
+  if (syncState == SyncState::Choosing) {
+    const size_t choices = syncCandidates.size() + 1;  // final entry is Skip
+    if (mappedInput.wasReleased(MappedInputManager::Button::Confirm)) { finishCandidateChoice(candidateIndex < syncCandidates.size()); return; }
+    if (mappedInput.wasReleased(MappedInputManager::Button::Back)) { finishCandidateChoice(false); return; }
+    buttonNavigator.onNextRelease([this, choices] { candidateIndex = (candidateIndex + 1) % choices; requestUpdate(); });
+    buttonNavigator.onPreviousRelease([this, choices] { candidateIndex = (candidateIndex + choices - 1) % choices; requestUpdate(); });
+    return;
   }
   runOneMetadataSync();
 
@@ -244,6 +283,15 @@ void RecentBooksActivity::render(RenderLock&&) {
                                   : metrics.topPadding + metrics.headerHeight + metrics.verticalSpacing;
   const int contentHeight = inkPoint ? InkPointShell::kFooterTop - contentTop - 8
                                      : pageHeight - contentTop - metrics.buttonHintsHeight - metrics.verticalSpacing;
+
+  if (syncState == SyncState::Choosing) {
+    GUI.drawList(renderer, Rect{0, contentTop, pageWidth, contentHeight}, static_cast<int>(syncCandidates.size() + 1), candidateIndex,
+      [this](int index) { return index < static_cast<int>(syncCandidates.size()) ? syncCandidates[index].title : std::string("Skip"); },
+      [this](int index) { if (index >= static_cast<int>(syncCandidates.size())) return std::string("Do not cache a match"); const auto& c = syncCandidates[index]; return c.author + " (" + std::to_string(c.snapshot.publicationYear) + ")"; },
+      [](int) { return UIIcon::None; });
+    renderer.displayBuffer();
+    return;
+  }
 
   // The explicit command stays visible even for an empty Library.
   if (recentBooks.empty())

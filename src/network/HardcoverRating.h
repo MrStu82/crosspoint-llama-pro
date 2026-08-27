@@ -3,12 +3,21 @@
 #include <cstdint>
 #include <optional>
 #include <string>
+#include <vector>
 
 struct HardcoverBookIdentity {
   std::string canonicalKey;
   std::string isbn;
   std::string title;
   std::string author;
+};
+
+enum class HardcoverRefreshStatus : uint8_t {
+  Updated,
+  TokenMissing,
+  NetworkFailure,
+  NoMatch,
+  Ambiguous,
 };
 
 struct RatingSnapshot {
@@ -27,11 +36,19 @@ struct RatingSnapshot {
   }
 };
 
+struct HardcoverCandidate {
+  RatingSnapshot snapshot;
+  std::string title;
+  std::string author;
+};
+
 // Isolated adapter for Hardcover's beta GraphQL catalog search. Rendering only
 // consumes RatingSnapshot, so a provider/schema change stays out of Home UI.
 namespace HardcoverRating {
 
 std::string buildSearchPayload(const HardcoverBookIdentity& book, bool byIsbn);
+std::vector<HardcoverCandidate> parseSearchCandidates(const HardcoverBookIdentity& book, const std::string& json,
+                                                          int64_t fetchedAt, bool byIsbn);
 std::optional<RatingSnapshot> parseSearchResponse(const HardcoverBookIdentity& book, const std::string& json,
                                                   int64_t fetchedAt, bool byIsbn);
 std::optional<RatingSnapshot> loadLastGood(const HardcoverBookIdentity& book);
@@ -39,6 +56,12 @@ bool storeLastGood(const RatingSnapshot& snapshot);
 
 // Fetches only when Wi-Fi is already connected and a scoped PAT is configured.
 // Failed/beta-schema responses retain the last-good cache and never blank UI.
-std::optional<RatingSnapshot> refresh(const HardcoverBookIdentity& book, int64_t fetchedAt);
+struct HardcoverRefreshResult {
+  HardcoverRefreshStatus status = HardcoverRefreshStatus::NoMatch;
+  std::optional<RatingSnapshot> snapshot;
+  std::vector<HardcoverCandidate> candidates;
+};
+
+HardcoverRefreshResult refresh(const HardcoverBookIdentity& book, int64_t fetchedAt);
 
 }  // namespace HardcoverRating

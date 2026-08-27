@@ -6,12 +6,18 @@
 #include <WiFi.h>
 
 #include <cstdio>
+#include <cctype>
 
 #include "HardcoverCredentialStore.h"
 #include "HttpDownloader.h"
 #include "activities/reader/ProgressFile.h"
 
 namespace {
+std::string normalized(const std::string& value) {
+  std::string result;
+  for (const unsigned char c : value) if (std::isalnum(c)) result.push_back(static_cast<char>(std::tolower(c)));
+  return result;
+}
 constexpr const char* kCacheDir = "/.crosspoint/home";
 constexpr const char* kEndpoint = "https://api.hardcover.app/v1/graphql";
 
@@ -36,12 +42,17 @@ std::optional<RatingSnapshot> snapshotFromJson(JsonVariantConst value) {
   return result.valid() ? std::optional<RatingSnapshot>(result) : std::nullopt;
 }
 
-std::optional<RatingSnapshot> query(const HardcoverBookIdentity& book, int64_t fetchedAt, bool byIsbn) {
+struct QueryResult {
+  bool networkOk = false;
+  std::vector<HardcoverCandidate> candidates;
+};
+
+QueryResult query(const HardcoverBookIdentity& book, int64_t fetchedAt, bool byIsbn) {
   std::string response;
   if (!HttpDownloader::postJson(kEndpoint, HardcoverRating::buildSearchPayload(book, byIsbn),
                                 HARDCOVER_STORE.getToken(), response))
-    return std::nullopt;
-  return HardcoverRating::parseSearchResponse(book, response, fetchedAt, byIsbn);
+    return {};
+  return {true, HardcoverRating::parseSearchCandidates(book, response, fetchedAt, byIsbn)};
 }
 }  // namespace
 
@@ -76,17 +87,32 @@ bool storeLastGood(const RatingSnapshot& snapshot) {
                                    cacheFileFor(snapshot.canonicalBookKey));
 }
 
-std::optional<RatingSnapshot> refresh(const HardcoverBookIdentity& book, int64_t fetchedAt) {
+HardcoverRefreshResult refresh(const HardcoverBookIdentity& book, int64_t fetchedAt) {
   const auto stale = loadLastGood(book);
-  if (WiFi.status() != WL_CONNECTED || WiFi.localIP() == IPAddress(0, 0, 0, 0) || !HARDCOVER_STORE.hasToken())
-    return stale;
+  if (!HARDCOVER_STORE.hasToken()) return {HardcoverRefreshStatus::TokenMissing, stale, {}};
+  if (WiFi.status() != WL_CONNECTED || WiFi.localIP() == IPAddress(0, 0, 0, 0))
+    return {HardcoverRefreshStatus::NetworkFailure, stale, {}};
 
-  std::optional<RatingSnapshot> fresh;
-  if (!book.isbn.empty()) fresh = query(book, fetchedAt, true);
-  if (!fresh) fresh = query(book, fetchedAt, false);
-  if (!fresh) return stale;
-  if (!storeLastGood(*fresh)) LOG_ERR("HCR", "Could not persist rating; retaining in-memory value");
-  return fresh;
+  // ISBN is a fast-path only. A title search is the retrieval fallback because
+  // concatenating author into the provider query demonstrably loses books.
+  if (!book.isbn.empty()) {
+    const auto isbn = query(book, fetchedAt, true);
+    if (isbn.networkOk && isbn.candidates.size() == 1) {
+      const auto& snapshot = isbn.candidates.front().snapshot;
+      if (!storeLastGood(snapshot)) LOG_ERR("HCR", "Could not persist rating; retaining in-memory value");
+      return {HardcoverRefreshStatus::Updated, snapshot, {}};
+    }
+  }
+  const auto title = query(book, fetchedAt, false);
+  if (!title.networkOk) return {HardcoverRefreshStatus::NetworkFailure, stale, {}};
+  if (title.candidates.empty()) return {HardcoverRefreshStatus::NoMatch, stale, {}};
+  const bool exactAuthor = normalized(title.candidates.front().author) == normalized(book.author);
+  if (title.candidates.size() == 1 && exactAuthor) {
+    const auto& snapshot = title.candidates.front().snapshot;
+    if (!storeLastGood(snapshot)) LOG_ERR("HCR", "Could not persist rating; retaining in-memory value");
+    return {HardcoverRefreshStatus::Updated, snapshot, {}};
+  }
+  return {HardcoverRefreshStatus::Ambiguous, stale, title.candidates};
 }
 
 }  // namespace HardcoverRating

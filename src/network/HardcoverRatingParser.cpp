@@ -4,16 +4,17 @@
 
 #include <cctype>
 #include <cmath>
+#include <algorithm>
 
 namespace {
 std::string normalized(const std::string& value) {
+  // Hardcover's search is punctuation-insensitive; match the same way so
+  // "J.R.R." and "J. R. R." identify the same author/ISBN. Keeping only
+  // letters and digits also makes ISBN hyphens irrelevant without accepting
+  // a title suffix such as "The Hobbit, or ...".
   std::string result;
-  bool pendingSpace = false;
   for (const unsigned char c : value) {
-    if (std::isspace(c)) { pendingSpace = !result.empty(); continue; }
-    if (pendingSpace) result.push_back(' ');
-    pendingSpace = false;
-    result.push_back(static_cast<char>(std::tolower(c)));
+    if (std::isalnum(c)) result.push_back(static_cast<char>(std::tolower(c)));
   }
   return result;
 }
@@ -25,9 +26,15 @@ bool containsNormalized(JsonVariantConst value, const std::string& expected) {
   return false;
 }
 
+bool titleMatches(JsonObjectConst doc, const HardcoverBookIdentity& book) {
+  return normalized(doc["title"] | "") == normalized(book.title);
+}
 bool matches(JsonObjectConst doc, const HardcoverBookIdentity& book, bool byIsbn) {
-  if (byIsbn) return !book.isbn.empty() && containsNormalized(doc["isbns"], book.isbn);
-  return normalized(doc["title"] | "") == normalized(book.title) && containsNormalized(doc["author_names"], book.author);
+  return byIsbn ? !book.isbn.empty() && containsNormalized(doc["isbns"], book.isbn) : titleMatches(doc, book);
+}
+std::string firstAuthor(JsonObjectConst doc) {
+  for (const char* entry : doc["author_names"].as<JsonArrayConst>()) if (entry && entry[0]) return entry;
+  return "Unknown author";
 }
 
 JsonVariantConst searchResults(JsonDocument& root, JsonDocument& decoded) {
@@ -46,19 +53,19 @@ std::string buildSearchPayload(const HardcoverBookIdentity& book, bool byIsbn) {
   JsonDocument payload;
   payload["query"] =
       "query Search($query:String!){search(query:$query,query_type:\"Book\",per_page:5,page:1){error results}}";
-  payload["variables"]["query"] = byIsbn && !book.isbn.empty() ? book.isbn : book.title + " " + book.author;
+  payload["variables"]["query"] = byIsbn && !book.isbn.empty() ? book.isbn : book.title;
   std::string json;
   serializeJson(payload, json);
   return json;
 }
 
-std::optional<RatingSnapshot> parseSearchResponse(const HardcoverBookIdentity& book, const std::string& json,
-                                                  int64_t fetchedAt, bool byIsbn) {
+std::vector<HardcoverCandidate> parseSearchCandidates(const HardcoverBookIdentity& book, const std::string& json,
+                                                          int64_t fetchedAt, bool byIsbn) {
   JsonDocument root;
-  if (deserializeJson(root, json) || !root["errors"].isNull() || !root["data"]["search"]["error"].isNull())
-    return std::nullopt;
+  if (deserializeJson(root, json) || !root["errors"].isNull() || !root["data"]["search"]["error"].isNull()) return {};
   JsonDocument decoded;
   const JsonVariantConst results = searchResults(root, decoded);
+  std::vector<HardcoverCandidate> candidates;
   for (JsonObjectConst hit : results["hits"].as<JsonArrayConst>()) {
     const JsonObjectConst doc = hit["document"].as<JsonObjectConst>();
     if (!matches(doc, book, byIsbn)) continue;
@@ -67,17 +74,29 @@ std::optional<RatingSnapshot> parseSearchResponse(const HardcoverBookIdentity& b
     const char* slug = doc["slug"] | "";
     const std::string id = doc["id"].is<const char*>() ? doc["id"].as<const char*>() : std::to_string(doc["id"] | 0);
     if (!(average > 0.0f && average <= 5.0f) || count == 0 || (id == "0" && slug[0] == '\0')) continue;
-    RatingSnapshot result;
-    result.canonicalBookKey = book.canonicalKey;
-    result.valueX100 = static_cast<int>(std::lround(average * 100.0f));
-    result.ratingCount = count;
-    result.publicationYear = doc["release_year"] | 0;
-    result.sourceId = id != "0" ? id : slug;
-    result.sourceUrl = slug[0] ? std::string("https://hardcover.app/books/") + slug : "https://hardcover.app";
-    result.fetchedAt = fetchedAt;
-    return result;
+    HardcoverCandidate candidate;
+    candidate.title = doc["title"] | "";
+    candidate.author = firstAuthor(doc);
+    candidate.snapshot = {book.canonicalKey, static_cast<int>(std::lround(average * 100.0f)), count,
+                          doc["release_year"] | 0, id != "0" ? id : slug,
+                          slug[0] ? std::string("https://hardcover.app/books/") + slug : "https://hardcover.app", fetchedAt};
+    candidates.push_back(std::move(candidate));
+    if (candidates.size() == 5) break;
   }
-  return std::nullopt;
+  std::stable_sort(candidates.begin(), candidates.end(), [&book](const HardcoverCandidate& a, const HardcoverCandidate& b) {
+    const bool aAuthor = normalized(a.author) == normalized(book.author);
+    const bool bAuthor = normalized(b.author) == normalized(book.author);
+    if (aAuthor != bAuthor) return aAuthor;
+    return a.snapshot.publicationYear > b.snapshot.publicationYear;
+  });
+  return candidates;
+}
+
+std::optional<RatingSnapshot> parseSearchResponse(const HardcoverBookIdentity& book, const std::string& json,
+                                                  int64_t fetchedAt, bool byIsbn) {
+  const auto candidates = parseSearchCandidates(book, json, fetchedAt, byIsbn);
+  if (candidates.size() != 1) return std::nullopt;
+  return candidates.front().snapshot;
 }
 
 }  // namespace HardcoverRating

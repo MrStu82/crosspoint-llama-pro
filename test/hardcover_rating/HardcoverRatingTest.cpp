@@ -1,7 +1,19 @@
 #include <gtest/gtest.h>
 
+#include <fstream>
+#include <sstream>
+
 #include "BookReadingStats.h"
 #include "HardcoverRating.h"
+
+namespace {
+std::string fixture(const char* name) {
+  std::ifstream input(std::string(HARDCOVER_FIXTURE_DIR) + "/" + name);
+  std::ostringstream content;
+  content << input.rdbuf();
+  return content.str();
+}
+}  // namespace
 
 TEST(HardcoverRating, IsbnIsPreferredInGraphqlVariables) {
   const HardcoverBookIdentity book{"book-key", "9780593820247", "Dungeon Crawler Carl", "Matt Dinniman"};
@@ -131,4 +143,31 @@ TEST(HardcoverRating, EmptyCapturedResponseHasNoSuggestions) {
   EXPECT_TRUE(candidates.empty());
   EXPECT_EQ(HardcoverSyncResult::format(0, 1, 1, 0, 0),
             (std::vector<std::string>{"Hardcover sync finished", "Unmatched: 1", "No Hardcover suggestions found."}));
+}
+
+TEST(HardcoverRating, CapturedLiveDccKeepsTheValidCatalogCandidate) {
+  const HardcoverBookIdentity book{"book-key", "", "Dungeon Crawler Carl: A LitRPG/Gamelit Adventure", "Matt Dinniman"};
+  HardcoverSearchDiagnostics stats;
+  const auto candidates = HardcoverRating::parseSearchCandidates(book, fixture("hardcover-live-dcc.json"), 1, false, &stats);
+  ASSERT_EQ(candidates.size(), 1u);
+  EXPECT_EQ(candidates[0].snapshot.sourceId, "446681");
+  EXPECT_EQ(candidates[0].title, "Dungeon Crawler Carl");
+  EXPECT_EQ(candidates[0].author, "Matt Dinniman");
+  EXPECT_EQ(stats.returned, 1);
+  EXPECT_EQ(stats.invalid, 0);
+}
+
+TEST(HardcoverRating, CapturedLiveNeverendingRejectsNotebookAndFindsMichaelEnde) {
+  const HardcoverBookIdentity book{"book-key", "", "The Neverending Story", "Michael Ende"};
+  HardcoverSearchDiagnostics stats;
+  const auto body = fixture("hardcover-live-neverending.json");
+  const auto candidates = HardcoverRating::parseSearchCandidates(book, body, 1, false, &stats);
+  ASSERT_EQ(candidates.size(), 3u);
+  EXPECT_EQ(candidates[0].snapshot.sourceId, "144950");
+  EXPECT_EQ(candidates[0].author, "Michael Ende");
+  EXPECT_EQ(stats.returned, 5);
+  EXPECT_EQ(stats.invalid, 2);
+  const auto exact = HardcoverRating::parseSearchResponse(book, body, 1, false);
+  ASSERT_TRUE(exact);
+  EXPECT_EQ(exact->sourceId, "144950");
 }

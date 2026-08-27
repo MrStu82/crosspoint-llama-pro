@@ -1,6 +1,7 @@
 #include "HardcoverRating.h"
 
 #include <ArduinoJson.h>
+#include <Logging.h>
 
 #include <cctype>
 #include <cmath>
@@ -70,7 +71,12 @@ std::vector<HardcoverCandidate> parseSearchCandidates(const HardcoverBookIdentit
   HardcoverSearchDiagnostics local;
   auto& stats = diagnostics ? *diagnostics : local;
   JsonDocument root;
-  if (deserializeJson(root, json) || !root["errors"].isNull() || !root["data"]["search"]["error"].isNull()) return {};
+  const auto error = deserializeJson(root, json, DeserializationOption::NestingLimit(12));
+  if (error) {
+    LOG_DBG("HCR", "search response JSON: %s", error.c_str());
+    return {};
+  }
+  if (!root["errors"].isNull() || !root["data"]["search"]["error"].isNull()) return {};
   JsonDocument decoded;
   const JsonVariantConst results = searchResults(root, decoded);
   std::vector<HardcoverCandidate> candidates;

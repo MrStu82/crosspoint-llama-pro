@@ -95,3 +95,40 @@ TEST(HardcoverRating, CapturedTitleSearchRanksExactAuthorThenYearAndLeavesAmbigu
   EXPECT_EQ(candidates[1].snapshot.sourceId, "old");
   EXPECT_FALSE(HardcoverRating::parseSearchResponse(book, body, 123456, false));
 }
+
+#include "HardcoverSyncResult.h"
+
+TEST(HardcoverRating, SyncResultOmitsZeroCategoriesAndUsesRequiredCopy) {
+  EXPECT_EQ(HardcoverSyncResult::format(2, 0, 0, 0, 0),
+            (std::vector<std::string>{"Hardcover sync finished", "Updated: 2"}));
+  EXPECT_EQ(HardcoverSyncResult::format(0, 3, 0, 1, 2),
+            (std::vector<std::string>{"Hardcover sync finished", "Unmatched: 3",
+              "Hardcover sign-in failed. Check token in Settings.",
+              "Couldn't reach Hardcover. Check Wi-Fi and retry."}));
+}
+
+TEST(HardcoverRating, FuzzyCandidatesAreRankedButNeverReturnedAsExactMatch) {
+  const HardcoverBookIdentity book{"book-key", "", "The Hobbit", "J.R.R. Tolkien"};
+  const char* body = R"({"data":{"search":{"results":{"hits":[{"document":{"id":"near","title":"The Hobbit, or There and Back Again","author_names":["J. R. R. Tolkien"],"release_year":1937,"rating":4.3,"ratings_count":100}}]}}}})";
+  HardcoverSearchDiagnostics stats;
+  const auto candidates = HardcoverRating::parseSearchCandidates(book, body, 1, false, &stats);
+  ASSERT_EQ(candidates.size(), 1u);
+  EXPECT_EQ(candidates[0].snapshot.sourceId, "near");
+  EXPECT_FALSE(HardcoverRating::parseSearchResponse(book, body, 1, false));
+  EXPECT_EQ(stats.returned, 1);
+  EXPECT_EQ(stats.titleRejected, 1);
+}
+
+TEST(HardcoverRating, SelectionPersistsOnlyCandidateChoicesAndSkipDoesNotPersist) {
+  EXPECT_TRUE(HardcoverSyncResult::shouldPersistSelection(0, 1));
+  EXPECT_TRUE(HardcoverSyncResult::shouldPersistSelection(4, 5));
+  EXPECT_FALSE(HardcoverSyncResult::shouldPersistSelection(5, 5)); // Skip
+}
+
+TEST(HardcoverRating, EmptyCapturedResponseHasNoSuggestions) {
+  const HardcoverBookIdentity book{"book-key", "", "Missing", "Nobody"};
+  const auto candidates = HardcoverRating::parseSearchCandidates(book, R"({"data":{"search":{"results":{"hits":[]}}}})", 1, false);
+  EXPECT_TRUE(candidates.empty());
+  EXPECT_EQ(HardcoverSyncResult::format(0, 1, 1, 0, 0),
+            (std::vector<std::string>{"Hardcover sync finished", "Unmatched: 1", "No Hardcover suggestions found."}));
+}

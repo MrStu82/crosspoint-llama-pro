@@ -45,6 +45,7 @@ std::optional<RatingSnapshot> snapshotFromJson(JsonVariantConst value) {
 struct QueryResult {
   bool networkOk = false;
   std::vector<HardcoverCandidate> candidates;
+  HardcoverSearchDiagnostics diagnostics;
 };
 
 QueryResult query(const HardcoverBookIdentity& book, int64_t fetchedAt, bool byIsbn) {
@@ -52,7 +53,9 @@ QueryResult query(const HardcoverBookIdentity& book, int64_t fetchedAt, bool byI
   if (!HttpDownloader::postJson(kEndpoint, HardcoverRating::buildSearchPayload(book, byIsbn),
                                 HARDCOVER_STORE.getToken(), response))
     return {};
-  return {true, HardcoverRating::parseSearchCandidates(book, response, fetchedAt, byIsbn)};
+  HardcoverSearchDiagnostics diagnostics;
+  auto candidates = HardcoverRating::parseSearchCandidates(book, response, fetchedAt, byIsbn, &diagnostics);
+  return {true, std::move(candidates), diagnostics};
 }
 }  // namespace
 
@@ -105,10 +108,13 @@ HardcoverRefreshResult refresh(const HardcoverBookIdentity& book, int64_t fetche
   }
   const auto title = query(book, fetchedAt, false);
   if (!title.networkOk) return {HardcoverRefreshStatus::NetworkFailure, stale, {}};
+  LOG_DBG("HCR", "search returned=%u invalid=%u title-rejected=%u author-rejected=%u", title.diagnostics.returned, title.diagnostics.invalid, title.diagnostics.titleRejected, title.diagnostics.authorRejected);
   if (title.candidates.empty()) return {HardcoverRefreshStatus::NoMatch, stale, {}};
-  const bool exactAuthor = normalized(title.candidates.front().author) == normalized(book.author);
-  if (title.candidates.size() == 1 && exactAuthor) {
-    const auto& snapshot = title.candidates.front().snapshot;
+  std::vector<HardcoverCandidate> exact;
+  for (const auto& candidate : title.candidates)
+    if (normalized(candidate.title) == normalized(book.title) && normalized(candidate.author) == normalized(book.author)) exact.push_back(candidate);
+  if (exact.size() == 1) {
+    const auto& snapshot = exact.front().snapshot;
     if (!storeLastGood(snapshot)) LOG_ERR("HCR", "Could not persist rating; retaining in-memory value");
     return {HardcoverRefreshStatus::Updated, snapshot, {}};
   }

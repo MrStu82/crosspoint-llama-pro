@@ -13,6 +13,7 @@
 #include "activities/util/ConfirmationActivity.h"
 #include "activities/network/WifiSelectionActivity.h"
 #include "network/HardcoverRating.h"
+#include "network/HardcoverSyncResult.h"
 #include "components/UITheme.h"
 #include "components/InkPointShell.h"
 #include "fontIds.h"
@@ -48,14 +49,14 @@ void RecentBooksActivity::promptMetadataSync() {
 
 void RecentBooksActivity::beginMetadataSync() {
   syncState = SyncState::Running;
-  syncIndex = syncUpdated = syncTokenMissing = syncNetworkFailed = syncNoMatch = 0;
+  syncIndex = syncUpdated = syncTokenMissing = syncNetworkFailed = syncNoMatch = syncNoSuggestions = 0;
   nextSyncAtMs = 0;
   syncStatus = "Preparing Library sync";
   requestUpdate(true);
 }
 
 void RecentBooksActivity::finishCandidateChoice(bool store) {
-  if (store && candidateIndex < syncCandidates.size()) {
+  if (store && HardcoverSyncResult::shouldPersistSelection(candidateIndex, syncCandidates.size())) {
     if (HardcoverRating::storeLastGood(syncCandidates[candidateIndex].snapshot)) ++syncUpdated;
     else ++syncNetworkFailed;
   } else {
@@ -73,10 +74,7 @@ void RecentBooksActivity::runOneMetadataSync() {
   if (syncState != SyncState::Running || millis() < nextSyncAtMs) return;
   if (syncIndex >= recentBooks.size()) {
     syncState = SyncState::Complete;
-    syncStatus = "Sync complete: " + std::to_string(syncUpdated) + " updated, " +
-                 std::to_string(syncTokenMissing) + " token, " +
-                 std::to_string(syncNetworkFailed) + " network, " +
-                 std::to_string(syncNoMatch) + " no match";
+    syncStatus.clear();
     requestUpdate(true);
     return;
   }
@@ -88,7 +86,7 @@ void RecentBooksActivity::runOneMetadataSync() {
     case HardcoverRefreshStatus::Updated: ++syncUpdated; break;
     case HardcoverRefreshStatus::TokenMissing: ++syncTokenMissing; break;
     case HardcoverRefreshStatus::NetworkFailure: ++syncNetworkFailed; break;
-    case HardcoverRefreshStatus::NoMatch: ++syncNoMatch; break;
+    case HardcoverRefreshStatus::NoMatch: ++syncNoMatch; ++syncNoSuggestions; break;
     case HardcoverRefreshStatus::Ambiguous:
       syncCandidates = result.candidates;
       candidateIndex = 0;
@@ -283,6 +281,17 @@ void RecentBooksActivity::render(RenderLock&&) {
                                   : metrics.topPadding + metrics.headerHeight + metrics.verticalSpacing;
   const int contentHeight = inkPoint ? InkPointShell::kFooterTop - contentTop - 8
                                      : pageHeight - contentTop - metrics.buttonHintsHeight - metrics.verticalSpacing;
+
+  if (syncState == SyncState::Complete) {
+    const auto lines = HardcoverSyncResult::format(syncUpdated, syncNoMatch, syncNoSuggestions, syncTokenMissing, syncNetworkFailed);
+    int y = contentTop + 18;
+    for (const auto& line : lines) {
+      renderer.drawText(UI_12_FONT_ID, metrics.contentSidePadding, y, line.c_str());
+      y += 22;
+    }
+    renderer.displayBuffer();
+    return;
+  }
 
   if (syncState == SyncState::Choosing) {
     GUI.drawList(renderer, Rect{0, contentTop, pageWidth, contentHeight}, static_cast<int>(syncCandidates.size() + 1), candidateIndex,

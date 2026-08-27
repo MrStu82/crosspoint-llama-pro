@@ -30,6 +30,7 @@ class RecentBooksActivity final : public Activity {
   size_t syncTokenMissing = 0;
   size_t syncNetworkFailed = 0;
   size_t syncNoMatch = 0;
+  size_t syncNoSuggestions = 0;
   unsigned long nextSyncAtMs = 0;
   std::string syncStatus;
   std::vector<HardcoverCandidate> syncCandidates;

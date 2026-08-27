@@ -36,6 +36,13 @@ struct RatingSnapshot {
   }
 };
 
+struct HardcoverSearchDiagnostics {
+  uint8_t returned = 0;
+  uint8_t invalid = 0;
+  uint8_t titleRejected = 0;
+  uint8_t authorRejected = 0;
+};
+
 struct HardcoverCandidate {
   RatingSnapshot snapshot;
   std::string title;
@@ -48,7 +55,7 @@ namespace HardcoverRating {
 
 std::string buildSearchPayload(const HardcoverBookIdentity& book, bool byIsbn);
 std::vector<HardcoverCandidate> parseSearchCandidates(const HardcoverBookIdentity& book, const std::string& json,
-                                                          int64_t fetchedAt, bool byIsbn);
+                                                          int64_t fetchedAt, bool byIsbn, HardcoverSearchDiagnostics* diagnostics = nullptr);
 std::optional<RatingSnapshot> parseSearchResponse(const HardcoverBookIdentity& book, const std::string& json,
                                                   int64_t fetchedAt, bool byIsbn);
 std::optional<RatingSnapshot> loadLastGood(const HardcoverBookIdentity& book);

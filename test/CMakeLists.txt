@@ -88,3 +88,5 @@ add_subdirectory(dictionary_styled_pages)
 add_subdirectory(epub_tables)
 add_subdirectory(extra_wide_spacing)
 add_subdirectory(transparent_sleep)
+
+add_subdirectory(phase5a_controls)

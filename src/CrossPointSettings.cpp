@@ -12,6 +12,7 @@
 #include "I18nKeys.h"
 #include "ReaderFontSizes.h"
 #include "SettingsList.h"
+#include "components/ControlCenterModel.h"
 #include "fontIds.h"
 
 namespace {
@@ -170,6 +171,18 @@ bool CrossPointSettings::fromJson(JsonVariantConst doc) {
       }
       s.*(info.valuePtr) = v;
     }
+  }
+
+  // Before Phase 5 the persisted brightness doubled as the on/off flag (0 =
+  // off). Split it without surprising existing users: a non-zero legacy level
+  // remains on, zero remains off, and the retained slider level becomes 1.
+  if (doc["frontlightOn"].isNull()) {
+    const uint8_t legacyBrightness = doc["frontlightBrightness"] | static_cast<uint8_t>(0);
+    const auto migrated =
+        ControlCenterModel::migrateFrontlightState(false, legacyBrightness, frontlightBrightness, frontlightOn);
+    frontlightBrightness = migrated.brightness;
+    frontlightOn = migrated.on;
+    needsResave = true;
   }
 
   if (doc["sleepTimeoutMinutes"].isNull() && !doc["sleepTimeout"].isNull()) {

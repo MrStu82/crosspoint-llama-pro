@@ -1,10 +1,12 @@
 #include "ActivityManager.h"
 
 #include <FontCacheManager.h>
+#include <HalDisplay.h>
 #include <HalPowerManager.h>
 
 #include <algorithm>
 
+#include "CrossPointSettings.h"
 #include "OpdsServerStore.h"
 #include "boot_sleep/BootActivity.h"
 #include "boot_sleep/SleepActivity.h"
@@ -71,6 +73,7 @@ void ActivityManager::renderTaskLoop() {
     RenderLock lock;
     if (currentActivity) {
       HalPowerManager::Lock powerLock;  // Ensure we don't go into low-power mode while rendering
+      display.setInverted(SETTINGS.screenInverted != 0);
       currentActivity->render(std::move(lock));
     }
 
@@ -121,11 +124,17 @@ void ActivityManager::loop() {
       return;
     }
 
-    // Global bottom-edge upward swipe -> quick brightness sheet. Same reuse of the
-    // existing per-loop edge-gesture dispatch as the block above; suppressed while
-    // FrontlightActivity is on top (its own full settings page already covers this)
-    // so the two brightness entry points can't stack.
-    if (!currentActivity->isFrontlightActivity() && mappedInput.wasBrightnessSheetGesture()) {
+    // The touch control centre keeps the existing bottom-edge gesture and adds
+    // the dependable status-bar tap used by the four top-level tab screens.
+    bool statusBarTap = false;
+    if (mappedInput.hasTouch() &&
+        (currentActivity->name == "Home" || currentActivity->name == "FileBrowser" ||
+         currentActivity->name == "Settings" || currentActivity->name == "NetworkModeSelection")) {
+      int tx = 0;
+      int ty = 0;
+      statusBarTap = mappedInput.wasScreenTapped(tx, ty) && ty < 44;
+    }
+    if (!currentActivity->isFrontlightActivity() && (statusBarTap || mappedInput.wasBrightnessSheetGesture())) {
       brightnessSheet.open();
       return;
     }

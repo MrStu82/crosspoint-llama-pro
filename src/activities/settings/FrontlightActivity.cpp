@@ -10,6 +10,7 @@
 #include "MappedInputManager.h"
 #include "activities/settings/FrontlightPinDiagnosticActivity.h"
 #include "activities/util/IntervalSelectionActivity.h"
+#include "components/ControlCenterModel.h"
 #include "components/UITheme.h"
 #include "fontIds.h"
 
@@ -55,6 +56,9 @@ void FrontlightActivity::onEnter() {
 
   if (SETTINGS.frontlightBrightness > CrossPointSettings::FRONTLIGHT_MAX) {
     SETTINGS.frontlightBrightness = CrossPointSettings::FRONTLIGHT_MAX;
+  }
+  if (SETTINGS.frontlightBrightness < ControlCenterModel::kBrightnessMin) {
+    SETTINGS.frontlightBrightness = ControlCenterModel::kBrightnessMin;
   }
   if (SETTINGS.frontlightWarmPercent > CrossPointSettings::FRONTLIGHT_MAX) {
     SETTINGS.frontlightWarmPercent = CrossPointSettings::FRONTLIGHT_MAX;
@@ -129,7 +133,7 @@ void FrontlightActivity::handleSelection() {
     case ITEM_TURN_OFF:
       // The explicit way back to zero: writes through the same SDK abstraction as
       // every other control here, and persists so a reboot doesn't resurrect the light.
-      SETTINGS.frontlightBrightness = 0;
+      SETTINGS.frontlightOn = 0;
       frontlightManager.setBrightness(0);
       SETTINGS.saveToFile();
       requestUpdate();
@@ -143,12 +147,13 @@ void FrontlightActivity::openBrightnessPicker() {
   startActivityForResult(
       std::make_unique<IntervalSelectionActivity>(renderer, mappedInput, "FrontlightBrightnessInterval",
                                                    StrId::STR_BRIGHTNESS, SETTINGS.frontlightBrightness,
-                                                   CrossPointSettings::FRONTLIGHT_MIN, CrossPointSettings::FRONTLIGHT_MAX,
+                                                   ControlCenterModel::kBrightnessMin, CrossPointSettings::FRONTLIGHT_MAX,
                                                    CrossPointSettings::FRONTLIGHT_STEP, CrossPointSettings::FRONTLIGHT_STEP,
                                                    StrId::STR_FRONTLIGHT_PERCENT_FORMAT),
       [this](const ActivityResult& result) {
         if (!result.isCancelled) {
           SETTINGS.frontlightBrightness = static_cast<uint8_t>(std::get<IntervalResult>(result.data).value);
+          SETTINGS.frontlightOn = 1;
           frontlightManager.setBrightness(SETTINGS.frontlightBrightness);
           SETTINGS.saveToFile();
         }
@@ -195,7 +200,7 @@ void FrontlightActivity::render(RenderLock&&) {
       [](int index) -> std::string {
         switch (index) {
           case ITEM_BRIGHTNESS:
-            return formatPercent(SETTINGS.frontlightBrightness);
+            return formatPercent(SETTINGS.frontlightOn ? SETTINGS.frontlightBrightness : 0);
           case ITEM_TURN_OFF:
             return "";
           case ITEM_WARM_COOL:

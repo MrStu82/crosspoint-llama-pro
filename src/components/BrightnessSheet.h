@@ -3,8 +3,8 @@
 class GfxRenderer;
 class MappedInputManager;
 
-// Quick brightness/warmth sheet: a band pinned to the bottom of the screen, opened by
-// a bottom-edge upward swipe (MappedInputManager::wasBrightnessSheetGesture()).
+// Touch-first control centre: a card pinned to the top of the screen, opened by
+// the existing edge gesture or a top-level status-bar tap.
 // Unlike FrontlightActivity, this is NOT an Activity — it draws directly into the
 // live framebuffer over whatever's already on screen (e.g. a reader page) and pushes
 // only its own band to the panel via GfxRenderer::displayWindow(), so opening/adjusting
@@ -12,12 +12,10 @@ class MappedInputManager;
 // back to a normal full-screen ActivityManager::requestUpdate(), since restoring
 // whatever was under the band is exactly what a full repaint already does.
 //
-// Hosts two independent controls: a BRIGHTNESS slider (0-100%, backed by
-// SETTINGS.frontlightBrightness) and a WARMTH slider (0=cool..100=warm, backed by
-// SETTINGS.frontlightWarmPercent). Each slider snaps to 5% ticks on drag and has
-// flanking -1/+1 trim buttons for single-percent adjustment. Two presets ("Off",
-// "1%") sit above the brightness slider for one-tap access to the two most common
-// low-light values.
+// Hosts Brightness (1..100) and Warm/Cool Balance (0..100), each with exact
+// one-percent trim and a continuous touch track. The brightness lamp is the
+// separate off control. Four touch tiles expose Night Mode, Refresh Screen,
+// reading orientation and Touch Reader Controls using existing UI vocabulary.
 class BrightnessSheet {
  public:
   BrightnessSheet(GfxRenderer& renderer, MappedInputManager& mappedInput)
@@ -43,14 +41,17 @@ class BrightnessSheet {
   MappedInputManager& mappedInput;
   bool open_ = false;
   DragTarget dragging = DragTarget::None;
+  unsigned char brightness = 1;
+  unsigned char warmth = 0;
+  bool lightOn = false;
 
-  static constexpr int SHEET_HEIGHT = 200;
-
-  int bandTop() const;
+  int sheetHeight() const;
   void setBrightness(unsigned char value);
   void setWarmth(unsigned char value);
   void trimBrightness(int delta);
   void trimWarmth(int delta);
+  void toggleLight();
+  void activateTile(int index);
   void close();
-  void draw() const;
+  void draw(bool cleanRefresh = false) const;
 };

@@ -2,129 +2,86 @@
 
 #include <EpdFontFamily.h>
 #include <GfxRenderer.h>
+#include <HalDisplay.h>
 #include <I18n.h>
 
 #include <algorithm>
 #include <cstdio>
-#include <cstdlib>
 
 #include "CrossPointSettings.h"
 #include "Frontlight.h"
 #include "MappedInputManager.h"
-#include "activities/Activity.h"
 #include "activities/ActivityManager.h"
 #include "activities/RenderLock.h"
+#include "activities/reader/ReaderUtils.h"
+#include "components/ControlCenterModel.h"
 #include "components/DrawerChrome.h"
 #include "fontIds.h"
 
 namespace {
-constexpr int TICK_COUNT = 21;  // Spans FRONTLIGHT_MIN..MAX in FRONTLIGHT_STEP (5%) increments
-constexpr int SLIDER_MARGIN_X = 20;
-constexpr int SLIDER_HEIGHT = 16;
-constexpr int TRIM_BTN_SIZE = 26;
-constexpr int TRIM_GAP = 6;
-constexpr int PRESET_BTN_WIDTH = 64;
-constexpr int PRESET_BTN_HEIGHT = 26;
-constexpr int PRESET_GAP = 12;
+using ControlCenterModel::Layout;
+using ControlCenterModel::SliderLayout;
 
-constexpr int PRESET_ROW_Y_OFFSET = 10;
-constexpr int BRIGHTNESS_LABEL_Y_OFFSET = 46;
-constexpr int BRIGHTNESS_SLIDER_Y_OFFSET = 72;
-constexpr int WARMTH_LABEL_Y_OFFSET = 118;
-constexpr int WARMTH_SLIDER_Y_OFFSET = 144;
-
-int tickValue(int index) {
-  const int range = CrossPointSettings::FRONTLIGHT_MAX - CrossPointSettings::FRONTLIGHT_MIN;
-  // Rounded division so ticks land on the nearest whole percent instead of always floor.
-  return CrossPointSettings::FRONTLIGHT_MIN + (range * index + (TICK_COUNT - 1) / 2) / (TICK_COUNT - 1);
+bool hit(const ControlCenterModel::Rect& rect, const int x, const int y) {
+  return rect.width > 0 && rect.height > 0 && rect.contains(x, y);
 }
 
-int nearestTickIndex(int value) {
-  int best = 0;
-  int bestDist = INT32_MAX;
-  for (int i = 0; i < TICK_COUNT; ++i) {
-    const int dist = std::abs(tickValue(i) - value);
-    if (dist < bestDist) {
-      bestDist = dist;
-      best = i;
-    }
+void drawCentered(const GfxRenderer& renderer, const ControlCenterModel::Rect& rect, const char* text,
+                  const bool black = true,
+                  const bool bold = false) {
+  const auto style = bold ? EpdFontFamily::BOLD : EpdFontFamily::REGULAR;
+  const int width = renderer.getTextWidth(UI_12_FONT_ID, text, style);
+  const int lineHeight = renderer.getLineHeight(UI_12_FONT_ID);
+  renderer.drawText(UI_12_FONT_ID, rect.x + (rect.width - width) / 2, rect.y + (rect.height - lineHeight) / 2, text,
+                    black, style);
+}
+
+void drawCaption(const GfxRenderer& renderer, const ControlCenterModel::Rect& rect, const char* label,
+                 const char* value) {
+  renderer.drawText(UI_12_FONT_ID, rect.x, rect.y, label, true, EpdFontFamily::BOLD);
+  const int valueWidth = renderer.getTextWidth(UI_12_FONT_ID, value, EpdFontFamily::BOLD);
+  renderer.drawText(UI_12_FONT_ID, rect.x + rect.width - valueWidth, rect.y, value, true, EpdFontFamily::BOLD);
+}
+
+void drawTrack(const GfxRenderer& renderer, const ControlCenterModel::Rect& track, const int value,
+               const int minimum) {
+  renderer.drawRect(track.x, track.y, track.width, track.height, 2, true);
+  const int cy = track.y + track.height / 2;
+  renderer.fillRect(track.x + 14, cy - 1, std::max(1, track.width - 28), 2, true);
+  const int knob = ControlCenterModel::knobX(
+      value, ControlCenterModel::Rect{track.x + 14, track.y, std::max(1, track.width - 28), track.height}, minimum);
+  renderer.fillRect(knob - 6, cy - 10, 12, 20, false);
+  renderer.drawRect(knob - 6, cy - 10, 12, 20, 2, true);
+}
+
+void drawSlider(const GfxRenderer& renderer, const SliderLayout& slider, const int value, const int minimum,
+                const bool withToggle, const bool lightOn) {
+  renderer.drawRect(slider.minus.x, slider.minus.y, slider.minus.width, slider.minus.height, 2, true);
+  drawCentered(renderer, slider.minus, "-", true, true);
+  drawTrack(renderer, slider.track, value, minimum);
+  renderer.drawRect(slider.plus.x, slider.plus.y, slider.plus.width, slider.plus.height, 2, true);
+  drawCentered(renderer, slider.plus, "+", true, true);
+  if (withToggle) {
+    renderer.drawRect(slider.toggle.x, slider.toggle.y, slider.toggle.width, slider.toggle.height, 2, true);
+    drawCentered(renderer, slider.toggle, lightOn ? tr(STR_FRONTLIGHT_OFF) : tr(STR_STATE_ON), true, true);
   }
-  return best;
 }
 
-bool hitTest(int px, int py, int rx, int ry, int rw, int rh) {
-  return px >= rx && px < rx + rw && py >= ry && py < ry + rh;
-}
-
-// All the geometry the sheet needs, derived once from the screen width and band top so
-// draw() (rendering) and loop() (hit-testing) can never drift apart from each other.
-struct Layout {
-  int sliderX;
-  int sliderWidth;
-
-  int trimMinusX;
-  int trimPlusX;
-  int brightnessSliderY;
-  int brightnessTrimY;
-  int warmthSliderY;
-  int warmthTrimY;
-
-  int presetOffX;
-  int presetOnePercentX;
-  int presetY;
-};
-
-Layout computeLayout(int top, int screenWidth) {
-  Layout layout{};
-  layout.sliderX = SLIDER_MARGIN_X + TRIM_BTN_SIZE + TRIM_GAP;
-  layout.sliderWidth = screenWidth - 2 * layout.sliderX;
-
-  layout.trimMinusX = SLIDER_MARGIN_X;
-  layout.trimPlusX = screenWidth - SLIDER_MARGIN_X - TRIM_BTN_SIZE;
-
-  layout.brightnessSliderY = top + BRIGHTNESS_SLIDER_Y_OFFSET;
-  layout.brightnessTrimY = layout.brightnessSliderY - (TRIM_BTN_SIZE - SLIDER_HEIGHT) / 2;
-
-  layout.warmthSliderY = top + WARMTH_SLIDER_Y_OFFSET;
-  layout.warmthTrimY = layout.warmthSliderY - (TRIM_BTN_SIZE - SLIDER_HEIGHT) / 2;
-
-  const int presetPairWidth = 2 * PRESET_BTN_WIDTH + PRESET_GAP;
-  layout.presetOffX = (screenWidth - presetPairWidth) / 2;
-  layout.presetOnePercentX = layout.presetOffX + PRESET_BTN_WIDTH + PRESET_GAP;
-  layout.presetY = top + PRESET_ROW_Y_OFFSET;
-
-  return layout;
-}
-
-// Same centering idiom already used for square buttons elsewhere (e.g.
-// MinesweeperActivity/SudokuActivity's `y + h / 2 - 6` baseline nudge for UI_10_FONT_ID).
-void drawCenteredLabel(const GfxRenderer& renderer, int x, int y, int w, int h, const char* text) {
-  const int tw = renderer.getTextWidth(UI_10_FONT_ID, text);
-  renderer.drawText(UI_10_FONT_ID, x + (w - tw) / 2, y + h / 2 - 6, text, true);
-}
-
-void drawSlider(const GfxRenderer& renderer, const Layout& layout, int sliderY, int trimY, uint8_t value) {
-  renderer.drawRect(layout.trimMinusX, trimY, TRIM_BTN_SIZE, TRIM_BTN_SIZE);
-  drawCenteredLabel(renderer, layout.trimMinusX, trimY, TRIM_BTN_SIZE, TRIM_BTN_SIZE, "-");
-  renderer.drawRect(layout.trimPlusX, trimY, TRIM_BTN_SIZE, TRIM_BTN_SIZE);
-  drawCenteredLabel(renderer, layout.trimPlusX, trimY, TRIM_BTN_SIZE, TRIM_BTN_SIZE, "+");
-
-  renderer.drawRect(layout.sliderX, sliderY, layout.sliderWidth, SLIDER_HEIGHT);
-
-  const int selectedIdx = nearestTickIndex(value);
-  for (int i = 0; i < TICK_COUNT; ++i) {
-    const int tickX = layout.sliderX + layout.sliderWidth * i / (TICK_COUNT - 1);
-    renderer.drawLine(tickX, sliderY - 6, tickX, sliderY, true);
-    if (i == selectedIdx) {
-      renderer.fillRect(tickX - 3, sliderY - 4, 6, SLIDER_HEIGHT + 8, true);
-    }
-  }
+const char* orientationLabel() {
+  static constexpr StrId names[4] = {StrId::STR_PORTRAIT, StrId::STR_LANDSCAPE_CW,
+                                      StrId::STR_ORIENTATION_INVERTED, StrId::STR_LANDSCAPE_CCW};
+  return I18N.get(names[SETTINGS.orientation % 4]);
 }
 }  // namespace
 
-int BrightnessSheet::bandTop() const { return renderer.getScreenHeight() - SHEET_HEIGHT; }
+int BrightnessSheet::sheetHeight() const {
+  return ControlCenterModel::layout(renderer.getScreenWidth(), renderer.getScreenHeight()).sheetHeight;
+}
 
 void BrightnessSheet::open() {
+  brightness = static_cast<unsigned char>(ControlCenterModel::clampBrightness(SETTINGS.frontlightBrightness));
+  warmth = static_cast<unsigned char>(ControlCenterModel::clampWarmth(SETTINGS.frontlightWarmPercent));
+  lightOn = SETTINGS.frontlightOn != 0 && frontlightManager.brightness() > 0;
   open_ = true;
   dragging = DragTarget::None;
   RenderLock lock;
@@ -134,154 +91,195 @@ void BrightnessSheet::open() {
 void BrightnessSheet::close() {
   open_ = false;
   dragging = DragTarget::None;
-  // Only a full repaint knows how to correctly restore whatever the band was
-  // overlaying (reader page, home screen, etc.) — the sheet never drew anything
-  // outside its own band, so this is the only correct way to reconstruct the rest.
   activityManager.requestUpdate();
 }
 
 void BrightnessSheet::setBrightness(unsigned char value) {
-  value = std::clamp<unsigned char>(value, CrossPointSettings::FRONTLIGHT_MIN, CrossPointSettings::FRONTLIGHT_MAX);
-  if (value == SETTINGS.frontlightBrightness) return;
-  SETTINGS.frontlightBrightness = value;
+  value = static_cast<unsigned char>(ControlCenterModel::clampBrightness(value));
+  const bool changed = value != brightness || !lightOn;
+  brightness = value;
+  lightOn = true;
   frontlightManager.setBrightness(value);
-  SETTINGS.saveToFile();
-  RenderLock lock;
-  draw();
+  if (SETTINGS.frontlightBrightness != value || SETTINGS.frontlightOn == 0) {
+    SETTINGS.frontlightBrightness = value;
+    SETTINGS.frontlightOn = 1;
+    SETTINGS.saveToFile();
+  }
+  if (changed) {
+    RenderLock lock;
+    draw();
+  }
 }
 
 void BrightnessSheet::setWarmth(unsigned char value) {
-  value = std::clamp<unsigned char>(value, CrossPointSettings::FRONTLIGHT_MIN, CrossPointSettings::FRONTLIGHT_MAX);
-  if (value == SETTINGS.frontlightWarmPercent) return;
-  SETTINGS.frontlightWarmPercent = value;
+  value = static_cast<unsigned char>(ControlCenterModel::clampWarmth(value));
+  if (value == warmth) return;
+  warmth = value;
   frontlightManager.setColorTemperature(value);
+  SETTINGS.frontlightWarmPercent = value;
   SETTINGS.saveToFile();
   RenderLock lock;
   draw();
 }
 
-void BrightnessSheet::trimBrightness(int delta) {
-  const int next = static_cast<int>(SETTINGS.frontlightBrightness) + delta;
-  setBrightness(static_cast<unsigned char>(std::clamp(next, static_cast<int>(CrossPointSettings::FRONTLIGHT_MIN),
-                                                        static_cast<int>(CrossPointSettings::FRONTLIGHT_MAX))));
+void BrightnessSheet::trimBrightness(const int delta) {
+  setBrightness(static_cast<unsigned char>(ControlCenterModel::clampBrightness(static_cast<int>(brightness) + delta)));
 }
 
-void BrightnessSheet::trimWarmth(int delta) {
-  const int next = static_cast<int>(SETTINGS.frontlightWarmPercent) + delta;
-  setWarmth(static_cast<unsigned char>(std::clamp(next, static_cast<int>(CrossPointSettings::FRONTLIGHT_MIN),
-                                                    static_cast<int>(CrossPointSettings::FRONTLIGHT_MAX))));
+void BrightnessSheet::trimWarmth(const int delta) {
+  setWarmth(static_cast<unsigned char>(ControlCenterModel::clampWarmth(static_cast<int>(warmth) + delta)));
+}
+
+void BrightnessSheet::toggleLight() {
+  lightOn = !lightOn;
+  if (lightOn)
+    frontlightManager.setBrightness(brightness);
+  else
+    frontlightManager.off();
+  SETTINGS.frontlightBrightness = brightness;
+  SETTINGS.frontlightOn = lightOn ? 1 : 0;
+  SETTINGS.saveToFile();
+  RenderLock lock;
+  draw();
+}
+
+void BrightnessSheet::activateTile(const int index) {
+  switch (index) {
+    case 0:
+      SETTINGS.screenInverted = SETTINGS.screenInverted ? 0 : 1;
+      SETTINGS.saveToFile();
+      display.setInverted(SETTINGS.screenInverted != 0);
+      {
+        RenderLock lock;
+        draw(true);
+      }
+      return;
+    case 1:
+      renderer.promoteNextRefresh(HalDisplay::FULL_REFRESH);
+      close();
+      return;
+    case 2:
+      SETTINGS.orientation = static_cast<unsigned char>((SETTINGS.orientation + 1) % 4);
+      SETTINGS.saveToFile();
+      ReaderUtils::applyOrientation(renderer, SETTINGS.orientation);
+      renderer.promoteNextRefresh(HalDisplay::FULL_REFRESH);
+      close();
+      return;
+    case 3:
+      SETTINGS.touchReaderControls = SETTINGS.touchReaderControls == CrossPointSettings::TOUCH_READER_OFF
+                                         ? CrossPointSettings::TOUCH_READER_ON
+                                         : CrossPointSettings::TOUCH_READER_OFF;
+      SETTINGS.saveToFile();
+      {
+        RenderLock lock;
+        draw();
+      }
+      return;
+    default:
+      return;
+  }
 }
 
 bool BrightnessSheet::loop() {
   if (!open_) return false;
 
-  const int top = bandTop();
-  const int screenWidth = renderer.getScreenWidth();
-  const Layout layout = computeLayout(top, screenWidth);
-
+  const Layout layout = ControlCenterModel::layout(renderer.getScreenWidth(), renderer.getScreenHeight());
   int tx = 0;
   int ty = 0;
   if (mappedInput.isScreenTouchHeld(tx, ty)) {
-    const bool onBrightnessTrack =
-        ty >= layout.brightnessSliderY - 24 && ty < layout.brightnessSliderY + SLIDER_HEIGHT + 24;
-    const bool onWarmthTrack = ty >= layout.warmthSliderY - 24 && ty < layout.warmthSliderY + SLIDER_HEIGHT + 24;
-
-    if (dragging == DragTarget::Brightness || (dragging == DragTarget::None && onBrightnessTrack)) {
+    if (dragging == DragTarget::Brightness || (dragging == DragTarget::None && hit(layout.brightness.track, tx, ty))) {
       dragging = DragTarget::Brightness;
-      const int idx =
-          std::clamp((tx - layout.sliderX) * (TICK_COUNT - 1) / std::max(1, layout.sliderWidth - 1), 0, TICK_COUNT - 1);
-      setBrightness(static_cast<unsigned char>(tickValue(idx)));
-    } else if (dragging == DragTarget::Warmth || (dragging == DragTarget::None && onWarmthTrack)) {
+      const ControlCenterModel::Rect valueTrack{layout.brightness.track.x + 14, layout.brightness.track.y,
+                                                 std::max(1, layout.brightness.track.width - 28),
+                                                 layout.brightness.track.height};
+      setBrightness(static_cast<unsigned char>(
+          ControlCenterModel::valueFromTrack(tx, valueTrack, ControlCenterModel::kBrightnessMin)));
+    } else if (dragging == DragTarget::Warmth || (dragging == DragTarget::None && hit(layout.warmth.track, tx, ty))) {
       dragging = DragTarget::Warmth;
-      const int idx =
-          std::clamp((tx - layout.sliderX) * (TICK_COUNT - 1) / std::max(1, layout.sliderWidth - 1), 0, TICK_COUNT - 1);
-      setWarmth(static_cast<unsigned char>(tickValue(idx)));
+      const ControlCenterModel::Rect valueTrack{layout.warmth.track.x + 14, layout.warmth.track.y,
+                                                 std::max(1, layout.warmth.track.width - 28),
+                                                 layout.warmth.track.height};
+      setWarmth(static_cast<unsigned char>(
+          ControlCenterModel::valueFromTrack(tx, valueTrack, ControlCenterModel::kWarmthMin)));
     }
-    return true;  // Sheet owns every touch-and-hold frame for its whole lifetime.
+    return true;
   }
   if (dragging != DragTarget::None) {
     dragging = DragTarget::None;
-    return true;  // Swallow the release frame of a drag.
+    return true;
   }
 
   if (mappedInput.wasScreenTapped(tx, ty)) {
-    if (hitTest(tx, ty, layout.presetOffX, layout.presetY, PRESET_BTN_WIDTH, PRESET_BTN_HEIGHT)) {
-      setBrightness(0);
-    } else if (hitTest(tx, ty, layout.presetOnePercentX, layout.presetY, PRESET_BTN_WIDTH, PRESET_BTN_HEIGHT)) {
-      setBrightness(1);
-    } else if (hitTest(tx, ty, layout.trimMinusX, layout.brightnessTrimY, TRIM_BTN_SIZE, TRIM_BTN_SIZE)) {
+    if (hit(layout.brightness.minus, tx, ty))
       trimBrightness(-1);
-    } else if (hitTest(tx, ty, layout.trimPlusX, layout.brightnessTrimY, TRIM_BTN_SIZE, TRIM_BTN_SIZE)) {
+    else if (hit(layout.brightness.plus, tx, ty))
       trimBrightness(1);
-    } else if (hitTest(tx, ty, layout.trimMinusX, layout.warmthTrimY, TRIM_BTN_SIZE, TRIM_BTN_SIZE)) {
+    else if (hit(layout.brightness.toggle, tx, ty))
+      toggleLight();
+    else if (hit(layout.warmth.minus, tx, ty))
       trimWarmth(-1);
-    } else if (hitTest(tx, ty, layout.trimPlusX, layout.warmthTrimY, TRIM_BTN_SIZE, TRIM_BTN_SIZE)) {
+    else if (hit(layout.warmth.plus, tx, ty))
       trimWarmth(1);
-    } else if (DrawerChrome::isOutsideTap(DrawerChrome::Edge::Bottom, Rect(0, top, screenWidth, SHEET_HEIGHT), tx,
-                                           ty)) {
-      close();
+    else {
+      for (int i = 0; i < 4; ++i) {
+        if (hit(layout.tiles[i], tx, ty)) {
+          activateTile(i);
+          return true;
+        }
+      }
+      if (DrawerChrome::isOutsideTap(DrawerChrome::Edge::Top,
+                                     ::Rect{0, 0, renderer.getScreenWidth(), layout.sheetHeight},
+                                     tx, ty)) {
+        close();
+      }
     }
-    // A tap inside the band that hit nothing (e.g. between ticks) is absorbed
-    // silently rather than passed through to whatever's underneath.
     return true;
   }
 
   if (mappedInput.wasPressed(MappedInputManager::Button::Back) ||
       mappedInput.wasPressed(MappedInputManager::Button::Confirm)) {
     close();
-    return true;
   }
-
-  return true;  // Sheet is open: own input this frame even with no event.
+  return true;
 }
 
-void BrightnessSheet::draw() const {
-  const int top = bandTop();
+void BrightnessSheet::draw(const bool cleanRefresh) const {
   const int screenWidth = renderer.getScreenWidth();
-  const Layout layout = computeLayout(top, screenWidth);
+  const Layout layout = ControlCenterModel::layout(screenWidth, renderer.getScreenHeight());
+  DrawerChrome::clearRegion(renderer, ::Rect(0, 0, screenWidth, layout.sheetHeight));
+  renderer.fillRect(0, layout.sheetHeight - 2, screenWidth, 2, true);
 
-  DrawerChrome::clearRegion(renderer, Rect(0, top, screenWidth, SHEET_HEIGHT));
-  renderer.drawLine(0, top, screenWidth, top, true);
+  char value[16];
+  snprintf(value, sizeof(value), tr(STR_FRONTLIGHT_PERCENT_FORMAT), static_cast<unsigned>(brightness));
+  drawCaption(renderer, layout.brightnessCaption, tr(STR_BRIGHTNESS), value);
+  drawSlider(renderer, layout.brightness, brightness, ControlCenterModel::kBrightnessMin, true, lightOn);
 
-  // Presets
-  renderer.drawRect(layout.presetOffX, layout.presetY, PRESET_BTN_WIDTH, PRESET_BTN_HEIGHT);
-  drawCenteredLabel(renderer, layout.presetOffX, layout.presetY, PRESET_BTN_WIDTH, PRESET_BTN_HEIGHT,
-                     tr(STR_FRONTLIGHT_OFF));
+  if (warmth == 0)
+    snprintf(value, sizeof(value), "%s", tr(STR_FRONTLIGHT_FULL_COOL));
+  else if (warmth == 100)
+    snprintf(value, sizeof(value), "%s", tr(STR_FRONTLIGHT_FULL_WARM));
+  else
+    snprintf(value, sizeof(value), tr(STR_FRONTLIGHT_PERCENT_FORMAT), static_cast<unsigned>(warmth));
+  drawCaption(renderer, layout.warmthCaption, tr(STR_WARM_COOL_BALANCE), value);
+  drawSlider(renderer, layout.warmth, warmth, ControlCenterModel::kWarmthMin, false, lightOn);
 
-  char onePercent[8];
-  snprintf(onePercent, sizeof(onePercent), tr(STR_FRONTLIGHT_PERCENT_FORMAT), 1);
-  renderer.drawRect(layout.presetOnePercentX, layout.presetY, PRESET_BTN_WIDTH, PRESET_BTN_HEIGHT);
-  drawCenteredLabel(renderer, layout.presetOnePercentX, layout.presetY, PRESET_BTN_WIDTH, PRESET_BTN_HEIGHT, onePercent);
-
-  // Brightness
-  const uint8_t brightness = SETTINGS.frontlightBrightness;
-  char brightnessValue[8];
-  if (brightness == 0) {
-    snprintf(brightnessValue, sizeof(brightnessValue), "%s", tr(STR_FRONTLIGHT_OFF));
-  } else {
-    snprintf(brightnessValue, sizeof(brightnessValue), tr(STR_FRONTLIGHT_PERCENT_FORMAT), brightness);
+  char touchLabel[40];
+  const bool touchOn = SETTINGS.touchReaderControls != CrossPointSettings::TOUCH_READER_OFF;
+  snprintf(touchLabel, sizeof(touchLabel), "%s %s", tr(STR_TOUCH_TOGGLE),
+           tr(touchOn ? STR_STATE_ON : STR_STATE_OFF));
+  const char* labels[4] = {tr(STR_NIGHT_MODE), tr(STR_FORCE_REFRESH), orientationLabel(), touchLabel};
+  for (int i = 0; i < 4; ++i) {
+    const auto ink = ControlCenterModel::tileInk(i, SETTINGS.screenInverted != 0, touchOn);
+    if (ink.blackFill)
+      renderer.fillRect(layout.tiles[i].x, layout.tiles[i].y, layout.tiles[i].width, layout.tiles[i].height);
+    renderer.drawRect(layout.tiles[i].x, layout.tiles[i].y, layout.tiles[i].width, layout.tiles[i].height, 2, true);
+    drawCentered(renderer, layout.tiles[i], labels[i], ink.blackText, true);
   }
-  char brightnessTitle[40];
-  snprintf(brightnessTitle, sizeof(brightnessTitle), "%s: %s", tr(STR_BRIGHTNESS), brightnessValue);
-  renderer.drawCenteredText(UI_12_FONT_ID, top + BRIGHTNESS_LABEL_Y_OFFSET, brightnessTitle, true, EpdFontFamily::BOLD);
 
-  drawSlider(renderer, layout, layout.brightnessSliderY, layout.brightnessTrimY, brightness);
-
-  // Warmth
-  const uint8_t warmth = SETTINGS.frontlightWarmPercent;
-  char warmthValue[16];
-  if (warmth == 0) {
-    snprintf(warmthValue, sizeof(warmthValue), "%s", tr(STR_FRONTLIGHT_FULL_COOL));
-  } else if (warmth >= 100) {
-    snprintf(warmthValue, sizeof(warmthValue), "%s", tr(STR_FRONTLIGHT_FULL_WARM));
-  } else {
-    snprintf(warmthValue, sizeof(warmthValue), tr(STR_FRONTLIGHT_PERCENT_FORMAT), warmth);
-  }
-  char warmthTitle[48];
-  snprintf(warmthTitle, sizeof(warmthTitle), "%s: %s", tr(STR_WARM_COOL_BALANCE), warmthValue);
-  renderer.drawCenteredText(UI_12_FONT_ID, top + WARMTH_LABEL_Y_OFFSET, warmthTitle, true, EpdFontFamily::BOLD);
-
-  drawSlider(renderer, layout, layout.warmthSliderY, layout.warmthTrimY, warmth);
-
-  renderer.displayWindow(0, top, screenWidth, SHEET_HEIGHT);
+  renderer.fillRoundedRect(layout.grabber.x, layout.grabber.y, layout.grabber.width, layout.grabber.height, 2,
+                           Color::Black);
+  if (cleanRefresh)
+    renderer.displayBuffer(HalDisplay::FULL_REFRESH);
+  else
+    renderer.displayWindow(0, 0, screenWidth, layout.sheetHeight);
 }

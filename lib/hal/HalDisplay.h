@@ -52,6 +52,10 @@ class HalDisplay {
   bool supportsAsyncRefresh() const;
   void refreshDisplay(RefreshMode mode = RefreshMode::FAST_REFRESH, bool turnOffScreen = false);
 
+  void setInverted(bool inverted);
+  bool toggleInverted();
+  bool isInverted() const;
+
   // Power management
   void deepSleep();
 

@@ -403,7 +403,8 @@ void setup() {
   // left the frontlight off (setBrightness(0)) — this is the only place a non-zero
   // value gets applied on boot, and only from a value the user explicitly set.
   frontlightManager.setColorTemperature(SETTINGS.frontlightWarmPercent);
-  frontlightManager.setBrightness(SETTINGS.frontlightBrightness);
+  frontlightManager.setBrightness(SETTINGS.frontlightOn ? SETTINGS.frontlightBrightness : 0);
+  display.setInverted(SETTINGS.screenInverted != 0);
   APP_STATE.loadFromFile();
   // A persisted retained-frame flag is valid only after a verified sleep wake.
   // A stale flag from an interrupted sleep transition must not suppress a cold
@@ -669,9 +670,9 @@ void loop() {
     if (frontlightManager.brightness() > 0) {
       frontlightManager.off();
     } else {
-      frontlightManager.on();
+      frontlightManager.setBrightness(SETTINGS.frontlightBrightness);
     }
-    SETTINGS.frontlightBrightness = frontlightManager.brightness();
+    SETTINGS.frontlightOn = frontlightManager.brightness() > 0 ? 1 : 0;
     SETTINGS.saveToFile();
   }
 

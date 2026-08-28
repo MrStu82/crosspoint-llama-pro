@@ -8,6 +8,7 @@
 #include <utility>
 
 #include "activities/Activity.h"
+#include "activities/util/TransientPasswordReveal.h"
 #include "util/ButtonNavigator.h"
 
 enum class InputType { Text, Password, Url };
@@ -37,7 +38,8 @@ class KeyboardEntryActivity : public Activity {
   std::string text;
   size_t maxLength;
   InputType inputType;
-  bool passwordVisible = false;
+  TransientPasswordReveal passwordReveal;
+  bool passwordRevealTouchActive = false;
 
   ButtonNavigator buttonNavigator;
 
@@ -118,6 +120,7 @@ class KeyboardEntryActivity : public Activity {
   static size_t utf8Next(const std::string& s, size_t pos);
 
   freeink::ui::Rect keyboardRect() const;
+  freeink::ui::Rect passwordToggleRect();
 
   static constexpr uint16_t LONG_PRESS_MS = 500;
   static constexpr uint16_t DEL_LONG_PRESS_MS = 1500;

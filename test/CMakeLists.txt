@@ -67,3 +67,5 @@ add_subdirectory(hardcover_rating)
 add_subdirectory(hardcover_credential_transaction)
 add_subdirectory(daily_quote)
 add_subdirectory(hardcover_token_import)
+
+add_subdirectory(recent_books_hardcover_touch)

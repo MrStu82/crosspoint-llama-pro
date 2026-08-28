@@ -133,19 +133,6 @@ void RecentBooksActivity::loop() {
       return;
     }
   }
-  if (syncState == SyncState::Choosing) {
-    const size_t choices = syncCandidates.size() + 1;  // final entry is Skip
-    if (mappedInput.wasReleased(MappedInputManager::Button::Confirm)) { finishCandidateChoice(candidateIndex < syncCandidates.size()); return; }
-    if (mappedInput.wasReleased(MappedInputManager::Button::Back)) { finishCandidateChoice(false); return; }
-    buttonNavigator.onNextRelease([this, choices] { candidateIndex = (candidateIndex + 1) % choices; requestUpdate(); });
-    buttonNavigator.onPreviousRelease([this, choices] { candidateIndex = (candidateIndex + choices - 1) % choices; requestUpdate(); });
-    return;
-  }
-  runOneMetadataSync();
-
-  const int pageItems = InkPointShell::enabled(renderer)
-                            ? GUI.getListPageItems(InkPointShell::kFooterTop - InkPointShell::kContentTop - 8, true)
-                            : UITheme::getInstance().getNumberOfItemsPerPage(renderer, true, false, true, true);
   const auto& metrics = UITheme::getInstance().getMetrics();
   const bool inkPoint = InkPointShell::enabled(renderer);
   const int contentTop = inkPoint ? InkPointShell::kContentTop
@@ -153,6 +140,41 @@ void RecentBooksActivity::loop() {
   const int contentHeight = inkPoint ? InkPointShell::kFooterTop - contentTop - 8
                                      : renderer.getScreenHeight() - contentTop - metrics.buttonHintsHeight -
                                            metrics.verticalSpacing;
+  if (syncState == SyncState::Choosing) {
+    const size_t choices = syncCandidates.size() + 1;  // final entry is Skip / Cancel
+    constexpr int suggestedMatchesHeadingHeight = 24;
+    const int listTop = contentTop + suggestedMatchesHeadingHeight;
+    const int listHeight = contentHeight - suggestedMatchesHeadingHeight;
+    int touchChoice = static_cast<int>(candidateIndex);
+    const auto touch = handleListTouch(touchChoice, static_cast<int>(choices), listTop, listHeight, true);
+    if (touch != ListTouchResult::None) {
+      candidateIndex = static_cast<size_t>(touchChoice);
+      if (touch == ListTouchResult::Activated) finishCandidateChoice(candidateIndex < syncCandidates.size());
+      return;
+    }
+    if (mappedInput.wasReleased(MappedInputManager::Button::Confirm)) { finishCandidateChoice(candidateIndex < syncCandidates.size()); return; }
+    if (mappedInput.wasReleased(MappedInputManager::Button::Back)) { finishCandidateChoice(false); return; }
+    const int pageItems = GUI.getListPageItems(listHeight, true);
+    const auto swipe = mappedInput.wasSwipe();
+    if (swipe == MappedInputManager::SwipeDir::Up) {
+      candidateIndex = ButtonNavigator::nextPageIndex(candidateIndex, choices, pageItems);
+      requestUpdate();
+      return;
+    }
+    if (swipe == MappedInputManager::SwipeDir::Down) {
+      candidateIndex = ButtonNavigator::previousPageIndex(candidateIndex, choices, pageItems);
+      requestUpdate();
+      return;
+    }
+    buttonNavigator.onNextRelease([this, choices] { candidateIndex = (candidateIndex + 1) % choices; requestUpdate(); });
+    buttonNavigator.onPreviousRelease([this, choices] { candidateIndex = (candidateIndex + choices - 1) % choices; requestUpdate(); });
+    return;
+  }
+  runOneMetadataSync();
+
+  const int pageItems = inkPoint
+                            ? GUI.getListPageItems(InkPointShell::kFooterTop - InkPointShell::kContentTop - 8, true)
+                            : UITheme::getInstance().getNumberOfItemsPerPage(renderer, true, false, true, true);
 
   // After a long-press has fired, swallow input until Confirm is physically released
   // (so the release doesn't also open the book; re-arm only once the button is up).
@@ -294,8 +316,12 @@ void RecentBooksActivity::render(RenderLock&&) {
   }
 
   if (syncState == SyncState::Choosing) {
-    GUI.drawList(renderer, Rect{0, contentTop, pageWidth, contentHeight}, static_cast<int>(syncCandidates.size() + 1), candidateIndex,
-      [this](int index) { return index < static_cast<int>(syncCandidates.size()) ? syncCandidates[index].title : std::string("Skip"); },
+    constexpr int suggestedMatchesHeadingHeight = 24;
+    renderer.drawText(UI_12_FONT_ID, metrics.contentSidePadding, contentTop + 16, "Suggested matches");
+    GUI.drawList(renderer, Rect{0, contentTop + suggestedMatchesHeadingHeight, pageWidth,
+                               contentHeight - suggestedMatchesHeadingHeight},
+      static_cast<int>(syncCandidates.size() + 1), candidateIndex,
+      [this](int index) { return index < static_cast<int>(syncCandidates.size()) ? syncCandidates[index].title : std::string("Skip / Cancel"); },
       [this](int index) { if (index >= static_cast<int>(syncCandidates.size())) return std::string("Do not cache a match"); const auto& c = syncCandidates[index]; return c.author + " (" + std::to_string(c.snapshot.publicationYear) + ")"; },
       [](int) { return UIIcon::None; });
     renderer.displayBuffer();

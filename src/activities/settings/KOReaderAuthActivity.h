@@ -3,6 +3,7 @@
 #include <functional>
 
 #include "activities/Activity.h"
+#include "network/WifiAwakeLock.h"
 
 /**
  * Activity for testing KOReader credentials, or — in sign-up mode — creating a
@@ -29,6 +30,8 @@ class KOReaderAuthActivity final : public Activity {
   State state = WIFI_SELECTION;
   std::string statusMessage;
   std::string errorMessage;
+  // Keeps modem sleep disabled only while the auth HTTP request is active.
+  WifiAwakeLock wifiAwake;
 
   void onWifiSelectionComplete(bool success);
   void performAuthentication();

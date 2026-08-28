@@ -2,6 +2,7 @@
 
 #include <GfxRenderer.h>
 #include <I18n.h>
+#include <Logging.h>
 #include <WiFi.h>
 
 #include "KOReaderCredentialStore.h"
@@ -14,6 +15,7 @@
 
 void KOReaderAuthActivity::onWifiSelectionComplete(const bool success) {
   if (!success) {
+    wifiAwake.release();
     {
       RenderLock lock(*this);
       state = FAILED;
@@ -22,6 +24,9 @@ void KOReaderAuthActivity::onWifiSelectionComplete(const bool success) {
     requestUpdate();
     return;
   }
+
+  wifiAwake.acquire();
+  LOG_DBG("KOAuth", "WiFi sleep disabled for authentication");
 
   {
     RenderLock lock(*this);
@@ -35,6 +40,7 @@ void KOReaderAuthActivity::onWifiSelectionComplete(const bool success) {
 
 void KOReaderAuthActivity::performAuthentication() {
   const auto result = mode == Mode::SIGN_UP ? KOReaderSyncClient::createUser() : KOReaderSyncClient::authenticate();
+  wifiAwake.release();
 
   {
     RenderLock lock(*this);
@@ -65,6 +71,7 @@ void KOReaderAuthActivity::onEnter() {
 }
 
 void KOReaderAuthActivity::onExit() {
+  wifiAwake.release();
   Activity::onExit();
 
   if (WiFi.getMode() != WIFI_MODE_NULL) {

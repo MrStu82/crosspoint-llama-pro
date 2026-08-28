@@ -5,7 +5,6 @@
 #include <I18n.h>
 #include <Logging.h>
 #include <WiFi.h>
-#include <esp_sntp.h>
 #include <esp_wifi.h>
 
 #include <algorithm>
@@ -38,31 +37,6 @@ const char* matchMethodName(const DocumentMatchMethod method) {
   return method == DocumentMatchMethod::FILENAME ? "filename" : "binary";
 }
 
-void syncTimeWithNTP() {
-  // Stop SNTP if already running (can't reconfigure while running)
-  if (esp_sntp_enabled()) {
-    esp_sntp_stop();
-  }
-
-  // Configure SNTP
-  esp_sntp_setoperatingmode(ESP_SNTP_OPMODE_POLL);
-  esp_sntp_setservername(0, "pool.ntp.org");
-  esp_sntp_init();
-
-  // Wait for time to sync (with timeout)
-  int retry = 0;
-  const int maxRetries = 50;  // 5 seconds max
-  while (sntp_get_sync_status() != SNTP_SYNC_STATUS_COMPLETED && retry < maxRetries) {
-    vTaskDelay(100 / portTICK_PERIOD_MS);
-    retry++;
-  }
-
-  if (retry < maxRetries) {
-    LOG_DBG("KOSync", "NTP time synced");
-  } else {
-    LOG_DBG("KOSync", "NTP sync timeout, using fallback");
-  }
-}
 }  // namespace
 
 void KOReaderSyncActivity::ensureEpubLoaded() {
@@ -100,7 +74,10 @@ void KOReaderSyncActivity::saveProgressAndReturn(int spineIndex, int page) {
   returnToReader();
 }
 
-void KOReaderSyncActivity::returnToReader() { activityManager.goToReader(epubPath); }
+void KOReaderSyncActivity::returnToReader() {
+  wifiAwake.release();
+  activityManager.goToReader(epubPath);
+}
 
 bool KOReaderSyncActivity::smartSyncEnabled() const {
   return KOREADER_STORE.getSyncBehavior() == KOReaderSyncBehavior::SMART;
@@ -109,6 +86,7 @@ bool KOReaderSyncActivity::smartSyncEnabled() const {
 void KOReaderSyncActivity::markAutoReturn() { autoReturnAt = millis() + AUTO_RETURN_DELAY_MS; }
 
 void KOReaderSyncActivity::completeAlreadySynced() {
+  wifiAwake.release();
   {
     RenderLock lock(*this);
     state = SYNC_COMPLETE;
@@ -119,12 +97,15 @@ void KOReaderSyncActivity::completeAlreadySynced() {
 
 void KOReaderSyncActivity::onWifiSelectionComplete(const bool success) {
   if (!success) {
+    wifiAwake.release();
     LOG_DBG("KOSync", "WiFi connection failed, exiting");
     returnToReader();
     return;
   }
 
   LOG_DBG("KOSync", "WiFi connected, starting sync");
+  wifiAwake.acquire();
+  LOG_DBG("KOSync", "WiFi sleep disabled for sync");
 
   {
     RenderLock lock(*this);
@@ -132,9 +113,6 @@ void KOReaderSyncActivity::onWifiSelectionComplete(const bool success) {
     statusMessage = tr(STR_SYNCING_TIME);
   }
   requestUpdate(true);
-
-  // Sync time with NTP before making API requests
-  syncTimeWithNTP();
 
   {
     RenderLock lock(*this);
@@ -149,6 +127,7 @@ void KOReaderSyncActivity::performSync() {
   const DocumentMatchMethod primaryMethod = KOREADER_STORE.getMatchMethod();
   documentHash = calculateDocumentHashForMethod(epubPath, primaryMethod);
   if (documentHash.empty()) {
+    wifiAwake.release();
     {
       RenderLock lock(*this);
       state = SYNC_FAILED;
@@ -204,6 +183,7 @@ void KOReaderSyncActivity::performSync() {
     }
 
     // No remote progress - offer to upload
+    wifiAwake.release();
     {
       RenderLock lock(*this);
       state = NO_REMOTE_PROGRESS;
@@ -214,6 +194,7 @@ void KOReaderSyncActivity::performSync() {
   }
 
   if (result != KOReaderSyncClient::OK) {
+    wifiAwake.release();
     {
       RenderLock lock(*this);
       state = SYNC_FAILED;
@@ -227,6 +208,7 @@ void KOReaderSyncActivity::performSync() {
   hasRemoteProgress = true;
   ensureEpubLoaded();
   if (!epub) {
+    wifiAwake.release();
     {
       RenderLock lock(*this);
       state = SYNC_FAILED;
@@ -284,10 +266,13 @@ void KOReaderSyncActivity::performSync() {
       selectedOption = 0;  // Apply remote progress
     }
   }
+  wifiAwake.release();
   requestUpdate(true);
 }
 
 void KOReaderSyncActivity::performUpload() {
+  wifiAwake.acquire();
+  LOG_DBG("KOSync", "WiFi sleep disabled for upload");
   {
     RenderLock lock(*this);
     state = UPLOADING;
@@ -342,6 +327,7 @@ void KOReaderSyncActivity::performUpload() {
   epub.reset();
 
   const auto result = KOReaderSyncClient::updateProgress(progress);
+  wifiAwake.release();
 
   // Drop the radio while user reads the result; full teardown happens at silent reboot.
   esp_wifi_stop();
@@ -392,6 +378,7 @@ void KOReaderSyncActivity::onEnter() {
 }
 
 void KOReaderSyncActivity::onExit() {
+  wifiAwake.release();
   Activity::onExit();
 
   if (wifiActivated) {

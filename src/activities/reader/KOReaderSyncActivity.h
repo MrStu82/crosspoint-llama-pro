@@ -8,6 +8,7 @@
 #include "KOReaderSyncClient.h"
 #include "ProgressMapper.h"
 #include "activities/Activity.h"
+#include "network/WifiAwakeLock.h"
 
 /**
  * Activity for syncing reading progress with KOReader sync server.
@@ -88,6 +89,9 @@ class KOReaderSyncActivity final : public Activity {
   // WiFi.getMode() because performUpload() calls esp_wifi_stop() on the way out,
   // which makes WiFi.getMode() return WIFI_MODE_NULL.
   bool wifiActivated = false;
+  // Scoped modem-sleep override for active KOReader HTTP work. Terminal paths
+  // release it promptly; onExit/destruction is the structural backstop.
+  WifiAwakeLock wifiAwake;
 
   void onWifiSelectionComplete(bool success);
   void performSync();

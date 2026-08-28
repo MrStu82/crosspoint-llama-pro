@@ -76,3 +76,5 @@ add_subdirectory(phase1_safety)
 add_subdirectory(gpio_wake_usb)
 
 add_subdirectory(koreader_wifi_awake)
+
+add_subdirectory(font_cache_manager)

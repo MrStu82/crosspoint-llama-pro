@@ -11,6 +11,7 @@
 #include "CrossPointSettings.h"
 #include "Frontlight.h"
 #include "MappedInputManager.h"
+#include "activities/Activity.h"
 #include "activities/ActivityManager.h"
 #include "activities/RenderLock.h"
 #include "activities/reader/ReaderUtils.h"
@@ -266,7 +267,7 @@ void BrightnessSheet::draw(const bool cleanRefresh) const {
   char touchLabel[40];
   const bool touchOn = SETTINGS.touchReaderControls != CrossPointSettings::TOUCH_READER_OFF;
   snprintf(touchLabel, sizeof(touchLabel), "%s %s", tr(STR_TOUCH_TOGGLE),
-           tr(touchOn ? STR_STATE_ON : STR_STATE_OFF));
+           I18N.get(touchOn ? StrId::STR_STATE_ON : StrId::STR_STATE_OFF));
   const char* labels[4] = {tr(STR_NIGHT_MODE), tr(STR_FORCE_REFRESH), orientationLabel(), touchLabel};
   for (int i = 0; i < 4; ++i) {
     const auto ink = ControlCenterModel::tileInk(i, SETTINGS.screenInverted != 0, touchOn);

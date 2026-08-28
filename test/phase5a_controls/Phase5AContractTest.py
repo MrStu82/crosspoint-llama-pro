@@ -35,10 +35,10 @@ assert "std::string" not in reveal
 assert "save" not in reveal.lower()
 assert "log" not in reveal.lower()
 
-# Phase 5A is controls-only: Home implementation and shell must remain byte-for-byte
-# at the approved Phase 4B base.
+# In the combined Phase 5 branch, Home is owned exclusively by the independently
+# verified Phase 5B tree. The shell remains covered by that same exact-tree check.
 subprocess.run([
-    "git", "diff", "--exit-code", "d3bf7a084ac90c58429a0338a2003b87e536b4a0", "--",
+    "git", "diff", "--exit-code", "2dcf603a27ac60a062a6b96db5bdf2ea8c5e6b62", "--",
     "src/activities/home", "src/components/InkPointShell.cpp", "src/components/InkPointShell.h"
 ], cwd=root, check=True, stdout=subprocess.DEVNULL)
-print("PASS phase5a source/privacy/home-delta contract")
+print("PASS phase5a source/privacy and exact Phase5B Home-tree contract")

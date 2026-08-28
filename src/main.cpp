@@ -366,7 +366,8 @@ void setup() {
   // The sampling updates InputManager too, so a held recovery side-button is
   // already debounced when it is read below.
   const auto wakeupReason = gpio.getWakeupReason();
-  if (wakeupReason == HalGPIO::WakeupReason::PowerButton && !gpio.verifyPowerButtonWakeup()) {
+  if (wakeupReason == HalGPIO::WakeupReason::PowerButton &&
+      !gpio_policy::verifyPowerButtonWakeup(gpio)) {
     powerManager.startDeepSleep(gpio);
   }
   wakePowerInputGate.arm(wakeupReason == HalGPIO::WakeupReason::PowerButton);

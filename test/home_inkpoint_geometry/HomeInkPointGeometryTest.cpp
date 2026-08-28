@@ -1,6 +1,7 @@
 #include <gtest/gtest.h>
 
 #include <cstdlib>
+#include <limits>
 
 #include "HomeInkPointGeometry.h"
 
@@ -16,6 +17,74 @@ TEST(HomeInkPointGeometry, FilledRatingUsesFivePointAlternatingPolygon) {
     EXPECT_GT(outerRadiusSquared, x[previousInner] * x[previousInner] + y[previousInner] * y[previousInner]);
     EXPECT_GT(outerRadiusSquared, x[nextInner] * x[nextInner] + y[nextInner] * y[nextInner]);
   }
+}
+
+TEST(HomeInkPointGeometry, PartialRatingUsesAClippedLeftHalfAndCompleteOutline) {
+  const auto& halfX = InkPointHomeGeometry::kHalfRatingStarX;
+  const auto& halfY = InkPointHomeGeometry::kHalfRatingStarY;
+  ASSERT_EQ(halfX.size(), 6U);
+  ASSERT_EQ(halfX.size(), halfY.size());
+  EXPECT_EQ(halfX.front(), 0);
+  EXPECT_EQ(halfY.front(), -10);
+  EXPECT_EQ(halfX[1], 0);
+  EXPECT_EQ(halfY[1], 5);
+  for (const int x : halfX) EXPECT_LE(x, 0);
+  EXPECT_EQ(InkPointHomeGeometry::ratingStarFill(444, 3),
+            InkPointHomeGeometry::RatingStarFill::Full);
+  EXPECT_EQ(InkPointHomeGeometry::ratingStarFill(444, 4),
+            InkPointHomeGeometry::RatingStarFill::Half);
+  EXPECT_EQ(InkPointHomeGeometry::ratingStarFill(400, 4),
+            InkPointHomeGeometry::RatingStarFill::Outline);
+}
+
+TEST(HomeInkPointGeometry, ProgressBarIsDoubleThicknessAndHugsCoverBounds) {
+  const auto layout = InkPointHomeGeometry::coverProgressLayout(20, 104, 220, 362, 61);
+  EXPECT_EQ(layout.x, 20);
+  EXPECT_EQ(layout.y, 466);
+  EXPECT_EQ(layout.width, 220);
+  EXPECT_EQ(layout.height, 14);
+  EXPECT_EQ(layout.fillX, 21);
+  EXPECT_EQ(layout.fillY, 470);
+  EXPECT_EQ(layout.fillWidth, 132);
+  EXPECT_EQ(layout.fillHeight, 6);
+}
+
+TEST(HomeInkPointGeometry, WholeBookEtaSitsBesideChapterWithoutMovingChevron) {
+  const auto layout = InkPointHomeGeometry::statsLayout(260, 305, 58);
+  EXPECT_EQ(layout.timeX, 260);
+  EXPECT_EQ(layout.timeY, 305);
+  EXPECT_EQ(layout.chapterX, 260);
+  EXPECT_EQ(layout.chapterY, 363);
+  EXPECT_EQ(layout.bookX, 362);
+  EXPECT_EQ(layout.bookY, layout.chapterY);
+  EXPECT_EQ(layout.chevronY, 461);
+}
+
+TEST(HomeInkPointGeometry, EtaUsesOnlyTheMeasuredPerBookRate) {
+  // 600s / 10 pages = 60s/page. At 20% the estimated total is 50 pages,
+  // leaving 40; the current chapter has 3 pages left.
+  const auto eta = InkPointHomeGeometry::estimateEtas(600, 10, true, 3, true, 20);
+  ASSERT_TRUE(eta.chapterMinutes);
+  ASSERT_TRUE(eta.bookMinutes);
+  EXPECT_EQ(*eta.chapterMinutes, 3U);
+  EXPECT_EQ(*eta.bookMinutes, 40U);
+}
+
+TEST(HomeInkPointGeometry, WholeBookEtaIsHiddenWhenEvidenceIsInsufficient) {
+  EXPECT_FALSE(InkPointHomeGeometry::estimateEtas(299, 5, false, 3, true, 20).bookMinutes);
+  EXPECT_FALSE(InkPointHomeGeometry::estimateEtas(600, 10, true, 3, true, 0).bookMinutes);
+  EXPECT_FALSE(InkPointHomeGeometry::estimateEtas(600, 10, true, 3, true, 100).bookMinutes);
+  EXPECT_FALSE(InkPointHomeGeometry::estimateEtas(600, 0, false, 3, true, 20).bookMinutes);
+}
+
+TEST(HomeInkPointGeometry, EtaArithmeticIsBoundedForCorruptExtremeState) {
+  const auto eta = InkPointHomeGeometry::estimateEtas(
+      std::numeric_limits<uint32_t>::max(), 5, true,
+      std::numeric_limits<int>::max(), true, 1);
+  ASSERT_TRUE(eta.chapterMinutes);
+  ASSERT_TRUE(eta.bookMinutes);
+  EXPECT_EQ(*eta.chapterMinutes, std::numeric_limits<uint32_t>::max());
+  EXPECT_EQ(*eta.bookMinutes, std::numeric_limits<uint32_t>::max());
 }
 
 TEST(HomeInkPointGeometry, QuoteAndOneLineAttributionAreCenteredInActualFreeBand) {

@@ -15,6 +15,19 @@ inline constexpr bool isStablePowerWake(const bool heldAtFirstSample, const bool
   return heldAtFirstSample && heldAfterDebounce;
 }
 
+// The production HAL exposes the Phase 2A no-argument stability check. The
+// pinned desktop simulator still carries its older two-argument no-op stub.
+// Keep that compatibility at this build seam only; production always selects
+// the no-argument API and therefore retains the physical debounce semantics.
+template <typename Gpio>
+inline bool verifyPowerButtonWakeup(Gpio& gpio) {
+  if constexpr (requires { gpio.verifyPowerButtonWakeup(); }) {
+    return gpio.verifyPowerButtonWakeup();
+  } else {
+    return gpio.verifyPowerButtonWakeup(0, true);
+  }
+}
+
 inline constexpr bool shouldUseSplashlessWake(const bool isVerifiedPowerWake, const bool showBootScreen) {
   return isVerifiedPowerWake && !showBootScreen;
 }

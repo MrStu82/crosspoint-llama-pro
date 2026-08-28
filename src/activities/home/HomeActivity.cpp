@@ -46,10 +46,6 @@ const Rect kInkStats{252, 300, 208, 250};
 constexpr int kInkStatsX = 260;
 constexpr int kInkStatsWidth = 200;
 constexpr int kInkStatsStep = 58;
-// Progress bar under the cover: 1px clear of the cover, thick enough to read as
-// a bar rather than a hairline.
-constexpr int kInkProgressGap = 1;
-constexpr int kInkProgressHeight = 7;
 const Rect kInkFooter{14, 728, 452, 60};
 constexpr int kInkTabWidth = 72;
 constexpr int kInkTabGap = 4;
@@ -86,18 +82,28 @@ void drawCentered(const GfxRenderer& renderer, int fontId, int cx, int baseline,
                     textTop(renderer, fontId, baseline), text, black, style);
 }
 
-void drawStar(const GfxRenderer& renderer, int cx, int cy, bool filled, bool partial) {
+void drawStar(const GfxRenderer& renderer, const int cx, const int cy,
+              const InkPointHomeGeometry::RatingStarFill fill) {
   int x[10] = {}, y[10] = {};
   for (int i = 0; i < 10; ++i) {
     x[i] = cx + InkPointHomeGeometry::kRatingStarX[i];
     y[i] = cy + InkPointHomeGeometry::kRatingStarY[i];
   }
-  for (int i = 0; i < 10; ++i) renderer.drawLine(x[i], y[i], x[(i + 1) % 10], y[(i + 1) % 10]);
-  if (filled) {
+  if (fill == InkPointHomeGeometry::RatingStarFill::Full) {
     renderer.fillPolygon(x, y, 10, true);
-  } else if (partial) {
-    for (int py = cy - 7; py <= cy + 5; py += 2) renderer.drawLine(cx - 7, py, cx - 1, py);
+  } else if (fill == InkPointHomeGeometry::RatingStarFill::Half) {
+    int halfX[InkPointHomeGeometry::kHalfRatingStarX.size()] = {};
+    int halfY[InkPointHomeGeometry::kHalfRatingStarY.size()] = {};
+    for (size_t i = 0; i < InkPointHomeGeometry::kHalfRatingStarX.size(); ++i) {
+      halfX[i] = cx + InkPointHomeGeometry::kHalfRatingStarX[i];
+      halfY[i] = cy + InkPointHomeGeometry::kHalfRatingStarY[i];
+    }
+    renderer.fillPolygon(halfX, halfY,
+                         static_cast<int>(InkPointHomeGeometry::kHalfRatingStarX.size()), true);
   }
+  // Draw last so both unfilled stars and the unfilled half retain the complete
+  // five-point outline.
+  for (int i = 0; i < 10; ++i) renderer.drawLine(x[i], y[i], x[(i + 1) % 10], y[(i + 1) % 10]);
 }
 
 std::string upper(const std::string& value) {
@@ -701,16 +707,15 @@ void HomeActivity::renderInkPointHome() {
     }
   }
 
-  // Progress bar sits one pixel clear of the cover's lower edge, so it reads as
-  // its own element rather than as part of the cover's frame.
-  const int progressY = coverY + coverH + kInkProgressGap;
-  renderer.drawRect(coverX, progressY, coverW, kInkProgressHeight);
+  // The outline starts at the cover's exact bounds (zero padding) and the bar
+  // beneath it is exactly twice v195's 7px thickness.
+  const auto progressLayout = InkPointHomeGeometry::coverProgressLayout(
+      coverX, coverY, coverW, coverH, book ? book->progressPercent : 0);
+  const int progressY = progressLayout.y;
+  renderer.drawRect(progressLayout.x, progressLayout.y, progressLayout.width, progressLayout.height);
   if (book && book->progressPercent >= 0) {
-    constexpr int kFillHeight = 3;
-    const int fillY = progressY + (kInkProgressHeight - kFillHeight) / 2;
-    renderer.fillRect(coverX + 1, fillY,
-                      std::max(0, std::min(coverW - 2, (coverW - 2) * book->progressPercent / 100)),
-                      kFillHeight);
+    renderer.fillRect(progressLayout.fillX, progressLayout.fillY,
+                      progressLayout.fillWidth, progressLayout.fillHeight);
   }
 
   constexpr int rightX = kInkStatsX;
@@ -759,9 +764,9 @@ void HomeActivity::renderInkPointHome() {
       renderer.drawText(UI_10_FONT_ID, rightX, y + 27, year);
     }
     if (rating) {
-      const int whole = rating->valueX100 / 100;
-      const int fraction = rating->valueX100 % 100;
-      for (int i = 0; i < 5; ++i) drawStar(renderer, rightX + 11 + i * 24, y + 62, i < whole, i == whole && fraction > 0);
+      for (int i = 0; i < 5; ++i)
+        drawStar(renderer, rightX + 11 + i * 24, y + 62,
+                 InkPointHomeGeometry::ratingStarFill(rating->valueX100, i));
       metadataBottom = y + 74;
     } else {
       metadataBottom = y + 18;
@@ -770,14 +775,13 @@ void HomeActivity::renderInkPointHome() {
 
   // Keep the entire right gutter flowing from the metadata above it. Cap its
   // start so even a six-line title leaves the stat link above the footer.
-  constexpr int kStatsToChevronGap = 20;
   constexpr int kChevronSafeBottom = InkPointShell::kFooterTop - 14;
-  const int statsHeight = 2 * kInkStatsStep + 20 + kStatsToChevronGap +
+  const int statsHeight = 2 * kInkStatsStep + 20 + InkPointHomeGeometry::kStatsToChevronGap +
                           kInkChevronHalf + kInkChevronRuleGap + kInkChevronRuleHeight;
   const int statStart = std::min(metadataBottom + 24, kChevronSafeBottom - statsHeight);
 
-  // Values are never omitted. Placeholders use the readable UI face, whose
-  // em-dash coverage is guaranteed; Caveat remains for actual numeric values.
+  // Available values use Caveat; unavailable time/chapter values retain the
+  // readable UI em dash. Whole-book ETA is withheld until it is honest.
   constexpr const char* labels[3] = {"TIME READ", "CHAPTER LEFT", "BOOK LEFT"};
   char timeRead[16] = {}, chapterLeft[16] = {}, bookLeft[16] = {};
   bool valueAvailable[3] = {false, false, false};
@@ -793,30 +797,31 @@ void HomeActivity::renderInkPointHome() {
   if (book && bookStats.available) {
     formatMinutes(timeRead, sizeof(timeRead), bookStats.totalSeconds / 60);
     valueAvailable[0] = true;
-    // Chapter left is bounded by the reader's own spine-item pagination: the
-    // pages it has left in the section it stopped in, priced at the reader's
-    // measured seconds-per-page. Best effort -- an em-dash if either the page
-    // count or the pace is missing, never a different metric wearing this label.
-    if (chapterProgress.available && bookStats.secondsPerPage() > 0) {
-      formatMinutes(chapterLeft, sizeof(chapterLeft),
-                    static_cast<uint32_t>(chapterProgress.pagesLeft()) * bookStats.secondsPerPage() / 60);
+    const auto eta = InkPointHomeGeometry::estimateEtas(
+        bookStats.totalSeconds, bookStats.forwardPages, bookStats.etaConfident(),
+        chapterProgress.pagesLeft(), chapterProgress.available, book->progressPercent);
+    if (eta.chapterMinutes) {
+      formatMinutes(chapterLeft, sizeof(chapterLeft), *eta.chapterMinutes);
       valueAvailable[1] = true;
     }
-    if (bookStats.etaConfident() && book->progressPercent > 0 && book->progressPercent < 100) {
-      const uint32_t totalPagesEstimate = bookStats.forwardPages * 100U / static_cast<uint32_t>(book->progressPercent);
-      const uint32_t remainingPages = totalPagesEstimate > bookStats.forwardPages ? totalPagesEstimate - bookStats.forwardPages : 0;
-      formatMinutes(bookLeft, sizeof(bookLeft), remainingPages * bookStats.secondsPerPage() / 60);
+    if (eta.bookMinutes) {
+      formatMinutes(bookLeft, sizeof(bookLeft), *eta.bookMinutes);
       valueAvailable[2] = true;
     }
   }
   const char* values[3] = {timeRead, chapterLeft, bookLeft};
+  const auto statsLayout = InkPointHomeGeometry::statsLayout(rightX, statStart, kInkStatsStep);
+  const int statX[3] = {statsLayout.timeX, statsLayout.chapterX, statsLayout.bookX};
+  const int statY[3] = {statsLayout.timeY, statsLayout.chapterY, statsLayout.bookY};
   for (int i = 0; i < 3; ++i) {
-    const int statY = statStart + i * kInkStatsStep;
-    renderer.drawText(UI_10_FONT_ID, rightX, statY, labels[i]);
-    if (valueAvailable[i]) renderer.drawText(CAVEAT_18_FONT_ID, rightX, statY + 20, values[i]);
-    else renderer.drawText(UI_12_FONT_ID, rightX, statY + 20, "\xE2\x80\x94");
+    // Whole-book ETA is the only optional group: without a confident measured
+    // pace it is hidden, rather than implying precision with a permanent slot.
+    if (i == 2 && !valueAvailable[i]) continue;
+    renderer.drawText(UI_10_FONT_ID, statX[i], statY[i], labels[i]);
+    if (valueAvailable[i]) renderer.drawText(CAVEAT_18_FONT_ID, statX[i], statY[i] + 20, values[i]);
+    else renderer.drawText(UI_12_FONT_ID, statX[i], statY[i] + 20, "\xE2\x80\x94");
   }
-  drawStatsChevron(renderer, statStart + 2 * kInkStatsStep + 20 + kStatsToChevronGap);
+  drawStatsChevron(renderer, statsLayout.chevronY);
 
   // The local-date quote is selected from a 366-record audited shuffled deck.
   // The day comes from the same RTC-plus-user-offset date the stats tracker
@@ -835,7 +840,9 @@ void HomeActivity::renderInkPointHome() {
   const int quoteLineHeight = renderer.getLineHeight(CAVEAT_15_FONT_ID);
   const int attributionLineHeight = renderer.getLineHeight(SMALL_FONT_ID);
   const auto quoteLayout = InkPointHomeGeometry::centerQuoteBlock(
-      progressY + kInkProgressHeight, InkPointShell::kFooterTop, static_cast<int>(quoteLines.size()),
+      coverY + coverH + InkPointHomeGeometry::kQuoteBandTopOffsetFromCoverBottom,
+      InkPointShell::kFooterTop,
+      static_cast<int>(quoteLines.size()),
       quoteLineHeight, quoteToAttribution, attributionLineHeight,
       renderer.getFontAscenderSize(CAVEAT_15_FONT_ID), renderer.getFontAscenderSize(SMALL_FONT_ID));
   int quoteBaseline = quoteLayout.quoteBaseline;
@@ -849,7 +856,10 @@ void HomeActivity::renderInkPointHome() {
   // The ring encloses the cover and the progress bar beneath it: 3px above the
   // cover, and clear of the bar's new lower edge.
   if (inkPointFocus == 0 && book)
-    renderer.drawRect(coverX - 3, coverY - 3, coverW + 6, coverH + 6 + kInkProgressGap + kInkProgressHeight + 3, 2,
+    renderer.drawRect(coverX - 3, coverY - 3, coverW + 6,
+                      coverH + 6 + InkPointHomeGeometry::kCoverProgressGap +
+                          InkPointHomeGeometry::kCoverProgressHeight + 3,
+                      2,
                       true);
   if (inkPointFocus == 7)
     renderer.drawRect(kInkStats.x, kInkStats.y, kInkStats.width, kInkStats.height, 2, true);

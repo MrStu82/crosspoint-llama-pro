@@ -4,3 +4,5 @@ target_link_libraries(gpio_wake_usb_test PRIVATE crosspoint_test_common)
 add_test(NAME gpio_wake_usb_policy COMMAND gpio_wake_usb_test)
 add_test(NAME wake_resume_main_contract
          COMMAND python3 ${CMAKE_CURRENT_SOURCE_DIR}/WakeResumeMainContractTest.py ${REPO_ROOT})
+add_test(NAME simulator_clean_build_contract
+         COMMAND python3 ${CMAKE_CURRENT_SOURCE_DIR}/SimulatorCleanBuildContractTest.py ${REPO_ROOT})

@@ -33,8 +33,8 @@ CHEVRON_LEFT = 416
 CHEVRON_RIGHT = 458
 CHEVRON_RULE_TOP = 531
 CHEVRON_RULE_BOTTOM = 533
-# Mirrors kInkProgressGap/kInkProgressHeight plus the focus ring's 3px skirt.
-PROGRESS_EXTENT = 1 + 7 + 4
+# Mirrors the zero-gap 14px Phase 5B bar plus the focus ring's 4px skirt.
+PROGRESS_EXTENT = 14 + 4
 
 
 class Bmp:
@@ -110,9 +110,10 @@ def main() -> None:
     long_bands = [long_title.ink_count(RIGHT_X, top, RIGHT_EDGE, top + 22) for top in range(CONTENT_TOP, 240, 22)]
     assert sum(count >= 20 for count in long_bands) >= 3, long_bands
 
-    # INK-02/INK-05: with no stats at all, every row falls back to an em dash --
-    # a single thin rule, so a genuine value is several times its ink.
-    dashes = [unavailable.ink_count(*stat_value_box(row)) for row in range(3)]
+    # INK-02/INK-05: unavailable time/chapter rows fall back to an em dash -- a
+    # single thin rule, so a genuine value is several times its ink. Phase 5B
+    # intentionally withholds the whole-book group until its ETA is confident.
+    dashes = [unavailable.ink_count(*stat_value_box(row)) for row in range(2)]
     assert all(8 <= count <= 60 for count in dashes), dashes
     time_read = populated.ink_count(*stat_value_box(0))
     assert time_read > max(dashes) * 2, (time_read, dashes)

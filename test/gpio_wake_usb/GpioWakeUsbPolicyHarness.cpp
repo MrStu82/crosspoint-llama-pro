@@ -6,6 +6,26 @@
 namespace {
 int checks = 0;
 
+struct ProductionWakeVerifier {
+  int calls = 0;
+  bool verifyPowerButtonWakeup() {
+    ++calls;
+    return true;
+  }
+};
+
+struct SimulatorWakeVerifier {
+  int calls = 0;
+  uint16_t requiredDurationMs = 99;
+  bool shortPressAllowed = false;
+  bool verifyPowerButtonWakeup(uint16_t requiredDuration, bool shortAllowed) {
+    ++calls;
+    requiredDurationMs = requiredDuration;
+    shortPressAllowed = shortAllowed;
+    return true;
+  }
+};
+
 void check(bool condition, const char* name) {
   ++checks;
   if (!condition) {
@@ -22,6 +42,13 @@ int main() {
   check(!gpio_policy::isStablePowerWake(true, false), "wake released during debounce");
   check(!gpio_policy::isStablePowerWake(false, true), "wake asserted after first sample");
   check(!gpio_policy::isStablePowerWake(false, false), "wake never asserted");
+  ProductionWakeVerifier productionWake;
+  check(gpio_policy::verifyPowerButtonWakeup(productionWake), "production wake adapter result");
+  check(productionWake.calls == 1, "production wake adapter uses no-argument API");
+  SimulatorWakeVerifier simulatorWake;
+  check(gpio_policy::verifyPowerButtonWakeup(simulatorWake), "simulator wake adapter result");
+  check(simulatorWake.calls == 1 && simulatorWake.requiredDurationMs == 0 && simulatorWake.shortPressAllowed,
+        "legacy simulator wake stub is isolated at adapter seam");
   check(gpio_policy::shouldUseSplashlessWake(true, false), "verified wake may retain the sleep frame");
   check(!gpio_policy::shouldUseSplashlessWake(false, false), "reset or panic rejects stale splashless state");
   check(!gpio_policy::shouldUseSplashlessWake(true, true), "boot-screen request wins on wake");

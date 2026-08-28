@@ -85,3 +85,4 @@ add_subdirectory(frontlight_mapping)
 
 add_subdirectory(dictionary_bundle)
 add_subdirectory(dictionary_styled_pages)
+add_subdirectory(epub_tables)

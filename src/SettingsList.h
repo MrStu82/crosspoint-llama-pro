@@ -18,6 +18,7 @@
 #include "ReaderFontSizes.h"
 #include "ReaderLineSpacing.h"
 #include "activities/settings/SettingsActivity.h"
+#include "components/ControlCenterModel.h"
 #include "util/DictionaryRegistry.h"
 
 static_assert(ReaderLineSpacing::LABEL_IDS.size() == CrossPointSettings::LINE_COMPRESSION_COUNT);
@@ -454,13 +455,17 @@ inline std::vector<SettingInfo> getSettingsList(const SdCardFontRegistry* regist
         // rebuildSettingsLists()'s if/else-if chain untouched and never double-appear in
         // the generic Display list — only reachable through the dedicated activity.
         SettingInfo::Value(StrId::STR_BRIGHTNESS, &CrossPointSettings::frontlightBrightness,
-                           {CrossPointSettings::FRONTLIGHT_MIN, CrossPointSettings::FRONTLIGHT_MAX,
+                           {ControlCenterModel::kBrightnessMin, CrossPointSettings::FRONTLIGHT_MAX,
                             CrossPointSettings::FRONTLIGHT_STEP},
                            "frontlightBrightness", StrId::STR_FRONTLIGHT),
         SettingInfo::Value(StrId::STR_WARM_COOL_BALANCE, &CrossPointSettings::frontlightWarmPercent,
-                           {CrossPointSettings::FRONTLIGHT_MIN, CrossPointSettings::FRONTLIGHT_MAX,
+                           {ControlCenterModel::kWarmthMin, CrossPointSettings::FRONTLIGHT_MAX,
                             CrossPointSettings::FRONTLIGHT_STEP},
                            "frontlightWarmPercent", StrId::STR_FRONTLIGHT),
+        SettingInfo::Toggle(StrId::STR_FRONTLIGHT, &CrossPointSettings::frontlightOn, "frontlightOn",
+                            StrId::STR_FRONTLIGHT),
+        SettingInfo::Toggle(StrId::STR_NIGHT_MODE, &CrossPointSettings::screenInverted, "screenInverted",
+                            StrId::STR_FRONTLIGHT),
     };
     // Only show tilt page turn setting when the QMI8658 IMU is present (X3)
     if (halTiltSensor.isAvailable()) {

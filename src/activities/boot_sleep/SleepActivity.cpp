@@ -490,11 +490,10 @@ void releaseSdFontCachesForDecode(const GfxRenderer& renderer) {
 void SleepActivity::onEnter() {
   Activity::onEnter();
 
+  // Capture the visible frame polarity before returning the display driver to
+  // normal. Transparent sleep materializes that polarity in the framebuffer;
+  // newly authored sleep artwork continues to render in normal polarity.
   const bool frameWasInverted = display.isInverted();
-
-  // Sleep screens always use normal polarity. This activity draws directly
-  // from onEnter (outside ActivityManager's per-render polarity resolution),
-  // so clear any inversion left over from a night-mode reader render.
   display.setInverted(false);
 
   const bool renderQuickResume =

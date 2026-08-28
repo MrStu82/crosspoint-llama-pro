@@ -81,6 +81,24 @@ TEST(TransparentSleepCore, RegularBmpFallbackDisablesDithering) {
   EXPECT_GT(renderer.drawBitmapCalls, 0);
 }
 
+TEST(TransparentSleepCore, TransparentSleepPreservesVisibleNightFrameThenCleansDriverPolarity) {
+  resetHarness();
+  SETTINGS.sleepScreen = CrossPointSettings::TRANSPARENT_CUSTOM;
+  display.setInverted(true);
+  // Mixed alpha makes this a valid transparent overlay and avoids the authored
+  // fallback screen's deliberate dark inversion.
+  Storage.addFile("/sleep-overlay.bmp", bmp(2, 1, 32, {0, 0, 0, 255, 255, 255, 255, 0}));
+  GfxRenderer renderer(32, 48);
+  MappedInputManager input;
+  SleepActivity activity(renderer, input);
+
+  activity.onEnter();
+
+  EXPECT_EQ(renderer.invertCalls, 1);  // materialized the visible Night Mode frame
+  EXPECT_FALSE(display.isInverted());  // output driver is clean for retained sleep
+  EXPECT_EQ(renderer.fontCache.releaseCalls, 1);
+}
+
 TEST(TransparentSleepCore, CacheReleasePrecedesMissingImageFallback) {
   resetHarness();
   SETTINGS.sleepScreen = CrossPointSettings::TRANSPARENT_CUSTOM;

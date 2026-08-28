@@ -135,7 +135,8 @@ void KeyboardEntryActivity::onEnter() {
   urlPanel = false;
   cursorMode = false;
   togglePos = false;
-  passwordVisible = false;
+  passwordReveal.reset();
+  passwordRevealTouchActive = false;
   selRow = 0;
   selCol = 0;
   delPressCount = 0;
@@ -152,7 +153,11 @@ void KeyboardEntryActivity::onEnter() {
   requestUpdate();
 }
 
-void KeyboardEntryActivity::onExit() { Activity::onExit(); }
+void KeyboardEntryActivity::onExit() {
+  passwordRevealTouchActive = false;
+  passwordReveal.reset();
+  Activity::onExit();
+}
 
 const fui::KeyboardLayout& KeyboardEntryActivity::currentLayout() const {
   if (symbols) return fui::builtinKeyboardLayout(layoutId, shifted, true);
@@ -342,20 +347,12 @@ bool KeyboardEntryActivity::clearAllOrAltOnSelected() {
 
 std::string KeyboardEntryActivity::displayTextForCurrentState() const {
   std::string displayText = text;
-  if (inputType != InputType::Password || passwordVisible) {
+  if (inputType != InputType::Password || passwordReveal.visible()) {
     return displayText;
   }
 
-  size_t revealPos;
-  if (cursorMode) {
-    revealPos = text.length();  // no reveal in displayText; block draws actual char directly
-  } else {
-    revealPos = (text.length() > 0 && cursorPos > 0) ? cursorPos - 1 : std::string::npos;
-  }
   for (size_t i = 0; i < displayText.length(); i++) {
-    if (i != revealPos) {
-      displayText[i] = '*';
-    }
+    displayText[i] = '*';
   }
   return displayText;
 }
@@ -499,9 +496,63 @@ fui::Rect KeyboardEntryActivity::keyboardRect() const {
                    static_cast<int16_t>(height)};
 }
 
+fui::Rect KeyboardEntryActivity::passwordToggleRect() {
+  const auto& metrics = UITheme::getInstance().getMetrics();
+  const int pageWidth = renderer.getScreenWidth();
+  const int lineHeight = renderer.getLineHeight(UI_12_FONT_ID);
+  const int inputStartY = metrics.topPadding + metrics.headerHeight + metrics.verticalSpacing +
+                          metrics.verticalSpacing * 4 + metrics.keyboardVerticalOffset;
+  int availableWidth = pageWidth;
+  if (gpio.deviceIsX3()) availableWidth -= 2 * metrics.sideButtonHintsWidth;
+  const int effectiveMargin = (pageWidth - availableWidth * metrics.keyboardTextFieldWidthPercent / 100) / 2;
+  const int toggleWidth = std::max(renderer.getTextWidth(UI_12_FONT_ID, "[abc]"),
+                                   renderer.getTextWidth(UI_12_FONT_ID, "[***]"));
+  const int maxLineWidth = pageWidth - 2 * effectiveMargin - toggleWidth - 4;
+
+  // Keep the hit target stationary while the text is revealed: line count is
+  // derived from the normal masked representation, never the plaintext glyphs.
+  std::string masked(text.length(), '*');
+  int lineStart = 0;
+  int inputHeight = 0;
+  while (true) {
+    const int lineEnd = lineBreakEnd(masked, lineStart, maxLineWidth);
+    if (lineEnd == static_cast<int>(masked.length())) break;
+    inputHeight += lineHeight;
+    lineStart = lineEnd;
+  }
+  const int toggleX = pageWidth - effectiveMargin - toggleWidth;
+  const int toggleY = inputStartY + inputHeight;
+  constexpr int touchPadding = 8;
+  return fui::Rect{static_cast<int16_t>(toggleX - touchPadding), static_cast<int16_t>(toggleY - touchPadding),
+                   static_cast<int16_t>(toggleWidth + 2 * touchPadding),
+                   static_cast<int16_t>(lineHeight + 2 * touchPadding)};
+}
+
 void KeyboardEntryActivity::loop() {
   int tx = 0;
   int ty = 0;
+
+  if (inputType == InputType::Password) {
+    int holdX = 0;
+    int holdY = 0;
+    const bool inContact = mappedInput.isScreenTouchHeld(holdX, holdY);
+    const fui::Rect revealRect = passwordToggleRect();
+    const bool overReveal =
+        inContact && holdX >= revealRect.x && holdX < revealRect.x + revealRect.width && holdY >= revealRect.y &&
+        holdY < revealRect.y + revealRect.height;
+    if (passwordRevealTouchActive) {
+      if (!overReveal && passwordReveal.reset()) requestUpdate();
+      if (!inContact) passwordRevealTouchActive = false;
+      // The reveal affordance owns its complete press/release/cancel sequence;
+      // never let its release become a cursor tap underneath.
+      return;
+    }
+    if (overReveal) {
+      passwordRevealTouchActive = true;
+      if (passwordReveal.begin()) requestUpdate();
+      return;
+    }
+  }
 
   size_t touchedCursorPos = 0;
   if (mappedInput.wasScreenTapped(tx, ty) && cursorPositionFromPoint(tx, ty, touchedCursorPos)) {
@@ -573,7 +624,7 @@ void KeyboardEntryActivity::loop() {
     downHeld = true;
     if (cursorMode) {
       togglePos = false;
-      passwordVisible = false;
+      passwordReveal.reset();
       cursorMode = false;
       hintVisible = false;
       downLongHandled = true;
@@ -603,6 +654,7 @@ void KeyboardEntryActivity::loop() {
       if (togglePos) {
         cursorPos = savedCursorPos;
         togglePos = false;
+        passwordReveal.reset();
         requestUpdate();
       } else if (cursorPos > 0) {
         cursorPos = utf8Prev(text, cursorPos);
@@ -652,19 +704,22 @@ void KeyboardEntryActivity::loop() {
   if (mappedInput.wasPressed(MappedInputManager::Button::Confirm)) {
     confirmHeld = true;
     confirmLongHandled = false;
+    if (cursorMode && inputType == InputType::Password && togglePos) {
+      if (passwordReveal.begin()) requestUpdate();
+    }
   }
 
   const fui::KeyboardKey* selKey = selectedKey();
   const bool selectedDel = selKey && selKey->value == fui::QWERTY_KEY_BACKSPACE;
 
-  if (confirmHeld && !confirmLongHandled && mappedInput.isPressed(MappedInputManager::Button::Confirm) &&
+  if (!cursorMode && confirmHeld && !confirmLongHandled && mappedInput.isPressed(MappedInputManager::Button::Confirm) &&
       mappedInput.getHeldTime() > DEL_LONG_PRESS_MS && selectedDel) {
     clearAllOrAltOnSelected();
     confirmLongHandled = true;
     requestUpdate();
   }
 
-  if (confirmHeld && !confirmLongHandled && mappedInput.isPressed(MappedInputManager::Button::Confirm) &&
+  if (!cursorMode && confirmHeld && !confirmLongHandled && mappedInput.isPressed(MappedInputManager::Button::Confirm) &&
       mappedInput.getHeldTime() > LONG_PRESS_MS) {
     if (!selectedDel && clearAllOrAltOnSelected()) {
       requestUpdate();
@@ -677,9 +732,8 @@ void KeyboardEntryActivity::loop() {
       if (selKey && activateValue(selKey->value, false)) {
         requestUpdate();
       }
-    } else if (confirmHeld && !confirmLongHandled && cursorMode && inputType == InputType::Password && togglePos) {
-      passwordVisible = !passwordVisible;
-      requestUpdate();
+    } else if (confirmHeld && cursorMode && inputType == InputType::Password && togglePos) {
+      if (passwordReveal.reset()) requestUpdate();
     }
     confirmHeld = false;
     confirmLongHandled = false;
@@ -758,7 +812,7 @@ void KeyboardEntryActivity::render(RenderLock&&) {
       if (!cursorDrawn && cursorPos >= lineStartIdx &&
           (isLastLine ? cursorPos <= lineEndIdx : cursorPos < lineEndIdx)) {
         std::string beforeCursor;
-        if (isPassword && !passwordVisible && cursorMode) {
+        if (isPassword && !passwordReveal.visible() && cursorMode) {
           beforeCursor = std::string(cursorPos - lineStartIdx, '*');
         } else {
           beforeCursor = displayText.substr(lineStartIdx, cursorPos - lineStartIdx);
@@ -783,13 +837,14 @@ void KeyboardEntryActivity::render(RenderLock&&) {
       }
 
       const int lineStartX = centerText ? effectiveMargin + (maxLineWidth - textWidth) / 2 : effectiveMargin;
-      if (isCursorLine && cursorMode && isPassword && !passwordVisible && !togglePos) {
+      if (isCursorLine && cursorMode && isPassword && !passwordReveal.visible() && !togglePos) {
         // Draw text in 3 parts to avoid block cursor overflowing onto next char.
-        // displayText uses '*' for all chars; actual char may be wider than '*'.
+        // displayText uses '*' for all chars; reserve the real glyph's width so
+        // cursor movement does not reflow, but keep its pixels masked.
         // Part 1: chars before cursor position
         const std::string part1 = displayText.substr(lineStartIdx, cursorPos - lineStartIdx);
         renderer.drawText(UI_12_FONT_ID, lineStartX, inputStartY + inputHeight, part1.c_str());
-        // Part 2: skip cursor slot (block + actual char drawn later)
+        // Part 2: skip cursor slot (block + masked glyph drawn later)
         // Part 3: chars after cursor position (skip char under cursor), starting at cursorPixelX + cursorCharWidth
         const int afterStart = static_cast<int>(cursorPos + cursorCharBytes);
         const int afterEnd = lineEndIdx;
@@ -818,7 +873,8 @@ void KeyboardEntryActivity::render(RenderLock&&) {
     static constexpr int blockPadding = 1;
     renderer.fillRect(cursorPixelX - blockPadding, cursorLineY, cursorCharWidth + blockPadding * 2, lineHeight, true);
     if (cursorCharBytes > 0) {
-      renderer.drawText(UI_12_FONT_ID, cursorPixelX, cursorLineY, cursorChar, false);
+      renderer.drawText(UI_12_FONT_ID, cursorPixelX, cursorLineY,
+                        isPassword && !passwordReveal.visible() ? displayCursorChar : cursorChar, false);
     }
   } else if (cursorPos <= displayText.length()) {
     static constexpr int serifW = 3;
@@ -833,7 +889,7 @@ void KeyboardEntryActivity::render(RenderLock&&) {
   }
 
   if (isPassword) {
-    const char* toggleLabel = passwordVisible ? "[***]" : "[abc]";
+    const char* toggleLabel = passwordReveal.visible() ? "[***]" : "[abc]";
     const int toggleWidth = renderer.getTextWidth(UI_12_FONT_ID, toggleLabel);
     const int toggleX = pageWidth - effectiveMargin - toggleWidth;
     const int toggleY = inputStartY + inputHeight;
@@ -856,14 +912,14 @@ void KeyboardEntryActivity::render(RenderLock&&) {
       if (inputType == InputType::Password && togglePos) {
         renderer.drawCenteredText(
             SMALL_FONT_ID, hintLineY,
-            passwordVisible ? tr(STR_KB_HINT_TOGGLE_HIDE_PASSWORD) : tr(STR_KB_HINT_TOGGLE_SHOW_PASSWORD), true);
+            passwordReveal.visible() ? tr(STR_KB_HINT_TOGGLE_HIDE_PASSWORD) : tr(STR_KB_HINT_TOGGLE_SHOW_PASSWORD), true);
         hintLineY += hintLh;
         renderer.drawCenteredText(SMALL_FONT_ID, hintLineY, tr(STR_KB_HINT_RETURN_CURSOR), true);
       } else {
         renderer.drawCenteredText(SMALL_FONT_ID, hintLineY, tr(STR_KB_HINT_MOVE_CURSOR), true);
         hintLineY += hintLh;
         if (inputType == InputType::Password) {
-          const char* passTip = passwordVisible ? tr(STR_KB_HINT_HIDE_PASSWORD) : tr(STR_KB_HINT_SHOW_PASSWORD);
+          const char* passTip = passwordReveal.visible() ? tr(STR_KB_HINT_HIDE_PASSWORD) : tr(STR_KB_HINT_SHOW_PASSWORD);
           renderer.drawCenteredText(SMALL_FONT_ID, hintLineY, passTip, true);
         }
       }
@@ -968,11 +1024,15 @@ void KeyboardEntryActivity::render(RenderLock&&) {
 }
 
 void KeyboardEntryActivity::onComplete(std::string text) {
+  passwordRevealTouchActive = false;
+  passwordReveal.reset();
   setResult(KeyboardResult{std::move(text)});
   finish();
 }
 
 void KeyboardEntryActivity::onCancel() {
+  passwordRevealTouchActive = false;
+  passwordReveal.reset();
   ActivityResult result;
   result.isCancelled = true;
   setResult(std::move(result));

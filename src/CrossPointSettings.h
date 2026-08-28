@@ -192,6 +192,8 @@ class CrossPointSettings : public PersistableStore<CrossPointSettings> {
 
   // Sleep screen settings
   uint8_t sleepScreen = DARK;
+  // Global output polarity toggled by the touch control centre.
+  uint8_t screenInverted = 0;
   // Sleep screen cover mode settings
   uint8_t sleepScreenCoverMode = FIT;
   // Sleep screen cover filter
@@ -280,6 +282,8 @@ class CrossPointSettings : public PersistableStore<CrossPointSettings> {
   static constexpr uint8_t FRONTLIGHT_STEP = 5;
   uint8_t frontlightBrightness = 0;
   uint8_t frontlightWarmPercent = 50;
+  // Kept separate from brightness so Off does not destroy the saved level.
+  uint8_t frontlightOn = 0;
   // Hide battery percentage
   uint8_t hideBatteryPercentage = HIDE_NEVER;
   // Long-press page turn button behavior

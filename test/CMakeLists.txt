@@ -70,3 +70,5 @@ add_subdirectory(hardcover_token_import)
 
 add_subdirectory(recent_books_hardcover_touch)
 add_subdirectory(home_inkpoint_geometry)
+
+add_subdirectory(phase1_safety)

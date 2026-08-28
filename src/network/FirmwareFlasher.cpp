@@ -8,6 +8,8 @@
 #include <mbedtls/sha256.h>
 #include <spi_flash_mmap.h>
 
+#include "SafetyGuards.h"
+
 #include <algorithm>
 #include <cstring>
 #include <memory>
@@ -46,6 +48,8 @@ const char* resultName(Result r) {
       return "BAD_CHECKSUM";
     case Result::BAD_SHA:
       return "BAD_SHA";
+    case Result::BAD_CHIP:
+      return "BAD_CHIP";
     case Result::BAD_SIZE:
       return "BAD_SIZE";
     case Result::NO_PARTITION:
@@ -62,6 +66,13 @@ const char* resultName(Result r) {
       return "OTADATA_FAIL";
   }
   return "?";
+}
+
+uint16_t runningPartitionChipId() {
+  const esp_partition_t* running = esp_ota_get_running_partition();
+  uint16_t chip = 0xFFFF;
+  if (!running || esp_partition_read(running, 12, &chip, sizeof(chip)) != ESP_OK) return 0xFFFF;
+  return chip;
 }
 
 namespace {
@@ -116,6 +127,13 @@ Result validateImageFile(const char* sdPath, size_t partitionSize) {
     LOG_ERR("FLASH", "validate: bad magic 0x%02X", header[0]);
     file.close();
     return Result::BAD_MAGIC;
+  }
+  uint16_t imageChip = 0;
+  std::memcpy(&imageChip, header + 12, sizeof(imageChip));
+  if (!safety_guards::imageChipMatchesDevice(imageChip, runningPartitionChipId())) {
+    LOG_ERR("FLASH", "validate: image chip does not match running partition");
+    file.close();
+    return Result::BAD_CHIP;
   }
   const uint8_t segCount = header[1];
   const bool hashAppended = header[23] != 0;

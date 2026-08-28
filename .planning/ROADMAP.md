@@ -7,6 +7,8 @@ Evidence captured in `.planning/evidence/upstream-pr-audit/` and the exact mappi
 
 ## Phase 1 — safety and data integrity
 
+**Status:** in progress.
+
 Selected upstream: #3215, #2962, #3034, #2880, #2834.
 
 - Dedupe the already-present semantic equivalents for resume rollback (#2962), file-list render

@@ -10,6 +10,7 @@
 #include <cassert>
 
 #include "HalGPIO.h"
+#include "SafetyGuards.h"
 
 HalPowerManager powerManager;  // Singleton instance
 
@@ -76,6 +77,19 @@ void HalPowerManager::startDeepSleep(HalGPIO& gpio) const {
     gpio_hold_en(GPIO_SPIWP);
   }
 #endif
+
+  // Deep sleep isolates pads. Reassert each configured keep-alive latch and
+  // hold it HIGH so X4 Pro GPIO1 cannot float low after external power leaves.
+  // GPIO13 is the C3 battery power-off path above, and bus pins are never latches.
+  constexpr int8_t kC3PowerOffPin = 13;
+  for (const int8_t pin : {BoardConfig::ACTIVE.power.latch0, BoardConfig::ACTIVE.power.latch1}) {
+    if (!safety_guards::shouldHoldPowerLatch(pin, kC3PowerOffPin, BoardConfig::latchConflictsWithBus(pin))) continue;
+    const auto held = static_cast<gpio_num_t>(pin);
+    gpio_hold_dis(held);
+    pinMode(pin, OUTPUT);
+    digitalWrite(pin, HIGH);
+    gpio_hold_en(held);
+  }
 
   // Cut the gated peripheral rails (touch/SD/EPD on boards like the Sticky) and
   // hold the enables off through deep sleep — otherwise the GT911 and SD card

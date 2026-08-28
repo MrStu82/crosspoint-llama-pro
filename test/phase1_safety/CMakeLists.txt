@@ -1,0 +1,4 @@
+add_executable(phase1_safety_test Phase1SafetyTest.cpp)
+target_include_directories(phase1_safety_test PRIVATE ${REPO_ROOT}/lib/hal)
+target_link_libraries(phase1_safety_test PRIVATE GTest::gtest_main crosspoint_test_common)
+gtest_discover_tests(phase1_safety_test)

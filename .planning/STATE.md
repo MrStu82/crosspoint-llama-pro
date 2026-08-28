@@ -2,6 +2,8 @@
 
 ## Current position
 
+- **Phase 1:** implementation in progress: explicit deep-sleep latch hold and candidate/running-image chip guard added; host gate pending.
+
 - **Phase:** 0 complete (planning/audit only).
 - **Frozen implementation base:** `b529db98e4c7d83d28f9ade24d747dde98120efd`.
 - **Frozen app:** `crosspoint-x4pro-v1.5.0-195-gb529db98e-app-0x10000.bin`.

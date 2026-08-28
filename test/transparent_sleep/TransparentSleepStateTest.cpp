@@ -51,4 +51,25 @@ TEST(TransparentSleepState, CorruptPersistedBoundsAreClamped) {
   EXPECT_EQ(state.recentOverlaySleepFill, 2);
 }
 
+TEST(TransparentSleepState, SplashlessWakeFlagPersistsAndDefaultsSafe) {
+  auto& state = CrossPointState::getInstance();
+  JsonDocument firstBoot;
+  ASSERT_TRUE(state.fromJson(firstBoot.as<JsonVariantConst>()));
+  EXPECT_TRUE(state.showBootScreen);
+
+  state.showBootScreen = false;
+  JsonDocument sleeping;
+  state.toJson(sleeping);
+  state.showBootScreen = true;
+  ASSERT_TRUE(state.fromJson(sleeping.as<JsonVariantConst>()));
+  EXPECT_FALSE(state.showBootScreen);
+
+  state.showBootScreen = true;
+  JsonDocument rearmed;
+  state.toJson(rearmed);
+  state.showBootScreen = false;
+  ASSERT_TRUE(state.fromJson(rearmed.as<JsonVariantConst>()));
+  EXPECT_TRUE(state.showBootScreen);
+}
+
 }  // namespace

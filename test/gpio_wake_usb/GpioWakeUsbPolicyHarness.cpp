@@ -22,9 +22,26 @@ int main() {
   check(!gpio_policy::isStablePowerWake(true, false), "wake released during debounce");
   check(!gpio_policy::isStablePowerWake(false, true), "wake asserted after first sample");
   check(!gpio_policy::isStablePowerWake(false, false), "wake never asserted");
-  check(gpio_policy::shouldUsePersistedSleepFrame(true, false), "verified wake may use retained frame");
-  check(!gpio_policy::shouldUsePersistedSleepFrame(false, false), "cold boot rejects stale retained frame");
-  check(!gpio_policy::shouldUsePersistedSleepFrame(true, true), "boot-screen request wins on wake");
+  check(gpio_policy::shouldUseSplashlessWake(true, false), "verified wake may retain the sleep frame");
+  check(!gpio_policy::shouldUseSplashlessWake(false, false), "reset or panic rejects stale splashless state");
+  check(!gpio_policy::shouldUseSplashlessWake(true, true), "boot-screen request wins on wake");
+  check(gpio_policy::shouldRearmBootScreen(false, false), "reset or panic rearms a stale one-shot");
+  check(!gpio_policy::shouldRearmBootScreen(true, false), "verified wake consumes its one-shot itself");
+  check(!gpio_policy::shouldRearmBootScreen(false, true), "safe boot flag needs no redundant persistence");
+
+  gpio_policy::WakePowerInputGate wakeGate;
+  wakeGate.arm(true);
+  check(!wakeGate.consumeWakeRelease(true), "verified wake hold is not consumed before release");
+  check(!wakeGate.allowsPowerActions(), "wake hold cannot trigger screenshot or short actions");
+  check(!wakeGate.allowsLongPress(true), "wake hold cannot become a long press");
+  check(wakeGate.consumeWakeRelease(false), "verified wake release is consumed once");
+  check(!wakeGate.consumeWakeRelease(false), "later idle release is not consumed");
+  check(wakeGate.allowsPowerActions(), "power actions re-enable after wake release");
+  check(wakeGate.allowsLongPress(true), "new press after release may become a long press");
+
+  wakeGate.arm(false);
+  check(!wakeGate.consumeWakeRelease(false), "non-power wake has no synthetic release to consume");
+  check(wakeGate.allowsLongPress(true), "non-power boot preserves ordinary power input");
 
   check(gpio_policy::isPhysicalButtonPressed(true, false, false), "active-low held");
   check(!gpio_policy::isPhysicalButtonPressed(true, false, true), "active-low released");

@@ -46,6 +46,7 @@ SdCardFontSystem sdFontSystem;
 FontCacheManager fontCacheManager(renderer.getFontMap(), renderer.getSdCardFonts());
 FrontlightManager frontlightManager;
 static unsigned long allowSleepAt = 0;
+static gpio_policy::WakePowerInputGate wakePowerInputGate;
 
 // Fonts
 EpdFont caveat15Font(&caveat_15_regular);
@@ -182,9 +183,9 @@ constexpr uint32_t SILENT_REBOOT_TARGET_READER = 1;
 // flows suppress the splash and leave the panel holding its pre-boot frame; a
 // plain boot shows the splash. See setup() for the resolution.
 enum class BootResume : uint8_t {
-  Splash,       // cold boot, flash, panic, or plain reboot
-  Silent,       // heap-defrag ESP.restart() (RTC flag; lost on power loss)
-  QuickResume,  // wake from a quick-resume deep sleep (SD flag; survives power loss)
+  Splash,          // cold boot, flash, panic, or plain reboot
+  Silent,          // heap-defrag ESP.restart() (RTC flag; lost on power loss)
+  SplashlessWake,  // verified deep-sleep wake with a retained panel frame
 };
 
 // Latched true once enterDeepSleep() commits to sleeping, before it tears down
@@ -219,14 +220,6 @@ void silentRestartToReader() {
   ESP.restart();
 }
 
-void waitForPowerRelease() {
-  gpio.update();
-  while (gpio.isPressed(HalGPIO::BTN_POWER)) {
-    delay(50);
-    gpio.update();
-  }
-}
-
 constexpr char SLEEP_FRAME_FILE[] = "/.crosspoint/sleep_frame.bin";
 
 static void saveSleepFrameBuffer() {
@@ -259,7 +252,10 @@ void enterDeepSleep(bool fromTimeout = false) {
       SETTINGS.sleepScreen == CrossPointSettings::SLEEP_SCREEN_MODE::QUICK_RESUME ||
       (fromTimeout &&
        SETTINGS.quickResumeSleepScreen == CrossPointSettings::QUICK_RESUME_SLEEP_SCREEN::QUICK_RESUME_AFTER_TIMEOUT);
-  APP_STATE.showBootScreen = !isQuickResumeSleep;
+  // Every sleep mode leaves a complete retained frame on the e-ink panel.
+  // Persist this one-shot flag before rendering it so a verified wake can keep
+  // the frame visible until Home or Reader performs its first useful paint.
+  APP_STATE.showBootScreen = false;
 
   APP_STATE.saveToFile();
 
@@ -270,6 +266,9 @@ void enterDeepSleep(bool fromTimeout = false) {
 
   if (isQuickResumeSleep) {
     saveSleepFrameBuffer();
+  } else if (Storage.exists(SLEEP_FRAME_FILE)) {
+    // A stale Quick Resume frame must never replace the selected sleep screen.
+    Storage.remove(SLEEP_FRAME_FILE);
   }
 
   // Tear down WiFi so the modem power domain isn't held alive across deep sleep.
@@ -370,6 +369,7 @@ void setup() {
   if (wakeupReason == HalGPIO::WakeupReason::PowerButton && !gpio.verifyPowerButtonWakeup()) {
     powerManager.startDeepSleep(gpio);
   }
+  wakePowerInputGate.arm(wakeupReason == HalGPIO::WakeupReason::PowerButton);
 
   // X4 Pro uses DOWN for recovery so boot never depends on its GPIO0 strap.
   // This reads only the physical side-button path and leaves GT911/Home events
@@ -408,8 +408,15 @@ void setup() {
   // A persisted retained-frame flag is valid only after a verified sleep wake.
   // A stale flag from an interrupted sleep transition must not suppress a cold
   // boot splash.
-  const bool usePersistedSleepFrame = gpio_policy::shouldUsePersistedSleepFrame(
+  const bool useSplashlessWake = gpio_policy::shouldUseSplashlessWake(
       wakeupReason == HalGPIO::WakeupReason::PowerButton, APP_STATE.showBootScreen);
+  if (gpio_policy::shouldRearmBootScreen(wakeupReason == HalGPIO::WakeupReason::PowerButton,
+                                        APP_STATE.showBootScreen)) {
+    // A reset, panic, flash or USB boot cannot consume a sleep-wake one-shot.
+    // Clear a stale false value so the next ordinary power-on remains safe.
+    APP_STATE.showBootScreen = true;
+    APP_STATE.saveToFile();
+  }
   RECENT_BOOKS.loadFromFile();
   I18N.setLanguage(static_cast<Language>(SETTINGS.language));
   KOREADER_STORE.loadFromFile();
@@ -443,8 +450,8 @@ void setup() {
   // HalDisplay::begin), so the first paint is FAST_REFRESH (~500ms) over the
   // retained frame and input dispatches against a visible UI.
   const BootResume resume = isSilentReboot            ? BootResume::Silent
-                            : usePersistedSleepFrame ? BootResume::QuickResume
-                                                     : BootResume::Splash;
+                            : useSplashlessWake       ? BootResume::SplashlessWake
+                                                      : BootResume::Splash;
   bool allowFastInitialReaderRefresh = false;
   bool needsWakeRefresh = false;
 
@@ -455,13 +462,13 @@ void setup() {
       // Splash skipped: the routing block below picks the target activity; the
       // panel keeps showing the pre-reboot popup until that first paint lands.
       break;
-    case BootResume::QuickResume:
-      // One-shot flag: re-arm the splash for the next non-quick-resume boot. Save
+    case BootResume::SplashlessWake:
+      // One-shot flag: re-arm the splash for the next ordinary boot. Save
       // before any painting so a hang in the blocking paint path can't strand
-      // us in a quick-resume-with-no-frame loop on the next boot.
+      // us in a splashless-with-no-frame loop on the next boot.
       APP_STATE.showBootScreen = true;
       APP_STATE.saveToFile();
-      if (loadSleepFrameBuffer()) {
+      if (Storage.exists(SLEEP_FRAME_FILE) && loadSleepFrameBuffer()) {
         const bool useDifferentialRefresh = gpio.deviceIsX3();
         if (useDifferentialRefresh) {
           // begin() clears the X3 controller RAM, so restore the saved frame as
@@ -478,8 +485,9 @@ void setup() {
           renderer.displayBuffer(HalDisplay::HALF_REFRESH);
         }
       } else {
-        // The retained sleep frame is unavailable, so the first Home paint
-        // must use the one-shot clean waveform instead of FAST_REFRESH.
+        // Standard and transparent sleep modes intentionally have no saved
+        // framebuffer. Home must replace the retained panel with one clean
+        // paint; Reader already uses its normal non-fast initial render.
         needsWakeRefresh = true;
       }
       break;
@@ -534,8 +542,6 @@ void setup() {
     gpio.update();
   }
 
-  // Ensure we're not still holding the power button before leaving setup
-  waitForPowerRelease();
   allowSleepAt = millis() + 2000;
 }
 
@@ -595,9 +601,15 @@ void loop() {
     powerManager.setPowerSaving(false);  // Restore normal CPU frequency on user activity
   }
 
+  // Boot may finish while the verified wake hold is still down. Swallow the
+  // release that ends that gesture so it cannot become a page turn, refresh,
+  // backlight toggle, or in-activity power-button action.
+  const bool powerPressed = gpio.isPressed(HalGPIO::BTN_POWER);
+  if (wakePowerInputGate.consumeWakeRelease(powerPressed)) return;
+
   static bool screenshotButtonsReleased = true;
   static bool screenshotComboActive = false;
-  if (gpio.isPressed(HalGPIO::BTN_POWER) && gpio.isPressed(HalGPIO::BTN_DOWN)) {
+  if (wakePowerInputGate.allowsPowerActions() && powerPressed && gpio.isPressed(HalGPIO::BTN_DOWN)) {
     screenshotComboActive = true;
     if (screenshotButtonsReleased) {
       screenshotButtonsReleased = false;
@@ -627,7 +639,7 @@ void loop() {
     return;
   }
 
-  if (millis() >= allowSleepAt && gpio.isPressed(HalGPIO::BTN_POWER) &&
+  if (wakePowerInputGate.allowsLongPress(powerPressed) && millis() >= allowSleepAt &&
       gpio.getPowerButtonHeldTime() > SETTINGS.getPowerButtonDuration()) {
     // If the screenshot combination is potentially being pressed, don't sleep
     if (gpio.isPressed(HalGPIO::BTN_DOWN)) {

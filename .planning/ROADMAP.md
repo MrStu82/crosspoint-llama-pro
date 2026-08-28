@@ -67,3 +67,16 @@ Selected upstream: #3156, #3080, #3115 (UI aspect).
 
 After Phase 5 approval and all phase host gates: one clean X4 Pro app build, descriptor stamp,
 esptool validation, artifact hash/size, and simulator evidence. No interim firmware images.
+
+## Queued Home requirements — prototype/Phase 5 only (parent 2026-08-28)
+
+These are explicitly deferred: do not interrupt Phase 1 and do not implement or build them before
+the UI-prototype approval gate. The single touch-first prototype must show them alongside quick
+settings:
+
+1. Half rating uses the same solid five-point polygon, clipped to a true half-fill with a legible
+   outline/unfilled half; no triangle raster.
+2. Whole-book ETA sits beside chapter ETA, using the existing measured reading-rate logic and
+   honestly suppressing when pace/progress is insufficient.
+3. The current-book progress bar is twice its present thickness and directly below the cover outline.
+4. The cover outline hugs the rendered cover bounds with zero padding.

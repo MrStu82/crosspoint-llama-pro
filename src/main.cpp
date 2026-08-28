@@ -4,6 +4,7 @@
 #include <FontCacheManager.h>
 #include <FontDecompressor.h>
 #include <GfxRenderer.h>
+#include <GpioWakeUsbPolicy.h>
 #include <HalClock.h>
 #include <HalDisplay.h>
 #include <HalGPIO.h>
@@ -169,10 +170,6 @@ EpdFontFamily notosans40BoldDigitsFontFamily(&notosans40BoldDigitsFont);
 
 EpdFont notosans20BoldDigitsFont(&notosans_20_bold_digits);
 EpdFontFamily notosans20BoldDigitsFontFamily(&notosans20BoldDigitsFont);
-
-// measurement of power button press duration calibration value
-unsigned long t1 = 0;
-unsigned long t2 = 0;
 
 // Definitions for SilentRestart.h. RTC_NOINIT survives ESP.restart() but not power loss.
 RTC_NOINIT_ATTR uint32_t silentRebootMagic;
@@ -340,8 +337,6 @@ void setupDisplayAndFonts(bool seamless = false) {
 void setup() {
   BoardConfig::holdPowerRails();
 
-  t1 = millis();
-
 #ifdef ENABLE_SERIAL_LOG
   // Earliest possible Serial setup. The 250 ms stall before begin() lets the
   // USB Serial/JTAG peripheral finish power-on and lets the host complete USB
@@ -367,6 +362,22 @@ void setup() {
 
   gpio.begin();
   powerManager.begin();
+
+  // Validate the wake before initializing storage, sensors or the frontlight.
+  // The sampling updates InputManager too, so a held recovery side-button is
+  // already debounced when it is read below.
+  const auto wakeupReason = gpio.getWakeupReason();
+  if (wakeupReason == HalGPIO::WakeupReason::PowerButton && !gpio.verifyPowerButtonWakeup()) {
+    powerManager.startDeepSleep(gpio);
+  }
+
+  // X4 Pro uses DOWN for recovery so boot never depends on its GPIO0 strap.
+  // This reads only the physical side-button path and leaves GT911/Home events
+  // untouched for normal MappedInputManager gesture dispatch.
+  const uint8_t recoveryButton = BoardConfig::isX4Pro() ? HalGPIO::BTN_DOWN : HalGPIO::BTN_UP;
+  const bool recoveryFirmwareMode =
+      wakeupReason == HalGPIO::WakeupReason::PowerButton && gpio.isPressed(recoveryButton);
+
   halTiltSensor.begin();
   halClock.begin();
   if (!frontlightManager.begin()) {
@@ -394,6 +405,11 @@ void setup() {
   frontlightManager.setColorTemperature(SETTINGS.frontlightWarmPercent);
   frontlightManager.setBrightness(SETTINGS.frontlightBrightness);
   APP_STATE.loadFromFile();
+  // A persisted retained-frame flag is valid only after a verified sleep wake.
+  // A stale flag from an interrupted sleep transition must not suppress a cold
+  // boot splash.
+  const bool usePersistedSleepFrame = gpio_policy::shouldUsePersistedSleepFrame(
+      wakeupReason == HalGPIO::WakeupReason::PowerButton, APP_STATE.showBootScreen);
   RECENT_BOOKS.loadFromFile();
   I18N.setLanguage(static_cast<Language>(SETTINGS.language));
   KOREADER_STORE.loadFromFile();
@@ -402,14 +418,8 @@ void setup() {
   UITheme::getInstance().reload();
   ButtonNavigator::setMappedInputManager(mappedInputManager);
 
-  const auto wakeupReason = gpio.getWakeupReason();
   switch (wakeupReason) {
     case HalGPIO::WakeupReason::PowerButton:
-      LOG_DBG("MAIN", "Verifying power button press duration");
-      if (!gpio.verifyPowerButtonWakeup(SETTINGS.getPowerButtonDuration(),
-                                        SETTINGS.shortPwrBtn == CrossPointSettings::SHORT_PWRBTN::SLEEP)) {
-        powerManager.startDeepSleep(gpio);
-      }
       break;
     case HalGPIO::WakeupReason::AfterUSBPower:
       // If USB power caused a cold boot, go back to sleep
@@ -423,35 +433,18 @@ void setup() {
       break;
   }
 
-  // Recovery firmware mode: hold left side button (BTN_UP) together with the power button at
-  // boot to skip directly to the SD-card firmware update screen. Useful on devices where USB
-  // flashing has been locked down (e.g. recent X3 firmware).
-  bool recoveryFirmwareMode = false;
-  if (wakeupReason == HalGPIO::WakeupReason::PowerButton) {
-    // Refresh the cached button state a few times — isPressed() needs ~half a second to settle
-    // after boot per the HalGPIO contract. Use a millis-based deadline so we always wait the full
-    // settle window even if the loop body takes longer than expected on slow boots.
-    const unsigned long settleStart = millis();
-    while (millis() - settleStart < 500) {
-      gpio.update();
-      delay(10);
-    }
-    if (gpio.isPressed(HalGPIO::BTN_UP)) {
-      recoveryFirmwareMode = true;
-      LOG_INF("MAIN", "Recovery firmware mode (UP + POWER held at boot)");
-    }
+  if (recoveryFirmwareMode) {
+    LOG_INF("MAIN", "Recovery firmware mode (%s + POWER held at boot)", BoardConfig::isX4Pro() ? "DOWN" : "UP");
   }
-
-  // First serial output only here to avoid timing inconsistencies for power button press duration verification
   LOG_DBG("MAIN", "Starting CrossPoint version " CROSSPOINT_VERSION);
 
   // Resolve the single boot-presentation decision. Skipping the splash also
   // skips the panel-clearing pass and the X3 initial-full-sync arming (see
   // HalDisplay::begin), so the first paint is FAST_REFRESH (~500ms) over the
   // retained frame and input dispatches against a visible UI.
-  const BootResume resume = isSilentReboot              ? BootResume::Silent
-                            : !APP_STATE.showBootScreen ? BootResume::QuickResume
-                                                        : BootResume::Splash;
+  const BootResume resume = isSilentReboot            ? BootResume::Silent
+                            : usePersistedSleepFrame ? BootResume::QuickResume
+                                                     : BootResume::Splash;
   bool allowFastInitialReaderRefresh = false;
   bool needsWakeRefresh = false;
 

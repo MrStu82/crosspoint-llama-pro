@@ -7,6 +7,8 @@
 #include <XteinkDetect.h>
 #include <esp_sleep.h>
 
+#include "GpioWakeUsbPolicy.h"
+
 // Global HalGPIO instance
 HalGPIO gpio;
 
@@ -305,64 +307,57 @@ bool HalGPIO::isXteinkDevice() const {
          BoardConfig::ACTIVE.board == BoardConfig::Board::XteinkX4;
 }
 
-bool HalGPIO::verifyPowerButtonWakeup(uint16_t requiredDurationMs, bool shortPressAllowed) {
-  // Boards without a power button (or M5Paper's latch circuit) cannot verify a
-  // hold; treat the wake as valid.
-  if (BoardConfig::ACTIVE.input.power < 0) {
-    return true;
-  }
-#if defined(FREEINK_DEVICE_M5PAPER) && FREEINK_DEVICE_M5PAPER
-  return true;
-#endif
-  if (shortPressAllowed) {
-    // Fast path - no duration check needed
-    return true;
-  }
-  // TODO: Intermittent edge case remains: a single tap followed by another single tap
-  // can still power on the device. Tighten wake debounce/state handling here.
+bool HalGPIO::verifyPowerButtonWakeup() {
+  const auto& input = BoardConfig::ACTIVE.input;
+  if (input.power < 0) return true;
 
-  // Calibrate: subtract boot time already elapsed, assuming button held since boot.
-  const unsigned long calibration = millis();
-  const unsigned long calibratedDuration = (calibration < requiredDurationMs) ? (requiredDurationMs - calibration) : 1;
+  const auto powerIsPhysicallyPressed = [&input]() {
+    return gpio_policy::isPhysicalButtonPressed(true, input.powerActiveHigh, digitalRead(input.power) == HIGH);
+  };
 
-  const auto start = millis();
+  // Reject a transient wake unless the physical power line remains asserted for
+  // the full debounce interval. Raw GPIO is intentional: BTN_POWER is a logical,
+  // debounced event and shared confirm/power boards do not expose it directly.
+  constexpr unsigned long POWER_WAKE_STABILITY_MS = 10;
+  const bool heldAtFirstSample = powerIsPhysicallyPressed();
+  const unsigned long sampleStart = millis();
   inputMgr.update();
-  // inputMgr.isPressed() may take up to ~500ms to return correct state
-  while (!inputMgr.isPressed(BTN_POWER) && millis() - start < 1000) {
-    delay(10);
+  while (millis() - sampleStart < POWER_WAKE_STABILITY_MS || inputMgr.isDebouncePending()) {
+    delay(1);
     inputMgr.update();
   }
-  if (inputMgr.isPressed(BTN_POWER)) {
-    do {
-      delay(10);
-      inputMgr.update();
-    } while (inputMgr.isPressed(BTN_POWER) && inputMgr.getPowerButtonHeldTime() < calibratedDuration);
-    if (inputMgr.getPowerButtonHeldTime() < calibratedDuration) {
-      return false;
-    }
-  } else {
-    return false;
-  }
-  return true;
+  return gpio_policy::isStablePowerWake(heldAtFirstSample, powerIsPhysicallyPressed());
 }
 
 bool HalGPIO::isUsbConnected() const {
-  if (deviceIsX3()) {
-    // X3: infer USB/charging via BQ27220 Current() register (0x0C, signed mA).
-    // Positive current means charging.
-    for (uint8_t attempt = 0; attempt < 2; ++attempt) {
-      int16_t currentMa = 0;
-      if (X3GPIO::readBQ27220CurrentMA(&currentMa)) {
-        return currentMa > 0;
+  // Charging is a valid USB fallback only on Sticky, whose board profile has a
+  // proven active-low BQ25616 CHARGE_STATE pin. X4 Pro's CW2017 reports battery
+  // state but cannot report external power, so never infer USB from it.
+  const auto source = gpio_policy::selectUsbDetectionSource(deviceIsX3(), BoardConfig::ACTIVE.usbDetect >= 0,
+                                                            BoardConfig::isSticky() &&
+                                                                BoardConfig::ACTIVE.batteryChargeStatus >= 0);
+  switch (source) {
+    case gpio_policy::UsbDetectionSource::X3GaugeCurrent:
+      // Preserve the X3's BQ27220 Current() semantics and bounded retry.
+      for (uint8_t attempt = 0; attempt < 2; ++attempt) {
+        int16_t currentMa = 0;
+        if (X3GPIO::readBQ27220CurrentMA(&currentMa)) {
+          return gpio_policy::usbConnectedFromCurrent(true, currentMa);
+        }
+        delay(2);
       }
-      delay(2);
-    }
-    return false;
+      return false;
+    case gpio_policy::UsbDetectionSource::DigitalPin:
+      return digitalRead(BoardConfig::ACTIVE.usbDetect) == HIGH;
+    case gpio_policy::UsbDetectionSource::ChargingState:
+      // Sticky's board-declared BQ25616 CHARGE_STATE is active-low. Read that
+      // proven signal directly instead of changing its existing gauge semantics.
+      return gpio_policy::usbConnectedFromCharging(
+          true, digitalRead(BoardConfig::ACTIVE.batteryChargeStatus) == LOW);
+    case gpio_policy::UsbDetectionSource::Unsupported:
+    default:
+      return false;
   }
-  if (BoardConfig::ACTIVE.usbDetect < 0) {
-    return false;
-  }
-  return digitalRead(BoardConfig::ACTIVE.usbDetect) == HIGH;
 }
 
 HalGPIO::WakeupReason HalGPIO::getWakeupReason() const {

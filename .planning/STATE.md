@@ -2,7 +2,7 @@
 
 ## Current position
 
-- **Phase 1:** implementation in progress: explicit deep-sleep latch hold and candidate/running-image chip guard added; host gate pending.
+- **Phase 1:** complete. `a9f20903` adds explicit held X4 latch sequencing and candidate/running-image chip validation; focused host gate 20/20 PASS.
 
 - **Phase:** 0 complete (planning/audit only).
 - **Frozen implementation base:** `b529db98e4c7d83d28f9ade24d747dde98120efd`.
@@ -12,7 +12,7 @@
 ## Evidence
 
 - Raw GitHub PR metadata and changed-file lists: `.planning/evidence/upstream-pr-audit/`.
-- Current-fork mapping/dedupe/conflict register: `.planning/UPSTREAM_PR_AUDIT.md`.
+- Current-fork mapping/dedupe/conflict register: `.planning/UPSTREAM_PR_AUDIT.md`; host proof: `/workspace/agent/phase1-focused-host.log`.
 - All 29 selected PRs were queried; the evidence records PR head/base SHAs, merge status and
   upstream changed-file shape.
 
@@ -30,10 +30,8 @@
 
 ## Next actionable item
 
-Parent gate: approve opening Phase 1 safety/data implementation from the Phase-0 mapping. The
-first action is source/test design for #3215/#2880 plus the `PersistableStore`/Hardcover locking
-audit; no firmware build until final programme delivery.
+Parent gate: approve Phase 2 power/performance implementation. No firmware build until final programme delivery.
 
 ## Resume file
 
-`.planning/UPSTREAM_PR_AUDIT.md`
+`.planning/UPSTREAM_PR_AUDIT.md`; host proof: `/workspace/agent/phase1-focused-host.log`

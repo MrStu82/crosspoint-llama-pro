@@ -7,7 +7,7 @@ Evidence captured in `.planning/evidence/upstream-pr-audit/` and the exact mappi
 
 ## Phase 1 — safety and data integrity
 
-**Status:** in progress.
+**Status:** complete — `a9f20903` implements the two missing guards; focused host gate 20/20 PASS.
 
 Selected upstream: #3215, #2962, #3034, #2880, #2834.
 

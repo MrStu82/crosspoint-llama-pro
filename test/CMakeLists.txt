@@ -80,3 +80,5 @@ add_subdirectory(koreader_wifi_awake)
 add_subdirectory(font_cache_manager)
 
 add_subdirectory(css_parser)
+
+add_subdirectory(frontlight_mapping)

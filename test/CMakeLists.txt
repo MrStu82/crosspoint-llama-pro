@@ -82,3 +82,6 @@ add_subdirectory(font_cache_manager)
 add_subdirectory(css_parser)
 
 add_subdirectory(frontlight_mapping)
+
+add_subdirectory(dictionary_bundle)
+add_subdirectory(dictionary_styled_pages)

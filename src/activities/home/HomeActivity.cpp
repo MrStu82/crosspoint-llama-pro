@@ -1,4 +1,5 @@
 #include "HomeActivity.h"
+#include "HomeInkPointGeometry.h"
 
 #include <Bitmap.h>
 #include <Epub.h>
@@ -86,16 +87,16 @@ void drawCentered(const GfxRenderer& renderer, int fontId, int cx, int baseline,
 }
 
 void drawStar(const GfxRenderer& renderer, int cx, int cy, bool filled, bool partial) {
-  constexpr int px[10] = {0, 3, 10, 5, 6, 0, -6, -5, -10, -3};
-  constexpr int py[10] = {-10, -3, -3, 2, 9, 5, 9, 2, -3, -3};
-  for (int i = 0; i < 10; ++i) renderer.drawLine(cx + px[i], cy + py[i], cx + px[(i + 1) % 10], cy + py[(i + 1) % 10]);
+  int x[10] = {}, y[10] = {};
+  for (int i = 0; i < 10; ++i) {
+    x[i] = cx + InkPointHomeGeometry::kRatingStarX[i];
+    y[i] = cy + InkPointHomeGeometry::kRatingStarY[i];
+  }
+  for (int i = 0; i < 10; ++i) renderer.drawLine(x[i], y[i], x[(i + 1) % 10], y[(i + 1) % 10]);
   if (filled) {
-    for (int y = cy - 7; y <= cy + 5; ++y) {
-      const int half = 2 + (y - (cy - 7)) / 2;
-      renderer.drawLine(cx - std::min(8, half), y, cx + std::min(8, half), y);
-    }
+    renderer.fillPolygon(x, y, 10, true);
   } else if (partial) {
-    for (int y = cy - 7; y <= cy + 5; y += 2) renderer.drawLine(cx - 7, y, cx - 1, y);
+    for (int py = cy - 7; py <= cy + 5; py += 2) renderer.drawLine(cx - 7, py, cx - 1, py);
   }
 }
 
@@ -826,23 +827,23 @@ void HomeActivity::renderInkPointHome() {
   const auto& daily =
       quoteDay >= 0 ? DailyQuote::select(today / 10000, quoteDay) : DailyQuote::select(2026, 0);
   const auto quoteLines = wrapWords(renderer, CAVEAT_15_FONT_ID, daily.quote, 400, 3);
-  const std::string attribution = DailyQuote::attributionLine(daily);
-  const auto attributionLines = wrapWords(renderer, SMALL_FONT_ID, attribution, 400, 2);
-  constexpr int quoteStep = 25;
-  constexpr int attributionStep = 18;
+  // Attribution is intentionally one line: quote and attribution are centred
+  // as one measured block in the actual free band, not a guessed screen area.
+  const std::string attribution = renderer.truncatedText(SMALL_FONT_ID,
+                                                           DailyQuote::attributionLine(daily).c_str(), 400);
   constexpr int quoteToAttribution = 16;
-  const int blockHeight = static_cast<int>(quoteLines.size()) * quoteStep + quoteToAttribution +
-                          static_cast<int>(attributionLines.size()) * attributionStep;
-  int quoteBaseline = 551 + (168 - blockHeight) / 2 + 20;
+  const int quoteLineHeight = renderer.getLineHeight(CAVEAT_15_FONT_ID);
+  const int attributionLineHeight = renderer.getLineHeight(SMALL_FONT_ID);
+  const auto quoteLayout = InkPointHomeGeometry::centerQuoteBlock(
+      progressY + kInkProgressHeight, InkPointShell::kFooterTop, static_cast<int>(quoteLines.size()),
+      quoteLineHeight, quoteToAttribution, attributionLineHeight,
+      renderer.getFontAscenderSize(CAVEAT_15_FONT_ID), renderer.getFontAscenderSize(SMALL_FONT_ID));
+  int quoteBaseline = quoteLayout.quoteBaseline;
   for (const auto& line : quoteLines) {
     drawCentered(renderer, CAVEAT_15_FONT_ID, 240, quoteBaseline, line.c_str());
-    quoteBaseline += quoteStep;
+    quoteBaseline += quoteLineHeight;
   }
-  int attributionBaseline = quoteBaseline + quoteToAttribution - 4;
-  for (const auto& line : attributionLines) {
-    drawCentered(renderer, SMALL_FONT_ID, 240, attributionBaseline, line.c_str());
-    attributionBaseline += attributionStep;
-  }
+  drawCentered(renderer, SMALL_FONT_ID, 240, quoteLayout.attributionBaseline, attribution.c_str());
 
   InkPointShell::drawFooter(renderer, InkPointShell::Destination::Home, inkPointFocus - 1);
   // The ring encloses the cover and the progress bar beneath it: 3px above the

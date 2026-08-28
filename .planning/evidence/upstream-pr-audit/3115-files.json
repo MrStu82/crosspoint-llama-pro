@@ -1,0 +1,14 @@
+[
+  {
+    "sha": "ffeaaa271231d865590f8c54ea45ec02b1342d4e",
+    "filename": "freeink-sdk",
+    "status": "modified",
+    "additions": 1,
+    "deletions": 1,
+    "changes": 2,
+    "blob_url": null,
+    "raw_url": null,
+    "contents_url": "https://api.github.com/repos/crosspoint-reader/crosspoint-reader/contents/freeink-sdk?ref=de3551cc63d33fbce982200ede780f9d29d45159",
+    "patch": "@@ -1 +1 @@\n-Subproject commit 310ec61506fc915836db7799a2e7f4fc135a570d\n+Subproject commit ffeaaa271231d865590f8c54ea45ec02b1342d4e"
+  }
+]

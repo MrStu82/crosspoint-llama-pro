@@ -1,0 +1,26 @@
+[
+  {
+    "sha": "3e4d65159605f2a53d5435824f9c24e62ea80d9e",
+    "filename": "freeink-sdk",
+    "status": "modified",
+    "additions": 1,
+    "deletions": 1,
+    "changes": 2,
+    "blob_url": null,
+    "raw_url": null,
+    "contents_url": "https://api.github.com/repos/crosspoint-reader/crosspoint-reader/contents/freeink-sdk?ref=f002041054498d3c0eb8d9ea979f73360f73e01d",
+    "patch": "@@ -1 +1 @@\n-Subproject commit e4d3cc334219954a3c53e228bcb880e9880c309a\n+Subproject commit 3e4d65159605f2a53d5435824f9c24e62ea80d9e"
+  },
+  {
+    "sha": "dd3a8ac16205694068e79fdf969378f9eedbba26",
+    "filename": "lib/hal/HalGPIO.cpp",
+    "status": "modified",
+    "additions": 10,
+    "deletions": 3,
+    "changes": 13,
+    "blob_url": "https://github.com/crosspoint-reader/crosspoint-reader/blob/f002041054498d3c0eb8d9ea979f73360f73e01d/lib%2Fhal%2FHalGPIO.cpp",
+    "raw_url": "https://github.com/crosspoint-reader/crosspoint-reader/raw/f002041054498d3c0eb8d9ea979f73360f73e01d/lib%2Fhal%2FHalGPIO.cpp",
+    "contents_url": "https://api.github.com/repos/crosspoint-reader/crosspoint-reader/contents/lib%2Fhal%2FHalGPIO.cpp?ref=f002041054498d3c0eb8d9ea979f73360f73e01d",
+    "patch": "@@ -1,3 +1,4 @@\n+#include <BatteryMonitor.h>\n #include <HalGPIO.h>\n #include <Logging.h>\n #include <PowerManager.h>\n@@ -238,10 +239,16 @@ bool HalGPIO::isUsbConnected() const {\n     }\n     return false;\n   }\n-  if (BoardConfig::ACTIVE.usbDetect < 0) {\n-    return false;\n+  if (BoardConfig::ACTIVE.usbDetect >= 0) {\n+    return digitalRead(BoardConfig::ACTIVE.usbDetect) == HIGH;\n   }\n-  return digitalRead(BoardConfig::ACTIVE.usbDetect) == HIGH;\n+  // No digital USB-detect line (e.g. Sticky, whose PWR_IN_VOLT is an analog\n+  // divider): infer external power from charging state instead. BatteryMonitor\n+  // picks the board's best source — charger IC status, gauge Current() sign, or\n+  // a /STAT pin — and reports false on boards with no battery telemetry at all.\n+  // Caveat: charge termination at 100% reads as \"not connected\".\n+  static const BatteryMonitor battery;\n+  return battery.isCharging();\n }\n \n HalGPIO::WakeupReason HalGPIO::getWakeupReason() const {"
+  }
+]

@@ -1,0 +1,1461 @@
+[
+  {
+    "number": 2654,
+    "title": "feat: render EPUB tables as columns",
+    "state": "closed",
+    "merged_at": "2026-08-21T13:12:17Z",
+    "head_sha": "967944dbdc59d2dae24f64530cb179d5eedadc03",
+    "base_sha": "93d572fcbd65bd3d7cabc75498b2c6515584602c",
+    "url": "https://github.com/crosspoint-reader/crosspoint-reader/pull/2654",
+    "files": [
+      {
+        "filename": "docs/file-formats.md",
+        "status": "modified",
+        "changes": 25
+      },
+      {
+        "filename": "lib/Epub/Epub/Section.cpp",
+        "status": "modified",
+        "changes": 5
+      },
+      {
+        "filename": "lib/Epub/Epub/parsers/ChapterHtmlSlimParser.cpp",
+        "status": "modified",
+        "changes": 501
+      },
+      {
+        "filename": "lib/Epub/Epub/parsers/ChapterHtmlSlimParser.h",
+        "status": "modified",
+        "changes": 23
+      }
+    ]
+  },
+  {
+    "number": 2696,
+    "title": "feat: StarDict .syn synonym lookup support",
+    "state": "closed",
+    "merged_at": "2026-08-10T17:01:29Z",
+    "head_sha": "dd0492d4fa1aa262556ffe32a85d467492fb78fd",
+    "base_sha": "596f0d3f71df5c719b8e18c9bec638a759388ff9",
+    "url": "https://github.com/crosspoint-reader/crosspoint-reader/pull/2696",
+    "files": [
+      {
+        "filename": "docs/dictionary.md",
+        "status": "modified",
+        "changes": 10
+      },
+      {
+        "filename": "scripts/generate_dictionary_synonyms_test_epub.py",
+        "status": "added",
+        "changes": 145
+      },
+      {
+        "filename": "src/util/Dictionary.cpp",
+        "status": "modified",
+        "changes": 305
+      },
+      {
+        "filename": "src/util/Dictionary.h",
+        "status": "modified",
+        "changes": 91
+      },
+      {
+        "filename": "test/epubs/test_dictionary_synonyms.epub",
+        "status": "added",
+        "changes": 0
+      }
+    ]
+  },
+  {
+    "number": 2834,
+    "title": "fix: thread-safety issues in credential store",
+    "state": "closed",
+    "merged_at": "2026-08-06T22:16:23Z",
+    "head_sha": "1498ab79744fb139975decdefd93158807464ae3",
+    "base_sha": "9c48609f8bac4c5ce40f948e68825be06e83a124",
+    "url": "https://github.com/crosspoint-reader/crosspoint-reader/pull/2834",
+    "files": [
+      {
+        "filename": "lib/Serialization/CredentialIntegrity.h",
+        "status": "added",
+        "changes": 28
+      },
+      {
+        "filename": "lib/Serialization/ObfuscationUtils.cpp",
+        "status": "modified",
+        "changes": 29
+      },
+      {
+        "filename": "lib/Serialization/ObfuscationUtils.h",
+        "status": "modified",
+        "changes": 4
+      },
+      {
+        "filename": "lib/Serialization/PersistableStore.cpp",
+        "status": "modified",
+        "changes": 25
+      },
+      {
+        "filename": "lib/Serialization/PersistableStore.h",
+        "status": "modified",
+        "changes": 1
+      },
+      {
+        "filename": "src/CrossPointSettings.cpp",
+        "status": "modified",
+        "changes": 8
+      },
+      {
+        "filename": "src/WifiCredentialStore.cpp",
+        "status": "modified",
+        "changes": 186
+      },
+      {
+        "filename": "src/WifiCredentialStore.h",
+        "status": "modified",
+        "changes": 24
+      },
+      {
+        "filename": "src/activities/network/WifiSelectionActivity.cpp",
+        "status": "modified",
+        "changes": 13
+      },
+      {
+        "filename": "src/network/CrossPointWebServer.cpp",
+        "status": "modified",
+        "changes": 32
+      },
+      {
+        "filename": "test/CMakeLists.txt",
+        "status": "modified",
+        "changes": 1
+      },
+      {
+        "filename": "test/credential_integrity/CMakeLists.txt",
+        "status": "added",
+        "changes": 10
+      },
+      {
+        "filename": "test/credential_integrity/CredentialIntegrityTest.cpp",
+        "status": "added",
+        "changes": 48
+      }
+    ]
+  },
+  {
+    "number": 2836,
+    "title": "feat: render HTML dictionary definitions via EPUB engine",
+    "state": "closed",
+    "merged_at": "2026-08-12T21:17:25Z",
+    "head_sha": "653b67cf0e4fae9ef7608dfb2195d2224245e32c",
+    "base_sha": "86eb1cbde27a7540d9ad10310ec59171859f3731",
+    "url": "https://github.com/crosspoint-reader/crosspoint-reader/pull/2836",
+    "files": [
+      {
+        "filename": "docs/dictionary.md",
+        "status": "modified",
+        "changes": 4
+      },
+      {
+        "filename": "src/activities/reader/DictionaryDefinitionActivity.cpp",
+        "status": "modified",
+        "changes": 65
+      },
+      {
+        "filename": "src/activities/reader/DictionaryDefinitionActivity.h",
+        "status": "modified",
+        "changes": 27
+      },
+      {
+        "filename": "src/activities/reader/DictionaryWordSelectActivity.cpp",
+        "status": "modified",
+        "changes": 7
+      },
+      {
+        "filename": "src/util/DictHtmlPages.cpp",
+        "status": "added",
+        "changes": 256
+      },
+      {
+        "filename": "src/util/DictHtmlPages.h",
+        "status": "added",
+        "changes": 16
+      },
+      {
+        "filename": "src/util/Dictionary.cpp",
+        "status": "modified",
+        "changes": 34
+      },
+      {
+        "filename": "src/util/Dictionary.h",
+        "status": "modified",
+        "changes": 6
+      }
+    ]
+  },
+  {
+    "number": 2880,
+    "title": "feat: guard against cross-chip firmware installs",
+    "state": "closed",
+    "merged_at": "2026-08-07T06:42:30Z",
+    "head_sha": "ee4ca18c02de3556bee2b2ee779fbeebc0e10316",
+    "base_sha": "fecb9eb3a4683cea556fb7621c00c7f2a846c09b",
+    "url": "https://github.com/crosspoint-reader/crosspoint-reader/pull/2880",
+    "files": [
+      {
+        "filename": "lib/I18n/translations/english.yaml",
+        "status": "modified",
+        "changes": 1
+      },
+      {
+        "filename": "src/activities/settings/OtaUpdateActivity.cpp",
+        "status": "modified",
+        "changes": 4
+      },
+      {
+        "filename": "src/activities/settings/OtaUpdateActivity.h",
+        "status": "modified",
+        "changes": 4
+      },
+      {
+        "filename": "src/activities/settings/SdFirmwareUpdateActivity.cpp",
+        "status": "modified",
+        "changes": 7
+      },
+      {
+        "filename": "src/network/FirmwareFlasher.cpp",
+        "status": "modified",
+        "changes": 29
+      },
+      {
+        "filename": "src/network/FirmwareFlasher.h",
+        "status": "modified",
+        "changes": 7
+      },
+      {
+        "filename": "src/network/OtaUpdater.cpp",
+        "status": "modified",
+        "changes": 31
+      },
+      {
+        "filename": "src/network/OtaUpdater.h",
+        "status": "modified",
+        "changes": 1
+      }
+    ]
+  },
+  {
+    "number": 2937,
+    "title": "feat: add transparent sleep overlays",
+    "state": "closed",
+    "merged_at": "2026-08-12T20:21:44Z",
+    "head_sha": "c5cba1078d35e27d21be80534525cda6cac96a84",
+    "base_sha": "2cac597143076036c5a657e2b9d2280812a4bb4c",
+    "url": "https://github.com/crosspoint-reader/crosspoint-reader/pull/2937",
+    "files": [
+      {
+        "filename": "README.md",
+        "status": "modified",
+        "changes": 2
+      },
+      {
+        "filename": "USER_GUIDE.md",
+        "status": "modified",
+        "changes": 18
+      },
+      {
+        "filename": "lib/I18n/translations/catalan.yaml",
+        "status": "modified",
+        "changes": 1
+      },
+      {
+        "filename": "lib/I18n/translations/english.yaml",
+        "status": "modified",
+        "changes": 1
+      },
+      {
+        "filename": "lib/I18n/translations/spanish.yaml",
+        "status": "modified",
+        "changes": 1
+      },
+      {
+        "filename": "lib/I18n/translations/valencian.yaml",
+        "status": "modified",
+        "changes": 1
+      },
+      {
+        "filename": "src/CrossPointSettings.h",
+        "status": "modified",
+        "changes": 1
+      },
+      {
+        "filename": "src/CrossPointState.cpp",
+        "status": "modified",
+        "changes": 61
+      },
+      {
+        "filename": "src/CrossPointState.h",
+        "status": "modified",
+        "changes": 14
+      },
+      {
+        "filename": "src/SettingsList.h",
+        "status": "modified",
+        "changes": 1
+      },
+      {
+        "filename": "src/activities/boot_sleep/SleepActivity.cpp",
+        "status": "modified",
+        "changes": 569
+      },
+      {
+        "filename": "src/activities/boot_sleep/SleepActivity.h",
+        "status": "modified",
+        "changes": 5
+      },
+      {
+        "filename": "src/activities/home/FileBrowserActivity.cpp",
+        "status": "modified",
+        "changes": 3
+      },
+      {
+        "filename": "src/activities/util/BmpViewerActivity.cpp",
+        "status": "modified",
+        "changes": 44
+      }
+    ]
+  },
+  {
+    "number": 2943,
+    "title": "feat: retain custom sleep screen during wake",
+    "state": "closed",
+    "merged_at": "2026-08-10T14:02:21Z",
+    "head_sha": "5cdabf4b66cfe070cc48e4a15a349cd14e353719",
+    "base_sha": "596f0d3f71df5c719b8e18c9bec638a759388ff9",
+    "url": "https://github.com/crosspoint-reader/crosspoint-reader/pull/2943",
+    "files": [
+      {
+        "filename": "src/main.cpp",
+        "status": "modified",
+        "changes": 55
+      }
+    ]
+  },
+  {
+    "number": 2959,
+    "title": "fix: image decode overflow and viewport clipping issues",
+    "state": "closed",
+    "merged_at": "2026-08-16T18:45:10Z",
+    "head_sha": "8d5a9a257873ee08df4788fbf6b8b7911943078b",
+    "base_sha": "a757b9d10a32841e6444cdaec284a2d6bf9eca84",
+    "url": "https://github.com/crosspoint-reader/crosspoint-reader/pull/2959",
+    "files": [
+      {
+        "filename": "lib/Epub/Epub.cpp",
+        "status": "modified",
+        "changes": 4
+      },
+      {
+        "filename": "lib/Epub/Epub/Section.cpp",
+        "status": "modified",
+        "changes": 5
+      },
+      {
+        "filename": "lib/Epub/Epub/converters/ImageDimsProbe.cpp",
+        "status": "modified",
+        "changes": 8
+      },
+      {
+        "filename": "lib/Epub/Epub/converters/ImageToFramebufferDecoder.cpp",
+        "status": "modified",
+        "changes": 35
+      },
+      {
+        "filename": "lib/Epub/Epub/converters/ImageToFramebufferDecoder.h",
+        "status": "modified",
+        "changes": 23
+      },
+      {
+        "filename": "lib/Epub/Epub/converters/JpegToFramebufferConverter.cpp",
+        "status": "modified",
+        "changes": 27
+      },
+      {
+        "filename": "lib/Epub/Epub/converters/PngToFramebufferConverter.cpp",
+        "status": "modified",
+        "changes": 18
+      },
+      {
+        "filename": "lib/Epub/Epub/parsers/ChapterHtmlSlimParser.cpp",
+        "status": "modified",
+        "changes": 13
+      },
+      {
+        "filename": "lib/hal/HalStorage.cpp",
+        "status": "modified",
+        "changes": 1
+      },
+      {
+        "filename": "lib/hal/HalStorage.h",
+        "status": "modified",
+        "changes": 1
+      },
+      {
+        "filename": "src/activities/reader/EpubReaderActivity.cpp",
+        "status": "modified",
+        "changes": 17
+      }
+    ]
+  },
+  {
+    "number": 2962,
+    "title": "fix: prevent reader resume position rollback",
+    "state": "closed",
+    "merged_at": "2026-08-13T12:05:02Z",
+    "head_sha": "800bb378011b3c9c7ef181471cf9e5396a397308",
+    "base_sha": "9b1fb712de83b87d518f6dc12a02977b6499bba2",
+    "url": "https://github.com/crosspoint-reader/crosspoint-reader/pull/2962",
+    "files": [
+      {
+        "filename": "src/activities/reader/EpubReaderActivity.cpp",
+        "status": "modified",
+        "changes": 39
+      },
+      {
+        "filename": "src/activities/reader/EpubReaderActivity.h",
+        "status": "modified",
+        "changes": 4
+      }
+    ]
+  },
+  {
+    "number": 2974,
+    "title": "feat: support transparent PNG sleep overlays",
+    "state": "closed",
+    "merged_at": "2026-08-13T19:59:55Z",
+    "head_sha": "fe0feccccd019a2f1d054e989740bd90dfeb5593",
+    "base_sha": "9b1fb712de83b87d518f6dc12a02977b6499bba2",
+    "url": "https://github.com/crosspoint-reader/crosspoint-reader/pull/2974",
+    "files": [
+      {
+        "filename": "USER_GUIDE.md",
+        "status": "modified",
+        "changes": 12
+      },
+      {
+        "filename": "lib/Epub/Epub/converters/DirectPixelWriter.h",
+        "status": "modified",
+        "changes": 6
+      },
+      {
+        "filename": "lib/Epub/Epub/converters/ImageToFramebufferDecoder.h",
+        "status": "modified",
+        "changes": 3
+      },
+      {
+        "filename": "lib/Epub/Epub/converters/PngToFramebufferConverter.cpp",
+        "status": "modified",
+        "changes": 146
+      },
+      {
+        "filename": "src/activities/boot_sleep/SleepActivity.cpp",
+        "status": "modified",
+        "changes": 167
+      },
+      {
+        "filename": "src/activities/boot_sleep/SleepActivity.h",
+        "status": "modified",
+        "changes": 4
+      },
+      {
+        "filename": "src/activities/home/FileBrowserActivity.cpp",
+        "status": "modified",
+        "changes": 2
+      },
+      {
+        "filename": "src/activities/reader/ReaderActivity.cpp",
+        "status": "modified",
+        "changes": 6
+      },
+      {
+        "filename": "src/activities/reader/ReaderActivity.h",
+        "status": "modified",
+        "changes": 2
+      },
+      {
+        "filename": "src/activities/util/BmpViewerActivity.cpp",
+        "status": "modified",
+        "changes": 61
+      },
+      {
+        "filename": "src/activities/util/BmpViewerActivity.h",
+        "status": "modified",
+        "changes": 4
+      },
+      {
+        "filename": "src/components/UITheme.cpp",
+        "status": "modified",
+        "changes": 2
+      }
+    ]
+  },
+  {
+    "number": 2989,
+    "title": "feat: skip boot screen on startup",
+    "state": "closed",
+    "merged_at": "2026-08-12T18:45:21Z",
+    "head_sha": "48729cef90f67fef5b53672a5e8c3706278c6030",
+    "base_sha": "86eb1cbde27a7540d9ad10310ec59171859f3731",
+    "url": "https://github.com/crosspoint-reader/crosspoint-reader/pull/2989",
+    "files": [
+      {
+        "filename": "src/main.cpp",
+        "status": "modified",
+        "changes": 25
+      }
+    ]
+  },
+  {
+    "number": 3001,
+    "title": "fix: epub metadata parsing",
+    "state": "closed",
+    "merged_at": "2026-08-16T18:46:49Z",
+    "head_sha": "a7d5e2c6e99e517f5539992aab21d7c09be6745b",
+    "base_sha": "b3d1e79d0414386d505edea4d5e1399244092341",
+    "url": "https://github.com/crosspoint-reader/crosspoint-reader/pull/3001",
+    "files": [
+      {
+        "filename": "lib/Epub/Epub/parsers/ContentOpfParser.cpp",
+        "status": "modified",
+        "changes": 42
+      },
+      {
+        "filename": "lib/XmlParserUtils/XmlParserUtils.h",
+        "status": "modified",
+        "changes": 12
+      },
+      {
+        "filename": "test/CMakeLists.txt",
+        "status": "modified",
+        "changes": 1
+      },
+      {
+        "filename": "test/xml_parser_utils/CMakeLists.txt",
+        "status": "added",
+        "changes": 15
+      },
+      {
+        "filename": "test/xml_parser_utils/XmlParserUtilsTest.cpp",
+        "status": "added",
+        "changes": 9
+      }
+    ]
+  },
+  {
+    "number": 3005,
+    "title": "fix: retry low-memory CSS cache safely",
+    "state": "closed",
+    "merged_at": "2026-08-26T12:08:53Z",
+    "head_sha": "156951542b224c4610ebde0382e90c4db943675c",
+    "base_sha": "8665dd7b9354f08311ad50fcce6b1f1105426c1f",
+    "url": "https://github.com/crosspoint-reader/crosspoint-reader/pull/3005",
+    "files": [
+      {
+        "filename": "lib/Epub/Epub.cpp",
+        "status": "modified",
+        "changes": 151
+      },
+      {
+        "filename": "lib/Epub/Epub.h",
+        "status": "modified",
+        "changes": 2
+      },
+      {
+        "filename": "lib/Epub/Epub/Section.cpp",
+        "status": "modified",
+        "changes": 15
+      },
+      {
+        "filename": "lib/Epub/Epub/css/CssParser.cpp",
+        "status": "modified",
+        "changes": 829
+      },
+      {
+        "filename": "lib/Epub/Epub/css/CssParser.h",
+        "status": "modified",
+        "changes": 121
+      },
+      {
+        "filename": "test/CMakeLists.txt",
+        "status": "modified",
+        "changes": 1
+      },
+      {
+        "filename": "test/css_parser/CMakeLists.txt",
+        "status": "added",
+        "changes": 17
+      },
+      {
+        "filename": "test/css_parser/CssParserTest.cpp",
+        "status": "added",
+        "changes": 292
+      },
+      {
+        "filename": "test/css_parser/stubs/Arduino.h",
+        "status": "added",
+        "changes": 9
+      },
+      {
+        "filename": "test/css_parser/stubs/HalStorage.h",
+        "status": "added",
+        "changes": 98
+      },
+      {
+        "filename": "test/css_parser/stubs/Logging.h",
+        "status": "added",
+        "changes": 9
+      }
+    ]
+  },
+  {
+    "number": 3009,
+    "title": "fix: clear sleep image after wake",
+    "state": "closed",
+    "merged_at": "2026-08-18T18:09:02Z",
+    "head_sha": "660e8f33a1d85dcf7c0d1ece9b175b0f3ea9b43e",
+    "base_sha": "618608e84f3daef14886ceaa3f4ad63f0f1da570",
+    "url": "https://github.com/crosspoint-reader/crosspoint-reader/pull/3009",
+    "files": [
+      {
+        "filename": "src/activities/ActivityManager.cpp",
+        "status": "modified",
+        "changes": 4
+      },
+      {
+        "filename": "src/activities/ActivityManager.h",
+        "status": "modified",
+        "changes": 2
+      },
+      {
+        "filename": "src/activities/home/HomeActivity.cpp",
+        "status": "modified",
+        "changes": 3
+      },
+      {
+        "filename": "src/activities/home/HomeActivity.h",
+        "status": "modified",
+        "changes": 7
+      },
+      {
+        "filename": "src/main.cpp",
+        "status": "modified",
+        "changes": 7
+      }
+    ]
+  },
+  {
+    "number": 3034,
+    "title": "fix: guard file list against render-task race in FileBrowserActivity",
+    "state": "closed",
+    "merged_at": "2026-08-15T05:51:25Z",
+    "head_sha": "a3bec0f782bedb8751ce81207a164d688d8350e2",
+    "base_sha": "a757b9d10a32841e6444cdaec284a2d6bf9eca84",
+    "url": "https://github.com/crosspoint-reader/crosspoint-reader/pull/3034",
+    "files": [
+      {
+        "filename": "src/activities/home/FileBrowserActivity.cpp",
+        "status": "modified",
+        "changes": 61
+      }
+    ]
+  },
+  {
+    "number": 3037,
+    "title": "feat: add Extra Wide reader line spacing option",
+    "state": "closed",
+    "merged_at": "2026-08-16T09:30:37Z",
+    "head_sha": "981b37fa3720d84a01020f93c9894312153ff687",
+    "base_sha": "33f07db7101ec8d817305ade3c7a9ec3afa66fd9",
+    "url": "https://github.com/crosspoint-reader/crosspoint-reader/pull/3037",
+    "files": [
+      {
+        "filename": "lib/I18n/translations/arabic.yaml",
+        "status": "modified",
+        "changes": 1
+      },
+      {
+        "filename": "lib/I18n/translations/belarusian.yaml",
+        "status": "modified",
+        "changes": 1
+      },
+      {
+        "filename": "lib/I18n/translations/bosnian.yaml",
+        "status": "modified",
+        "changes": 1
+      },
+      {
+        "filename": "lib/I18n/translations/catalan.yaml",
+        "status": "modified",
+        "changes": 1
+      },
+      {
+        "filename": "lib/I18n/translations/czech.yaml",
+        "status": "modified",
+        "changes": 1
+      },
+      {
+        "filename": "lib/I18n/translations/danish.yaml",
+        "status": "modified",
+        "changes": 1
+      },
+      {
+        "filename": "lib/I18n/translations/dutch.yaml",
+        "status": "modified",
+        "changes": 1
+      },
+      {
+        "filename": "lib/I18n/translations/english.yaml",
+        "status": "modified",
+        "changes": 1
+      },
+      {
+        "filename": "lib/I18n/translations/finnish.yaml",
+        "status": "modified",
+        "changes": 1
+      },
+      {
+        "filename": "lib/I18n/translations/french.yaml",
+        "status": "modified",
+        "changes": 1
+      },
+      {
+        "filename": "lib/I18n/translations/german.yaml",
+        "status": "modified",
+        "changes": 1
+      },
+      {
+        "filename": "lib/I18n/translations/hebrew.yaml",
+        "status": "modified",
+        "changes": 1
+      },
+      {
+        "filename": "lib/I18n/translations/hungarian.yaml",
+        "status": "modified",
+        "changes": 1
+      },
+      {
+        "filename": "lib/I18n/translations/indonesia.yaml",
+        "status": "modified",
+        "changes": 1
+      },
+      {
+        "filename": "lib/I18n/translations/italian.yaml",
+        "status": "modified",
+        "changes": 1
+      },
+      {
+        "filename": "lib/I18n/translations/kazakh.yaml",
+        "status": "modified",
+        "changes": 1
+      },
+      {
+        "filename": "lib/I18n/translations/lithuanian.yaml",
+        "status": "modified",
+        "changes": 1
+      },
+      {
+        "filename": "lib/I18n/translations/norwegian.yaml",
+        "status": "modified",
+        "changes": 1
+      },
+      {
+        "filename": "lib/I18n/translations/orangutan.yaml",
+        "status": "modified",
+        "changes": 1
+      },
+      {
+        "filename": "lib/I18n/translations/polish.yaml",
+        "status": "modified",
+        "changes": 1
+      },
+      {
+        "filename": "lib/I18n/translations/portuguese-BR.yaml",
+        "status": "modified",
+        "changes": 1
+      },
+      {
+        "filename": "lib/I18n/translations/portuguese-PT.yaml",
+        "status": "modified",
+        "changes": 1
+      },
+      {
+        "filename": "lib/I18n/translations/romanian.yaml",
+        "status": "modified",
+        "changes": 1
+      },
+      {
+        "filename": "lib/I18n/translations/russian.yaml",
+        "status": "modified",
+        "changes": 1
+      },
+      {
+        "filename": "lib/I18n/translations/slovak.yaml",
+        "status": "modified",
+        "changes": 1
+      },
+      {
+        "filename": "lib/I18n/translations/slovenian.yaml",
+        "status": "modified",
+        "changes": 1
+      },
+      {
+        "filename": "lib/I18n/translations/spanish.yaml",
+        "status": "modified",
+        "changes": 1
+      },
+      {
+        "filename": "lib/I18n/translations/swedish.yaml",
+        "status": "modified",
+        "changes": 1
+      },
+      {
+        "filename": "lib/I18n/translations/turkish.yaml",
+        "status": "modified",
+        "changes": 1
+      },
+      {
+        "filename": "lib/I18n/translations/ukrainian.yaml",
+        "status": "modified",
+        "changes": 1
+      },
+      {
+        "filename": "lib/I18n/translations/valencian.yaml",
+        "status": "modified",
+        "changes": 1
+      },
+      {
+        "filename": "lib/I18n/translations/vietnamese.yaml",
+        "status": "modified",
+        "changes": 1
+      },
+      {
+        "filename": "src/CrossPointSettings.cpp",
+        "status": "modified",
+        "changes": 6
+      },
+      {
+        "filename": "src/CrossPointSettings.h",
+        "status": "modified",
+        "changes": 2
+      },
+      {
+        "filename": "src/SettingsList.h",
+        "status": "modified",
+        "changes": 3
+      },
+      {
+        "filename": "src/activities/settings/TextSettingsActivity.cpp",
+        "status": "modified",
+        "changes": 2
+      }
+    ]
+  },
+  {
+    "number": 3080,
+    "title": "feat: show Wi-Fi, KOReader, and OPDS passwords during entry",
+    "state": "closed",
+    "merged_at": "2026-08-16T22:57:52Z",
+    "head_sha": "91aa634c2d60e53b3c615201eb7cf7fd0998ba36",
+    "base_sha": "99724aa79a9543124d7511bac32ad95a237cfcdf",
+    "url": "https://github.com/crosspoint-reader/crosspoint-reader/pull/3080",
+    "files": [
+      {
+        "filename": "src/activities/network/WifiSelectionActivity.cpp",
+        "status": "modified",
+        "changes": 2
+      },
+      {
+        "filename": "src/activities/settings/KOReaderSettingsActivity.cpp",
+        "status": "modified",
+        "changes": 19
+      },
+      {
+        "filename": "src/activities/settings/OpdsSettingsActivity.cpp",
+        "status": "modified",
+        "changes": 2
+      }
+    ]
+  },
+  {
+    "number": 3093,
+    "title": "fix: Release SD font cache before render transparent sleep overlay",
+    "state": "closed",
+    "merged_at": "2026-08-17T19:44:04Z",
+    "head_sha": "2caf13f0d1fa0b5cbedd5ffdccb8e984dd3e61e3",
+    "base_sha": "618608e84f3daef14886ceaa3f4ad63f0f1da570",
+    "url": "https://github.com/crosspoint-reader/crosspoint-reader/pull/3093",
+    "files": [
+      {
+        "filename": "src/activities/boot_sleep/SleepActivity.cpp",
+        "status": "modified",
+        "changes": 10
+      }
+    ]
+  },
+  {
+    "number": 3115,
+    "title": "feat: Lower frontlight brightness for x4pro",
+    "state": "closed",
+    "merged_at": "2026-08-20T18:13:44Z",
+    "head_sha": "de3551cc63d33fbce982200ede780f9d29d45159",
+    "base_sha": "eef205044f6cdc0898e93e6213c51a082e20d3d2",
+    "url": "https://github.com/crosspoint-reader/crosspoint-reader/pull/3115",
+    "files": [
+      {
+        "filename": "freeink-sdk",
+        "status": "modified",
+        "changes": 2
+      }
+    ]
+  },
+  {
+    "number": 3119,
+    "title": "fix: don't use dithering for non alpha bmp transparent sleep screen",
+    "state": "closed",
+    "merged_at": "2026-08-19T13:02:04Z",
+    "head_sha": "c24545594128aaec7e7505f71182c91003912f1f",
+    "base_sha": "eef205044f6cdc0898e93e6213c51a082e20d3d2",
+    "url": "https://github.com/crosspoint-reader/crosspoint-reader/pull/3119",
+    "files": [
+      {
+        "filename": "src/activities/boot_sleep/SleepActivity.cpp",
+        "status": "modified",
+        "changes": 2
+      }
+    ]
+  },
+  {
+    "number": 3144,
+    "title": "perf: Reduce built-in font flash by 323 KB (sparse kerning, split class maps, Zopfli)",
+    "state": "closed",
+    "merged_at": "2026-08-26T12:21:51Z",
+    "head_sha": "64d79a1e7b6de8c5ab28ae615ee206ab63c06b7e",
+    "base_sha": "8665dd7b9354f08311ad50fcce6b1f1105426c1f",
+    "url": "https://github.com/crosspoint-reader/crosspoint-reader/pull/3144",
+    "files": [
+      {
+        "filename": "lib/EpdFont/EpdFont.cpp",
+        "status": "modified",
+        "changes": 45
+      },
+      {
+        "filename": "lib/EpdFont/EpdFontData.h",
+        "status": "modified",
+        "changes": 29
+      },
+      {
+        "filename": "lib/EpdFont/SdCardFont.cpp",
+        "status": "modified",
+        "changes": 10
+      },
+      {
+        "filename": "lib/EpdFont/builtinFonts/notosans_12_bold.h",
+        "status": "modified",
+        "changes": 4573
+      },
+      {
+        "filename": "lib/EpdFont/builtinFonts/notosans_12_bolditalic.h",
+        "status": "modified",
+        "changes": 5076
+      },
+      {
+        "filename": "lib/EpdFont/builtinFonts/notosans_12_italic.h",
+        "status": "modified",
+        "changes": 4773
+      },
+      {
+        "filename": "lib/EpdFont/builtinFonts/notosans_12_regular.h",
+        "status": "modified",
+        "changes": 4306
+      },
+      {
+        "filename": "lib/EpdFont/builtinFonts/notosans_14_bold.h",
+        "status": "modified",
+        "changes": 5279
+      },
+      {
+        "filename": "lib/EpdFont/builtinFonts/notosans_14_bolditalic.h",
+        "status": "modified",
+        "changes": 5992
+      },
+      {
+        "filename": "lib/EpdFont/builtinFonts/notosans_14_italic.h",
+        "status": "modified",
+        "changes": 5609
+      },
+      {
+        "filename": "lib/EpdFont/builtinFonts/notosans_14_regular.h",
+        "status": "modified",
+        "changes": 5006
+      },
+      {
+        "filename": "lib/EpdFont/builtinFonts/notosans_16_bold.h",
+        "status": "modified",
+        "changes": 5946
+      },
+      {
+        "filename": "lib/EpdFont/builtinFonts/notosans_16_bolditalic.h",
+        "status": "modified",
+        "changes": 6803
+      },
+      {
+        "filename": "lib/EpdFont/builtinFonts/notosans_16_italic.h",
+        "status": "modified",
+        "changes": 6353
+      },
+      {
+        "filename": "lib/EpdFont/builtinFonts/notosans_16_regular.h",
+        "status": "modified",
+        "changes": 5596
+      },
+      {
+        "filename": "lib/EpdFont/builtinFonts/notosans_18_bold.h",
+        "status": "modified",
+        "changes": 6722
+      },
+      {
+        "filename": "lib/EpdFont/builtinFonts/notosans_18_bolditalic.h",
+        "status": "modified",
+        "changes": 7765
+      },
+      {
+        "filename": "lib/EpdFont/builtinFonts/notosans_18_italic.h",
+        "status": "modified",
+        "changes": 7269
+      },
+      {
+        "filename": "lib/EpdFont/builtinFonts/notosans_18_regular.h",
+        "status": "modified",
+        "changes": 6241
+      },
+      {
+        "filename": "lib/EpdFont/builtinFonts/notosans_8_regular.h",
+        "status": "modified",
+        "changes": 1410
+      },
+      {
+        "filename": "lib/EpdFont/builtinFonts/notoserif_12_bold.h",
+        "status": "modified",
+        "changes": 4649
+      },
+      {
+        "filename": "lib/EpdFont/builtinFonts/notoserif_12_bolditalic.h",
+        "status": "modified",
+        "changes": 5584
+      },
+      {
+        "filename": "lib/EpdFont/builtinFonts/notoserif_12_italic.h",
+        "status": "modified",
+        "changes": 5321
+      },
+      {
+        "filename": "lib/EpdFont/builtinFonts/notoserif_12_regular.h",
+        "status": "modified",
+        "changes": 4377
+      },
+      {
+        "filename": "lib/EpdFont/builtinFonts/notoserif_14_bold.h",
+        "status": "modified",
+        "changes": 5402
+      },
+      {
+        "filename": "lib/EpdFont/builtinFonts/notoserif_14_bolditalic.h",
+        "status": "modified",
+        "changes": 6558
+      },
+      {
+        "filename": "lib/EpdFont/builtinFonts/notoserif_14_italic.h",
+        "status": "modified",
+        "changes": 6239
+      },
+      {
+        "filename": "lib/EpdFont/builtinFonts/notoserif_14_regular.h",
+        "status": "modified",
+        "changes": 5162
+      },
+      {
+        "filename": "lib/EpdFont/builtinFonts/notoserif_16_bold.h",
+        "status": "modified",
+        "changes": 6067
+      },
+      {
+        "filename": "lib/EpdFont/builtinFonts/notoserif_16_bolditalic.h",
+        "status": "modified",
+        "changes": 7411
+      },
+      {
+        "filename": "lib/EpdFont/builtinFonts/notoserif_16_italic.h",
+        "status": "modified",
+        "changes": 7071
+      },
+      {
+        "filename": "lib/EpdFont/builtinFonts/notoserif_16_regular.h",
+        "status": "modified",
+        "changes": 5811
+      },
+      {
+        "filename": "lib/EpdFont/builtinFonts/notoserif_18_bold.h",
+        "status": "modified",
+        "changes": 6955
+      },
+      {
+        "filename": "lib/EpdFont/builtinFonts/notoserif_18_bolditalic.h",
+        "status": "modified",
+        "changes": 8447
+      },
+      {
+        "filename": "lib/EpdFont/builtinFonts/notoserif_18_italic.h",
+        "status": "modified",
+        "changes": 8022
+      },
+      {
+        "filename": "lib/EpdFont/builtinFonts/notoserif_18_regular.h",
+        "status": "modified",
+        "changes": 6541
+      },
+      {
+        "filename": "lib/EpdFont/builtinFonts/ubuntu_10_bold.h",
+        "status": "modified",
+        "changes": 1994
+      },
+      {
+        "filename": "lib/EpdFont/builtinFonts/ubuntu_10_medium.h",
+        "status": "modified",
+        "changes": 1677
+      },
+      {
+        "filename": "lib/EpdFont/builtinFonts/ubuntu_12_bold.h",
+        "status": "modified",
+        "changes": 1994
+      },
+      {
+        "filename": "lib/EpdFont/builtinFonts/ubuntu_12_medium.h",
+        "status": "modified",
+        "changes": 1669
+      },
+      {
+        "filename": "lib/EpdFont/scripts/convert-builtin-fonts.sh",
+        "status": "modified",
+        "changes": 4
+      },
+      {
+        "filename": "lib/EpdFont/scripts/fontconvert.py",
+        "status": "modified",
+        "changes": 109
+      },
+      {
+        "filename": "lib/EpdFont/scripts/requirements.txt",
+        "status": "modified",
+        "changes": 1
+      },
+      {
+        "filename": "test/differential_rounding/DifferentialRoundingTest.cpp",
+        "status": "modified",
+        "changes": 114
+      }
+    ]
+  },
+  {
+    "number": 3153,
+    "title": "fix: (dictionary) restore heading breaks in htmlToPlainText",
+    "state": "closed",
+    "merged_at": "2026-08-24T08:34:32Z",
+    "head_sha": "74d4c40e480eaa196af84ce48ff8d5333cd003d3",
+    "base_sha": "d72ae2ac8dc8426da3658e60e34096b9eb592d96",
+    "url": "https://github.com/crosspoint-reader/crosspoint-reader/pull/3153",
+    "files": [
+      {
+        "filename": "src/util/HtmlToPlainText.cpp",
+        "status": "modified",
+        "changes": 5
+      },
+      {
+        "filename": "test/CMakeLists.txt",
+        "status": "modified",
+        "changes": 1
+      },
+      {
+        "filename": "test/html_to_plain_text/CMakeLists.txt",
+        "status": "added",
+        "changes": 17
+      },
+      {
+        "filename": "test/html_to_plain_text/HtmlToPlainTextTest.cpp",
+        "status": "added",
+        "changes": 63
+      }
+    ]
+  },
+  {
+    "number": 3154,
+    "title": "fix: (dictionary) stop styled HTML definitions refusing their own first page",
+    "state": "closed",
+    "merged_at": "2026-08-22T18:16:52Z",
+    "head_sha": "95490ea4a4c592a8c101d8aeb0adb35cd6c730fa",
+    "base_sha": "d72ae2ac8dc8426da3658e60e34096b9eb592d96",
+    "url": "https://github.com/crosspoint-reader/crosspoint-reader/pull/3154",
+    "files": [
+      {
+        "filename": "src/util/DictHtmlPages.cpp",
+        "status": "modified",
+        "changes": 47
+      }
+    ]
+  },
+  {
+    "number": 3156,
+    "title": "feat: control center \u2014 quick-setting tiles on the frontlight panel (touch boards)",
+    "state": "closed",
+    "merged_at": "2026-08-23T23:19:17Z",
+    "head_sha": "1c15ab9f0cf1459e0307e2057fb5933c9b70c5d6",
+    "base_sha": "62e84a16f86fe8d205e53770c0eaa320c658cdca",
+    "url": "https://github.com/crosspoint-reader/crosspoint-reader/pull/3156",
+    "files": [
+      {
+        "filename": "freeink-sdk",
+        "status": "modified",
+        "changes": 2
+      },
+      {
+        "filename": "lib/GfxRenderer/GfxRenderer.cpp",
+        "status": "modified",
+        "changes": 12
+      },
+      {
+        "filename": "lib/GfxRenderer/GfxRenderer.h",
+        "status": "modified",
+        "changes": 16
+      },
+      {
+        "filename": "lib/I18n/translations/english.yaml",
+        "status": "modified",
+        "changes": 9
+      },
+      {
+        "filename": "lib/I18n/translations/vietnamese.yaml",
+        "status": "modified",
+        "changes": 1
+      },
+      {
+        "filename": "src/activities/ActivityManager.cpp",
+        "status": "modified",
+        "changes": 14
+      },
+      {
+        "filename": "src/activities/reader/EpubReaderActivity.cpp",
+        "status": "modified",
+        "changes": 25
+      },
+      {
+        "filename": "src/activities/reader/EpubReaderActivity.h",
+        "status": "modified",
+        "changes": 6
+      },
+      {
+        "filename": "src/activities/util/FrontlightPanelActivity.cpp",
+        "status": "modified",
+        "changes": 316
+      },
+      {
+        "filename": "src/activities/util/FrontlightPanelActivity.h",
+        "status": "modified",
+        "changes": 48
+      },
+      {
+        "filename": "src/components/UIThemeTokens.h",
+        "status": "modified",
+        "changes": 5
+      },
+      {
+        "filename": "src/components/themes/BaseTheme.h",
+        "status": "modified",
+        "changes": 13
+      },
+      {
+        "filename": "src/components/themes/lyra/LyraTheme.h",
+        "status": "modified",
+        "changes": 5
+      },
+      {
+        "filename": "src/components/themes/roundedraff/RoundedRaffTheme.h",
+        "status": "modified",
+        "changes": 5
+      }
+    ]
+  },
+  {
+    "number": 3191,
+    "title": "feat: Improve power button wake detection and timing",
+    "state": "closed",
+    "merged_at": "2026-08-24T17:28:12Z",
+    "head_sha": "e38d8fd49a9ad5e605c05e21246f1873987b9460",
+    "base_sha": "8575b142702ad045443dcdd6c3a04e99f5a0906c",
+    "url": "https://github.com/crosspoint-reader/crosspoint-reader/pull/3191",
+    "files": [
+      {
+        "filename": "freeink-sdk",
+        "status": "modified",
+        "changes": 2
+      },
+      {
+        "filename": "lib/hal/HalGPIO.cpp",
+        "status": "modified",
+        "changes": 41
+      },
+      {
+        "filename": "lib/hal/HalGPIO.h",
+        "status": "modified",
+        "changes": 4
+      },
+      {
+        "filename": "platformio.ini",
+        "status": "modified",
+        "changes": 4
+      },
+      {
+        "filename": "src/main.cpp",
+        "status": "modified",
+        "changes": 67
+      }
+    ]
+  },
+  {
+    "number": 3215,
+    "title": "fix(x4pro): hold power-latch pins HIGH through deep sleep",
+    "state": "closed",
+    "merged_at": "2026-08-26T13:24:54Z",
+    "head_sha": "da52e367634b47250a3acd304d195476f524af15",
+    "base_sha": "8665dd7b9354f08311ad50fcce6b1f1105426c1f",
+    "url": "https://github.com/crosspoint-reader/crosspoint-reader/pull/3215",
+    "files": [
+      {
+        "filename": "lib/hal/HalPowerManager.cpp",
+        "status": "modified",
+        "changes": 21
+      }
+    ]
+  },
+  {
+    "number": 3222,
+    "title": "perf: optimize style-aware font prewarm",
+    "state": "closed",
+    "merged_at": "2026-08-26T16:10:16Z",
+    "head_sha": "5175fa4d460ff87206a9c08e8ce09a67c4c35f4f",
+    "base_sha": "f0c655062c5135753134443d56513f8202208f6a",
+    "url": "https://github.com/crosspoint-reader/crosspoint-reader/pull/3222",
+    "files": [
+      {
+        "filename": "lib/GfxRenderer/FontCacheManager.cpp",
+        "status": "modified",
+        "changes": 146
+      },
+      {
+        "filename": "lib/GfxRenderer/FontCacheManager.h",
+        "status": "modified",
+        "changes": 33
+      },
+      {
+        "filename": "test/CMakeLists.txt",
+        "status": "modified",
+        "changes": 1
+      },
+      {
+        "filename": "test/epubs/font-prewarm-benchmark.epub",
+        "status": "added",
+        "changes": 0
+      },
+      {
+        "filename": "test/epubs/generate_font_prewarm_benchmark.py",
+        "status": "added",
+        "changes": 126
+      },
+      {
+        "filename": "test/font_cache_manager/CMakeLists.txt",
+        "status": "added",
+        "changes": 18
+      },
+      {
+        "filename": "test/font_cache_manager/FontCacheManagerTest.cpp",
+        "status": "added",
+        "changes": 132
+      },
+      {
+        "filename": "test/font_cache_manager/stubs/EpdFontFamily.h",
+        "status": "added",
+        "changes": 28
+      },
+      {
+        "filename": "test/font_cache_manager/stubs/FontDecompressor.h",
+        "status": "added",
+        "changes": 27
+      },
+      {
+        "filename": "test/font_cache_manager/stubs/Logging.h",
+        "status": "added",
+        "changes": 8
+      },
+      {
+        "filename": "test/font_cache_manager/stubs/SdCardFont.h",
+        "status": "added",
+        "changes": 28
+      }
+    ]
+  },
+  {
+    "number": 3223,
+    "title": "fix: Add fallback USB detection via battery charging state",
+    "state": "closed",
+    "merged_at": "2026-08-26T16:22:47Z",
+    "head_sha": "f002041054498d3c0eb8d9ea979f73360f73e01d",
+    "base_sha": "f0c655062c5135753134443d56513f8202208f6a",
+    "url": "https://github.com/crosspoint-reader/crosspoint-reader/pull/3223",
+    "files": [
+      {
+        "filename": "freeink-sdk",
+        "status": "modified",
+        "changes": 2
+      },
+      {
+        "filename": "lib/hal/HalGPIO.cpp",
+        "status": "modified",
+        "changes": 13
+      }
+    ]
+  },
+  {
+    "number": 3233,
+    "title": "fix(KOSync): keep WiFi awake during KOReader authentication and sync",
+    "state": "closed",
+    "merged_at": "2026-08-27T15:36:34Z",
+    "head_sha": "c7408802e4a4b45893e8b9e6c2bd9d54ff2e5e90",
+    "base_sha": "8bc1603e85ba1f0b533d4fb3227d65266348799b",
+    "url": "https://github.com/crosspoint-reader/crosspoint-reader/pull/3233",
+    "files": [
+      {
+        "filename": "src/activities/reader/KOReaderSyncActivity.cpp",
+        "status": "modified",
+        "changes": 35
+      },
+      {
+        "filename": "src/activities/settings/KOReaderAuthActivity.cpp",
+        "status": "modified",
+        "changes": 4
+      },
+      {
+        "filename": "test/font_cache_manager/FontCacheManagerTest.cpp",
+        "status": "modified",
+        "changes": 3
+      }
+    ]
+  }
+]

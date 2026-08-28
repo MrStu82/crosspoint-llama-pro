@@ -1,0 +1,98 @@
+[
+  {
+    "sha": "009f1fb641d8d6079ce4e376cd58c19c7fe9cff0",
+    "filename": "lib/I18n/translations/english.yaml",
+    "status": "modified",
+    "additions": 1,
+    "deletions": 0,
+    "changes": 1,
+    "blob_url": "https://github.com/crosspoint-reader/crosspoint-reader/blob/ee4ca18c02de3556bee2b2ee779fbeebc0e10316/lib%2FI18n%2Ftranslations%2Fenglish.yaml",
+    "raw_url": "https://github.com/crosspoint-reader/crosspoint-reader/raw/ee4ca18c02de3556bee2b2ee779fbeebc0e10316/lib%2FI18n%2Ftranslations%2Fenglish.yaml",
+    "contents_url": "https://api.github.com/repos/crosspoint-reader/crosspoint-reader/contents/lib%2FI18n%2Ftranslations%2Fenglish.yaml?ref=ee4ca18c02de3556bee2b2ee779fbeebc0e10316",
+    "patch": "@@ -423,6 +423,7 @@ STR_VALIDATING_FIRMWARE: \"Validating firmware...\"\n STR_INVALID_FIRMWARE: \"Invalid firmware file\"\n STR_FIRMWARE_TOO_LARGE: \"Firmware too large for partition\"\n STR_FIRMWARE_TOO_SMALL: \"Firmware file is too small\"\n+STR_FIRMWARE_WRONG_DEVICE: \"Firmware is for a different device\"\n STR_FIRMWARE_UPDATE_PROMPT: \"Update firmware?\"\n STR_FIRMWARE_FILE_OPEN_FAILED: \"Cannot open file\"\n STR_FIRMWARE_WRITE_FAILED: \"Firmware write failed\""
+  },
+  {
+    "sha": "9cebf35dce9ba0cf717f2727db40f80f879a3baa",
+    "filename": "src/activities/settings/OtaUpdateActivity.cpp",
+    "status": "modified",
+    "additions": 4,
+    "deletions": 0,
+    "changes": 4,
+    "blob_url": "https://github.com/crosspoint-reader/crosspoint-reader/blob/ee4ca18c02de3556bee2b2ee779fbeebc0e10316/src%2Factivities%2Fsettings%2FOtaUpdateActivity.cpp",
+    "raw_url": "https://github.com/crosspoint-reader/crosspoint-reader/raw/ee4ca18c02de3556bee2b2ee779fbeebc0e10316/src%2Factivities%2Fsettings%2FOtaUpdateActivity.cpp",
+    "contents_url": "https://api.github.com/repos/crosspoint-reader/crosspoint-reader/contents/src%2Factivities%2Fsettings%2FOtaUpdateActivity.cpp?ref=ee4ca18c02de3556bee2b2ee779fbeebc0e10316",
+    "patch": "@@ -160,6 +160,9 @@ void OtaUpdateActivity::render(RenderLock&&) {\n     GUI.drawButtonHints(renderer, labels.btn1, labels.btn2, labels.btn3, labels.btn4);\n   } else if (state == FAILED) {\n     renderer.drawCenteredText(UI_10_FONT_ID, top, tr(STR_UPDATE_FAILED), true, EpdFontFamily::BOLD);\n+    if (failedDetail != nullptr) {\n+      renderer.drawCenteredText(UI_10_FONT_ID, top + height + metrics.verticalSpacing, failedDetail);\n+    }\n     const auto labels = mappedInput.mapLabels(tr(STR_BACK), \"\", \"\", \"\");\n     GUI.drawButtonHints(renderer, labels.btn1, labels.btn2, labels.btn3, labels.btn4);\n   } else if (state == FINISHED) {\n@@ -190,6 +193,7 @@ void OtaUpdateActivity::runUpdateInstall() {\n     LOG_DBG(\"OTA\", \"Update failed: %d\", res);\n     {\n       RenderLock lock(*this);\n+      failedDetail = res == OtaUpdater::WRONG_DEVICE_ERROR ? tr(STR_FIRMWARE_WRONG_DEVICE) : nullptr;\n       state = FAILED;\n     }\n     requestUpdate();"
+  },
+  {
+    "sha": "d779e67a24b676510bb2a8d0ec41de2c2aa55bfb",
+    "filename": "src/activities/settings/OtaUpdateActivity.h",
+    "status": "modified",
+    "additions": 4,
+    "deletions": 0,
+    "changes": 4,
+    "blob_url": "https://github.com/crosspoint-reader/crosspoint-reader/blob/ee4ca18c02de3556bee2b2ee779fbeebc0e10316/src%2Factivities%2Fsettings%2FOtaUpdateActivity.h",
+    "raw_url": "https://github.com/crosspoint-reader/crosspoint-reader/raw/ee4ca18c02de3556bee2b2ee779fbeebc0e10316/src%2Factivities%2Fsettings%2FOtaUpdateActivity.h",
+    "contents_url": "https://api.github.com/repos/crosspoint-reader/crosspoint-reader/contents/src%2Factivities%2Fsettings%2FOtaUpdateActivity.h?ref=ee4ca18c02de3556bee2b2ee779fbeebc0e10316",
+    "patch": "@@ -21,6 +21,10 @@ class OtaUpdateActivity : public Activity {\n   State state = WIFI_SELECTION;\n   unsigned int lastUpdaterPercentage = UNINITIALIZED_PERCENTAGE;\n   OtaUpdater updater;\n+  // Optional detail line shown under the generic \"Update failed\" heading.\n+  // Points into the i18n string table (flash-resident, so no lifetime concern);\n+  // nullptr means no extra detail.\n+  const char* failedDetail = nullptr;\n \n   void onWifiSelectionComplete(bool success);\n   void runUpdateInstall();"
+  },
+  {
+    "sha": "573de01d564b1889802c91a352b77e40d704520f",
+    "filename": "src/activities/settings/SdFirmwareUpdateActivity.cpp",
+    "status": "modified",
+    "additions": 6,
+    "deletions": 1,
+    "changes": 7,
+    "blob_url": "https://github.com/crosspoint-reader/crosspoint-reader/blob/ee4ca18c02de3556bee2b2ee779fbeebc0e10316/src%2Factivities%2Fsettings%2FSdFirmwareUpdateActivity.cpp",
+    "raw_url": "https://github.com/crosspoint-reader/crosspoint-reader/raw/ee4ca18c02de3556bee2b2ee779fbeebc0e10316/src%2Factivities%2Fsettings%2FSdFirmwareUpdateActivity.cpp",
+    "contents_url": "https://api.github.com/repos/crosspoint-reader/crosspoint-reader/contents/src%2Factivities%2Fsettings%2FSdFirmwareUpdateActivity.cpp?ref=ee4ca18c02de3556bee2b2ee779fbeebc0e10316",
+    "patch": "@@ -103,6 +103,8 @@ bool SdFirmwareUpdateActivity::validateFirmware() {\n       errorMessage = tr(STR_FIRMWARE_TOO_LARGE);\n     } else if (vr == firmware_flash::Result::TOO_SMALL) {\n       errorMessage = tr(STR_FIRMWARE_TOO_SMALL);\n+    } else if (vr == firmware_flash::Result::BAD_CHIP) {\n+      errorMessage = tr(STR_FIRMWARE_WRONG_DEVICE);\n     } else {\n       errorMessage = tr(STR_INVALID_FIRMWARE);\n     }\n@@ -167,7 +169,10 @@ void SdFirmwareUpdateActivity::performUpdate() {\n   const auto result = firmware_flash::flashFromSdPath(firmwarePath.c_str(), progressCb, this);\n   if (result != firmware_flash::Result::OK) {\n     LOG_ERR(\"FW\", \"flash failed: %s\", firmware_flash::resultName(result));\n-    errorMessage = tr(STR_FIRMWARE_WRITE_FAILED);\n+    // BAD_CHIP here is the TOCTOU re-validation catching a wrong-MCU image the\n+    // pre-confirmation pass missed (e.g. the SD card was swapped).\n+    errorMessage =\n+        result == firmware_flash::Result::BAD_CHIP ? tr(STR_FIRMWARE_WRONG_DEVICE) : tr(STR_FIRMWARE_WRITE_FAILED);\n     RenderLock lock(*this);\n     state = State::FAILED;\n     requestUpdate();"
+  },
+  {
+    "sha": "81cdb46de292e31dce99f739c1523d8494a76285",
+    "filename": "src/network/FirmwareFlasher.cpp",
+    "status": "modified",
+    "additions": 29,
+    "deletions": 0,
+    "changes": 29,
+    "blob_url": "https://github.com/crosspoint-reader/crosspoint-reader/blob/ee4ca18c02de3556bee2b2ee779fbeebc0e10316/src%2Fnetwork%2FFirmwareFlasher.cpp",
+    "raw_url": "https://github.com/crosspoint-reader/crosspoint-reader/raw/ee4ca18c02de3556bee2b2ee779fbeebc0e10316/src%2Fnetwork%2FFirmwareFlasher.cpp",
+    "contents_url": "https://api.github.com/repos/crosspoint-reader/crosspoint-reader/contents/src%2Fnetwork%2FFirmwareFlasher.cpp?ref=ee4ca18c02de3556bee2b2ee779fbeebc0e10316",
+    "patch": "@@ -46,6 +46,8 @@ const char* resultName(Result r) {\n       return \"BAD_CHECKSUM\";\n     case Result::BAD_SHA:\n       return \"BAD_SHA\";\n+    case Result::BAD_CHIP:\n+      return \"BAD_CHIP\";\n     case Result::BAD_SIZE:\n       return \"BAD_SIZE\";\n     case Result::NO_PARTITION:\n@@ -64,6 +66,22 @@ const char* resultName(Result r) {\n   return \"?\";\n }\n \n+uint16_t runningPartitionChipId() {\n+  // esp_partition_read hits SPI flash; cache the running slot's chip_id so we\n+  // only pay that cost once per boot. The running image is immutable at\n+  // runtime, so a function-local static is safe here.\n+  static uint16_t cached = [] {\n+    const esp_partition_t* run = esp_ota_get_running_partition();\n+    if (!run) return static_cast<uint16_t>(0xFFFF);\n+    uint16_t id = 0xFFFF;\n+    // chip_id sits at offset 12 of esp_image_header_t. memcpy target is a\n+    // uint16_t local, so RISC-V alignment is guaranteed.\n+    if (esp_partition_read(run, 12, &id, sizeof(id)) != ESP_OK) return static_cast<uint16_t>(0xFFFF);\n+    return id;\n+  }();\n+  return cached;\n+}\n+\n namespace {\n // Stream `length` bytes from `file` starting at the current read offset, feeding them through\n // both the XOR-checksum and SHA256 accumulators. Used by validateImageFile so the whole image\n@@ -117,6 +135,17 @@ Result validateImageFile(const char* sdPath, size_t partitionSize) {\n     file.close();\n     return Result::BAD_MAGIC;\n   }\n+  // Reject an image built for a different MCU family before it can brick the\n+  // device. chip_id lives at esp_image_header_t offset 12; compare it against\n+  // the running slot's own chip_id (self-describing, no chip enumeration).\n+  uint16_t imageChip;\n+  std::memcpy(&imageChip, header + 12, sizeof(imageChip));\n+  const uint16_t deviceChip = runningPartitionChipId();\n+  if (deviceChip != 0xFFFF && imageChip != deviceChip) {\n+    LOG_ERR(\"FLASH\", \"validate: wrong chip: image=0x%04X device=0x%04X\", imageChip, deviceChip);\n+    file.close();\n+    return Result::BAD_CHIP;\n+  }\n   const uint8_t segCount = header[1];\n   const bool hashAppended = header[23] != 0;\n "
+  },
+  {
+    "sha": "8efe6fb29ac2d8ac31ea228fe5008983256eb474",
+    "filename": "src/network/FirmwareFlasher.h",
+    "status": "modified",
+    "additions": 7,
+    "deletions": 0,
+    "changes": 7,
+    "blob_url": "https://github.com/crosspoint-reader/crosspoint-reader/blob/ee4ca18c02de3556bee2b2ee779fbeebc0e10316/src%2Fnetwork%2FFirmwareFlasher.h",
+    "raw_url": "https://github.com/crosspoint-reader/crosspoint-reader/raw/ee4ca18c02de3556bee2b2ee779fbeebc0e10316/src%2Fnetwork%2FFirmwareFlasher.h",
+    "contents_url": "https://api.github.com/repos/crosspoint-reader/crosspoint-reader/contents/src%2Fnetwork%2FFirmwareFlasher.h?ref=ee4ca18c02de3556bee2b2ee779fbeebc0e10316",
+    "patch": "@@ -23,6 +23,7 @@ enum class Result {\n   BAD_SEGMENTS,  // segment table malformed or runs past EOF\n   BAD_CHECKSUM,  // ESP image XOR checksum mismatch\n   BAD_SHA,       // SHA256 trailer mismatch (hash_appended images)\n+  BAD_CHIP,      // image chip_id doesn't match the running MCU family\n   BAD_SIZE,      // body+pad+sha length doesn't match file size\n   NO_PARTITION,\n   OOM,\n@@ -60,4 +61,10 @@ Result validateImageFile(const char* sdPath, size_t partitionSize);\n \n const char* resultName(Result r);\n \n+// Returns the chip_id (esp_image_header_t offset 12) of the currently-running\n+// image, or 0xFFFF if it cannot be read. Because the running slot booted\n+// successfully, its chip_id is authoritative for the current CPU, so a\n+// candidate image must match it to be safe to flash.\n+uint16_t runningPartitionChipId();\n+\n }  // namespace firmware_flash"
+  },
+  {
+    "sha": "6b6245f08891d91df6ef40d84b20096dc8edb00d",
+    "filename": "src/network/OtaUpdater.cpp",
+    "status": "modified",
+    "additions": 31,
+    "deletions": 0,
+    "changes": 31,
+    "blob_url": "https://github.com/crosspoint-reader/crosspoint-reader/blob/ee4ca18c02de3556bee2b2ee779fbeebc0e10316/src%2Fnetwork%2FOtaUpdater.cpp",
+    "raw_url": "https://github.com/crosspoint-reader/crosspoint-reader/raw/ee4ca18c02de3556bee2b2ee779fbeebc0e10316/src%2Fnetwork%2FOtaUpdater.cpp",
+    "contents_url": "https://api.github.com/repos/crosspoint-reader/crosspoint-reader/contents/src%2Fnetwork%2FOtaUpdater.cpp?ref=ee4ca18c02de3556bee2b2ee779fbeebc0e10316",
+    "patch": "@@ -11,8 +11,12 @@\n #include <esp_wifi.h>\n // clang-format on\n \n+#include <algorithm>\n+#include <cstring>\n #include <string>\n \n+#include \"FirmwareFlasher.h\"\n+\n namespace {\n constexpr char latestReleaseUrl[] = \"https://api.github.com/repos/crosspoint-reader/crosspoint-reader/releases/latest\";\n }  // namespace\n@@ -133,7 +137,28 @@ OtaUpdater::OtaUpdaterError OtaUpdater::installUpdate(ProgressCallback onProgres\n   processedSize = 0;\n   int lastReportedPct = -1;\n   bool flashOk = true;\n+  // The image streams in chunks; only the first bytes carry the header. Buffer\n+  // the first 14 bytes so we can read chip_id (esp_image_header_t offset 12)\n+  // and reject a wrong-MCU image before it overwrites the OTA partition.\n+  uint8_t hdr[14];\n+  size_t hdrLen = 0;\n+  bool wrongChip = false;\n   const bool fetchOk = HttpDownloader::fetchUrl(otaUrl, [&](const uint8_t* data, size_t len) {\n+    if (hdrLen < sizeof(hdr)) {\n+      const size_t take = std::min(len, sizeof(hdr) - hdrLen);\n+      std::memcpy(hdr + hdrLen, data, take);\n+      hdrLen += take;\n+      if (hdrLen == sizeof(hdr)) {\n+        uint16_t imageChip;\n+        std::memcpy(&imageChip, hdr + 12, sizeof(imageChip));\n+        const uint16_t deviceChip = firmware_flash::runningPartitionChipId();\n+        if (deviceChip != 0xFFFF && imageChip != deviceChip) {\n+          LOG_ERR(\"OTA\", \"wrong chip: image=0x%04X device=0x%04X\", imageChip, deviceChip);\n+          wrongChip = true;\n+          return false;  // abort the transfer\n+        }\n+      }\n+    }\n     if (esp_ota_write(otaHandle, data, len) != ESP_OK) {\n       flashOk = false;\n       return false;  // abort the transfer\n@@ -155,6 +180,12 @@ OtaUpdater::OtaUpdaterError OtaUpdater::installUpdate(ProgressCallback onProgres\n   /* Return back to default power saving for WiFi in case of failing */\n   esp_wifi_set_ps(WIFI_PS_MIN_MODEM);\n \n+  if (wrongChip) {\n+    LOG_ERR(\"OTA\", \"Firmware install aborted: wrong device\");\n+    esp_ota_abort(otaHandle);\n+    return WRONG_DEVICE_ERROR;\n+  }\n+\n   if (!fetchOk || !flashOk) {\n     LOG_ERR(\"OTA\", \"Firmware install failed (%s)\", flashOk ? \"download\" : \"flash write\");\n     esp_ota_abort(otaHandle);"
+  },
+  {
+    "sha": "5015a54c591f1a305b1f7110e801a394c0248a37",
+    "filename": "src/network/OtaUpdater.h",
+    "status": "modified",
+    "additions": 1,
+    "deletions": 0,
+    "changes": 1,
+    "blob_url": "https://github.com/crosspoint-reader/crosspoint-reader/blob/ee4ca18c02de3556bee2b2ee779fbeebc0e10316/src%2Fnetwork%2FOtaUpdater.h",
+    "raw_url": "https://github.com/crosspoint-reader/crosspoint-reader/raw/ee4ca18c02de3556bee2b2ee779fbeebc0e10316/src%2Fnetwork%2FOtaUpdater.h",
+    "contents_url": "https://api.github.com/repos/crosspoint-reader/crosspoint-reader/contents/src%2Fnetwork%2FOtaUpdater.h?ref=ee4ca18c02de3556bee2b2ee779fbeebc0e10316",
+    "patch": "@@ -21,6 +21,7 @@ class OtaUpdater {\n     UPDATE_OLDER_ERROR,\n     INTERNAL_UPDATE_ERROR,\n     OOM_ERROR,\n+    WRONG_DEVICE_ERROR,\n   };\n \n   size_t getOtaSize() const { return otaSize; }"
+  }
+]

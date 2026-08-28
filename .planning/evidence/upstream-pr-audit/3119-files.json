@@ -1,0 +1,14 @@
+[
+  {
+    "sha": "f46145e1b3bb3437363b95b09934d4e137e73f4a",
+    "filename": "src/activities/boot_sleep/SleepActivity.cpp",
+    "status": "modified",
+    "additions": 1,
+    "deletions": 1,
+    "changes": 2,
+    "blob_url": "https://github.com/crosspoint-reader/crosspoint-reader/blob/c24545594128aaec7e7505f71182c91003912f1f/src%2Factivities%2Fboot_sleep%2FSleepActivity.cpp",
+    "raw_url": "https://github.com/crosspoint-reader/crosspoint-reader/raw/c24545594128aaec7e7505f71182c91003912f1f/src%2Factivities%2Fboot_sleep%2FSleepActivity.cpp",
+    "contents_url": "https://api.github.com/repos/crosspoint-reader/crosspoint-reader/contents/src%2Factivities%2Fboot_sleep%2FSleepActivity.cpp?ref=c24545594128aaec7e7505f71182c91003912f1f",
+    "patch": "@@ -666,7 +666,7 @@ bool SleepActivity::renderSleepOverlayFile(HalFile& file, const char* pathForLog\n   if (alphaResult == AlphaOverlayResult::Rendered) return true;\n   if (alphaResult == AlphaOverlayResult::Error) return false;\n \n-  Bitmap bitmap(file, true);\n+  Bitmap bitmap(file);\n   const auto parseResult = bitmap.parseHeaders();\n   if (parseResult != BmpReaderError::Ok) {\n     LOG_ERR(\"SLP\", \"Invalid sleep overlay BMP %s: %s\", pathForLog, Bitmap::errorToString(parseResult));"
+  }
+]

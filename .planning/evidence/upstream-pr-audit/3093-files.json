@@ -1,0 +1,14 @@
+[
+  {
+    "sha": "d7b7f5c043e6ac7d601c0004ca9fdc3bd338382e",
+    "filename": "src/activities/boot_sleep/SleepActivity.cpp",
+    "status": "modified",
+    "additions": 10,
+    "deletions": 0,
+    "changes": 10,
+    "blob_url": "https://github.com/crosspoint-reader/crosspoint-reader/blob/2caf13f0d1fa0b5cbedd5ffdccb8e984dd3e61e3/src%2Factivities%2Fboot_sleep%2FSleepActivity.cpp",
+    "raw_url": "https://github.com/crosspoint-reader/crosspoint-reader/raw/2caf13f0d1fa0b5cbedd5ffdccb8e984dd3e61e3/src%2Factivities%2Fboot_sleep%2FSleepActivity.cpp",
+    "contents_url": "https://api.github.com/repos/crosspoint-reader/crosspoint-reader/contents/src%2Factivities%2Fboot_sleep%2FSleepActivity.cpp?ref=2caf13f0d1fa0b5cbedd5ffdccb8e984dd3e61e3",
+    "patch": "@@ -2,6 +2,7 @@\n \n #include <Epub.h>\n #include <Epub/converters/PngToFramebufferConverter.h>\n+#include <FontCacheManager.h>\n #include <FsHelpers.h>\n #include <GfxRenderer.h>\n #include <HalDisplay.h>\n@@ -476,6 +477,14 @@ bool drawSleepPopupPreservingFrame(GfxRenderer& renderer) {\n   return true;\n }\n \n+void releaseSdFontCachesForDecode(const GfxRenderer& renderer) {\n+  if (auto* fcm = renderer.getFontCacheManager()) {\n+    LOG_DBG(\"SLP\", \"Free heap before SD font cache release: %d bytes\", ESP.getFreeHeap());\n+    fcm->releaseSdFontCaches();\n+    LOG_DBG(\"SLP\", \"Free heap before sleep image decode: %d bytes\", ESP.getFreeHeap());\n+  }\n+}\n+\n }  // namespace\n \n void SleepActivity::onEnter() {\n@@ -509,6 +518,7 @@ void SleepActivity::onEnter() {\n     if (APP_STATE.lastSleepFromReader) {\n       renderer.setOrientation(GfxRenderer::Orientation::Portrait);\n     }\n+    releaseSdFontCachesForDecode(renderer);\n     return renderTransparentCustomSleepScreen();\n   }\n "
+  }
+]

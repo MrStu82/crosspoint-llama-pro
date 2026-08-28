@@ -1,0 +1,50 @@
+[
+  {
+    "sha": "7b404a9867a970238d819c88b55ec92519e3498c",
+    "filename": "src/util/HtmlToPlainText.cpp",
+    "status": "modified",
+    "additions": 4,
+    "deletions": 1,
+    "changes": 5,
+    "blob_url": "https://github.com/crosspoint-reader/crosspoint-reader/blob/74d4c40e480eaa196af84ce48ff8d5333cd003d3/src%2Futil%2FHtmlToPlainText.cpp",
+    "raw_url": "https://github.com/crosspoint-reader/crosspoint-reader/raw/74d4c40e480eaa196af84ce48ff8d5333cd003d3/src%2Futil%2FHtmlToPlainText.cpp",
+    "contents_url": "https://api.github.com/repos/crosspoint-reader/crosspoint-reader/contents/src%2Futil%2FHtmlToPlainText.cpp?ref=74d4c40e480eaa196af84ce48ff8d5333cd003d3",
+    "patch": "@@ -19,7 +19,10 @@ enum class TagBreak : uint8_t { None, Line, Paragraph };\n TagBreak tagBreak(const std::string& input, size_t start, size_t end) {\n   while (start < end && (input[start] == '/' || std::isspace(static_cast<unsigned char>(input[start])))) start++;\n   const size_t nameStart = start;\n-  while (start < end && std::isalpha(static_cast<unsigned char>(input[start]))) start++;\n+  // Alphanumeric, not alphabetic: a name scan that stops at the first digit\n+  // reads \"h1\" as \"h\", so none of the heading names below could ever match and\n+  // a definition's headings ran into the text that followed them.\n+  while (start < end && std::isalnum(static_cast<unsigned char>(input[start]))) start++;\n   const size_t len = start - nameStart;\n   if (len == 0) return TagBreak::None;\n "
+  },
+  {
+    "sha": "51897778063c9db68ab4180aec00b9573dc43511",
+    "filename": "test/CMakeLists.txt",
+    "status": "modified",
+    "additions": 1,
+    "deletions": 0,
+    "changes": 1,
+    "blob_url": "https://github.com/crosspoint-reader/crosspoint-reader/blob/74d4c40e480eaa196af84ce48ff8d5333cd003d3/test%2FCMakeLists.txt",
+    "raw_url": "https://github.com/crosspoint-reader/crosspoint-reader/raw/74d4c40e480eaa196af84ce48ff8d5333cd003d3/test%2FCMakeLists.txt",
+    "contents_url": "https://api.github.com/repos/crosspoint-reader/crosspoint-reader/contents/test%2FCMakeLists.txt?ref=74d4c40e480eaa196af84ce48ff8d5333cd003d3",
+    "patch": "@@ -44,6 +44,7 @@ add_subdirectory(differential_rounding)\n add_subdirectory(hyphenation_eval)\n add_subdirectory(utf8_compose)\n add_subdirectory(opds_filename)\n+add_subdirectory(html_to_plain_text)\n add_subdirectory(minibidi_arabic)\n add_subdirectory(combining_marks)\n add_subdirectory(credential_integrity)"
+  },
+  {
+    "sha": "a23d2f411f75f1c829b3892735450b3fbd5286cc",
+    "filename": "test/html_to_plain_text/CMakeLists.txt",
+    "status": "added",
+    "additions": 17,
+    "deletions": 0,
+    "changes": 17,
+    "blob_url": "https://github.com/crosspoint-reader/crosspoint-reader/blob/74d4c40e480eaa196af84ce48ff8d5333cd003d3/test%2Fhtml_to_plain_text%2FCMakeLists.txt",
+    "raw_url": "https://github.com/crosspoint-reader/crosspoint-reader/raw/74d4c40e480eaa196af84ce48ff8d5333cd003d3/test%2Fhtml_to_plain_text%2FCMakeLists.txt",
+    "contents_url": "https://api.github.com/repos/crosspoint-reader/crosspoint-reader/contents/test%2Fhtml_to_plain_text%2FCMakeLists.txt?ref=74d4c40e480eaa196af84ce48ff8d5333cd003d3",
+    "patch": "@@ -0,0 +1,17 @@\n+add_executable(HtmlToPlainTextTest\n+  HtmlToPlainTextTest.cpp\n+  ${REPO_ROOT}/src/util/HtmlToPlainText.cpp\n+  ${REPO_ROOT}/lib/Epub/Epub/htmlEntities.cpp\n+)\n+\n+target_include_directories(HtmlToPlainTextTest PRIVATE\n+  ${REPO_ROOT}/src/util\n+  ${REPO_ROOT}/lib/Epub\n+)\n+\n+target_link_libraries(HtmlToPlainTextTest PRIVATE\n+  crosspoint_test_common\n+  GTest::gtest_main\n+)\n+\n+gtest_discover_tests(HtmlToPlainTextTest)"
+  },
+  {
+    "sha": "dceb9c9fa64d0862f21afe6a420795498f4c967f",
+    "filename": "test/html_to_plain_text/HtmlToPlainTextTest.cpp",
+    "status": "added",
+    "additions": 63,
+    "deletions": 0,
+    "changes": 63,
+    "blob_url": "https://github.com/crosspoint-reader/crosspoint-reader/blob/74d4c40e480eaa196af84ce48ff8d5333cd003d3/test%2Fhtml_to_plain_text%2FHtmlToPlainTextTest.cpp",
+    "raw_url": "https://github.com/crosspoint-reader/crosspoint-reader/raw/74d4c40e480eaa196af84ce48ff8d5333cd003d3/test%2Fhtml_to_plain_text%2FHtmlToPlainTextTest.cpp",
+    "contents_url": "https://api.github.com/repos/crosspoint-reader/crosspoint-reader/contents/test%2Fhtml_to_plain_text%2FHtmlToPlainTextTest.cpp?ref=74d4c40e480eaa196af84ce48ff8d5333cd003d3",
+    "patch": "@@ -0,0 +1,63 @@\n+// Host tests for htmlToPlainText(), used to render dictionary definitions that\n+// cannot be laid out as styled pages.\n+\n+#include <gtest/gtest.h>\n+\n+#include <string>\n+\n+#include \"HtmlToPlainText.h\"\n+\n+namespace {\n+\n+TEST(HtmlToPlainText, StripsTagsAndKeepsText) {\n+  EXPECT_EQ(htmlToPlainText(\"<b>quixotic</b> <i>adj.</i>\"), \"quixotic adj.\");\n+  EXPECT_EQ(htmlToPlainText(\"<span class=\\\"x\\\">in span</span>\"), \"in span\");\n+  EXPECT_EQ(htmlToPlainText(\"plain\"), \"plain\");\n+  EXPECT_EQ(htmlToPlainText(\"\"), \"\");\n+}\n+\n+TEST(HtmlToPlainText, BlockElementsBecomeBreaks) {\n+  EXPECT_EQ(htmlToPlainText(\"a<br>b\"), \"a\\nb\");\n+  EXPECT_EQ(htmlToPlainText(\"<div>a</div><div>b</div>\"), \"a\\nb\");\n+  EXPECT_EQ(htmlToPlainText(\"<p>a</p><p>b</p>\"), \"a\\n\\nb\");\n+  // Consecutive breaks do not stack up.\n+  EXPECT_EQ(htmlToPlainText(\"a<br><br><br>b\"), \"a\\nb\");\n+}\n+\n+TEST(HtmlToPlainText, HeadingsBreakLikeParagraphs) {\n+  // tagBreak() lists h1-h6 among the paragraph-breaking names, so they must\n+  // actually reach that comparison -- a name scan that stops at the first digit\n+  // reads \"h1\" as \"h\" and the heading runs into the text after it.\n+  for (const char* tag : {\"h1\", \"h2\", \"h3\", \"h4\", \"h5\", \"h6\"}) {\n+    const std::string html = std::string(\"<\") + tag + \">title</\" + tag + \">body\";\n+    EXPECT_EQ(htmlToPlainText(html), \"title\\n\\nbody\") << tag;\n+  }\n+  EXPECT_EQ(htmlToPlainText(\"<hr>after\"), \"after\");\n+}\n+\n+TEST(HtmlToPlainText, DecodesEntities) {\n+  EXPECT_EQ(htmlToPlainText(\"Tom &amp; Jerry\"), \"Tom & Jerry\");\n+  EXPECT_EQ(htmlToPlainText(\"a&nbsp;b\"),\n+            \"a\\xC2\\xA0\"\n+            \"b\");\n+  EXPECT_EQ(htmlToPlainText(\"&#65;&#66;\"), \"AB\");\n+  EXPECT_EQ(htmlToPlainText(\"&#x2014;\"), \"\\xE2\\x80\\x94\");\n+  // Not entities: left as written rather than swallowed.\n+  EXPECT_EQ(htmlToPlainText(\"&notanentity;\"), \"&notanentity;\");\n+  EXPECT_EQ(htmlToPlainText(\"100% & up\"), \"100% & up\");\n+}\n+\n+TEST(HtmlToPlainText, TrimsSurroundingWhitespace) {\n+  EXPECT_EQ(htmlToPlainText(\"<p>only</p>\"), \"only\");\n+  EXPECT_EQ(htmlToPlainText(\"text   \"), \"text\");\n+  EXPECT_EQ(htmlToPlainText(\"a\\tb\"), \"a b\");\n+  EXPECT_EQ(htmlToPlainText(\"<br>a\"), \"a\");\n+}\n+\n+TEST(HtmlToPlainText, SurvivesMalformedMarkup) {\n+  EXPECT_EQ(htmlToPlainText(\"a <b\"), \"a <b\");\n+  EXPECT_EQ(htmlToPlainText(\"x < y\"), \"x < y\");\n+  EXPECT_EQ(htmlToPlainText(\"<!-- comment -->kept\"), \"kept\");\n+}\n+\n+}  // namespace"
+  }
+]

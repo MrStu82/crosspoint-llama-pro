@@ -1,0 +1,38 @@
+[
+  {
+    "sha": "58c129cf2cff4a9b83fd118ea2422eedaba0ed99",
+    "filename": "src/activities/network/WifiSelectionActivity.cpp",
+    "status": "modified",
+    "additions": 1,
+    "deletions": 1,
+    "changes": 2,
+    "blob_url": "https://github.com/crosspoint-reader/crosspoint-reader/blob/91aa634c2d60e53b3c615201eb7cf7fd0998ba36/src%2Factivities%2Fnetwork%2FWifiSelectionActivity.cpp",
+    "raw_url": "https://github.com/crosspoint-reader/crosspoint-reader/raw/91aa634c2d60e53b3c615201eb7cf7fd0998ba36/src%2Factivities%2Fnetwork%2FWifiSelectionActivity.cpp",
+    "contents_url": "https://api.github.com/repos/crosspoint-reader/crosspoint-reader/contents/src%2Factivities%2Fnetwork%2FWifiSelectionActivity.cpp?ref=91aa634c2d60e53b3c615201eb7cf7fd0998ba36",
+    "patch": "@@ -347,7 +347,7 @@ void WifiSelectionActivity::promptPasswordEntry() {\n   startActivityForResult(std::make_unique<KeyboardEntryActivity>(renderer, mappedInput, tr(STR_ENTER_WIFI_PASSWORD),\n                                                                  \"\",  // No initial text\n                                                                  64,  // Max password length\n-                                                                 InputType::Password),\n+                                                                 InputType::Text),\n                          [this](const ActivityResult& result) {\n                            if (result.isCancelled) {\n                              state = WifiSelectionState::NETWORK_LIST;"
+  },
+  {
+    "sha": "63894ab61a6f09c801c9f38d8034e1fc848db214",
+    "filename": "src/activities/settings/KOReaderSettingsActivity.cpp",
+    "status": "modified",
+    "additions": 9,
+    "deletions": 10,
+    "changes": 19,
+    "blob_url": "https://github.com/crosspoint-reader/crosspoint-reader/blob/91aa634c2d60e53b3c615201eb7cf7fd0998ba36/src%2Factivities%2Fsettings%2FKOReaderSettingsActivity.cpp",
+    "raw_url": "https://github.com/crosspoint-reader/crosspoint-reader/raw/91aa634c2d60e53b3c615201eb7cf7fd0998ba36/src%2Factivities%2Fsettings%2FKOReaderSettingsActivity.cpp",
+    "contents_url": "https://api.github.com/repos/crosspoint-reader/crosspoint-reader/contents/src%2Factivities%2Fsettings%2FKOReaderSettingsActivity.cpp?ref=91aa634c2d60e53b3c615201eb7cf7fd0998ba36",
+    "patch": "@@ -51,16 +51,15 @@ void KOReaderSettingsActivity::activateIndex(const int index) {\n                            });\n   } else if (index == 1) {\n     // Password\n-    startActivityForResult(\n-        std::make_unique<KeyboardEntryActivity>(renderer, mappedInput, tr(STR_KOREADER_PASSWORD),\n-                                                KOREADER_STORE.getPassword(), 64, InputType::Password),\n-        [this](const ActivityResult& result) {\n-          if (!result.isCancelled) {\n-            const auto& kb = std::get<KeyboardResult>(result.data);\n-            KOREADER_STORE.setCredentials(KOREADER_STORE.getUsername(), kb.text);\n-            KOREADER_STORE.saveToFile();\n-          }\n-        });\n+    startActivityForResult(std::make_unique<KeyboardEntryActivity>(renderer, mappedInput, tr(STR_KOREADER_PASSWORD),\n+                                                                   KOREADER_STORE.getPassword(), 64, InputType::Text),\n+                           [this](const ActivityResult& result) {\n+                             if (!result.isCancelled) {\n+                               const auto& kb = std::get<KeyboardResult>(result.data);\n+                               KOREADER_STORE.setCredentials(KOREADER_STORE.getUsername(), kb.text);\n+                               KOREADER_STORE.saveToFile();\n+                             }\n+                           });\n   } else if (index == 2) {\n     // Sync Server URL - prefill with https:// if empty to save typing\n     const std::string currentUrl = KOREADER_STORE.getServerUrl();"
+  },
+  {
+    "sha": "6bacb551c43d3544d79a59f3c16be870a7cbde0a",
+    "filename": "src/activities/settings/OpdsSettingsActivity.cpp",
+    "status": "modified",
+    "additions": 1,
+    "deletions": 1,
+    "changes": 2,
+    "blob_url": "https://github.com/crosspoint-reader/crosspoint-reader/blob/91aa634c2d60e53b3c615201eb7cf7fd0998ba36/src%2Factivities%2Fsettings%2FOpdsSettingsActivity.cpp",
+    "raw_url": "https://github.com/crosspoint-reader/crosspoint-reader/raw/91aa634c2d60e53b3c615201eb7cf7fd0998ba36/src%2Factivities%2Fsettings%2FOpdsSettingsActivity.cpp",
+    "contents_url": "https://api.github.com/repos/crosspoint-reader/crosspoint-reader/contents/src%2Factivities%2Fsettings%2FOpdsSettingsActivity.cpp?ref=91aa634c2d60e53b3c615201eb7cf7fd0998ba36",
+    "patch": "@@ -148,7 +148,7 @@ void OpdsSettingsActivity::handleSelection() {\n       }\n     };\n     startActivityForResult(std::make_unique<KeyboardEntryActivity>(renderer, mappedInput, tr(STR_PASSWORD),\n-                                                                   editServer.password, 63, InputType::Password),\n+                                                                   editServer.password, 63, InputType::Text),\n                            handler);\n   } else if (nav.selected == 4 && !isNewServer) {\n     // Delete flow is only available for existing servers."
+  }
+]

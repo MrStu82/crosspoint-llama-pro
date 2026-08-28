@@ -1,0 +1,62 @@
+[
+  {
+    "sha": "51de5ab24f39d3db45633ca3e79b6f2ab75b55d7",
+    "filename": "lib/Epub/Epub/parsers/ContentOpfParser.cpp",
+    "status": "modified",
+    "additions": 21,
+    "deletions": 21,
+    "changes": 42,
+    "blob_url": "https://github.com/crosspoint-reader/crosspoint-reader/blob/a7d5e2c6e99e517f5539992aab21d7c09be6745b/lib%2FEpub%2FEpub%2Fparsers%2FContentOpfParser.cpp",
+    "raw_url": "https://github.com/crosspoint-reader/crosspoint-reader/raw/a7d5e2c6e99e517f5539992aab21d7c09be6745b/lib%2FEpub%2FEpub%2Fparsers%2FContentOpfParser.cpp",
+    "contents_url": "https://api.github.com/repos/crosspoint-reader/crosspoint-reader/contents/lib%2FEpub%2FEpub%2Fparsers%2FContentOpfParser.cpp?ref=a7d5e2c6e99e517f5539992aab21d7c09be6745b",
+    "patch": "@@ -95,43 +95,43 @@ void XMLCALL ContentOpfParser::startElement(void* userData, const XML_Char* name\n   auto* self = static_cast<ContentOpfParser*>(userData);\n   (void)atts;\n \n-  if (self->state == START && (strcmp(name, \"package\") == 0 || strcmp(name, \"opf:package\") == 0)) {\n+  if (self->state == START && xmlLocalNameEquals(name, \"package\")) {\n     self->state = IN_PACKAGE;\n     return;\n   }\n \n-  if (self->state == IN_PACKAGE && (strcmp(name, \"metadata\") == 0 || strcmp(name, \"opf:metadata\") == 0)) {\n+  if (self->state == IN_PACKAGE && xmlLocalNameEquals(name, \"metadata\")) {\n     self->state = IN_METADATA;\n     return;\n   }\n \n-  if (self->state == IN_METADATA && strcmp(name, \"dc:title\") == 0) {\n-    // Only capture the first dc:title element; subsequent ones are subtitles\n+  if (self->state == IN_METADATA && xmlLocalNameEquals(name, \"title\")) {\n+    // Only capture the first title element; subsequent ones are subtitles\n     if (self->title.empty()) {\n       self->state = IN_BOOK_TITLE;\n     }\n     return;\n   }\n \n-  if (self->state == IN_METADATA && strcmp(name, \"dc:creator\") == 0) {\n+  if (self->state == IN_METADATA && xmlLocalNameEquals(name, \"creator\")) {\n     self->state = IN_BOOK_AUTHOR;\n     return;\n   }\n \n-  if (self->state == IN_METADATA && strcmp(name, \"dc:language\") == 0) {\n+  if (self->state == IN_METADATA && xmlLocalNameEquals(name, \"language\")) {\n     self->state = IN_BOOK_LANGUAGE;\n     return;\n   }\n \n-  if (self->state == IN_PACKAGE && (strcmp(name, \"manifest\") == 0 || strcmp(name, \"opf:manifest\") == 0)) {\n+  if (self->state == IN_PACKAGE && xmlLocalNameEquals(name, \"manifest\")) {\n     self->state = IN_MANIFEST;\n     if (!Storage.openFileForWrite(\"COF\", self->cachePath + itemCacheFile, self->tempItemStore)) {\n       LOG_ERR(\"COF\", \"Couldn't open temp items file for writing. This is probably going to be a fatal error.\");\n     }\n     return;\n   }\n \n-  if (self->state == IN_PACKAGE && (strcmp(name, \"spine\") == 0 || strcmp(name, \"opf:spine\") == 0)) {\n+  if (self->state == IN_PACKAGE && xmlLocalNameEquals(name, \"spine\")) {\n     self->state = IN_SPINE;\n     if (!Storage.openFileForRead(\"COF\", self->cachePath + itemCacheFile, self->tempItemStore)) {\n       LOG_ERR(\"COF\", \"Couldn't open temp items file for reading. This is probably going to be a fatal error.\");\n@@ -150,7 +150,7 @@ void XMLCALL ContentOpfParser::startElement(void* userData, const XML_Char* name\n     return;\n   }\n \n-  if (self->state == IN_PACKAGE && (strcmp(name, \"guide\") == 0 || strcmp(name, \"opf:guide\") == 0)) {\n+  if (self->state == IN_PACKAGE && xmlLocalNameEquals(name, \"guide\")) {\n     self->state = IN_GUIDE;\n     // TODO Remove print\n     LOG_DBG(\"COF\", \"Entering guide state.\");\n@@ -160,7 +160,7 @@ void XMLCALL ContentOpfParser::startElement(void* userData, const XML_Char* name\n     return;\n   }\n \n-  if (self->state == IN_METADATA && (strcmp(name, \"meta\") == 0 || strcmp(name, \"opf:meta\") == 0)) {\n+  if (self->state == IN_METADATA && xmlLocalNameEquals(name, \"meta\")) {\n     bool isCover = false;\n     std::string coverItemId;\n \n@@ -178,7 +178,7 @@ void XMLCALL ContentOpfParser::startElement(void* userData, const XML_Char* name\n     return;\n   }\n \n-  if (self->state == IN_MANIFEST && (strcmp(name, \"item\") == 0 || strcmp(name, \"opf:item\") == 0)) {\n+  if (self->state == IN_MANIFEST && xmlLocalNameEquals(name, \"item\")) {\n     std::string itemId;\n     std::string href;\n     std::string mediaType;\n@@ -255,7 +255,7 @@ void XMLCALL ContentOpfParser::startElement(void* userData, const XML_Char* name\n   // NOTE: This relies on spine appearing after item manifest (which is pretty safe as it's part of the EPUB spec)\n   // Only run the spine parsing if there's a cache to add it to\n   if (self->cache) {\n-    if (self->state == IN_SPINE && (strcmp(name, \"itemref\") == 0 || strcmp(name, \"opf:itemref\") == 0)) {\n+    if (self->state == IN_SPINE && xmlLocalNameEquals(name, \"itemref\")) {\n       for (int i = 0; atts[i]; i += 2) {\n         if (strcmp(atts[i], \"idref\") == 0) {\n           const std::string idref = atts[i + 1];\n@@ -309,7 +309,7 @@ void XMLCALL ContentOpfParser::startElement(void* userData, const XML_Char* name\n     }\n   }\n   // parse the guide\n-  if (self->state == IN_GUIDE && (strcmp(name, \"reference\") == 0 || strcmp(name, \"opf:reference\") == 0)) {\n+  if (self->state == IN_GUIDE && xmlLocalNameEquals(name, \"reference\")) {\n     std::string type;\n     std::string guideHref;\n     for (int i = 0; atts[i]; i += 2) {\n@@ -362,45 +362,45 @@ void XMLCALL ContentOpfParser::endElement(void* userData, const XML_Char* name)\n   auto* self = static_cast<ContentOpfParser*>(userData);\n   (void)name;\n \n-  if (self->state == IN_SPINE && (strcmp(name, \"spine\") == 0 || strcmp(name, \"opf:spine\") == 0)) {\n+  if (self->state == IN_SPINE && xmlLocalNameEquals(name, \"spine\")) {\n     self->state = IN_PACKAGE;\n     self->tempItemStore.close();\n     return;\n   }\n \n-  if (self->state == IN_GUIDE && (strcmp(name, \"guide\") == 0 || strcmp(name, \"opf:guide\") == 0)) {\n+  if (self->state == IN_GUIDE && xmlLocalNameEquals(name, \"guide\")) {\n     self->state = IN_PACKAGE;\n     self->tempItemStore.close();\n     return;\n   }\n \n-  if (self->state == IN_MANIFEST && (strcmp(name, \"manifest\") == 0 || strcmp(name, \"opf:manifest\") == 0)) {\n+  if (self->state == IN_MANIFEST && xmlLocalNameEquals(name, \"manifest\")) {\n     self->state = IN_PACKAGE;\n     self->tempItemStore.close();\n     return;\n   }\n \n-  if (self->state == IN_BOOK_TITLE && strcmp(name, \"dc:title\") == 0) {\n+  if (self->state == IN_BOOK_TITLE && xmlLocalNameEquals(name, \"title\")) {\n     self->state = IN_METADATA;\n     return;\n   }\n \n-  if (self->state == IN_BOOK_AUTHOR && strcmp(name, \"dc:creator\") == 0) {\n+  if (self->state == IN_BOOK_AUTHOR && xmlLocalNameEquals(name, \"creator\")) {\n     self->state = IN_METADATA;\n     return;\n   }\n \n-  if (self->state == IN_BOOK_LANGUAGE && strcmp(name, \"dc:language\") == 0) {\n+  if (self->state == IN_BOOK_LANGUAGE && xmlLocalNameEquals(name, \"language\")) {\n     self->state = IN_METADATA;\n     return;\n   }\n \n-  if (self->state == IN_METADATA && (strcmp(name, \"metadata\") == 0 || strcmp(name, \"opf:metadata\") == 0)) {\n+  if (self->state == IN_METADATA && xmlLocalNameEquals(name, \"metadata\")) {\n     self->state = IN_PACKAGE;\n     return;\n   }\n \n-  if (self->state == IN_PACKAGE && (strcmp(name, \"package\") == 0 || strcmp(name, \"opf:package\") == 0)) {\n+  if (self->state == IN_PACKAGE && xmlLocalNameEquals(name, \"package\")) {\n     self->state = START;\n     return;\n   }"
+  },
+  {
+    "sha": "dbffec8068a30de3d72485585c392e0d7c38f7e4",
+    "filename": "lib/XmlParserUtils/XmlParserUtils.h",
+    "status": "modified",
+    "additions": 12,
+    "deletions": 0,
+    "changes": 12,
+    "blob_url": "https://github.com/crosspoint-reader/crosspoint-reader/blob/a7d5e2c6e99e517f5539992aab21d7c09be6745b/lib%2FXmlParserUtils%2FXmlParserUtils.h",
+    "raw_url": "https://github.com/crosspoint-reader/crosspoint-reader/raw/a7d5e2c6e99e517f5539992aab21d7c09be6745b/lib%2FXmlParserUtils%2FXmlParserUtils.h",
+    "contents_url": "https://api.github.com/repos/crosspoint-reader/crosspoint-reader/contents/lib%2FXmlParserUtils%2FXmlParserUtils.h?ref=a7d5e2c6e99e517f5539992aab21d7c09be6745b",
+    "patch": "@@ -2,6 +2,8 @@\n \n #include <expat.h>\n \n+#include <cstring>\n+\n // Safely tear down an expat parser: stop processing, clear callbacks, free, and null the pointer.\n inline void destroyXmlParser(XML_Parser& parser) {\n   if (!parser) return;\n@@ -11,3 +13,13 @@ inline void destroyXmlParser(XML_Parser& parser) {\n   XML_ParserFree(parser);\n   parser = nullptr;\n }\n+\n+inline const char* xmlLocalName(const char* qName) {\n+  if (!qName) return \"\";\n+  const char* const separator = std::strchr(qName, ':');\n+  return separator ? separator + 1 : qName;\n+}\n+\n+inline bool xmlLocalNameEquals(const char* qName, const char* expected) {\n+  return std::strcmp(xmlLocalName(qName), expected) == 0;\n+}"
+  },
+  {
+    "sha": "85e2551ce9cda646ccdb84b135752472ebeac908",
+    "filename": "test/CMakeLists.txt",
+    "status": "modified",
+    "additions": 1,
+    "deletions": 0,
+    "changes": 1,
+    "blob_url": "https://github.com/crosspoint-reader/crosspoint-reader/blob/a7d5e2c6e99e517f5539992aab21d7c09be6745b/test%2FCMakeLists.txt",
+    "raw_url": "https://github.com/crosspoint-reader/crosspoint-reader/raw/a7d5e2c6e99e517f5539992aab21d7c09be6745b/test%2FCMakeLists.txt",
+    "contents_url": "https://api.github.com/repos/crosspoint-reader/crosspoint-reader/contents/test%2FCMakeLists.txt?ref=a7d5e2c6e99e517f5539992aab21d7c09be6745b",
+    "patch": "@@ -47,4 +47,5 @@ add_subdirectory(opds_filename)\n add_subdirectory(minibidi_arabic)\n add_subdirectory(combining_marks)\n add_subdirectory(credential_integrity)\n+add_subdirectory(xml_parser_utils)\n add_subdirectory(token_boundary)"
+  },
+  {
+    "sha": "38c12f36844ffaa17ce5a54490594ab3ba52dd3f",
+    "filename": "test/xml_parser_utils/CMakeLists.txt",
+    "status": "added",
+    "additions": 15,
+    "deletions": 0,
+    "changes": 15,
+    "blob_url": "https://github.com/crosspoint-reader/crosspoint-reader/blob/a7d5e2c6e99e517f5539992aab21d7c09be6745b/test%2Fxml_parser_utils%2FCMakeLists.txt",
+    "raw_url": "https://github.com/crosspoint-reader/crosspoint-reader/raw/a7d5e2c6e99e517f5539992aab21d7c09be6745b/test%2Fxml_parser_utils%2FCMakeLists.txt",
+    "contents_url": "https://api.github.com/repos/crosspoint-reader/crosspoint-reader/contents/test%2Fxml_parser_utils%2FCMakeLists.txt?ref=a7d5e2c6e99e517f5539992aab21d7c09be6745b",
+    "patch": "@@ -0,0 +1,15 @@\n+add_executable(XmlParserUtilsTest\n+  XmlParserUtilsTest.cpp\n+)\n+\n+target_include_directories(XmlParserUtilsTest PRIVATE\n+  ${REPO_ROOT}/lib/XmlParserUtils\n+  ${REPO_ROOT}/lib/expat\n+)\n+\n+target_link_libraries(XmlParserUtilsTest PRIVATE\n+  crosspoint_test_common\n+  GTest::gtest_main\n+)\n+\n+gtest_discover_tests(XmlParserUtilsTest)"
+  },
+  {
+    "sha": "aac96d080b237b3763d5697488e9610b00ca9b63",
+    "filename": "test/xml_parser_utils/XmlParserUtilsTest.cpp",
+    "status": "added",
+    "additions": 9,
+    "deletions": 0,
+    "changes": 9,
+    "blob_url": "https://github.com/crosspoint-reader/crosspoint-reader/blob/a7d5e2c6e99e517f5539992aab21d7c09be6745b/test%2Fxml_parser_utils%2FXmlParserUtilsTest.cpp",
+    "raw_url": "https://github.com/crosspoint-reader/crosspoint-reader/raw/a7d5e2c6e99e517f5539992aab21d7c09be6745b/test%2Fxml_parser_utils%2FXmlParserUtilsTest.cpp",
+    "contents_url": "https://api.github.com/repos/crosspoint-reader/crosspoint-reader/contents/test%2Fxml_parser_utils%2FXmlParserUtilsTest.cpp?ref=a7d5e2c6e99e517f5539992aab21d7c09be6745b",
+    "patch": "@@ -0,0 +1,9 @@\n+#include <gtest/gtest.h>\n+\n+#include \"XmlParserUtils.h\"\n+\n+TEST(XmlParserUtils, MatchesLocalNamesRegardlessOfPrefix) {\n+  EXPECT_TRUE(xmlLocalNameEquals(\"package\", \"package\"));\n+  EXPECT_TRUE(xmlLocalNameEquals(\"ns0:package\", \"package\"));\n+  EXPECT_FALSE(xmlLocalNameEquals(\"ns0:metadata\", \"package\"));\n+}"
+  }
+]

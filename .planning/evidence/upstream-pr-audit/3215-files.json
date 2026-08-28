@@ -1,0 +1,14 @@
+[
+  {
+    "sha": "90518ecf843d34ec9da9d7133a10de4e0898fe05",
+    "filename": "lib/hal/HalPowerManager.cpp",
+    "status": "modified",
+    "additions": 21,
+    "deletions": 0,
+    "changes": 21,
+    "blob_url": "https://github.com/crosspoint-reader/crosspoint-reader/blob/da52e367634b47250a3acd304d195476f524af15/lib%2Fhal%2FHalPowerManager.cpp",
+    "raw_url": "https://github.com/crosspoint-reader/crosspoint-reader/raw/da52e367634b47250a3acd304d195476f524af15/lib%2Fhal%2FHalPowerManager.cpp",
+    "contents_url": "https://api.github.com/repos/crosspoint-reader/crosspoint-reader/contents/lib%2Fhal%2FHalPowerManager.cpp?ref=da52e367634b47250a3acd304d195476f524af15",
+    "patch": "@@ -89,6 +89,27 @@ void HalPowerManager::startDeepSleep(HalGPIO& gpio) const {\n   }\n #endif\n \n+  // Hold every configured power-latch pin HIGH through deep sleep. These are\n+  // keep-alive enables (the X4 Pro's master peripheral rail on GPIO1, the\n+  // Sticky's PWR_HOLD/PWR_LOCK): deepSleep() isolates all pads\n+  // (esp_sleep_config_gpio_isolate), so a latch without an armed hold loses its\n+  // output driver and floats — on the X4 Pro the latch drops as soon as\n+  // external power leaves (serial/pogo adapter unplugged), and the next power-\n+  // button press cold-boots instead of fast-waking. holdPowerRails() asserted\n+  // the latches at boot but arms no sleep hold; arm it here instead. Skips\n+  // XTEINK_C3_GPIO13: it IS power.latch0 on the C3 Xteink boards, where the\n+  // block above drives it LOW on purpose (battery power-off).\n+  for (const int8_t pin : {BoardConfig::ACTIVE.power.latch0, BoardConfig::ACTIVE.power.latch1}) {\n+    if (pin < 0 || static_cast<gpio_num_t>(pin) == XTEINK_C3_GPIO13) continue;\n+    const auto g = static_cast<gpio_num_t>(pin);\n+    // Release any surviving pad hold first: a held pad silently ignores the\n+    // drive below (same trap as the GPIO13 block above).\n+    gpio_hold_dis(g);\n+    pinMode(pin, OUTPUT);\n+    digitalWrite(pin, HIGH);\n+    gpio_hold_en(g);\n+  }\n+\n   // Cut the gated peripheral rails (touch/SD/EPD on boards like the Sticky) and\n   // hold the enables off through deep sleep — otherwise the GT911 and SD card\n   // stay powered all through \"off\" and drain the battery. No-op on boards with"
+  }
+]

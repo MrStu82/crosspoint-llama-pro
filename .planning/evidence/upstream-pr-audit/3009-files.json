@@ -1,0 +1,62 @@
+[
+  {
+    "sha": "badffa1ff30d82356cf294c456d8b542d80c140b",
+    "filename": "src/activities/ActivityManager.cpp",
+    "status": "modified",
+    "additions": 2,
+    "deletions": 2,
+    "changes": 4,
+    "blob_url": "https://github.com/crosspoint-reader/crosspoint-reader/blob/660e8f33a1d85dcf7c0d1ece9b175b0f3ea9b43e/src%2Factivities%2FActivityManager.cpp",
+    "raw_url": "https://github.com/crosspoint-reader/crosspoint-reader/raw/660e8f33a1d85dcf7c0d1ece9b175b0f3ea9b43e/src%2Factivities%2FActivityManager.cpp",
+    "contents_url": "https://api.github.com/repos/crosspoint-reader/crosspoint-reader/contents/src%2Factivities%2FActivityManager.cpp?ref=660e8f33a1d85dcf7c0d1ece9b175b0f3ea9b43e",
+    "patch": "@@ -256,7 +256,7 @@ void ActivityManager::goToFullScreenMessage(std::string message, EpdFontFamily::\n   replaceActivity(std::make_unique<FullScreenMessageActivity>(renderer, mappedInput, std::move(message), style));\n }\n \n-void ActivityManager::goHome(HomeMenuItem initialMenuItem) {\n+void ActivityManager::goHome(HomeMenuItem initialMenuItem, bool cleanInitialRefresh) {\n   if (initialMenuItem == HomeMenuItem::NONE && currentActivity) {\n     const auto& activityName = currentActivity->name;\n     if (activityName == \"FileBrowser\") {\n@@ -271,7 +271,7 @@ void ActivityManager::goHome(HomeMenuItem initialMenuItem) {\n       initialMenuItem = HomeMenuItem::SETTINGS_MENU;\n     }\n   }\n-  replaceActivity(std::make_unique<HomeActivity>(renderer, mappedInput, initialMenuItem));\n+  replaceActivity(std::make_unique<HomeActivity>(renderer, mappedInput, initialMenuItem, cleanInitialRefresh));\n }\n void ActivityManager::goToCrashReport() { replaceActivity(std::make_unique<CrashActivity>(renderer, mappedInput)); }\n "
+  },
+  {
+    "sha": "bfba4b906841f3740d2a0f151a59930fdbcf7f64",
+    "filename": "src/activities/ActivityManager.h",
+    "status": "modified",
+    "additions": 1,
+    "deletions": 1,
+    "changes": 2,
+    "blob_url": "https://github.com/crosspoint-reader/crosspoint-reader/blob/660e8f33a1d85dcf7c0d1ece9b175b0f3ea9b43e/src%2Factivities%2FActivityManager.h",
+    "raw_url": "https://github.com/crosspoint-reader/crosspoint-reader/raw/660e8f33a1d85dcf7c0d1ece9b175b0f3ea9b43e/src%2Factivities%2FActivityManager.h",
+    "contents_url": "https://api.github.com/repos/crosspoint-reader/crosspoint-reader/contents/src%2Factivities%2FActivityManager.h?ref=660e8f33a1d85dcf7c0d1ece9b175b0f3ea9b43e",
+    "patch": "@@ -91,7 +91,7 @@ class ActivityManager {\n   void goToBoot();\n   void goToFullScreenMessage(std::string message, EpdFontFamily::Style style = EpdFontFamily::REGULAR);\n   void goToCrashReport();\n-  void goHome(HomeMenuItem initialMenuItem = HomeMenuItem::NONE);\n+  void goHome(HomeMenuItem initialMenuItem = HomeMenuItem::NONE, bool cleanInitialRefresh = false);\n \n   // This will move current activity to stack instead of deleting it\n   void pushActivity(std::unique_ptr<Activity>&& activity);"
+  },
+  {
+    "sha": "228b2e6055373e46856f71a33af0343fa4323099",
+    "filename": "src/activities/home/HomeActivity.cpp",
+    "status": "modified",
+    "additions": 2,
+    "deletions": 1,
+    "changes": 3,
+    "blob_url": "https://github.com/crosspoint-reader/crosspoint-reader/blob/660e8f33a1d85dcf7c0d1ece9b175b0f3ea9b43e/src%2Factivities%2Fhome%2FHomeActivity.cpp",
+    "raw_url": "https://github.com/crosspoint-reader/crosspoint-reader/raw/660e8f33a1d85dcf7c0d1ece9b175b0f3ea9b43e/src%2Factivities%2Fhome%2FHomeActivity.cpp",
+    "contents_url": "https://api.github.com/repos/crosspoint-reader/crosspoint-reader/contents/src%2Factivities%2Fhome%2FHomeActivity.cpp?ref=660e8f33a1d85dcf7c0d1ece9b175b0f3ea9b43e",
+    "patch": "@@ -4,6 +4,7 @@\n #include <Epub.h>\n #include <FsHelpers.h>\n #include <GfxRenderer.h>\n+#include <HalDisplay.h>\n #include <HalStorage.h>\n #include <I18n.h>\n #include <Utf8.h>\n@@ -335,7 +336,7 @@ void HomeActivity::render(RenderLock&&) {\n                                             tr(STR_DIR_DOWN));\n   GUI.drawButtonHints(renderer, labels.btn1, labels.btn2, labels.btn3, labels.btn4);\n \n-  renderer.displayBuffer();\n+  renderer.displayBuffer(cleanInitialRefresh && !firstRenderDone ? HalDisplay::HALF_REFRESH : HalDisplay::FAST_REFRESH);\n \n   if (!firstRenderDone) {\n     firstRenderDone = true;"
+  },
+  {
+    "sha": "4ea540e57f27abe992dc6a0449d24345c97e3c2a",
+    "filename": "src/activities/home/HomeActivity.h",
+    "status": "modified",
+    "additions": 5,
+    "deletions": 2,
+    "changes": 7,
+    "blob_url": "https://github.com/crosspoint-reader/crosspoint-reader/blob/660e8f33a1d85dcf7c0d1ece9b175b0f3ea9b43e/src%2Factivities%2Fhome%2FHomeActivity.h",
+    "raw_url": "https://github.com/crosspoint-reader/crosspoint-reader/raw/660e8f33a1d85dcf7c0d1ece9b175b0f3ea9b43e/src%2Factivities%2Fhome%2FHomeActivity.h",
+    "contents_url": "https://api.github.com/repos/crosspoint-reader/crosspoint-reader/contents/src%2Factivities%2Fhome%2FHomeActivity.h?ref=660e8f33a1d85dcf7c0d1ece9b175b0f3ea9b43e",
+    "patch": "@@ -29,6 +29,7 @@ class HomeActivity final : public Activity {\n   int coverRectH = 0;\n   std::vector<RecentBook> recentBooks;\n   const HomeMenuItem initialMenuItem;\n+  const bool cleanInitialRefresh;\n \n   // Convert HomeMenuItem to menu index (used in onEnter)\n   static int menuItemToIndex(HomeMenuItem item, bool hasOpdsUrl) {\n@@ -71,8 +72,10 @@ class HomeActivity final : public Activity {\n \n  public:\n   explicit HomeActivity(GfxRenderer& renderer, MappedInputManager& mappedInput,\n-                        HomeMenuItem initialMenuItemValue = HomeMenuItem::NONE)\n-      : Activity(\"Home\", renderer, mappedInput), initialMenuItem(initialMenuItemValue) {}\n+                        HomeMenuItem initialMenuItemValue = HomeMenuItem::NONE, bool cleanInitialRefresh = false)\n+      : Activity(\"Home\", renderer, mappedInput),\n+        initialMenuItem(initialMenuItemValue),\n+        cleanInitialRefresh(cleanInitialRefresh) {}\n   void onEnter() override;\n   void onExit() override;\n   void loop() override;"
+  },
+  {
+    "sha": "1b94e319d6eaf90f4a42ad7c21528c03c71e7d03",
+    "filename": "src/main.cpp",
+    "status": "modified",
+    "additions": 6,
+    "deletions": 1,
+    "changes": 7,
+    "blob_url": "https://github.com/crosspoint-reader/crosspoint-reader/blob/660e8f33a1d85dcf7c0d1ece9b175b0f3ea9b43e/src%2Fmain.cpp",
+    "raw_url": "https://github.com/crosspoint-reader/crosspoint-reader/raw/660e8f33a1d85dcf7c0d1ece9b175b0f3ea9b43e/src%2Fmain.cpp",
+    "contents_url": "https://api.github.com/repos/crosspoint-reader/crosspoint-reader/contents/src%2Fmain.cpp?ref=660e8f33a1d85dcf7c0d1ece9b175b0f3ea9b43e",
+    "patch": "@@ -464,6 +464,7 @@ void setup() {\n                             : isSleepWake && !APP_STATE.showBootScreen ? BootResume::SplashlessWake\n                                                                        : BootResume::Splash;\n   bool allowFastInitialReaderRefresh = false;\n+  bool needsWakeRefresh = false;\n \n   setupDisplayAndFonts(resume != BootResume::Splash);\n \n@@ -494,6 +495,10 @@ void setup() {\n         } else {\n           renderer.displayBuffer(HalDisplay::HALF_REFRESH);\n         }\n+      } else {\n+        // The first Home/Reader paint is followed by an explicit clean refresh\n+        // because the panel still physically shows the sleep image.\n+        needsWakeRefresh = true;\n       }\n       break;\n     case BootResume::Splash:\n@@ -523,7 +528,7 @@ void setup() {\n              mappedInputManager.isPressed(MappedInputManager::Button::Back) || APP_STATE.readerActivityLoadCount > 0) {\n     // Boot to home screen if no book is open, last sleep was not from reader, back button is held, or reader activity\n     // crashed (indicated by readerActivityLoadCount > 0)\n-    activityManager.goHome();\n+    activityManager.goHome(HomeMenuItem::NONE, needsWakeRefresh);\n   } else {\n     // Clear app state to avoid getting into a boot loop if the epub doesn't load\n     const auto path = APP_STATE.openEpubPath;"
+  }
+]

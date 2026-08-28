@@ -1,0 +1,38 @@
+[
+  {
+    "sha": "9da5baf2f4b4cbfdd83b399519544ba59fdf0101",
+    "filename": "src/activities/reader/KOReaderSyncActivity.cpp",
+    "status": "modified",
+    "additions": 6,
+    "deletions": 29,
+    "changes": 35,
+    "blob_url": "https://github.com/crosspoint-reader/crosspoint-reader/blob/c7408802e4a4b45893e8b9e6c2bd9d54ff2e5e90/src%2Factivities%2Freader%2FKOReaderSyncActivity.cpp",
+    "raw_url": "https://github.com/crosspoint-reader/crosspoint-reader/raw/c7408802e4a4b45893e8b9e6c2bd9d54ff2e5e90/src%2Factivities%2Freader%2FKOReaderSyncActivity.cpp",
+    "contents_url": "https://api.github.com/repos/crosspoint-reader/crosspoint-reader/contents/src%2Factivities%2Freader%2FKOReaderSyncActivity.cpp?ref=c7408802e4a4b45893e8b9e6c2bd9d54ff2e5e90",
+    "patch": "@@ -5,7 +5,6 @@\n #include <I18n.h>\n #include <Logging.h>\n #include <WiFi.h>\n-#include <esp_sntp.h>\n #include <esp_wifi.h>\n \n #include <algorithm>\n@@ -46,31 +45,6 @@ const char* matchMethodName(const DocumentMatchMethod method) {\n   return method == DocumentMatchMethod::FILENAME ? \"filename\" : \"binary\";\n }\n \n-void syncTimeWithNTP() {\n-  // Stop SNTP if already running (can't reconfigure while running)\n-  if (esp_sntp_enabled()) {\n-    esp_sntp_stop();\n-  }\n-\n-  // Configure SNTP\n-  esp_sntp_setoperatingmode(ESP_SNTP_OPMODE_POLL);\n-  esp_sntp_setservername(0, \"pool.ntp.org\");\n-  esp_sntp_init();\n-\n-  // Wait for time to sync (with timeout)\n-  int retry = 0;\n-  const int maxRetries = 50;  // 5 seconds max\n-  while (sntp_get_sync_status() != SNTP_SYNC_STATUS_COMPLETED && retry < maxRetries) {\n-    vTaskDelay(100 / portTICK_PERIOD_MS);\n-    retry++;\n-  }\n-\n-  if (retry < maxRetries) {\n-    LOG_DBG(\"KOSync\", \"NTP time synced\");\n-  } else {\n-    LOG_DBG(\"KOSync\", \"NTP sync timeout, using fallback\");\n-  }\n-}\n }  // namespace\n \n KOReaderSyncActivity::KOReaderSyncActivity(GfxRenderer& renderer, MappedInputManager& mappedInput,\n@@ -150,16 +124,19 @@ void KOReaderSyncActivity::onWifiSelectionComplete(const bool success) {\n \n   LOG_DBG(\"KOSync\", \"WiFi connected, starting sync\");\n \n+  // Keep the station fully awake for the short sync transaction. The web server\n+  // does the same because ESP32 modem sleep can introduce multi-second network\n+  // stalls that surface as HTTP timeouts. WiFi is torn down when this activity exits.\n+  WiFi.setSleep(false);\n+  LOG_DBG(\"KOSync\", \"WiFi sleep disabled for sync\");\n+\n   {\n     RenderLock lock(*this);\n     state = SYNCING;\n     statusMessage = tr(STR_SYNCING_TIME);\n   }\n   requestUpdate(true);\n \n-  // Sync time with NTP before making API requests\n-  syncTimeWithNTP();\n-\n   {\n     RenderLock lock(*this);\n     statusMessage = tr(STR_CALC_HASH);"
+  },
+  {
+    "sha": "48ac5cddab0f4709241d0b6dca2aac86279e028a",
+    "filename": "src/activities/settings/KOReaderAuthActivity.cpp",
+    "status": "modified",
+    "additions": 4,
+    "deletions": 0,
+    "changes": 4,
+    "blob_url": "https://github.com/crosspoint-reader/crosspoint-reader/blob/c7408802e4a4b45893e8b9e6c2bd9d54ff2e5e90/src%2Factivities%2Fsettings%2FKOReaderAuthActivity.cpp",
+    "raw_url": "https://github.com/crosspoint-reader/crosspoint-reader/raw/c7408802e4a4b45893e8b9e6c2bd9d54ff2e5e90/src%2Factivities%2Fsettings%2FKOReaderAuthActivity.cpp",
+    "contents_url": "https://api.github.com/repos/crosspoint-reader/crosspoint-reader/contents/src%2Factivities%2Fsettings%2FKOReaderAuthActivity.cpp?ref=c7408802e4a4b45893e8b9e6c2bd9d54ff2e5e90",
+    "patch": "@@ -2,6 +2,7 @@\n \n #include <GfxRenderer.h>\n #include <I18n.h>\n+#include <Logging.h>\n #include <WiFi.h>\n \n #include \"KOReaderCredentialStore.h\"\n@@ -23,6 +24,9 @@ void KOReaderAuthActivity::onWifiSelectionComplete(const bool success) {\n     return;\n   }\n \n+  WiFi.setSleep(false);\n+  LOG_DBG(\"KOAuth\", \"WiFi sleep disabled for authentication\");\n+\n   {\n     RenderLock lock(*this);\n     state = AUTHENTICATING;"
+  },
+  {
+    "sha": "44652f61223cf33e84472495bacbe6c0b92572d4",
+    "filename": "test/font_cache_manager/FontCacheManagerTest.cpp",
+    "status": "modified",
+    "additions": 1,
+    "deletions": 2,
+    "changes": 3,
+    "blob_url": "https://github.com/crosspoint-reader/crosspoint-reader/blob/c7408802e4a4b45893e8b9e6c2bd9d54ff2e5e90/test%2Ffont_cache_manager%2FFontCacheManagerTest.cpp",
+    "raw_url": "https://github.com/crosspoint-reader/crosspoint-reader/raw/c7408802e4a4b45893e8b9e6c2bd9d54ff2e5e90/test%2Ffont_cache_manager%2FFontCacheManagerTest.cpp",
+    "contents_url": "https://api.github.com/repos/crosspoint-reader/crosspoint-reader/contents/test%2Ffont_cache_manager%2FFontCacheManagerTest.cpp?ref=c7408802e4a4b45893e8b9e6c2bd9d54ff2e5e90",
+    "patch": "@@ -123,8 +123,7 @@ TEST(FontCacheManagerTest, PrewarmScanDoesNotAllocateHeapMemory) {\n   heapAllocationCount = 0;\n   countHeapAllocations = true;\n   auto scope = manager.createPrewarmScope();\n-  manager.recordText(\"Repeated text: \\xC3\\xA9 \\xE4\\xB8\\xAD \\xF0\\x9F\\x98\\x80\", 7,\n-                     EpdFontFamily::REGULAR);\n+  manager.recordText(\"Repeated text: \\xC3\\xA9 \\xE4\\xB8\\xAD \\xF0\\x9F\\x98\\x80\", 7, EpdFontFamily::REGULAR);\n   scope.endScanAndPrewarm();\n   countHeapAllocations = false;\n "
+  }
+]

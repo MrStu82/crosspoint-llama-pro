@@ -8,6 +8,7 @@
 #include <cctype>
 #include <charconv>
 #include <cstring>
+#include <new>
 #include <string_view>
 
 namespace {
@@ -44,6 +45,10 @@ constexpr size_t MAX_RULES = 1500;
 // Minimum free heap required to apply CSS during rendering
 // If below this threshold, we skip CSS to avoid display artifacts.
 constexpr size_t MIN_FREE_HEAP_FOR_CSS = 48 * 1024;
+
+#ifdef CSS_PARSER_TESTING
+CssParser::CacheAllocationGate cacheAllocationGateForTesting = nullptr;
+#endif
 
 // Maximum length for a single selector string
 // Prevents parsing of extremely long or malformed selectors
@@ -703,11 +708,46 @@ CssStyle CssParser::parseInlineStyle(std::string_view styleValue) { return parse
 
 // Cache file name (version is CssParser::CSS_CACHE_VERSION)
 constexpr char rulesCache[] = "/css_rules.cache";
+constexpr char rulesCacheTmp[] = "/css_rules.cache.tmp";
+constexpr char rulesCacheBackup[] = "/css_rules.cache.bak";
 
-bool CssParser::hasCache() const { return Storage.exists((cachePath + rulesCache).c_str()); }
+bool CssParser::hasCache() const {
+  return Storage.exists((cachePath + rulesCache).c_str()) || restoreCacheBackupIfNeeded();
+}
+
+bool CssParser::restoreCacheBackupIfNeeded() const {
+  if (cachePath.empty()) return false;
+
+  const std::string finalPath = cachePath + rulesCache;
+  if (Storage.exists(finalPath.c_str())) return true;
+
+  const std::string backupPath = cachePath + rulesCacheBackup;
+  if (!Storage.exists(backupPath.c_str())) return false;
+  if (!Storage.rename(backupPath.c_str(), finalPath.c_str())) {
+    LOG_ERR("CSS", "Failed to restore CSS cache backup");
+    return false;
+  }
+  return true;
+}
+
+bool CssParser::cacheAllocationAllowed(const size_t requestedBytes) {
+#ifdef CSS_PARSER_TESTING
+  if (cacheAllocationGateForTesting && !cacheAllocationGateForTesting(requestedBytes)) return false;
+#endif
+  const size_t freeHeap = ESP.getFreeHeap();
+  return freeHeap >= MIN_FREE_HEAP_FOR_CSS && requestedBytes <= freeHeap - MIN_FREE_HEAP_FOR_CSS;
+}
+
+#ifdef CSS_PARSER_TESTING
+void CssParser::setCacheAllocationGateForTesting(const CacheAllocationGate gate) {
+  cacheAllocationGateForTesting = gate;
+}
+#endif
 
 void CssParser::deleteCache() const {
   if (hasCache()) Storage.remove((cachePath + rulesCache).c_str());
+  Storage.remove((cachePath + rulesCacheTmp).c_str());
+  Storage.remove((cachePath + rulesCacheBackup).c_str());
 }
 
 bool CssParser::saveToCache() const {
@@ -715,37 +755,47 @@ bool CssParser::saveToCache() const {
     return false;
   }
 
+  const std::string finalPath = cachePath + rulesCache;
+  const std::string tmpPath = cachePath + rulesCacheTmp;
+  const std::string backupPath = cachePath + rulesCacheBackup;
+  Storage.remove(tmpPath.c_str());
+
   HalFile file;
-  if (!Storage.openFileForWrite("CSS", cachePath + rulesCache, file)) {
+  if (!Storage.openFileForWrite("CSS", tmpPath, file)) {
     return false;
   }
 
-  // Write version
-  file.write(CssParser::CSS_CACHE_VERSION);
+  bool writeOk = true;
+  const auto writeBytes = [&file, &writeOk](const void* data, const size_t size) {
+    if (writeOk && size > 0 && file.write(data, size) != size) writeOk = false;
+  };
+  const auto writeByte = [&writeBytes](const uint8_t value) { writeBytes(&value, sizeof(value)); };
+
+  writeByte(CssParser::CSS_CACHE_VERSION);
 
   // Write rule count
   const auto ruleCount = static_cast<uint16_t>(rulesBySelector_.size());
-  file.write(reinterpret_cast<const uint8_t*>(&ruleCount), sizeof(ruleCount));
+  writeBytes(&ruleCount, sizeof(ruleCount));
 
   // Write each rule: selector string + CssStyle fields
   for (const auto& pair : rulesBySelector_) {
     // Write selector string (length-prefixed)
     const auto selectorLen = static_cast<uint16_t>(pair.first.size());
-    file.write(reinterpret_cast<const uint8_t*>(&selectorLen), sizeof(selectorLen));
-    file.write(reinterpret_cast<const uint8_t*>(pair.first.data()), selectorLen);
+    writeBytes(&selectorLen, sizeof(selectorLen));
+    writeBytes(pair.first.data(), selectorLen);
 
     // Write CssStyle fields (all are POD types)
     const CssStyle& style = pair.second;
-    file.write(static_cast<uint8_t>(style.textAlign));
-    file.write(static_cast<uint8_t>(style.fontStyle));
-    file.write(static_cast<uint8_t>(style.fontWeight));
-    file.write(static_cast<uint8_t>(style.textDecoration));
-    file.write(static_cast<uint8_t>(style.direction));
+    writeByte(static_cast<uint8_t>(style.textAlign));
+    writeByte(static_cast<uint8_t>(style.fontStyle));
+    writeByte(static_cast<uint8_t>(style.fontWeight));
+    writeByte(static_cast<uint8_t>(style.textDecoration));
+    writeByte(static_cast<uint8_t>(style.direction));
 
     // Write CssLength fields (value + unit)
-    auto writeLength = [&file](const CssLength& len) {
-      file.write(reinterpret_cast<const uint8_t*>(&len.value), sizeof(len.value));
-      file.write(static_cast<uint8_t>(len.unit));
+    auto writeLength = [&writeBytes, &writeByte](const CssLength& len) {
+      writeBytes(&len.value, sizeof(len.value));
+      writeByte(static_cast<uint8_t>(len.unit));
     };
 
     writeLength(style.textIndent);
@@ -759,9 +809,9 @@ bool CssParser::saveToCache() const {
     writeLength(style.paddingRight);
     writeLength(style.imageHeight);
     writeLength(style.imageWidth);
-    file.write(static_cast<uint8_t>(style.display));
-    file.write(static_cast<uint8_t>(style.verticalAlign));
-    file.write(static_cast<uint8_t>(style.backgroundBlack ? 1 : 0));
+    writeByte(static_cast<uint8_t>(style.display));
+    writeByte(static_cast<uint8_t>(style.verticalAlign));
+    writeByte(static_cast<uint8_t>(style.backgroundBlack ? 1 : 0));
 
     // Write defined flags as uint32_t
     uint32_t definedBits = 0;
@@ -784,21 +834,49 @@ bool CssParser::saveToCache() const {
     if (style.defined.direction) definedBits |= 1 << 16;
     if (style.defined.verticalAlign) definedBits |= 1 << 17;
     if (style.defined.backgroundBlack) definedBits |= 1 << 18;
-    file.write(reinterpret_cast<const uint8_t*>(&definedBits), sizeof(definedBits));
+    writeBytes(&definedBits, sizeof(definedBits));
+    if (!writeOk) break;
   }
+
+  if (!writeOk || !file.close()) {
+    file.close();
+    Storage.remove(tmpPath.c_str());
+    return false;
+  }
+
+  const bool hadExistingCache = Storage.exists(finalPath.c_str());
+  if (hadExistingCache) {
+    Storage.remove(backupPath.c_str());
+    if (!Storage.rename(finalPath.c_str(), backupPath.c_str())) {
+      Storage.remove(tmpPath.c_str());
+      return false;
+    }
+  }
+
+  if (!Storage.rename(tmpPath.c_str(), finalPath.c_str())) {
+    Storage.remove(tmpPath.c_str());
+    if (hadExistingCache && !Storage.rename(backupPath.c_str(), finalPath.c_str())) {
+      LOG_ERR("CSS", "Failed to restore previous CSS cache");
+    }
+    return false;
+  }
+  Storage.remove(backupPath.c_str());
 
   LOG_DBG("CSS", "Saved %u rules to cache", ruleCount);
   return true;
 }
 
-bool CssParser::loadFromCache() {
+bool CssParser::loadFromCacheOnce(bool& lowMemory) {
+  lowMemory = false;
   if (cachePath.empty()) {
     return false;
   }
 
   HalFile file;
   if (!Storage.openFileForRead("CSS", cachePath + rulesCache, file)) {
-    return false;
+    if (!restoreCacheBackupIfNeeded() || !Storage.openFileForRead("CSS", cachePath + rulesCache, file)) {
+      return false;
+    }
   }
 
   // Clear existing rules
@@ -828,6 +906,10 @@ bool CssParser::loadFromCache() {
   }
 
   // Size the bucket array up front to avoid incremental rehashes while loading rules.
+  if (ruleCount > 0 && !cacheAllocationAllowed(ruleCount * (sizeof(std::pair<const std::string, CssStyle>) + 16))) {
+    lowMemory = true;
+    return false;
+  }
   rulesBySelector_.reserve(ruleCount);
 
   auto hasRemainingBytes = [&file](const size_t neededBytes) -> bool {
@@ -859,6 +941,11 @@ bool CssParser::loadFromCache() {
     }
 
     std::string selector;
+    if (!cacheAllocationAllowed(static_cast<size_t>(selectorLen) + 1)) {
+      lowMemory = true;
+      rulesBySelector_.clear();
+      return false;
+    }
     selector.resize(selectorLen);
     if (file.read(&selector[0], selectorLen) != selectorLen) {
       rulesBySelector_.clear();
@@ -972,9 +1059,51 @@ bool CssParser::loadFromCache() {
     style.defined.verticalAlign = (definedBits & 1 << 17) != 0;
     style.defined.backgroundBlack = (definedBits & 1 << 18) != 0;
 
+    if (!cacheAllocationAllowed(sizeof(std::pair<const std::string, CssStyle>) + selectorLen + 1)) {
+      lowMemory = true;
+      rulesBySelector_.clear();
+      return false;
+    }
     rulesBySelector_[selector] = style;
+  }
+
+  if (file.available() != 0) {
+    rulesBySelector_.clear();
+    return false;
   }
 
   LOG_DBG("CSS", "Loaded %u rules from cache", ruleCount);
   return true;
+}
+
+bool CssParser::loadFromCache() {
+  for (uint8_t attempt = 0; attempt < 2; ++attempt) {
+    bool lowMemory = false;
+    bool loaded = false;
+#if defined(__cpp_exceptions)
+    try {
+      loaded = loadFromCacheOnce(lowMemory);
+    } catch (const std::bad_alloc&) {
+      lowMemory = true;
+    }
+#else
+    loaded = loadFromCacheOnce(lowMemory);
+#endif
+
+    if (loaded) return true;
+
+    // Never expose entries from a failed hydration attempt. Releasing them
+    // before the single retry is what makes a transient allocation failure
+    // recoverable instead of compounding partial-map pressure.
+    clear();
+    if (!lowMemory) {
+      deleteCache();
+      return false;
+    }
+    LOG_DBG("CSS", "Low-memory CSS cache load attempt %u failed", static_cast<unsigned>(attempt + 1));
+  }
+
+  // The on-disk cache may still be valid and can be retried on a later section,
+  // but this parser instance must honestly remain empty.
+  return false;
 }

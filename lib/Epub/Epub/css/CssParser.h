@@ -105,6 +105,13 @@ class CssParser {
    */
   bool loadFromCache();
 
+#ifdef CSS_PARSER_TESTING
+  // Deterministic host-only failure gate. Production builds use the same
+  // bounded retry path with the real free-heap guard.
+  using CacheAllocationGate = bool (*)(size_t requestedBytes);
+  static void setCacheAllocationGateForTesting(CacheAllocationGate gate);
+#endif
+
  private:
   // Lookup key for a multi-piece selector. The pieces are hashed and compared
   // as if concatenated, so callers can look up composite keys without
@@ -141,6 +148,10 @@ class CssParser {
   std::unordered_map<std::string, CssStyle, SvHash, SvEqual> rulesBySelector_;
 
   std::string cachePath;
+
+  bool loadFromCacheOnce(bool& lowMemory);
+  bool restoreCacheBackupIfNeeded() const;
+  static bool cacheAllocationAllowed(size_t requestedBytes);
 
   // Internal parsing helpers
   void processRuleBlockWithStyle(std::string_view selectorGroup, const CssStyle& style);

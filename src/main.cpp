@@ -478,7 +478,9 @@ void setup() {
           renderer.displayBuffer(HalDisplay::HALF_REFRESH);
         }
       } else {
-activityManager.goToBoot();  // frame file missing, fall back to the splash
+        // The retained sleep frame is unavailable, so the first Home paint
+        // must use the one-shot clean waveform instead of FAST_REFRESH.
+        needsWakeRefresh = true;
       }
       break;
     case BootResume::Splash:

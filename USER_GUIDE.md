@@ -186,6 +186,7 @@ The Settings screen allows you to configure the device's behavior. There are a f
   - "None" - A blank screen
   - "Cover + Custom" - The book cover image while actively reading, falls back to "Custom" behavior otherwise
   - "Quick resume" - The text of the last page read will be displayed on the sleep screen and a moon icon is shown on the edge of the screen. Waking up the device will return to the same page of the opened book. This is useful for quickly resuming reading without waiting for the device to fully wake up and load the book.
+  - "Transparent" - A transparent BMP or PNG overlay drawn over the current screen; see [Sleep Screen](#37-sleep-screen) below.
 
 - **Sleep Screen Cover Mode**: How to display the book cover when "Cover" sleep screen is selected:
   
@@ -502,6 +503,7 @@ The **Sleep Screen** setting controls what is displayed when the device goes to 
 | **Cover**          | The cover of the currently open book. Falls back to **Dark** if no book is open.                                             |
 | **Cover + Custom** | The cover of the currently open book, shown only while actively reading. Falls back to **Custom** behavior when not reading. |
 | **None**           | A blank screen.                                                                                                              |
+| **Transparent**    | A BMP or PNG overlay drawn over the retained screen. Invalid or missing overlays fall back to **Dark**.                    |
 
 #### Cover settings
 
@@ -526,6 +528,15 @@ To use custom sleep images, set the sleep screen mode to **Custom** or **Cover +
 
 > [!TIP]
 > You can set an image as the sleep screen cover directly from the BMP image viewer in the **[Browse Files](#33-browse-files-screen)** screen.
+
+#### Transparent overlay images
+
+Set the sleep screen mode to **Transparent**, then use one of these separate overlay locations:
+
+- **Single image:** `/sleep-overlay.bmp` or `/sleep-overlay.png` (BMP takes priority).
+- **Rotating images:** `/.sleep-overlay/` or the fallback `/sleep-overlay/` directory, containing valid `.bmp` or `.png` files.
+
+Regular BMP overlays treat white as transparent. PNG and 32-bit BGRA BMP overlays preserve per-pixel alpha; opaque white erases the content behind it. The overlay decoder rejects corrupt, oversized, or unsupported images and falls back safely.
 
 ---
 

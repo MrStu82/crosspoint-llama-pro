@@ -105,9 +105,10 @@ inline TouchPageTurn detectTouchPageTurn(GfxRenderer& renderer, const MappedInpu
   return result;
 }
 
-// Reader menu opens on a downward swipe from the top edge (replaces the old center tap-and-hold).
+// Text settings opens on an upward swipe starting at the bottom edge. The
+// top-edge downward gesture belongs exclusively to global Quick Settings.
 inline bool isTouchMenuGesture(const MappedInputManager& input) {
-  return SETTINGS.touchReaderControls && input.hasTouch() && input.wasMenuGesture();
+  return SETTINGS.touchReaderControls && input.hasTouch() && input.wasBrightnessSheetGesture();
 }
 
 // One helper, blocking or deferred: the async form starts the refresh and

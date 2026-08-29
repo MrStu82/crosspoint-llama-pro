@@ -57,18 +57,17 @@ void TextSettingsActivity::onEnter() {
   Activity::onEnter();
 
   metrics_ = UITheme::getInstance().getMetrics();
-  afterHeader = metrics_.topPadding + metrics_.headerHeight + metrics_.verticalSpacing;
   bottomReserved = metrics_.buttonHintsHeight + metrics_.verticalSpacing;
-  usableHeight = renderer.getScreenHeight() - afterHeader - bottomReserved;
+  // Touch Text Settings is a bottom-edge drawer: preserve the old hint band as
+  // a peek above it, then align the drawer's own painted region to the physical
+  // bottom row. Non-touch keeps the conventional full activity geometry.
+  drawerTop = mappedInput.hasTouch() ? bottomReserved : 0;
+  afterHeader = drawerTop + metrics_.topPadding + metrics_.headerHeight + metrics_.verticalSpacing;
+  usableHeight = renderer.getScreenHeight() - afterHeader - (mappedInput.hasTouch() ? 0 : bottomReserved);
   previewHeight = usableHeight * metrics_.previewHeightPercent / 100;
 
-  // DRW-02 (Stuart #322096): on touch hardware, BaseTheme::drawButtonHints() no-ops
-  // (BaseTheme.cpp: `if (gpio.hasTouch()) { return; }` — hints are a physical-button-only
-  // affordance), so bottomReserved is already blank content-wise there. render() leaves
-  // that band off the panel push instead of flushing/clearing it, so the reader page peeks
-  // through underneath the drawer. No content region is shrunk to make room for it, so no
-  // existing layout math changes — just confirm the free band is actually big enough to
-  // read as a peek, on whichever orientation is live right now.
+  // The existing physical-button hint band is the measured peek outside the
+  // bottom drawer on touch hardware.
   if (mappedInput.hasTouch() && bottomReserved < DRAWER_MIN_PEEK_PX) {
     LOG_ERR("TEXTSET", "drawer peek gap too small: %dpx (min %dpx) - theme metrics changed?", bottomReserved,
             DRAWER_MIN_PEEK_PX);
@@ -192,14 +191,13 @@ bool TextSettingsActivity::handleTouch() {
     return true;
   }
 
-  // DRW-02 (Stuart #322096): match BrightnessSheet — a tap that lands outside the drawer's
-  // own drawn region (i.e. in the reader-page peek band below contentBottom) dismisses it,
-  // instead of Back being the only way out.
+  // A tap in the preserved reader-page band above the bottom drawer dismisses it.
   int outsideTx = 0;
   int outsideTy = 0;
   if (mappedInput.wasScreenTapped(outsideTx, outsideTy)) {
     const int contentBottom = afterHeader + usableHeight + (mappedInput.hasTouch() ? 0 : bottomReserved);
-    if (DrawerChrome::isOutsideTap(DrawerChrome::Edge::Top, Rect(0, 0, renderer.getScreenWidth(), contentBottom),
+    if (DrawerChrome::isOutsideTap(DrawerChrome::Edge::Bottom,
+                                    Rect(0, drawerTop, renderer.getScreenWidth(), contentBottom - drawerTop),
                                     outsideTx, outsideTy)) {
       finish();
       return true;
@@ -256,9 +254,10 @@ void TextSettingsActivity::render(RenderLock&&) {
   // anything they don't explicitly overdraw was left showing whatever was in the framebuffer
   // before, i.e. the reader page bleeding through. Fill our own region with background first.
   const int contentBottom = afterHeader + usableHeight + (mappedInput.hasTouch() ? 0 : bottomReserved);
-  DrawerChrome::clearRegion(renderer, Rect(0, 0, pageWidth, contentBottom));
+  DrawerChrome::clearRegion(renderer, Rect(0, drawerTop, pageWidth, contentBottom - drawerTop));
 
-  GUI.drawHeader(renderer, Rect{0, metrics_.topPadding, pageWidth, metrics_.headerHeight}, tr(STR_TEXT_SETTINGS));
+  GUI.drawHeader(renderer, Rect{0, drawerTop + metrics_.topPadding, pageWidth, metrics_.headerHeight},
+                 tr(STR_TEXT_SETTINGS));
 
   const auto geo = paneGeometry();
   const char* familyName = (currentFamilyIndex_ >= 0 && currentFamilyIndex_ < static_cast<int>(fonts_.size()))
@@ -339,13 +338,7 @@ void TextSettingsActivity::render(RenderLock&&) {
   const auto labels = mappedInput.mapLabels(tr(STR_BACK), confirmLabel, tr(STR_DIR_UP), tr(STR_DIR_DOWN));
   GUI.drawButtonHints(renderer, labels.btn1, labels.btn2, labels.btn3, labels.btn4);
 
-  // DRW-02: push only the region this activity actually draws into, instead of a
-  // clearScreen()+full-buffer flush. On touch hardware drawButtonHints() above never drew
-  // into bottomReserved, so excluding it here leaves that band's existing panel pixels (the
-  // reader page underneath) untouched — a real drawer peek, not a full-screen takeover. On
-  // non-touch hardware drawButtonHints() DID draw into bottomReserved, so it's included in
-  // the push there to avoid clipping the hints off-panel.
-  renderer.displayWindow(0, 0, pageWidth, contentBottom);
+  renderer.displayWindow(0, drawerTop, pageWidth, contentBottom - drawerTop);
 }
 
 // Font switching runs on the main task from loop(), which deliberately holds no

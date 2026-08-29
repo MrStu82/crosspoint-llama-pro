@@ -28,40 +28,8 @@ inline RatingStarFill ratingStarFill(const int valueX100, const int starIndex) {
   return RatingStarFill::Half;
 }
 
-inline constexpr int kCoverProgressGap = 0;
-inline constexpr int kCoverProgressHeight = 14;
-inline constexpr int kCoverProgressFillHeight = 6;
-// v195 centred the quote from coverBottom + 8. Keep that anchor even though the
-// thicker bar now extends farther into the otherwise empty band.
 inline constexpr int kQuoteBandTopOffsetFromCoverBottom = 8;
 inline constexpr int kStatsToChevronGap = 20;
-
-struct CoverProgressLayout {
-  int x;
-  int y;
-  int width;
-  int height;
-  int fillX;
-  int fillY;
-  int fillWidth;
-  int fillHeight;
-};
-
-inline CoverProgressLayout coverProgressLayout(const int coverX, const int coverY,
-                                               const int coverWidth, const int coverHeight,
-                                               const int progressPercent) {
-  const int innerWidth = std::max(0, coverWidth - 2);
-  const int boundedPercent = std::clamp(progressPercent, 0, 100);
-  return {coverX,
-          coverY + coverHeight + kCoverProgressGap,
-          coverWidth,
-          kCoverProgressHeight,
-          coverX + 1,
-          coverY + coverHeight + kCoverProgressGap +
-              (kCoverProgressHeight - kCoverProgressFillHeight) / 2,
-          innerWidth * boundedPercent / 100,
-          kCoverProgressFillHeight};
-}
 
 struct StatsLayout {
   int timeX;
@@ -73,14 +41,13 @@ struct StatsLayout {
   int chevronY;
 };
 
-// Keep the v195 time and chevron positions. The only layout delta is moving
-// BOOK LEFT beside CHAPTER LEFT, into the second half of the 200px gutter.
+// Each ETA owns a full row. On the physical X4 Pro, BOOK LEFT beside CHAPTER
+// LEFT collided once translated text and real values were rasterised.
 inline StatsLayout statsLayout(const int rightX, const int statStart, const int statStep) {
-  constexpr int kEtaColumnOffset = 102;
   constexpr int kValueOffset = 20;
   return {rightX, statStart, rightX, statStart + statStep,
-          rightX + kEtaColumnOffset, statStart + statStep,
-          statStart + 2 * statStep + kValueOffset + kStatsToChevronGap};
+          rightX, statStart + 2 * statStep,
+          statStart + 3 * statStep + kValueOffset + kStatsToChevronGap};
 }
 
 struct EtaState {

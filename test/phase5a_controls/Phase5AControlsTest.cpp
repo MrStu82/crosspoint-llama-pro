@@ -8,31 +8,32 @@ using namespace ControlCenterModel;
 
 TEST(ControlCenterLayout, ApprovedPortraitGeometryIsExactAndAdditive) {
   const Layout l = layout(480, 800);
-  EXPECT_EQ(l.sheetHeight, 516);
+  EXPECT_EQ(l.sheetHeight, 372);
   EXPECT_EQ(l.brightnessCaption.x, 16);
   EXPECT_EQ(l.brightnessCaption.y, 18);
   EXPECT_EQ(l.brightnessCaption.width, 448);
   EXPECT_EQ(l.brightness.minus.x, 16);
-  EXPECT_EQ(l.brightness.minus.y, 42);
+  EXPECT_EQ(l.brightness.minus.y, 50);
   EXPECT_EQ(l.brightness.minus.width, 56);
   EXPECT_EQ(l.brightness.track.x, 72);
   EXPECT_EQ(l.brightness.track.width, 280);
   EXPECT_EQ(l.brightness.plus.x, 352);
   EXPECT_EQ(l.brightness.toggle.x, 408);
 
-  EXPECT_EQ(l.warmthCaption.y, 134);
-  EXPECT_EQ(l.warmth.minus.y, 158);
+  EXPECT_EQ(l.warmthCaption.y, 114);
+  EXPECT_EQ(l.warmth.minus.y, 146);
   EXPECT_EQ(l.warmth.track.x, 72);
   EXPECT_EQ(l.warmth.track.width, 336);
   EXPECT_EQ(l.warmth.plus.x, 408);
 
   EXPECT_EQ(l.tiles[0].x, 16);
-  EXPECT_EQ(l.tiles[0].y, 250);
+  EXPECT_EQ(l.tiles[0].y, 210);
   EXPECT_EQ(l.tiles[0].width, 216);
+  EXPECT_EQ(l.tiles[0].height, 56);
   EXPECT_EQ(l.tiles[1].x, 248);
-  EXPECT_EQ(l.tiles[2].y, 350);
+  EXPECT_EQ(l.tiles[2].y, 282);
   EXPECT_EQ(l.grabber.x, 212);
-  EXPECT_EQ(l.grabber.y, 500);
+  EXPECT_EQ(l.grabber.y, 358);
 }
 
 TEST(ControlCenterLayout, EveryExplicitControlIsFingerSizedAndWithinTheSheet) {

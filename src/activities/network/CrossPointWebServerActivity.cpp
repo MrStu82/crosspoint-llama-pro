@@ -15,6 +15,7 @@
 #include "WifiSelectionActivity.h"
 #include "activities/network/CalibreConnectActivity.h"
 #include "components/UITheme.h"
+#include "components/InkPointShell.h"
 #include "fontIds.h"
 #include "util/QrUtils.h"
 #include "util/TaskWatchdog.h"
@@ -285,6 +286,15 @@ void CrossPointWebServerActivity::startWebServer() {
 }
 
 void CrossPointWebServerActivity::loop() {
+  if ((state == WebServerActivityState::SERVER_RUNNING || state == WebServerActivityState::AP_STARTING) &&
+      InkPointShell::enabled(renderer)) {
+    int tx = 0;
+    int ty = 0;
+    if (mappedInput.wasScreenTapped(tx, ty) && ty >= InkPointShell::kFooterTop) {
+      onGoHome();
+      return;
+    }
+  }
   // Handle different states
   if (state == WebServerActivityState::SERVER_RUNNING) {
     // Handle DNS requests for captive portal (AP mode only)
@@ -391,17 +401,31 @@ void CrossPointWebServerActivity::render(RenderLock&&) {
     const auto pageWidth = renderer.getScreenWidth();
     const auto pageHeight = renderer.getScreenHeight();
 
-    GUI.drawHeader(renderer, Rect{0, metrics.topPadding, pageWidth, metrics.headerHeight},
-                   isApMode ? tr(STR_HOTSPOT_MODE) : tr(STR_FILE_TRANSFER), nullptr);
+    const bool inkPoint = InkPointShell::enabled(renderer);
+    if (inkPoint)
+      InkPointShell::drawHeader(renderer, isApMode ? "Hotspot" : "Transfer");
+    else
+      GUI.drawHeader(renderer, Rect{0, metrics.topPadding, pageWidth, metrics.headerHeight},
+                     isApMode ? tr(STR_HOTSPOT_MODE) : tr(STR_FILE_TRANSFER), nullptr);
 
     if (state == WebServerActivityState::SERVER_RUNNING) {
-      GUI.drawSubHeader(renderer, Rect{0, metrics.topPadding + metrics.headerHeight, pageWidth, metrics.tabBarHeight},
-                        connectedSSID.c_str());
+      if (!inkPoint)
+        GUI.drawSubHeader(renderer,
+                          Rect{0, metrics.topPadding + metrics.headerHeight, pageWidth, metrics.tabBarHeight},
+                          connectedSSID.c_str());
       renderServerRunning();
     } else {
       const auto height = renderer.getLineHeight(UI_10_FONT_ID);
-      const auto top = (pageHeight - height) / 2;
+      const int bodyTop = inkPoint ? InkPointShell::kContentTop : 0;
+      const int bodyBottom = inkPoint ? InkPointShell::kFooterTop : pageHeight;
+      const auto top = bodyTop + (bodyBottom - bodyTop - height) / 2;
       renderer.drawCenteredText(UI_10_FONT_ID, top, tr(STR_STARTING_HOTSPOT));
+    }
+    if (inkPoint) {
+      renderer.drawRoundedRect(14, InkPointShell::kFooterTop, pageWidth - 28,
+                               InkPointShell::kFooterHeight, 2, 7, true);
+      renderer.drawCenteredText(UI_10_FONT_ID, InkPointShell::kFooterTop + 18,
+                                tr(STR_EXIT), true, EpdFontFamily::BOLD);
     }
     renderer.displayBuffer();
   }
@@ -411,16 +435,23 @@ void CrossPointWebServerActivity::renderServerRunning() const {
   const auto& metrics = UITheme::getInstance().getMetrics();
   const auto pageWidth = renderer.getScreenWidth();
 
-  GUI.drawHeader(renderer, Rect{0, metrics.topPadding, pageWidth, metrics.headerHeight},
-                 isApMode ? tr(STR_HOTSPOT_MODE) : tr(STR_FILE_TRANSFER), nullptr);
-  GUI.drawSubHeader(renderer, Rect{0, metrics.topPadding + metrics.headerHeight, pageWidth, metrics.tabBarHeight},
-                    connectedSSID.c_str());
-
-  if (!isApMode) {
-    renderWifiIndicator(metrics.topPadding + metrics.headerHeight);
+  const bool inkPoint = InkPointShell::enabled(renderer);
+  if (inkPoint) {
+    InkPointShell::drawHeader(renderer, isApMode ? "Hotspot" : "Transfer");
+    renderer.drawText(SMALL_FONT_ID, 20, 96, connectedSSID.c_str());
+  } else {
+    GUI.drawHeader(renderer, Rect{0, metrics.topPadding, pageWidth, metrics.headerHeight},
+                   isApMode ? tr(STR_HOTSPOT_MODE) : tr(STR_FILE_TRANSFER), nullptr);
+    GUI.drawSubHeader(renderer, Rect{0, metrics.topPadding + metrics.headerHeight, pageWidth, metrics.tabBarHeight},
+                      connectedSSID.c_str());
   }
 
-  int startY = metrics.topPadding + metrics.headerHeight + metrics.tabBarHeight + metrics.verticalSpacing * 2;
+  if (!isApMode) {
+    renderWifiIndicator(inkPoint ? InkPointShell::kHeaderBottom : metrics.topPadding + metrics.headerHeight);
+  }
+
+  int startY = inkPoint ? InkPointShell::kContentTop
+                        : metrics.topPadding + metrics.headerHeight + metrics.tabBarHeight + metrics.verticalSpacing * 2;
   int height10 = renderer.getLineHeight(UI_10_FONT_ID);
   if (isApMode) {
     // AP mode display
@@ -482,8 +513,10 @@ void CrossPointWebServerActivity::renderServerRunning() const {
     renderer.drawCenteredText(SMALL_FONT_ID, startY, hostnameUrl.c_str(), true);
   }
 
-  const auto labels = mappedInput.mapLabels(tr(STR_EXIT), "", "", "");
-  GUI.drawButtonHints(renderer, labels.btn1, labels.btn2, labels.btn3, labels.btn4);
+  if (!inkPoint) {
+    const auto labels = mappedInput.mapLabels(tr(STR_EXIT), "", "", "");
+    GUI.drawButtonHints(renderer, labels.btn1, labels.btn2, labels.btn3, labels.btn4);
+  }
 }
 
 void CrossPointWebServerActivity::renderWifiIndicator(int subHeaderTop) const {

@@ -324,7 +324,7 @@ bool MappedInputManager::wasBrightnessGesture() const {
 }
 
 bool MappedInputManager::wasBrightnessSheetGesture() const {
-  // Bottom-edge upward swipe -> quick brightness sheet. Mirrors wasMenuGesture()'s
+  // Bottom-edge upward swipe -> reader Text Settings. Mirrors wasMenuGesture()'s
   // top-edge zone, decoded via the same decodeSwipe() mechanism as every other edge
   // gesture here (no new gesture-decoding path). Bottom-left corner ambiguity with
   // wasBrightnessGesture()'s left zone is resolved there (see its comment) in favor

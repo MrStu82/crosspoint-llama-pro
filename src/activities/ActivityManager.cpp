@@ -124,17 +124,10 @@ void ActivityManager::loop() {
       return;
     }
 
-    // The touch control centre keeps the existing bottom-edge gesture and adds
-    // the dependable status-bar tap used by the four top-level tab screens.
-    bool statusBarTap = false;
-    if (mappedInput.hasTouch() &&
-        (currentActivity->name == "Home" || currentActivity->name == "FileBrowser" ||
-         currentActivity->name == "Settings" || currentActivity->name == "NetworkModeSelection")) {
-      int tx = 0;
-      int ty = 0;
-      statusBarTap = mappedInput.wasScreenTapped(tx, ty) && ty < 44;
-    }
-    if (!currentActivity->isFrontlightActivity() && (statusBarTap || mappedInput.wasBrightnessSheetGesture())) {
+    // Quick settings has one unambiguous entry path: a downward swipe whose
+    // first sample is in the top-edge zone. Bottom-edge up is reserved for the
+    // reader's Text Settings drawer, and ordinary status-bar taps stay inert.
+    if (!currentActivity->isFrontlightActivity() && mappedInput.wasMenuGesture()) {
       brightnessSheet.open();
       return;
     }

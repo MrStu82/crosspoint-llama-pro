@@ -7,6 +7,7 @@
 
 #include "MappedInputManager.h"
 #include "activities/home/StatsActivity.h"
+#include "components/InkPointShell.h"
 #include "components/UITheme.h"
 #include "fontIds.h"
 
@@ -63,6 +64,17 @@ void UsbTransferActivity::endSessionAndFinish() {
 }
 
 void UsbTransferActivity::loop() {
+  if (InkPointShell::enabled(renderer)) {
+    int tx = 0;
+    int ty = 0;
+    if (mappedInput.wasScreenTapped(tx, ty) && ty >= InkPointShell::kFooterTop) {
+      if (state == State::ERROR)
+        finish();
+      else
+        endSessionAndFinish();
+      return;
+    }
+  }
   if (state == State::ERROR) {
     if (mappedInput.wasPressed(MappedInputManager::Button::Back) ||
         mappedInput.wasPressed(MappedInputManager::Button::Confirm)) {
@@ -99,10 +111,16 @@ void UsbTransferActivity::render(RenderLock&&) {
   const auto pageHeight = renderer.getScreenHeight();
 
   renderer.clearScreen();
-  GUI.drawHeader(renderer, Rect{0, metrics.topPadding, pageWidth, metrics.headerHeight}, tr(STR_USB_TRANSFER));
+  const bool inkPoint = InkPointShell::enabled(renderer);
+  if (inkPoint)
+    InkPointShell::drawHeader(renderer, "USB transfer");
+  else
+    GUI.drawHeader(renderer, Rect{0, metrics.topPadding, pageWidth, metrics.headerHeight}, tr(STR_USB_TRANSFER));
 
   const auto lineHeight = renderer.getLineHeight(UI_10_FONT_ID);
-  const auto top = (pageHeight - lineHeight) / 2;
+  const int bodyTop = inkPoint ? InkPointShell::kContentTop : 0;
+  const int bodyBottom = inkPoint ? InkPointShell::kFooterTop : pageHeight;
+  const auto top = bodyTop + (bodyBottom - bodyTop - lineHeight) / 2;
 
   if (state == State::ERROR) {
     renderer.drawCenteredText(UI_10_FONT_ID, top, tr(STR_USB_TRANSFER_ERROR), true, EpdFontFamily::BOLD);
@@ -118,8 +136,16 @@ void UsbTransferActivity::render(RenderLock&&) {
   }
 
   if (state != State::ERROR) {
-    const int hintY = pageHeight - lineHeight - metrics.verticalSpacing;
+    const int hintY = bodyBottom - lineHeight - metrics.verticalSpacing;
     renderer.drawCenteredText(UI_10_FONT_ID, hintY, tr(STR_USB_TRANSFER_HINT));
+  }
+
+  if (inkPoint) {
+    renderer.drawRoundedRect(14, InkPointShell::kFooterTop, pageWidth - 28,
+                             InkPointShell::kFooterHeight, 2, 7, true);
+    renderer.drawCenteredText(UI_10_FONT_ID, InkPointShell::kFooterTop + 18,
+                              state == State::ERROR ? tr(STR_BACK) : tr(STR_EXIT), true,
+                              EpdFontFamily::BOLD);
   }
 
   renderer.displayBuffer();

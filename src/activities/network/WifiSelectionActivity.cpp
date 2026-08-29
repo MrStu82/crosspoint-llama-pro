@@ -14,6 +14,7 @@
 #include "WifiCredentialStore.h"
 #include "activities/util/KeyboardEntryActivity.h"
 #include "components/UITheme.h"
+#include "components/InkPointShell.h"
 #include "fontIds.h"
 
 namespace {
@@ -23,6 +24,12 @@ bool readStationMac(uint8_t (&mac)[6]) {
 #else
   return esp_read_mac(mac, ESP_MAC_WIFI_STA) == ESP_OK;
 #endif
+}
+
+Rect wifiContentScreen(const GfxRenderer& renderer) {
+  if (InkPointShell::enabled(renderer))
+    return Rect{0, 0, renderer.getScreenWidth(), InkPointShell::kFooterTop};
+  return UITheme::getInstance().getScreenSafeArea(renderer, true, false);
 }
 }  // namespace
 
@@ -556,7 +563,7 @@ void WifiSelectionActivity::loop() {
   // Handle save prompt state
   if (state == WifiSelectionState::SAVE_PROMPT) {
     {
-      const Rect screen = UITheme::getInstance().getScreenSafeArea(renderer, true, false);
+      const Rect screen = wifiContentScreen(renderer);
       const auto height = renderer.getLineHeight(UI_10_FONT_ID);
       const int buttonY = screen.y + (screen.height - height * 3) / 2 + 80;
       constexpr int buttonWidth = 60;
@@ -613,7 +620,7 @@ void WifiSelectionActivity::loop() {
   // Handle forget prompt state (connection failed with saved credentials)
   if (state == WifiSelectionState::FORGET_PROMPT) {
     {
-      const Rect screen = UITheme::getInstance().getScreenSafeArea(renderer, true, false);
+      const Rect screen = wifiContentScreen(renderer);
       const auto height = renderer.getLineHeight(UI_10_FONT_ID);
       const int buttonY = screen.y + (screen.height - height * 3) / 2 + 80;
       constexpr int buttonWidth = 120;
@@ -742,7 +749,7 @@ void WifiSelectionActivity::loop() {
 
     if (!networks.empty()) {
       const auto& metrics = UITheme::getInstance().getMetrics();
-      Rect screen = UITheme::getInstance().getScreenSafeArea(renderer, true, false);
+      Rect screen = wifiContentScreen(renderer);
       const int contentTop =
           screen.y + metrics.topPadding + metrics.headerHeight + metrics.tabBarHeight + metrics.verticalSpacing;
       const int contentHeight = screen.height - contentTop - metrics.verticalSpacing * 2;
@@ -807,19 +814,27 @@ void WifiSelectionActivity::render(RenderLock&&) {
 
   auto& theme = UITheme::getInstance();
   auto metrics = theme.getMetrics();
-  Rect screen = theme.getScreenSafeArea(renderer, true, false);
+  const bool inkPoint = InkPointShell::enabled(renderer);
+  Rect screen = wifiContentScreen(renderer);
 
   // Draw header
   // STR_NETWORKS_FOUND is ~37 bytes once the Arabic translation is substituted,
   // so 32 truncated it. See ClockSyncActivity for the same class of bug.
   char countStr[64];
   snprintf(countStr, sizeof(countStr), tr(STR_NETWORKS_FOUND), realNetworkCount);
-  GUI.drawHeader(renderer, Rect{screen.x, screen.y + metrics.topPadding, screen.width, metrics.headerHeight},
-                 tr(STR_WIFI_NETWORKS), countStr);
-  GUI.drawSubHeader(
-      renderer,
-      Rect{screen.x, screen.y + metrics.topPadding + metrics.headerHeight, screen.width, metrics.tabBarHeight},
-      cachedMacAddress.c_str());
+  if (inkPoint) {
+    InkPointShell::drawHeader(renderer, "Wi-Fi");
+    renderer.drawText(SMALL_FONT_ID, 20, 96, countStr);
+    renderer.drawText(SMALL_FONT_ID, screen.width - 20 - renderer.getTextWidth(SMALL_FONT_ID, cachedMacAddress.c_str()),
+                      96, cachedMacAddress.c_str());
+  } else {
+    GUI.drawHeader(renderer, Rect{screen.x, screen.y + metrics.topPadding, screen.width, metrics.headerHeight},
+                   tr(STR_WIFI_NETWORKS), countStr);
+    GUI.drawSubHeader(
+        renderer,
+        Rect{screen.x, screen.y + metrics.topPadding + metrics.headerHeight, screen.width, metrics.tabBarHeight},
+        cachedMacAddress.c_str());
+  }
 
   switch (state) {
     case WifiSelectionState::AUTO_CONNECTING:

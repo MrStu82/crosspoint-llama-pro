@@ -43,11 +43,13 @@ void drawIcon(const GfxRenderer& r, const int index, const int cx, const int cy,
     r.drawLine(cx - 10, cy - 4, cx + 7, cy - 4, black); r.drawLine(cx + 7, cy - 4, cx + 3, cy - 8, black);
     r.drawLine(cx + 10, cy + 4, cx - 7, cy + 4, black); r.drawLine(cx - 7, cy + 4, cx - 3, cy + 8, black);
   } else {
-    constexpr int ox[16] = {-3,-3,3,3,8,8,11,11,8,8,3,3,-3,-3,-8,-8};
-    constexpr int oy[16] = {-11,-8,-8,-11,-8,-5,-5,3,3,8,8,11,11,8,8,3};
-    for (int i = 0; i < 16; ++i)
-      r.drawLine(cx + ox[i], cy + oy[i], cx + ox[(i + 1) % 16], cy + oy[(i + 1) % 16], 2, black);
-    r.drawRoundedRect(cx - 4, cy - 4, 8, 8, 1, 4, black);
+    // Symmetric eight-tooth cog. The old 16-point path omitted the entire
+    // lower-left quadrant and visibly spiralled on the X4 Pro panel.
+    constexpr int ox[24] = {-3,3,3,7,9,13,11,11,13,9,7,3,3,-3,-3,-7,-9,-13,-11,-11,-13,-9,-7,-3};
+    constexpr int oy[24] = {-11,-11,-8,-7,-9,-5,-3,3,5,9,7,8,11,11,8,7,9,5,3,-3,-5,-9,-7,-8};
+    for (int i = 0; i < 24; ++i)
+      r.drawLine(cx + ox[i], cy + oy[i], cx + ox[(i + 1) % 24], cy + oy[(i + 1) % 24], 2, black);
+    r.drawRoundedRect(cx - 4, cy - 4, 8, 8, 2, 4, black);
   }
 }
 }  // namespace
@@ -61,7 +63,7 @@ bool enabled(const GfxRenderer& renderer) {
 void drawHeader(const GfxRenderer& renderer, const char* title) {
   char battery[12];
   std::snprintf(battery, sizeof(battery), "%u%%", static_cast<unsigned>(powerManager.getBatteryPercentage()));
-  renderer.drawText(SMALL_FONT_ID, 460 - renderer.getTextWidth(SMALL_FONT_ID, battery), 2, battery);
+  renderer.drawText(SMALL_FONT_ID, 460 - renderer.getTextWidth(SMALL_FONT_ID, battery), 4, battery);
   // Caveat 30 has the same measured on-panel ink height as the approved 42px prototype token.
   // Drawn from y=23, its descenders reach y=94 (kHeaderBottom); kContentTop sits
   // clear of that, so no screen's content can collide with the heading.

@@ -707,17 +707,6 @@ void HomeActivity::renderInkPointHome() {
     }
   }
 
-  // The outline starts at the cover's exact bounds (zero padding) and the bar
-  // beneath it is exactly twice v195's 7px thickness.
-  const auto progressLayout = InkPointHomeGeometry::coverProgressLayout(
-      coverX, coverY, coverW, coverH, book ? book->progressPercent : 0);
-  const int progressY = progressLayout.y;
-  renderer.drawRect(progressLayout.x, progressLayout.y, progressLayout.width, progressLayout.height);
-  if (book && book->progressPercent >= 0) {
-    renderer.fillRect(progressLayout.fillX, progressLayout.fillY,
-                      progressLayout.fillWidth, progressLayout.fillHeight);
-  }
-
   constexpr int rightX = kInkStatsX;
   constexpr int rightWidth = kInkStatsWidth;
   int metadataBottom = InkPointShell::kContentTop;
@@ -776,7 +765,7 @@ void HomeActivity::renderInkPointHome() {
   // Keep the entire right gutter flowing from the metadata above it. Cap its
   // start so even a six-line title leaves the stat link above the footer.
   constexpr int kChevronSafeBottom = InkPointShell::kFooterTop - 14;
-  const int statsHeight = 2 * kInkStatsStep + 20 + InkPointHomeGeometry::kStatsToChevronGap +
+  const int statsHeight = 3 * kInkStatsStep + 20 + InkPointHomeGeometry::kStatsToChevronGap +
                           kInkChevronHalf + kInkChevronRuleGap + kInkChevronRuleHeight;
   const int statStart = std::min(metadataBottom + 24, kChevronSafeBottom - statsHeight);
 
@@ -853,14 +842,8 @@ void HomeActivity::renderInkPointHome() {
   drawCentered(renderer, SMALL_FONT_ID, 240, quoteLayout.attributionBaseline, attribution.c_str());
 
   InkPointShell::drawFooter(renderer, InkPointShell::Destination::Home, inkPointFocus - 1);
-  // The ring encloses the cover and the progress bar beneath it: 3px above the
-  // cover, and clear of the bar's new lower edge.
-  if (inkPointFocus == 0 && book)
-    renderer.drawRect(coverX - 3, coverY - 3, coverW + 6,
-                      coverH + 6 + InkPointHomeGeometry::kCoverProgressGap +
-                          InkPointHomeGeometry::kCoverProgressHeight + 3,
-                      2,
-                      true);
+  // The approved Home intentionally leaves the cover unframed. Touch and
+  // Confirm still activate the full cover lane; focus must not add an outline.
   if (inkPointFocus == 7)
     renderer.drawRect(kInkStats.x, kInkStats.y, kInkStats.width, kInkStats.height, 2, true);
 

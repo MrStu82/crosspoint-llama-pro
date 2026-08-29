@@ -12,14 +12,16 @@ constexpr int kBrightnessMin = 1;
 constexpr int kWarmthMin = 0;
 constexpr int kValueMax = 100;
 
-constexpr int kPortraitSheetHeight = 516;
 constexpr int kSideMargin = 16;
 constexpr int kTopPadding = 18;
 constexpr int kCaptionHeight = 24;
+constexpr int kCaptionToSliderGap = 8;
 constexpr int kControlHeight = 56;
-constexpr int kSliderBlockHeight = 116;
-constexpr int kTileHeight = 84;
+constexpr int kSliderBlockGap = 8;
+// The four quick-setting buttons are exactly two thirds of their former 84px height.
+constexpr int kTileHeight = 56;
 constexpr int kTileGap = 16;
+constexpr int kBottomPadding = 34;
 constexpr int kGrabberWidth = 56;
 constexpr int kGrabberHeight = 5;
 
@@ -95,35 +97,36 @@ inline int knobX(const int value, const Rect& track, const int minimum) {
 
 inline Layout layout(const int screenWidth, const int screenHeight) {
   Layout out{};
-  out.sheetHeight = std::min(kPortraitSheetHeight, screenHeight);
   const int contentWidth = std::max(0, screenWidth - 2 * kSideMargin);
   const int y0 = kTopPadding;
 
   out.brightnessCaption = {kSideMargin, y0, contentWidth, kCaptionHeight};
-  const int brightnessY = y0 + kCaptionHeight;
+  const int brightnessY = y0 + kCaptionHeight + kCaptionToSliderGap;
   const int brightnessTrackWidth = std::max(1, contentWidth - 3 * kControlHeight);
   out.brightness.minus = {kSideMargin, brightnessY, kControlHeight, kControlHeight};
   out.brightness.track = {out.brightness.minus.x + kControlHeight, brightnessY, brightnessTrackWidth, kControlHeight};
   out.brightness.plus = {out.brightness.track.x + brightnessTrackWidth, brightnessY, kControlHeight, kControlHeight};
   out.brightness.toggle = {out.brightness.plus.x + kControlHeight, brightnessY, kControlHeight, kControlHeight};
 
-  const int warmthCaptionY = y0 + kSliderBlockHeight;
+  const int warmthCaptionY = brightnessY + kControlHeight + kSliderBlockGap;
   out.warmthCaption = {kSideMargin, warmthCaptionY, contentWidth, kCaptionHeight};
-  const int warmthY = warmthCaptionY + kCaptionHeight;
+  const int warmthY = warmthCaptionY + kCaptionHeight + kCaptionToSliderGap;
   const int warmthTrackWidth = std::max(1, contentWidth - 2 * kControlHeight);
   out.warmth.minus = {kSideMargin, warmthY, kControlHeight, kControlHeight};
   out.warmth.track = {out.warmth.minus.x + kControlHeight, warmthY, warmthTrackWidth, kControlHeight};
   out.warmth.plus = {out.warmth.track.x + warmthTrackWidth, warmthY, kControlHeight, kControlHeight};
   out.warmth.toggle = {0, 0, 0, 0};
 
-  const int tileTop = y0 + 2 * kSliderBlockHeight;
+  const int tileTop = warmthY + kControlHeight + kSliderBlockGap;
   const int tileWidth = std::max(1, (contentWidth - kTileGap) / 2);
   out.tiles[0] = {kSideMargin, tileTop, tileWidth, kTileHeight};
   out.tiles[1] = {kSideMargin + tileWidth + kTileGap, tileTop, tileWidth, kTileHeight};
   out.tiles[2] = {kSideMargin, tileTop + kTileHeight + kTileGap, tileWidth, kTileHeight};
   out.tiles[3] = {kSideMargin + tileWidth + kTileGap, tileTop + kTileHeight + kTileGap, tileWidth, kTileHeight};
 
-  out.grabber = {(screenWidth - kGrabberWidth) / 2, out.sheetHeight - 16, kGrabberWidth, kGrabberHeight};
+  const int contentsBottom = out.tiles[2].y + out.tiles[2].height;
+  out.sheetHeight = std::min(contentsBottom + kBottomPadding, screenHeight);
+  out.grabber = {(screenWidth - kGrabberWidth) / 2, out.sheetHeight - 14, kGrabberWidth, kGrabberHeight};
   return out;
 }
 

@@ -553,9 +553,8 @@ void EpubReaderActivity::loop() {
     }
   }
 
-  // Downward swipe from the top edge -> text settings directly (Stuart: "the top menu should
-  // have text options" — TEXT_SETTINGS was buried at item 3 of 14 in the full menu; this gesture
-  // is the shortcut straight to it, distinct from Confirm's full-menu-open above).
+  // Upward swipe from the bottom edge -> text settings directly. Global Quick
+  // Settings owns the opposite top-edge/downward gesture, so they cannot collide.
   if (ReaderUtils::isTouchMenuGesture(mappedInput)) {
     startActivityForResult(std::make_unique<TextSettingsActivity>(renderer, mappedInput, &sdFontSystem.registry(),
                                                                    TextSettingsActivity::Tab::Family),

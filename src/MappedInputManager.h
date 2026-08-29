@@ -68,10 +68,8 @@ class MappedInputManager {
   // the now-retired wasBackGesture() (Back is covered by the physical home key alone; see
   // wasHomeKeyBackGesture()).
   bool wasBrightnessGesture() const;
-  // Bottom-edge upward swipe -> quick brightness sheet (9-tick, windowed partial refresh).
-  // Edge-anchored to the bottom, mirroring wasMenuGesture()'s top-edge zone. The bottom-left
-  // corner is shared with wasBrightnessGesture()'s left zone; wasBrightnessGesture() excludes
-  // it so this gesture always wins there.
+  // Bottom-edge upward swipe -> reader Text Settings. Edge-anchored to the
+  // bottom, mirroring Quick Settings' exclusive top-edge/downward zone.
   bool wasBrightnessSheetGesture() const;
   bool wasAnyPressed() const;
   bool wasAnyReleased() const;

@@ -92,6 +92,7 @@ class TextSettingsActivity final : public Activity {
   int currentSizeIndex_ = 0;
 
   ThemeMetrics metrics_ = {};
+  int drawerTop = 0;
   int afterHeader = 0;
   int bottomReserved = 0;
   int usableHeight = 0;

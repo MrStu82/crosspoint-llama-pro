@@ -37,27 +37,16 @@ TEST(HomeInkPointGeometry, PartialRatingUsesAClippedLeftHalfAndCompleteOutline) 
             InkPointHomeGeometry::RatingStarFill::Outline);
 }
 
-TEST(HomeInkPointGeometry, ProgressBarIsDoubleThicknessAndHugsCoverBounds) {
-  const auto layout = InkPointHomeGeometry::coverProgressLayout(20, 104, 220, 362, 61);
-  EXPECT_EQ(layout.x, 20);
-  EXPECT_EQ(layout.y, 466);
-  EXPECT_EQ(layout.width, 220);
-  EXPECT_EQ(layout.height, 14);
-  EXPECT_EQ(layout.fillX, 21);
-  EXPECT_EQ(layout.fillY, 470);
-  EXPECT_EQ(layout.fillWidth, 132);
-  EXPECT_EQ(layout.fillHeight, 6);
-}
-
-TEST(HomeInkPointGeometry, WholeBookEtaSitsBesideChapterWithoutMovingChevron) {
+TEST(HomeInkPointGeometry, WholeBookEtaOwnsTheRowBelowChapter) {
   const auto layout = InkPointHomeGeometry::statsLayout(260, 305, 58);
   EXPECT_EQ(layout.timeX, 260);
   EXPECT_EQ(layout.timeY, 305);
   EXPECT_EQ(layout.chapterX, 260);
   EXPECT_EQ(layout.chapterY, 363);
-  EXPECT_EQ(layout.bookX, 362);
-  EXPECT_EQ(layout.bookY, layout.chapterY);
-  EXPECT_EQ(layout.chevronY, 461);
+  EXPECT_EQ(layout.bookX, 260);
+  EXPECT_EQ(layout.bookY, 421);
+  EXPECT_GE(layout.bookY, layout.chapterY + 58);
+  EXPECT_EQ(layout.chevronY, 519);
 }
 
 TEST(HomeInkPointGeometry, EtaUsesOnlyTheMeasuredPerBookRate) {

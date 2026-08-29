@@ -27,6 +27,11 @@ constexpr const char* AP_PASSWORD = nullptr;  // Open network for ease of use
 constexpr const char* AP_HOSTNAME = "crosspoint";
 constexpr uint8_t AP_CHANNEL = 1;
 constexpr uint8_t AP_MAX_CONNECTIONS = 4;
+const IPAddress AP_IP(192, 168, 4, 1);
+const IPAddress AP_GATEWAY(192, 168, 4, 1);
+const IPAddress AP_SUBNET(255, 255, 255, 0);
+const IPAddress AP_DHCP_START(192, 168, 4, 2);
+constexpr unsigned long AP_READY_TIMEOUT_MS = 2000;
 constexpr int QR_CODE_WIDTH = 198;
 constexpr int QR_CODE_HEIGHT = 198;
 
@@ -205,9 +210,15 @@ void CrossPointWebServerActivity::startAccessPoint() {
   LOG_DBG("WEBACT", "Starting Access Point mode...");
   LOG_DBG("WEBACT", "Free heap before AP start: %d bytes", ESP.getFreeHeap());
 
-  // Configure and start the AP
+  // Configure a deterministic AP netif and DHCP lease before publishing its
+  // SSID. Association alone does not prove that the IPv4 netif is ready.
   WiFi.mode(WIFI_AP);
-  delay(100);
+  if (!WiFi.softAPConfig(AP_IP, AP_GATEWAY, AP_SUBNET, AP_DHCP_START, AP_IP)) {
+    LOG_ERR("WEBACT", "ERROR: Failed to configure Access Point IPv4/DHCP!");
+    WiFi.softAPdisconnect(true);
+    onGoHome();
+    return;
+  }
 
   // Start soft AP
   bool apStarted;
@@ -224,10 +235,24 @@ void CrossPointWebServerActivity::startAccessPoint() {
     return;
   }
 
-  delay(100);  // Wait for AP to fully initialize
-
-  // Get AP IP address
+  // The pinned Arduino core starts AP/DHCP asynchronously. Wait for the exact
+  // netif address instead of sleeping for an assumed 100 ms and then binding
+  // port 80 to a possibly unready interface.
+  const unsigned long readyStartedAt = millis();
+  while (((WiFi.getMode() & WIFI_MODE_AP) == 0 || WiFi.softAPIP() != AP_IP) &&
+         millis() - readyStartedAt < AP_READY_TIMEOUT_MS) {
+    delay(10);
+  }
   const IPAddress apIP = WiFi.softAPIP();
+  if ((WiFi.getMode() & WIFI_MODE_AP) == 0 || apIP != AP_IP) {
+    LOG_ERR("WEBACT", "ERROR: Access Point netif not ready (mode=%d, IP=%s)", WiFi.getMode(),
+            apIP.toString().c_str());
+    WiFi.softAPdisconnect(true);
+    onGoHome();
+    return;
+  }
+
+  // Get the verified AP IP address.
   char ipStr[16];
   snprintf(ipStr, sizeof(ipStr), "%d.%d.%d.%d", apIP[0], apIP[1], apIP[2], apIP[3]);
   connectedIP = ipStr;
@@ -237,7 +262,12 @@ void CrossPointWebServerActivity::startAccessPoint() {
   LOG_DBG("WEBACT", "SSID: %s", AP_SSID);
   LOG_DBG("WEBACT", "IP: %s", connectedIP.c_str());
 
-  // Start mDNS for hostname resolution
+  // Port 80 is the primary service. Start and verify its listener before the
+  // optional discovery helpers consume sockets/heap.
+  startWebServer();
+  if (state != WebServerActivityState::SERVER_RUNNING) return;
+
+  // Start mDNS for hostname resolution.
   restartMdns(AP_HOSTNAME, "WEBACT");
 
   // Start DNS server for captive portal behavior
@@ -249,9 +279,6 @@ void CrossPointWebServerActivity::startAccessPoint() {
   LOG_DBG("WEBACT", "DNS server started for captive portal");
 
   LOG_DBG("WEBACT", "Free heap after AP start: %d bytes", ESP.getFreeHeap());
-
-  // Start the web server
-  startWebServer();
 }
 
 void CrossPointWebServerActivity::startWebServer() {
@@ -359,28 +386,18 @@ void CrossPointWebServerActivity::loop() {
       // Reset watchdog BEFORE processing - HTTP header parsing can be slow
       resetTaskWatchdogIfSubscribed();
 
-      // Process HTTP requests in tight loop for maximum throughput
-      // More iterations = more data processed per main loop cycle
-      constexpr int MAX_ITERATIONS = 500;
+      // Keep each foreground service slice bounded. The main loop immediately
+      // re-enters this activity, so 32 accepts retain throughput while giving
+      // the AP/DHCP/TCP event machinery a scheduling point every slice.
+      constexpr int MAX_ITERATIONS = 32;
       for (int i = 0; i < MAX_ITERATIONS && webServer->isRunning(); i++) {
         webServer->handleClient();
         // Reset watchdog every 32 iterations
         if ((i & 0x1F) == 0x1F) {
           resetTaskWatchdogIfSubscribed();
         }
-        // Yield and check for exit button every 64 iterations
-        if ((i & 0x3F) == 0x3F) {
-          yield();
-          // Force trigger an update of which buttons are being pressed so be have accurate state
-          // for back button checking
-          mappedInput.update();
-          // Check for exit button inside loop for responsiveness
-          if (mappedInput.wasPressed(MappedInputManager::Button::Back)) {
-            onGoHome();
-            return;
-          }
-        }
       }
+      yield();
       lastHandleClientTime = millis();
     }
 
@@ -476,18 +493,18 @@ void CrossPointWebServerActivity::renderServerRunning() const {
                       EpdFontFamily::BOLD);
     startY += height10 + metrics.verticalSpacing * 2;
 
-    std::string hostnameUrl = std::string("http://") + AP_HOSTNAME + ".local/";
-    std::string ipUrl = tr(STR_OR_HTTP_PREFIX) + connectedIP + "/";
+    const std::string directUrl = std::string("http://") + connectedIP + "/";
+    const std::string hostnameFallback = std::string(tr(STR_OR_HTTP_PREFIX)) + AP_HOSTNAME + ".local/";
 
     // Show QR code for URL
     const Rect qrBoundsUrl(metrics.contentSidePadding, startY, QR_CODE_WIDTH, QR_CODE_HEIGHT);
-    QrUtils::drawQrCode(renderer, qrBoundsUrl, hostnameUrl);
+    QrUtils::drawQrCode(renderer, qrBoundsUrl, directUrl);
 
-    // Show IP address as fallback
+    // Show the same direct address as the QR, with mDNS retained as fallback.
     renderer.drawText(UI_10_FONT_ID, metrics.contentSidePadding + QR_CODE_WIDTH + metrics.verticalSpacing, startY + 80,
-                      hostnameUrl.c_str());
+                      directUrl.c_str());
     renderer.drawText(SMALL_FONT_ID, metrics.contentSidePadding + QR_CODE_WIDTH + metrics.verticalSpacing, startY + 100,
-                      ipUrl.c_str());
+                      hostnameFallback.c_str());
   } else {
     startY += metrics.verticalSpacing * 2;
 

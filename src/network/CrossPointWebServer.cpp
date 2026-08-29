@@ -112,8 +112,9 @@ void CrossPointWebServer::begin() {
   LOG_DBG("WEB", "[MEM] Free heap before begin: %d bytes", ESP.getFreeHeap());
   LOG_DBG("WEB", "Network mode: %s", apMode ? "AP" : "STA");
 
-  LOG_DBG("WEB", "Creating web server on port %d...", port);
-  server.reset(new WebServer(port));
+  const IPAddress listenAddress = apMode ? WiFi.softAPIP() : WiFi.localIP();
+  LOG_DBG("WEB", "Creating web server on %s:%d...", listenAddress.toString().c_str(), port);
+  server.reset(new CheckedWebServer(listenAddress, port));
 
   // Disable WiFi sleep to improve responsiveness and prevent 'unreachable' errors.
   // This is critical for reliable web server operation on ESP32.
@@ -193,6 +194,15 @@ void CrossPointWebServer::begin() {
   LOG_DBG("WEB", "WebDAV handler initialized");
 
   server->begin();
+
+  // Arduino's WebServer::begin() returns void even when its underlying socket
+  // fails to bind/listen. Do not publish SERVER_RUNNING in that state: the UI
+  // would show a valid address while both / and /api/status time out.
+  if (!server->isListening()) {
+    LOG_ERR("WEB", "Failed to listen on %s:%d", listenAddress.toString().c_str(), port);
+    server.reset();
+    return;
+  }
 
   // Start WebSocket server for fast binary uploads
   LOG_DBG("WEB", "Starting WebSocket server on port %d...", wsPort);

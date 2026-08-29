@@ -17,6 +17,15 @@ struct FileInfo {
   bool isDirectory;
 };
 
+// WebServer::begin() has a void return type, but its protected NetworkServer
+// records whether bind/listen actually succeeded. Expose only that lifecycle
+// fact so callers cannot report a dead port-80 socket as "running".
+class CheckedWebServer final : public WebServer {
+ public:
+  using WebServer::WebServer;
+  bool isListening() { return static_cast<bool>(_server); }
+};
+
 class CrossPointWebServer {
  public:
   struct WsUploadStatus {
@@ -69,7 +78,7 @@ class CrossPointWebServer {
   uint16_t getPort() const { return port; }
 
  private:
-  std::unique_ptr<WebServer> server = nullptr;
+  std::unique_ptr<CheckedWebServer> server = nullptr;
   std::unique_ptr<WebSocketsServer> wsServer = nullptr;
   bool running = false;
   bool apMode = false;  // true when running in AP mode, false for STA mode

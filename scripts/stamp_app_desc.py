@@ -26,14 +26,30 @@ import struct
 import subprocess
 import sys
 
-Import("env")  # noqa: F821  (injected by SCons)
-
 PROJECT_NAME = "crosspoint-llama-pro"
 # esp_app_desc_t: magic, secure_version, reserv1[2], version[32], project[32], ...
 DESC_MAGIC = 0xABCD5432
 VERSION_OFFSET = 16
 PROJECT_OFFSET = 48
 FIELD_LEN = 32
+
+
+def descriptor_member(members):
+    """Accept both IDF archive naming conventions (.o and prebuilt .obj)."""
+    for name in ("esp_app_desc.c.o", "esp_app_desc.c.obj"):
+        if name in members:
+            return name
+    return None
+
+
+if "--self-test" in sys.argv:
+    assert descriptor_member(["esp_app_desc.c.o"]) == "esp_app_desc.c.o"
+    assert descriptor_member(["x.o", "esp_app_desc.c.obj"]) == "esp_app_desc.c.obj"
+    assert descriptor_member(["x.o"]) is None
+    raise SystemExit(0)
+
+
+Import("env")  # noqa: F821  (injected by SCons)
 
 
 def warn(msg):
@@ -100,14 +116,21 @@ def stamp():
     private = os.path.join(work, "libesp_app_format.a")
     shutil.copyfile(source, private)
 
-    member = "esp_app_desc.c.o"
     try:
+        members = subprocess.check_output(["ar", "t", private], text=True).splitlines()
+        member = descriptor_member(members)
+        if member is None:
+            warn("esp_app_desc object not found in archive; descriptor left alone")
+            return
         subprocess.check_call(["ar", "x", private, member], cwd=work)
     except (OSError, subprocess.CalledProcessError) as error:
-        warn(f"could not extract {member} ({error}); descriptor left alone")
+        warn(f"could not inspect/extract descriptor object ({error}); descriptor left alone")
         return
 
     obj = os.path.join(work, member)
+    if not os.path.isfile(obj):
+        warn(f"archive extraction did not create {member}; descriptor left alone")
+        return
     with open(obj, "rb") as handle:
         blob = bytearray(handle.read())
     at = descriptor_offset(blob)

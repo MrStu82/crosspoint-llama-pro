@@ -37,6 +37,18 @@ TEST(HomeInkPointGeometry, PartialRatingUsesAClippedLeftHalfAndCompleteOutline) 
             InkPointHomeGeometry::RatingStarFill::Outline);
 }
 
+TEST(HomeInkPointGeometry, ProgressBarBeginsDirectlyBelowUnframedCover) {
+  const auto layout = InkPointHomeGeometry::coverProgressLayout(20, 116, 220, 434, 61);
+  EXPECT_EQ(layout.x, 20);
+  EXPECT_EQ(layout.y, 550);
+  EXPECT_EQ(layout.width, 220);
+  EXPECT_EQ(layout.height, 14);
+  EXPECT_EQ(layout.fillX, 21);
+  EXPECT_EQ(layout.fillY, 554);
+  EXPECT_EQ(layout.fillWidth, 132);
+  EXPECT_EQ(layout.fillHeight, 6);
+}
+
 TEST(HomeInkPointGeometry, WholeBookEtaOwnsTheRowBelowChapter) {
   const auto layout = InkPointHomeGeometry::statsLayout(260, 305, 58);
   EXPECT_EQ(layout.timeX, 260);
@@ -46,7 +58,9 @@ TEST(HomeInkPointGeometry, WholeBookEtaOwnsTheRowBelowChapter) {
   EXPECT_EQ(layout.bookX, 260);
   EXPECT_EQ(layout.bookY, 421);
   EXPECT_GE(layout.bookY, layout.chapterY + 58);
-  EXPECT_EQ(layout.chevronY, 519);
+  EXPECT_EQ(layout.chevronY, 507);
+  EXPECT_GT(layout.chevronY, layout.bookY + 20);
+  EXPECT_LT(layout.chevronY, 550);  // Existing Stats tap target bottom.
 }
 
 TEST(HomeInkPointGeometry, EtaUsesOnlyTheMeasuredPerBookRate) {

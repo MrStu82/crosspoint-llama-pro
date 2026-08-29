@@ -4,6 +4,7 @@
 #include <HalPowerManager.h>
 
 #include <cstdio>
+#include <array>
 
 #include "MappedInputManager.h"
 #include "activities/Activity.h"
@@ -14,6 +15,16 @@ namespace {
 constexpr int kFooterX = 14;
 constexpr int kTabWidth = 72;
 constexpr int kTabGap = 4;
+
+// Filled 8-tooth silhouette with exact horizontal/vertical symmetry. Keeping
+// the vertices relative to the supplied centre prevents the Settings glyph
+// from drifting within its existing footer button.
+constexpr std::array<int, 32> kSettingsCogX = {
+    -3, 3, 3, 6, 8, 12, 10, 11, 14, 14, 11, 10, 12, 8, 6, 3,
+     3,-3,-3,-6,-8,-12,-10,-11,-14,-14,-11,-10,-12,-8,-6,-3};
+constexpr std::array<int, 32> kSettingsCogY = {
+    -12,-12,-9,-8,-10,-6,-4,-2,-2, 2, 2, 4, 6,10, 8, 9,
+     12, 12, 9, 8, 10, 6, 4, 2, 2,-2,-2,-4,-6,-10,-8,-9};
 
 int textTop(const GfxRenderer& renderer, const int fontId, const int baseline) {
   return baseline - renderer.getFontAscenderSize(fontId);
@@ -43,13 +54,14 @@ void drawIcon(const GfxRenderer& r, const int index, const int cx, const int cy,
     r.drawLine(cx - 10, cy - 4, cx + 7, cy - 4, black); r.drawLine(cx + 7, cy - 4, cx + 3, cy - 8, black);
     r.drawLine(cx + 10, cy + 4, cx - 7, cy + 4, black); r.drawLine(cx - 7, cy + 4, cx - 3, cy + 8, black);
   } else {
-    // Symmetric eight-tooth cog. The old 16-point path omitted the entire
-    // lower-left quadrant and visibly spiralled on the X4 Pro panel.
-    constexpr int ox[24] = {-3,3,3,7,9,13,11,11,13,9,7,3,3,-3,-3,-7,-9,-13,-11,-11,-13,-9,-7,-3};
-    constexpr int oy[24] = {-11,-11,-8,-7,-9,-5,-3,3,5,9,7,8,11,11,8,7,9,5,3,-3,-5,-9,-7,-8};
-    for (int i = 0; i < 24; ++i)
-      r.drawLine(cx + ox[i], cy + oy[i], cx + ox[(i + 1) % 24], cy + oy[(i + 1) % 24], 2, black);
-    r.drawRoundedRect(cx - 4, cy - 4, 8, 8, 2, 4, black);
+    int x[kSettingsCogX.size()] = {}, y[kSettingsCogY.size()] = {};
+    for (size_t i = 0; i < kSettingsCogX.size(); ++i) {
+      x[i] = cx + kSettingsCogX[i];
+      y[i] = cy + kSettingsCogY[i];
+    }
+    r.fillPolygon(x, y, static_cast<int>(kSettingsCogX.size()), black);
+    r.fillRoundedRect(cx - 4, cy - 4, 8, 8, 4,
+                      black ? Color::White : Color::Black);
   }
 }
 }  // namespace
@@ -63,7 +75,7 @@ bool enabled(const GfxRenderer& renderer) {
 void drawHeader(const GfxRenderer& renderer, const char* title) {
   char battery[12];
   std::snprintf(battery, sizeof(battery), "%u%%", static_cast<unsigned>(powerManager.getBatteryPercentage()));
-  renderer.drawText(SMALL_FONT_ID, 460 - renderer.getTextWidth(SMALL_FONT_ID, battery), 4, battery);
+  renderer.drawText(SMALL_FONT_ID, 460 - renderer.getTextWidth(SMALL_FONT_ID, battery), 5, battery);
   // Caveat 30 has the same measured on-panel ink height as the approved 42px prototype token.
   // Drawn from y=23, its descenders reach y=94 (kHeaderBottom); kContentTop sits
   // clear of that, so no screen's content can collide with the heading.

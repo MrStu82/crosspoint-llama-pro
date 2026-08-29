@@ -707,6 +707,17 @@ void HomeActivity::renderInkPointHome() {
     }
   }
 
+  // The progress indicator begins at the cover's lower edge. It is the only
+  // geometry drawn around a real cover: the cover itself remains unframed.
+  const auto progressLayout = InkPointHomeGeometry::coverProgressLayout(
+      coverX, coverY, coverW, coverH, book ? book->progressPercent : 0);
+  renderer.drawRect(progressLayout.x, progressLayout.y,
+                    progressLayout.width, progressLayout.height);
+  if (book && book->progressPercent >= 0) {
+    renderer.fillRect(progressLayout.fillX, progressLayout.fillY,
+                      progressLayout.fillWidth, progressLayout.fillHeight);
+  }
+
   constexpr int rightX = kInkStatsX;
   constexpr int rightWidth = kInkStatsWidth;
   int metadataBottom = InkPointShell::kContentTop;

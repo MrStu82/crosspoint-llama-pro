@@ -28,8 +28,38 @@ inline RatingStarFill ratingStarFill(const int valueX100, const int starIndex) {
   return RatingStarFill::Half;
 }
 
+inline constexpr int kCoverProgressGap = 0;
+inline constexpr int kCoverProgressHeight = 14;
+inline constexpr int kCoverProgressFillHeight = 6;
 inline constexpr int kQuoteBandTopOffsetFromCoverBottom = 8;
-inline constexpr int kStatsToChevronGap = 20;
+inline constexpr int kStatsToChevronGap = 8;
+
+struct CoverProgressLayout {
+  int x;
+  int y;
+  int width;
+  int height;
+  int fillX;
+  int fillY;
+  int fillWidth;
+  int fillHeight;
+};
+
+inline CoverProgressLayout coverProgressLayout(const int coverX, const int coverY,
+                                               const int coverWidth, const int coverHeight,
+                                               const int progressPercent) {
+  const int innerWidth = std::max(0, coverWidth - 2);
+  const int boundedPercent = std::clamp(progressPercent, 0, 100);
+  return {coverX,
+          coverY + coverHeight + kCoverProgressGap,
+          coverWidth,
+          kCoverProgressHeight,
+          coverX + 1,
+          coverY + coverHeight + kCoverProgressGap +
+              (kCoverProgressHeight - kCoverProgressFillHeight) / 2,
+          innerWidth * boundedPercent / 100,
+          kCoverProgressFillHeight};
+}
 
 struct StatsLayout {
   int timeX;

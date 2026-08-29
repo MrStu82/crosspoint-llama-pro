@@ -15,14 +15,17 @@ wifi = (root / "src/activities/network/WifiSelectionActivity.cpp").read_text()
 transfer = (root / "src/activities/network/CrossPointWebServerActivity.cpp").read_text()
 usb = (root / "src/activities/settings/UsbTransferActivity.cpp").read_text()
 
-# Home has no drawn cover progress or focus outline; book ETA is a full row below chapter.
-for retired in ["coverProgressLayout", "kCoverProgressHeight", "coverX - 3"]:
-    assert retired not in home, retired
+# The later four-fix approval restores cover progress but not the rejected
+# cover/focus outline; book ETA remains a full row below chapter.
+assert "coverProgressLayout" in home and "kCoverProgressHeight = 14" in geometry
+assert "coverX - 3" not in home
 assert "rightX, statStart + 2 * statStep" in geometry
 
-# Battery baseline moves by exactly two panel rows; cog path is a symmetric 24-point path.
-assert "battery), 4, battery" in shell
-assert "constexpr int ox[24]" in shell and "constexpr int oy[24]" in shell
+# The four-fix approval moves the battery one further row and replaces the
+# outline cog with a centred, axis-symmetric filled silhouette.
+assert "battery), 5, battery" in shell
+assert "kSettingsCogX" in shell and "kSettingsCogY" in shell
+assert "fillPolygon(x, y" in shell
 
 # Quick Settings owns top/down exclusively. Reader Text Settings owns bottom/up.
 assert "mappedInput.wasMenuGesture()" in manager

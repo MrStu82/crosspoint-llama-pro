@@ -64,9 +64,8 @@ TEST(HomeInkPointGeometry, WholeBookEtaOwnsTheRowBelowChapter) {
 }
 
 TEST(HomeInkPointGeometry, EtaUsesOnlyTheMeasuredPerBookRate) {
-  // 600s / 10 pages = 60s/page. At 20% the estimated total is 50 pages,
-  // leaving 40; the current chapter has 3 pages left.
-  const auto eta = InkPointHomeGeometry::estimateEtas(600, 10, true, 3, true, 20);
+  const auto eta = InkPointHomeGeometry::estimateEtas(
+      BookReadingRate::kQ16One, 40U * BookReadingRate::kQ16One, true, 3, true);
   ASSERT_TRUE(eta.chapterMinutes);
   ASSERT_TRUE(eta.bookMinutes);
   EXPECT_EQ(*eta.chapterMinutes, 3U);
@@ -74,16 +73,15 @@ TEST(HomeInkPointGeometry, EtaUsesOnlyTheMeasuredPerBookRate) {
 }
 
 TEST(HomeInkPointGeometry, WholeBookEtaIsHiddenWhenEvidenceIsInsufficient) {
-  EXPECT_FALSE(InkPointHomeGeometry::estimateEtas(299, 5, false, 3, true, 20).bookMinutes);
-  EXPECT_FALSE(InkPointHomeGeometry::estimateEtas(600, 10, true, 3, true, 0).bookMinutes);
-  EXPECT_FALSE(InkPointHomeGeometry::estimateEtas(600, 10, true, 3, true, 100).bookMinutes);
-  EXPECT_FALSE(InkPointHomeGeometry::estimateEtas(600, 0, false, 3, true, 20).bookMinutes);
+  EXPECT_FALSE(InkPointHomeGeometry::estimateEtas(BookReadingRate::kQ16One, 40U << 16, false, 3, true)
+                   .bookMinutes);
+  EXPECT_FALSE(InkPointHomeGeometry::estimateEtas(0, 40U << 16, true, 3, true).bookMinutes);
 }
 
 TEST(HomeInkPointGeometry, EtaArithmeticIsBoundedForCorruptExtremeState) {
   const auto eta = InkPointHomeGeometry::estimateEtas(
-      std::numeric_limits<uint32_t>::max(), 5, true,
-      std::numeric_limits<int>::max(), true, 1);
+      1, std::numeric_limits<uint32_t>::max(), true,
+      std::numeric_limits<int>::max(), true);
   ASSERT_TRUE(eta.chapterMinutes);
   ASSERT_TRUE(eta.bookMinutes);
   EXPECT_EQ(*eta.chapterMinutes, std::numeric_limits<uint32_t>::max());

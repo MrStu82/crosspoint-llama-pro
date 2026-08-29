@@ -1,6 +1,7 @@
 #include "BookReadingStats.h"
 
 #include <algorithm>
+#include <array>
 #include <limits>
 
 #include <Epub.h>
@@ -10,14 +11,10 @@
 #include "activities/reader/ProgressFile.h"
 
 namespace {
-constexpr uint8_t kVersion = 1;
-struct Stored {
-  uint8_t version;
-  uint8_t reserved[3];
-  uint32_t totalSeconds;
-  uint32_t forwardPages;
-};
-static_assert(sizeof(Stored) == 12);
+using namespace BookReadingRate;
+constexpr char BOOK_FILENAME[] = "reading_stats.bin";
+constexpr char OVERALL_DIR[] = "/.crosspoint";
+constexpr char OVERALL_FILENAME[] = "reading_rate_v2.bin";
 
 std::string cachePath(const std::string& path) {
   if (FsHelpers::hasEpubExtension(path)) return Epub(path, "/.crosspoint").getCachePath();
@@ -26,32 +23,184 @@ std::string cachePath(const std::string& path) {
     return Txt(path, "/.crosspoint").getCachePath();
   return "/.crosspoint/home";
 }
+
+uint32_t satAdd(uint32_t a, uint32_t b) {
+  return b > std::numeric_limits<uint32_t>::max() - a ? std::numeric_limits<uint32_t>::max() : a + b;
+}
+
+bool ensureDir(const std::string& dir) { return Storage.exists(dir.c_str()) || Storage.mkdir(dir.c_str()); }
+
+bool loadBook(const std::string& path, StoredBookV2& stored, bool& available) {
+  available = false;
+  HalFile file;
+  const std::string filename = cachePath(path) + "/" + BOOK_FILENAME;
+  if (!Storage.openFileForRead("BRS", filename, file)) return true;
+  if (file.size() == sizeof(LegacyBookV1)) {
+    LegacyBookV1 legacy{};
+    if (file.read(reinterpret_cast<uint8_t*>(&legacy), sizeof(legacy)) != sizeof(legacy) || legacy.version != 1)
+      return false;
+    stored = migrate(legacy);
+    available = true;
+    return true;
+  }
+  if (file.size() != sizeof(StoredBookV2) ||
+      file.read(reinterpret_cast<uint8_t*>(&stored), sizeof(stored)) != sizeof(stored) || !valid(stored))
+    return false;
+  available = true;
+  return true;
+}
+
+bool saveBook(const std::string& path, StoredBookV2& stored) {
+  const std::string dir = cachePath(path);
+  if (!ensureDir(dir)) return false;
+  seal(stored);
+  return ProgressFile::writeAtomic(dir, reinterpret_cast<const uint8_t*>(&stored), sizeof(stored), BOOK_FILENAME);
+}
+
+bool loadOverall(StoredOverallV2& stored) {
+  HalFile file;
+  const std::string filename = std::string(OVERALL_DIR) + "/" + OVERALL_FILENAME;
+  if (!Storage.openFileForRead("BRR", filename, file)) return true;
+  return file.size() == sizeof(stored) && file.read(reinterpret_cast<uint8_t*>(&stored), sizeof(stored)) == sizeof(stored) &&
+         valid(stored);
+}
+
+bool saveOverall(StoredOverallV2& stored) {
+  if (!ensureDir(OVERALL_DIR)) return false;
+  seal(stored);
+  return ProgressFile::writeAtomic(OVERALL_DIR, reinterpret_cast<const uint8_t*>(&stored), sizeof(stored),
+                                   OVERALL_FILENAME);
+}
+
+template <typename T, size_t N>
+void append(std::array<T, N>& values, uint8_t& count, uint8_t& next, const T& value) {
+  values[next] = value;
+  next = static_cast<uint8_t>((next + 1U) % N);
+  if (count < N) ++count;
+}
+
+uint32_t currentRate(const StoredBookV2& stored, uint32_t& seconds) {
+  std::array<uint16_t, kBookSampleCapacity> dwell{};
+  seconds = 0;
+  for (uint8_t i = 0; i < stored.sampleCount; ++i) {
+    dwell[i] = stored.samples[i].dwellSeconds;
+    seconds = satAdd(seconds, dwell[i]);
+  }
+  if (!currentConfident(stored.sampleCount, seconds)) return 0;
+  return pagesPerMinuteQ16(dwell.data(), stored.sampleCount);
+}
+
+uint32_t overallRate(const StoredOverallV2& stored, uint32_t fingerprint) {
+  std::array<uint16_t, kOverallSampleCapacity> dwell{};
+  std::array<uint32_t, kOverallSampleCapacity> books{};
+  size_t count = 0;
+  size_t bookCount = 0;
+  for (uint8_t i = 0; i < stored.sampleCount; ++i) {
+    const auto& sample = stored.samples[i];
+    if (sample.fingerprint != fingerprint || sample.dwellSeconds == 0) continue;
+    dwell[count++] = sample.dwellSeconds;
+    if (std::find(books.begin(), books.begin() + static_cast<ptrdiff_t>(bookCount), sample.bookHash) ==
+        books.begin() + static_cast<ptrdiff_t>(bookCount))
+      books[bookCount++] = sample.bookHash;
+  }
+  if (!overallConfident(count, bookCount)) return 0;
+  return pagesPerMinuteQ16(dwell.data(), count);
+}
+
+uint32_t fineRemaining(const StoredBookV2& stored) {
+  std::array<uint32_t, kBookSampleCapacity> deltas{};
+  for (uint8_t i = 0; i < stored.sampleCount; ++i) deltas[i] = stored.samples[i].progressDeltaQ24;
+  return remainingFromFineProgressQ16(stored.progressQ24, deltas.data(), stored.sampleCount);
+}
 }  // namespace
 
 namespace BookReadingStats {
 BookReadingStatsValue read(const std::string& bookPath) {
   BookReadingStatsValue result;
-  HalFile file;
-  const std::string filename = cachePath(bookPath) + "/reading_stats.bin";
-  if (!Storage.openFileForRead("BRS", filename, file) || file.size() != sizeof(Stored)) return result;
-  Stored stored{};
-  if (file.read(reinterpret_cast<uint8_t*>(&stored), sizeof(stored)) != sizeof(stored) || stored.version != kVersion)
-    return result;
+  StoredBookV2 stored;
+  bool available = false;
+  if (!loadBook(bookPath, stored, available) || !available) return result;
+
   result.available = true;
   result.totalSeconds = stored.totalSeconds;
-  result.forwardPages = stored.forwardPages;
+  result.fingerprint = stored.fingerprint;
+  result.qualifiedSamples = stored.sampleCount;
+  result.remainingPagesQ16 = stored.basis == ContentBasis::FineProgress ? fineRemaining(stored)
+                                                                         : stored.remainingPagesQ16;
+  result.remainingAvailable = stored.basis != ContentBasis::Unknown &&
+                              (stored.basis != ContentBasis::FineProgress || result.remainingPagesQ16 != 0 ||
+                               stored.progressQ24 == kQ24One);
+
+  result.pagesPerMinuteQ16 = currentRate(stored, result.qualifiedSeconds);
+  result.currentRate = result.pagesPerMinuteQ16 != 0;
+  if (!result.currentRate && stored.fingerprint != 0) {
+    StoredOverallV2 overall;
+    if (loadOverall(overall)) result.pagesPerMinuteQ16 = overallRate(overall, stored.fingerprint);
+    result.fallbackRate = result.pagesPerMinuteQ16 != 0;
+  }
   return result;
 }
 
-bool add(const std::string& bookPath, uint32_t seconds, uint32_t forwardPages) {
-  if (seconds == 0 && forwardPages == 0) return true;
-  auto current = read(bookPath);
-  const auto satAdd = [](uint32_t a, uint32_t b) {
-    return b > std::numeric_limits<uint32_t>::max() - a ? std::numeric_limits<uint32_t>::max() : a + b;
-  };
-  Stored stored{kVersion, {0, 0, 0}, satAdd(current.totalSeconds, seconds), satAdd(current.forwardPages, forwardPages)};
-  const std::string dir = cachePath(bookPath);
-  if (!Storage.exists(dir.c_str()) && !Storage.mkdir(dir.c_str())) return false;
-  return ProgressFile::writeAtomic(dir, reinterpret_cast<const uint8_t*>(&stored), sizeof(stored), "reading_stats.bin");
+bool add(const std::string& bookPath, uint32_t seconds, uint32_t) {
+  if (seconds == 0) return true;
+  StoredBookV2 stored;
+  bool available = false;
+  if (!loadBook(bookPath, stored, available)) stored = StoredBookV2{};
+  stored.totalSeconds = satAdd(stored.totalSeconds, seconds);
+  return saveBook(bookPath, stored);
+}
+
+bool recordQualifiedPage(const std::string& bookPath, const QualifiedPageSample& sample) {
+  if (sample.dwellSeconds < kMinDwellMs / 1000U || sample.dwellSeconds > kMaxDwellMs / 1000U ||
+      sample.fingerprint == 0 || sample.bookHash == 0 || sample.basis == ContentBasis::Unknown)
+    return false;
+
+  StoredBookV2 stored;
+  bool available = false;
+  if (!loadBook(bookPath, stored, available)) stored = StoredBookV2{};
+  if (stored.fingerprint != sample.fingerprint) {
+    const uint32_t preservedSeconds = stored.totalSeconds;
+    stored = StoredBookV2{};
+    stored.totalSeconds = preservedSeconds;
+    stored.fingerprint = sample.fingerprint;
+  }
+  stored.basis = sample.basis;
+  stored.progressQ24 = sample.progressQ24;
+  if (sample.basis == ContentBasis::ExactPages) {
+    const uint64_t q16 = static_cast<uint64_t>(sample.exactRemainingPages) * kQ16One;
+    stored.remainingPagesQ16 = static_cast<uint32_t>(std::min<uint64_t>(q16, std::numeric_limits<uint32_t>::max()));
+  }
+  append(stored.samples, stored.sampleCount, stored.sampleNext,
+         RateSample{sample.dwellSeconds, 0, sample.progressDeltaQ24});
+  const bool bookSaved = saveBook(bookPath, stored);
+
+  StoredOverallV2 overall;
+  if (!loadOverall(overall)) overall = StoredOverallV2{};
+  append(overall.samples, overall.sampleCount, overall.sampleNext,
+         OverallSample{sample.dwellSeconds, 0, sample.fingerprint, sample.bookHash});
+  const bool overallSaved = saveOverall(overall);
+  return bookSaved && overallSaved;
+}
+
+bool updatePosition(const std::string& bookPath, const uint32_t fingerprint,
+                    const ContentBasis basis, const uint32_t exactRemainingPages,
+                    const uint32_t progressQ24) {
+  if (fingerprint == 0 || basis == ContentBasis::Unknown) return false;
+  StoredBookV2 stored;
+  bool available = false;
+  if (!loadBook(bookPath, stored, available)) stored = StoredBookV2{};
+  if (stored.fingerprint != fingerprint) {
+    const uint32_t preservedSeconds = stored.totalSeconds;
+    stored = StoredBookV2{};
+    stored.totalSeconds = preservedSeconds;
+    stored.fingerprint = fingerprint;
+  }
+  stored.basis = basis;
+  stored.progressQ24 = progressQ24;
+  if (basis == ContentBasis::ExactPages) {
+    const uint64_t q16 = static_cast<uint64_t>(exactRemainingPages) * kQ16One;
+    stored.remainingPagesQ16 = static_cast<uint32_t>(std::min<uint64_t>(q16, std::numeric_limits<uint32_t>::max()));
+  }
+  return saveBook(bookPath, stored);
 }
 }  // namespace BookReadingStats

@@ -10,6 +10,7 @@
 #include "EpubReaderMenuActivity.h"
 #include "ProgressMapper.h"
 #include "activities/Activity.h"
+#include "util/BookReadingStats.h"
 
 class EpubReaderActivity final : public Activity {
   std::shared_ptr<Epub> epub;
@@ -76,6 +77,7 @@ class EpubReaderActivity final : public Activity {
   // Reading-session timer, started in onEnter(), consumed in onExit() to
   // record elapsed reading time via StatsManager::addReadingTimeSeconds.
   unsigned long sessionStartTime = 0UL;
+  BookReadingRate::DwellTracker dwellTracker;
   // One-shot guard so reaching end-of-book only increments the finished-books
   // stat once per session, not on every re-render of the EOB screen.
   bool bookFinishedLogged = false;
@@ -196,7 +198,12 @@ class EpubReaderActivity final : public Activity {
   bool launchKOReaderSync();
   void applyOrientation(uint8_t orientation);
   void toggleAutoPageTurn(uint8_t selectedPageTurnOption);
-  void pageTurn(bool isForwardTurn);
+  uint32_t rateFingerprint() const;
+  uint32_t visiblePageKey() const;
+  uint32_t fineProgressQ24(int spineIndex, int page, int pageCount) const;
+  void recordQualifiedForward(uint16_t dwellSeconds, uint32_t progressBeforeQ24,
+                              uint32_t progressAfterQ24);
+  void pageTurn(bool isForwardTurn, bool qualifyRate = true);
   void loadCachedBookmarks();
   void addBookmark();
   void updateBookmarkFlag();
@@ -213,6 +220,8 @@ class EpubReaderActivity final : public Activity {
         pagesUntilFullRefresh(initialRefreshCountdown) {}
   void onEnter() override;
   void onExit() override;
+  void onCovered() override { dwellTracker.pause(); }
+  void onUncovered() override;
   void loop() override;
   void render(RenderLock&& lock) override;
   // Full CPU speed + fast loop ticks while a section build runs: at the low-power

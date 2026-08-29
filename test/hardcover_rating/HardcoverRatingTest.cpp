@@ -85,13 +85,19 @@ TEST(HardcoverRating, ErrorsMissingRatingsAndNearMatchesStayUnresolved) {
       book, R"({"errors":[{"message":"insufficient_scope"}]})", 1, false));
 }
 
-TEST(BookReadingStats, EtaNeedsMeaningfulBookSpecificSample) {
+TEST(BookReadingStats, EtaRequiresQualifiedRateAndRemainingPageEvidence) {
   EXPECT_FALSE(BookReadingStatsValue{}.available);
-  EXPECT_FALSE((BookReadingStatsValue{299, 5}).etaConfident());
-  EXPECT_FALSE((BookReadingStatsValue{300, 4}).etaConfident());
-  const BookReadingStatsValue confident{600, 10};
+  BookReadingStatsValue confident;
+  confident.available = true;
+  confident.remainingAvailable = true;
+  confident.currentRate = true;
+  confident.remainingPagesQ16 = 40U * BookReadingRate::kQ16One;
+  confident.pagesPerMinuteQ16 = BookReadingRate::kQ16One;
   EXPECT_TRUE(confident.etaConfident());
-  EXPECT_EQ(confident.secondsPerPage(), 60u);
+  ASSERT_TRUE(confident.bookMinutes());
+  EXPECT_EQ(*confident.bookMinutes(), 40U);
+  confident.remainingAvailable = false;
+  EXPECT_FALSE(confident.etaConfident());
 }
 
 TEST(HardcoverRating, CapturedTitleSearchRanksExactAuthorThenYearAndLeavesAmbiguityForConfirmation) {

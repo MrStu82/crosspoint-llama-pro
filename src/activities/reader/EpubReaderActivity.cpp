@@ -223,7 +223,18 @@ void EpubReaderActivity::onEnter() {
 }
 
 void EpubReaderActivity::onExit() {
+  dwellTracker.pause();
   Activity::onExit();
+
+  if (epub) {
+    uint32_t progress = currentSpineIndex >= epub->getSpineItemsCount() ? BookReadingRate::kQ24One : 0;
+    if (section) {
+      const int pageCount = std::max(section->estimatedTotalPages(), section->pageCount);
+      progress = fineProgressQ24(currentSpineIndex, section->currentPage, pageCount);
+    }
+    BookReadingStats::updatePosition(epub->getPath(), rateFingerprint(), BookReadingRate::ContentBasis::FineProgress,
+                                     0, progress);
+  }
 
   if (sessionStartTime != 0UL) {
     const unsigned long secs = (millis() - sessionStartTime) / 1000;
@@ -260,6 +271,43 @@ void EpubReaderActivity::onExit() {
   } else {
     epub.reset();
   }
+}
+
+uint32_t EpubReaderActivity::rateFingerprint() const {
+  const uint32_t flags = static_cast<uint32_t>(SETTINGS.hyphenationEnabled) |
+                         (static_cast<uint32_t>(SETTINGS.embeddedStyle) << 8) |
+                         (static_cast<uint32_t>(SETTINGS.focusReadingEnabled) << 16) |
+                         (static_cast<uint32_t>(SETTINGS.forceParagraphIndents) << 24);
+  return BookReadingRate::layoutFingerprint(1, renderer.getScreenWidth(), renderer.getScreenHeight(),
+                                             SETTINGS.getReaderFontId(), SETTINGS.fontPointSize,
+                                             SETTINGS.lineSpacing, SETTINGS.screenMargin,
+                                             SETTINGS.paragraphAlignment, SETTINGS.orientation, flags);
+}
+
+uint32_t EpubReaderActivity::visiblePageKey() const {
+  const uint32_t page = section ? static_cast<uint32_t>(std::max(0, section->currentPage)) : 0;
+  return BookReadingRate::pageKey(rateFingerprint(), static_cast<uint32_t>(std::max(0, currentSpineIndex)), page);
+}
+
+uint32_t EpubReaderActivity::fineProgressQ24(const int spineIndex, const int page, const int pageCount) const {
+  if (!epub || epub->getBookSize() == 0 || pageCount <= 0) return 0;
+  if (spineIndex >= epub->getSpineItemsCount()) return BookReadingRate::kQ24One;
+  const float chapterProgress = std::clamp(static_cast<float>(page) / static_cast<float>(pageCount), 0.0F, 1.0F);
+  return BookReadingRate::progressQ24(epub->calculateProgress(spineIndex, chapterProgress));
+}
+
+void EpubReaderActivity::onUncovered() {
+  if (epub && section) dwellTracker.markVisible(millis(), visiblePageKey());
+}
+
+void EpubReaderActivity::recordQualifiedForward(const uint16_t dwellSeconds,
+                                                const uint32_t progressBeforeQ24,
+                                                const uint32_t progressAfterQ24) {
+  if (!epub || progressAfterQ24 <= progressBeforeQ24) return;
+  BookReadingStats::recordQualifiedPage(
+      epub->getPath(), {dwellSeconds, rateFingerprint(), BookReadingRate::hashString(epub->getPath().c_str()),
+                        BookReadingRate::ContentBasis::FineProgress, 0, progressAfterQ24,
+                        progressAfterQ24 - progressBeforeQ24});
 }
 
 void EpubReaderActivity::openReaderMenu() {
@@ -498,7 +546,7 @@ void EpubReaderActivity::loop() {
     }
 
     if ((millis() - lastPageTurnTime) >= pageTurnDuration) {
-      pageTurn(true);
+      pageTurn(true, false);
       return;
     }
   }
@@ -654,6 +702,7 @@ void EpubReaderActivity::loop() {
     if (nextTriggered) {
       onGoHome();
     } else {
+      dwellTracker.pause();
       currentSpineIndex = epub->getSpineItemsCount() - 1;
       nextPageNumber = 0;
       pendingPageJump = std::numeric_limits<uint16_t>::max();
@@ -671,6 +720,7 @@ void EpubReaderActivity::loop() {
   }
 
   if (longPress && SETTINGS.longPressButtonBehavior == SETTINGS.CHAPTER_SKIP) {
+    dwellTracker.pause();
     if (!nextTriggered && section && section->currentPage > 0) {
       section->currentPage = 0;
       requestUpdate();
@@ -717,6 +767,7 @@ void EpubReaderActivity::loop() {
 // Translate an absolute percent into a spine index plus a normalized position
 // within that spine so we can jump after the section is loaded.
 void EpubReaderActivity::jumpToPercent(int percent) {
+  dwellTracker.pause();
   if (!epub) {
     return;
   }
@@ -1013,6 +1064,7 @@ bool EpubReaderActivity::launchKOReaderSync() {
 }
 
 void EpubReaderActivity::applyOrientation(const uint8_t orientation) {
+  dwellTracker.pause();
   // No-op if the selected orientation matches current settings.
   if (SETTINGS.orientation == orientation) {
     return;
@@ -1066,7 +1118,15 @@ void EpubReaderActivity::toggleAutoPageTurn(const uint8_t selectedPageTurnOption
   }
 }
 
-void EpubReaderActivity::pageTurn(bool isForwardTurn) {
+void EpubReaderActivity::pageTurn(bool isForwardTurn, bool qualifyRate) {
+  const int oldSpine = currentSpineIndex;
+  const int oldPage = section ? section->currentPage : 0;
+  const int oldPageCount = section ? std::max(section->estimatedTotalPages(), section->pageCount) : 0;
+  const uint32_t progressBeforeQ24 = fineProgressQ24(oldSpine, oldPage, oldPageCount);
+  const auto dwell = isForwardTurn
+                         ? dwellTracker.takeQualifiedForward(millis(), visiblePageKey(), qualifyRate)
+                         : std::optional<uint16_t>{};
+  if (!isForwardTurn) dwellTracker.pause();
   // A page turn is authoritative: do not let a resume/reflow position captured
   // at session start snap the reader back after the incremental build completes.
   {
@@ -1112,12 +1172,23 @@ void EpubReaderActivity::pageTurn(bool isForwardTurn) {
   if (sessionStartTime != 0UL) {
     const unsigned long secs = (millis() - sessionStartTime) / 1000;
     StatsManager::getInstance().addReadingTimeSeconds(secs);
-    BookReadingStats::add(epub->getPath(), secs, isForwardTurn ? 1 : 0);
+    BookReadingStats::add(epub->getPath(), secs, 0);
     sessionStartTime += secs * 1000;
   }
   // Only forward turns count as pages read -- paging back to reread shouldn't inflate the count.
   if (isForwardTurn) {
-    if (sessionStartTime == 0UL) BookReadingStats::add(epub->getPath(), 0, 1);
+    if (dwell) {
+      uint32_t progressAfterQ24 = BookReadingRate::kQ24One;
+      if (currentSpineIndex < epub->getSpineItemsCount()) {
+        if (section) {
+          const int pageCount = std::max(section->estimatedTotalPages(), section->pageCount);
+          progressAfterQ24 = fineProgressQ24(currentSpineIndex, section->currentPage, pageCount);
+        } else {
+          progressAfterQ24 = BookReadingRate::progressQ24(epub->calculateProgress(currentSpineIndex, 0.0F));
+        }
+      }
+      recordQualifiedForward(*dwell, progressBeforeQ24, progressAfterQ24);
+    }
     StatsManager::getInstance().incrementPagesRead();
   }
   requestUpdate();
@@ -1128,6 +1199,11 @@ void EpubReaderActivity::render(RenderLock&& lock) {
   if (!epub) {
     return;
   }
+
+  // Reader-owned popups obscure the visible page without pushing an Activity,
+  // so explicitly exclude their lifetime just like menus and network screens.
+  const bool popupObscuresPage = pendingSyncSaveError || showBookmarkMessage || showDictionaryMessage;
+  if (popupObscuresPage) dwellTracker.pause();
 
   const auto showPendingSyncSaveError = [this]() {
     if (!pendingSyncSaveError) return;
@@ -1571,6 +1647,7 @@ void EpubReaderActivity::render(RenderLock&& lock) {
   if (showDictionaryMessage) {
     GUI.drawPopup(renderer, tr(STR_DICT_NO_DICT_SET));
   }
+  if (section && !popupObscuresPage) dwellTracker.markVisible(millis(), visiblePageKey());
 }
 
 bool EpubReaderActivity::applyDeferredReposition() {
@@ -1973,6 +2050,7 @@ void EpubReaderActivity::renderStatusBar() const {
 }
 
 void EpubReaderActivity::navigateToHref(const std::string& hrefStr, const bool savePosition) {
+  dwellTracker.pause();
   if (!epub) return;
 
   // Push current position onto saved stack
@@ -2018,6 +2096,7 @@ void EpubReaderActivity::navigateToHref(const std::string& hrefStr, const bool s
 }
 
 void EpubReaderActivity::restoreSavedPosition() {
+  dwellTracker.pause();
   if (footnoteDepth <= 0) return;
   footnoteDepth--;
   const auto& pos = savedPositions[footnoteDepth];

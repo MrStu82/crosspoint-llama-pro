@@ -51,7 +51,14 @@ void XtcReaderActivity::onEnter() {
 }
 
 void XtcReaderActivity::onExit() {
+  dwellTracker.pause();
   Activity::onExit();
+
+  if (xtc) {
+    const uint32_t total = xtc->getPageCount();
+    BookReadingStats::updatePosition(xtc->getPath(), rateFingerprint(), BookReadingRate::ContentBasis::ExactPages,
+                                     currentPage < total ? total - currentPage - 1 : 0, 0);
+  }
 
   if (sessionStartTime != 0UL) {
     const unsigned long secs = (millis() - sessionStartTime) / 1000;
@@ -64,6 +71,28 @@ void XtcReaderActivity::onExit() {
   APP_STATE.readerActivityLoadCount = 0;
   APP_STATE.saveToFile();
   xtc.reset();
+}
+
+uint32_t XtcReaderActivity::rateFingerprint() const {
+  return BookReadingRate::layoutFingerprint(3, renderer.getScreenWidth(), renderer.getScreenHeight(),
+                                             0, 0, 0, 0, 0, SETTINGS.orientation, 0);
+}
+
+uint32_t XtcReaderActivity::visiblePageKey() const {
+  return BookReadingRate::pageKey(rateFingerprint(), currentPage);
+}
+
+void XtcReaderActivity::onUncovered() {
+  if (xtc && currentPage < xtc->getPageCount()) dwellTracker.markVisible(millis(), visiblePageKey());
+}
+
+void XtcReaderActivity::recordQualifiedForward(const uint16_t dwellSeconds) {
+  if (!xtc) return;
+  const uint32_t total = xtc->getPageCount();
+  BookReadingStats::recordQualifiedPage(
+      xtc->getPath(), {dwellSeconds, rateFingerprint(), BookReadingRate::hashString(xtc->getPath().c_str()),
+                       BookReadingRate::ContentBasis::ExactPages,
+                       currentPage < total ? total - currentPage - 1 : 0, 0, 0});
 }
 
 void XtcReaderActivity::openChapterSelection() {
@@ -151,6 +180,7 @@ void XtcReaderActivity::loop() {
   const int skipAmount = skipPages ? 10 : 1;
 
   if (prevTriggered) {
+    dwellTracker.pause();
     if (currentPage >= static_cast<uint32_t>(skipAmount)) {
       currentPage -= skipAmount;
     } else {
@@ -165,6 +195,7 @@ void XtcReaderActivity::loop() {
     // Backward turns (rereading) don't count as pages read.
     requestUpdate();
   } else if (nextTriggered) {
+    const auto dwell = dwellTracker.takeQualifiedForward(millis(), visiblePageKey(), skipAmount == 1);
     currentPage += skipAmount;
     if (currentPage >= xtc->getPageCount()) {
       currentPage = xtc->getPageCount();  // Allow showing "End of book"
@@ -172,11 +203,11 @@ void XtcReaderActivity::loop() {
     if (sessionStartTime != 0UL) {
       const unsigned long secs = (millis() - sessionStartTime) / 1000;
       StatsManager::getInstance().addReadingTimeSeconds(secs);
-      BookReadingStats::add(xtc->getPath(), secs, 1);
+      BookReadingStats::add(xtc->getPath(), secs, 0);
       sessionStartTime += secs * 1000;
     }
     StatsManager::getInstance().incrementPagesRead();
-    if (sessionStartTime == 0UL) BookReadingStats::add(xtc->getPath(), 0, 1);
+    if (dwell && currentPage < xtc->getPageCount()) recordQualifiedForward(*dwell);
     requestUpdate();
   }
 }
@@ -203,6 +234,7 @@ void XtcReaderActivity::render(RenderLock&&) {
 
   renderPage();
   saveProgress();
+  dwellTracker.markVisible(millis(), visiblePageKey());
 }
 
 XtcReaderActivity::StatusBarInfo XtcReaderActivity::getStatusBarInfo() const {

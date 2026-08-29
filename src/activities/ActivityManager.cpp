@@ -102,7 +102,9 @@ void ActivityManager::loop() {
   // OptionPopup is checked before its normal loop() body), and no other gesture or
   // per-activity handling below may run in the same frame.
   if (brightnessSheet.isOpen()) {
-    if (brightnessSheet.loop()) return;
+    const bool consumed = brightnessSheet.loop();
+    if (!brightnessSheet.isOpen() && currentActivity) currentActivity->onUncovered();
+    if (consumed) return;
   }
 
   if (currentActivity) {
@@ -128,6 +130,7 @@ void ActivityManager::loop() {
     // first sample is in the top-edge zone. Bottom-edge up is reserved for the
     // reader's Text Settings drawer, and ordinary status-bar taps stay inert.
     if (!currentActivity->isFrontlightActivity() && mappedInput.wasMenuGesture()) {
+      currentActivity->onCovered();
       brightnessSheet.open();
       return;
     }
@@ -174,6 +177,8 @@ void ActivityManager::loop() {
           handler(pendingResult);
         }
 
+        if (pendingAction == PendingAction::None) currentActivity->onUncovered();
+
         // Request an update to ensure the popped activity gets re-rendered
         if (pendingAction == PendingAction::None) {
           requestUpdate();
@@ -197,6 +202,7 @@ void ActivityManager::loop() {
         }
       } else if (pendingAction == PendingAction::Push) {
         // Move current activity to stack
+        if (currentActivity) currentActivity->onCovered();
         stackActivities.push_back(std::move(currentActivity));
         LOG_DBG("ACT", "Pushed to activity stack, new size = %zu", stackActivities.size());
       }

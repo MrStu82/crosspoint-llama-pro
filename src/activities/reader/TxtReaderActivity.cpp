@@ -52,7 +52,12 @@ void TxtReaderActivity::onEnter() {
 }
 
 void TxtReaderActivity::onExit() {
+  dwellTracker.pause();
   Activity::onExit();
+
+  if (txt && totalPages > 0)
+    BookReadingStats::updatePosition(txt->getPath(), rateFingerprint(), BookReadingRate::ContentBasis::ExactPages,
+                                     static_cast<uint32_t>(std::max(0, totalPages - currentPage - 1)), 0);
 
   if (sessionStartTime != 0UL) {
     const unsigned long secs = (millis() - sessionStartTime) / 1000;
@@ -72,6 +77,33 @@ void TxtReaderActivity::onExit() {
   txt.reset();
 }
 
+uint32_t TxtReaderActivity::rateFingerprint() const {
+  const uint32_t flags = static_cast<uint32_t>(SETTINGS.hyphenationEnabled) |
+                         (static_cast<uint32_t>(SETTINGS.embeddedStyle) << 8) |
+                         (static_cast<uint32_t>(SETTINGS.focusReadingEnabled) << 16) |
+                         (static_cast<uint32_t>(SETTINGS.forceParagraphIndents) << 24);
+  return BookReadingRate::layoutFingerprint(2, renderer.getScreenWidth(), renderer.getScreenHeight(),
+                                             SETTINGS.getReaderFontId(), SETTINGS.fontPointSize,
+                                             SETTINGS.lineSpacing, SETTINGS.screenMargin,
+                                             SETTINGS.paragraphAlignment, SETTINGS.orientation, flags);
+}
+
+uint32_t TxtReaderActivity::visiblePageKey() const {
+  return BookReadingRate::pageKey(rateFingerprint(), static_cast<uint32_t>(std::max(0, currentPage)));
+}
+
+void TxtReaderActivity::onUncovered() {
+  if (txt && initialized && !pageOffsets.empty()) dwellTracker.markVisible(millis(), visiblePageKey());
+}
+
+void TxtReaderActivity::recordQualifiedForward(const uint16_t dwellSeconds) {
+  if (!txt || totalPages <= 0) return;
+  BookReadingStats::recordQualifiedPage(
+      txt->getPath(), {dwellSeconds, rateFingerprint(), BookReadingRate::hashString(txt->getPath().c_str()),
+                       BookReadingRate::ContentBasis::ExactPages,
+                       static_cast<uint32_t>(std::max(0, totalPages - currentPage - 1)), 0, 0});
+}
+
 void TxtReaderActivity::loop() {
   if (ReaderUtils::handleBackNavigation(mappedInput, activityManager, txt ? txt->getPath().c_str() : "",
                                         {this, [](void* ctx) { static_cast<TxtReaderActivity*>(ctx)->onGoHome(); }})) {
@@ -87,6 +119,7 @@ void TxtReaderActivity::loop() {
   }
 
   if (prevTriggered && currentPage > 0) {
+    dwellTracker.pause();
     currentPage--;
     if (sessionStartTime != 0UL) {
       const unsigned long secs = (millis() - sessionStartTime) / 1000;
@@ -98,15 +131,16 @@ void TxtReaderActivity::loop() {
     requestUpdate();
   } else if (nextTriggered) {
     if (currentPage < totalPages - 1) {
+      const auto dwell = dwellTracker.takeQualifiedForward(millis(), visiblePageKey(), true);
       currentPage++;
       if (sessionStartTime != 0UL) {
       const unsigned long secs = (millis() - sessionStartTime) / 1000;
       StatsManager::getInstance().addReadingTimeSeconds(secs);
-      BookReadingStats::add(txt->getPath(), secs, 1);
+      BookReadingStats::add(txt->getPath(), secs, 0);
       sessionStartTime += secs * 1000;
       }
       StatsManager::getInstance().incrementPagesRead();
-      if (sessionStartTime == 0UL) BookReadingStats::add(txt->getPath(), 0, 1);
+      if (dwell) recordQualifiedForward(*dwell);
       requestUpdate();
     } else {
       onGoHome();
@@ -371,6 +405,7 @@ void TxtReaderActivity::render(RenderLock&&) {
 
   // Save progress
   saveProgress();
+  dwellTracker.markVisible(millis(), visiblePageKey());
 }
 
 void TxtReaderActivity::renderPage() {

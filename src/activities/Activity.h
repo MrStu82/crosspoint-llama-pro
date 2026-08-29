@@ -43,6 +43,10 @@ class Activity {
   virtual ~Activity() { exitGameLutMode(); }
   virtual void onEnter();
   virtual void onExit();
+  // A pushed activity or global sheet covers the current activity without
+  // exiting it. Readers use these hooks to exclude hidden time from dwell rate.
+  virtual void onCovered() {}
+  virtual void onUncovered() {}
   virtual void loop() {}
 
   virtual void render(RenderLock&&) {}

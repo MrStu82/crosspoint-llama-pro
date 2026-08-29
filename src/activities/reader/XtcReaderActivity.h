@@ -14,6 +14,7 @@
 
 #include "EndOfBookOptions.h"
 #include "activities/Activity.h"
+#include "util/BookReadingStats.h"
 
 class XtcReaderActivity final : public Activity {
   std::shared_ptr<Xtc> xtc;
@@ -28,6 +29,11 @@ class XtcReaderActivity final : public Activity {
   // One-shot guard so reaching end-of-book only increments the finished-books
   // stat once per session, not on every re-render of the EOB screen.
   bool bookFinishedLogged = false;
+  BookReadingRate::DwellTracker dwellTracker;
+
+  uint32_t rateFingerprint() const;
+  uint32_t visiblePageKey() const;
+  void recordQualifiedForward(uint16_t dwellSeconds);
 
   enum class StatusBarOverlayPosition { Bottom, Top };
   struct StatusBarInfo {
@@ -52,6 +58,8 @@ class XtcReaderActivity final : public Activity {
         pagesUntilFullRefresh(initialRefreshCountdown) {}
   void onEnter() override;
   void onExit() override;
+  void onCovered() override { dwellTracker.pause(); }
+  void onUncovered() override;
   void loop() override;
   void render(RenderLock&&) override;
   bool isReaderActivity() const override { return true; }

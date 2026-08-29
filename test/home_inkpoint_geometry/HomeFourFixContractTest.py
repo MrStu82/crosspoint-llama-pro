@@ -13,10 +13,13 @@ shell = (ROOT / "src/components/InkPointShell.cpp").read_text()
 # Progress is derived from exact cover bounds, while the approved no-focus-ring
 # contract and the existing full cover lane tap path remain intact.
 assert "coverProgressLayout(\n      coverX, coverY, coverW, coverH" in home
-assert "renderer.drawRect(progressLayout.x, progressLayout.y" in home
+assert "renderer.drawRect(progressLayout.x, progressLayout.y" not in home
+assert "renderer.fillRect(progressLayout.fillX, progressLayout.fillY" in home
+assert "progressLayout.fillWidth, progressLayout.fillHeight" in home
 assert "if (inkPointFocus == 0" not in home
 assert "x >= kInkCoverLane.x && x < kInkCoverRight" in home
 assert "kCoverProgressGap = 0" in geometry
+assert "kCoverProgressFillHeight = 6" in geometry
 
 # The chevron moves only through its measured gap; Stats bounds and activation
 # remain unchanged.

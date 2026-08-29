@@ -6,6 +6,7 @@
 
 #include "CrossPointSettings.h"
 #include "activities/Activity.h"
+#include "util/BookReadingStats.h"
 
 class TxtReaderActivity final : public Activity {
   std::unique_ptr<Txt> txt;
@@ -33,6 +34,11 @@ class TxtReaderActivity final : public Activity {
   // Reading-session timer, started in onEnter(), consumed in onExit() to
   // record elapsed reading time via StatsManager::addReadingTimeSeconds.
   unsigned long sessionStartTime = 0UL;
+  BookReadingRate::DwellTracker dwellTracker;
+
+  uint32_t rateFingerprint() const;
+  uint32_t visiblePageKey() const;
+  void recordQualifiedForward(uint16_t dwellSeconds);
 
   void renderPage();
   void renderStatusBar() const;
@@ -53,6 +59,8 @@ class TxtReaderActivity final : public Activity {
         pagesUntilFullRefresh(initialRefreshCountdown) {}
   void onEnter() override;
   void onExit() override;
+  void onCovered() override { dwellTracker.pause(); }
+  void onUncovered() override;
   void loop() override;
   void render(RenderLock&&) override;
   bool isReaderActivity() const override { return true; }

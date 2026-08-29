@@ -6,6 +6,8 @@
 #include <limits>
 #include <optional>
 
+#include "util/BookReadingRate.h"
+
 namespace InkPointHomeGeometry {
 
 // Alternating outer/inner vertices, clockwise from the top point.  This is a
@@ -85,31 +87,20 @@ struct EtaState {
   std::optional<uint32_t> bookMinutes;
 };
 
-inline std::optional<uint32_t> pagesToMinutes(const uint64_t pages, const uint32_t secondsPerPage) {
-  if (secondsPerPage == 0) return std::nullopt;
-  if (pages > std::numeric_limits<uint64_t>::max() / secondsPerPage)
-    return std::numeric_limits<uint32_t>::max();
-  const uint64_t minutes = pages * secondsPerPage / 60U;
-  return static_cast<uint32_t>(std::min<uint64_t>(minutes, std::numeric_limits<uint32_t>::max()));
-}
-
-// Both estimates use the same per-book measured pace. Whole-book ETA is
-// withheld until the existing confidence threshold has been met and progress
-// can yield a bounded remaining-page estimate.
-inline EtaState estimateEtas(const uint32_t totalSeconds, const uint32_t forwardPages,
-                             const bool etaConfident, const int chapterPagesLeft,
-                             const bool chapterAvailable, const int progressPercent) {
-  const uint32_t secondsPerPage = forwardPages == 0 ? 0 : totalSeconds / forwardPages;
+// Both estimates use the selected robust pages/minute rate. Whole-book ETA is
+// withheld unless the reader persisted compatible remaining page-equivalents;
+// rounded 0-100 progress is deliberately not part of this contract.
+inline EtaState estimateEtas(const uint32_t pagesPerMinuteQ16, const uint32_t remainingPagesQ16,
+                             const bool remainingAvailable, const int chapterPagesLeft,
+                             const bool chapterAvailable) {
   EtaState result;
-  if (chapterAvailable && chapterPagesLeft >= 0)
-    result.chapterMinutes = pagesToMinutes(static_cast<uint32_t>(chapterPagesLeft), secondsPerPage);
-  if (!etaConfident || progressPercent <= 0 || progressPercent >= 100 || forwardPages == 0)
-    return result;
-
-  const uint64_t totalPages = static_cast<uint64_t>(forwardPages) * 100U /
-                              static_cast<uint32_t>(progressPercent);
-  if (totalPages < forwardPages) return result;
-  result.bookMinutes = pagesToMinutes(totalPages - forwardPages, secondsPerPage);
+  if (chapterAvailable && chapterPagesLeft >= 0 && pagesPerMinuteQ16 != 0) {
+    const uint64_t q16 = static_cast<uint64_t>(static_cast<uint32_t>(chapterPagesLeft)) << 16;
+    result.chapterMinutes = BookReadingRate::etaMinutes(
+        static_cast<uint32_t>(std::min<uint64_t>(q16, std::numeric_limits<uint32_t>::max())), pagesPerMinuteQ16);
+  }
+  if (remainingAvailable)
+    result.bookMinutes = BookReadingRate::etaMinutes(remainingPagesQ16, pagesPerMinuteQ16);
   return result;
 }
 

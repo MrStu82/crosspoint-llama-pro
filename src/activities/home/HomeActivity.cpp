@@ -707,12 +707,10 @@ void HomeActivity::renderInkPointHome() {
     }
   }
 
-  // The progress indicator begins at the cover's lower edge. It is the only
-  // geometry drawn around a real cover: the cover itself remains unframed.
+  // The unoutlined progress fill begins at the cover's lower edge. Keep the
+  // established layout/inset semantics; only the former rectangular frame is omitted.
   const auto progressLayout = InkPointHomeGeometry::coverProgressLayout(
       coverX, coverY, coverW, coverH, book ? book->progressPercent : 0);
-  renderer.drawRect(progressLayout.x, progressLayout.y,
-                    progressLayout.width, progressLayout.height);
   if (book && book->progressPercent >= 0) {
     renderer.fillRect(progressLayout.fillX, progressLayout.fillY,
                       progressLayout.fillWidth, progressLayout.fillHeight);
@@ -798,8 +796,8 @@ void HomeActivity::renderInkPointHome() {
     formatMinutes(timeRead, sizeof(timeRead), bookStats.totalSeconds / 60);
     valueAvailable[0] = true;
     const auto eta = InkPointHomeGeometry::estimateEtas(
-        bookStats.totalSeconds, bookStats.forwardPages, bookStats.etaConfident(),
-        chapterProgress.pagesLeft(), chapterProgress.available, book->progressPercent);
+        bookStats.pagesPerMinuteQ16, bookStats.remainingPagesQ16, bookStats.remainingAvailable,
+        chapterProgress.pagesLeft(), chapterProgress.available);
     if (eta.chapterMinutes) {
       formatMinutes(chapterLeft, sizeof(chapterLeft), *eta.chapterMinutes);
       valueAvailable[1] = true;

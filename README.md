@@ -2,36 +2,41 @@
 
 [![Fund contributors](https://img.shields.io/badge/%F0%9F%91%91_Fund_contributors-royalty.dev-BB953A?style=for-the-badge&labelColor=1a1a1a)](https://app.royalty.dev/crosspoint-reader/crosspoint-reader)
 
-## ⚠️ This fork: `crosspoint-llama-pro` status
+## This fork: `crosspoint-llama-pro` status
 
-This fork targets the **Xteink X4 Pro** (ESP32-S3, distinct from the ESP32-C3
-`X4`/`X3` this README otherwise describes), based on upstream
-[`4e61903`](https://github.com/crosspoint-reader/crosspoint-reader/commit/4e61903578cb2b9972ea56ae1f98e6b104bcd27c),
-plus four ported mods (chapter progress bar, cover progress indicator, reader
-stats, and Deep Mines — a dungeon-crawler mini-game).
+This fork targets the **Xteink X4 Pro**, an ESP32-S3 device distinct from the
+ESP32-C3 X3 and X4 supported by upstream CrossPoint. The active
+[`feature/reader-convergence-20260825`](https://github.com/MrStu82/crosspoint-llama-pro/tree/feature/reader-convergence-20260825)
+branch selectively adopts reviewed CrossPoint 1.6 work; it is **not** a wholesale
+1.6 rebase and does not claim full 1.6 feature parity. The selection and conflict
+rules are recorded in the [upstream PR audit](./.planning/UPSTREAM_PR_AUDIT.md).
 
-**What's unvalidated, and why it matters before you flash this:**
+The integrated source is
+[`b2036ff9`](https://github.com/MrStu82/crosspoint-llama-pro/commit/b2036ff973ab0cc718bf8b47e9fdeb0a1b7b4af6).
+Its final production image identifies itself as `crosspoint-llama-pro` /
+`v1.5.0-212-gb2036ff`. That source passed the complete 274-test host suite, a
+clean X4 Pro simulator build, and deterministic touch and framebuffer gates.
+Those results validate source and simulated behaviour; **they do not claim that
+the exact v212 image has been tested on a real X4 Pro**.
 
-- **The Pro's own hardware support is largely unbenched.** The display, SDMMC
-  storage, RTC, and I²C bus map are confirmed working on real hardware (see
-  `freeink-sdk/docs/xteink-x4pro-support.md` for the bring-up detail). The
-  **frontlight pin mapping (GPIO8/GPIO9, dual warm/cool PWM) came from an OEM
-  firmware dump and has never been run on a bench** — treat it as a hypothesis,
-  not a fact, until you've watched it light up on your own device.
-- **All four ported mods compile clean and pass static analysis, and nothing
-  more.** None have been run on real hardware. See
-  `crosspoint-llama-device-validation.md` at the repo root for the specific,
-  concrete things to check on-device for each one — button reachability, save
-  persistence across a power cycle, redraw speed on this panel, and more. That
-  file is written to be run through without needing to ask anyone a question
-  first.
-- **If you're flashing this fork today**, budget time to work through that
-  checklist before trusting it for daily reading — this is a bring-up-stage fork,
-  not a released build.
+### Selected integration
+
+- **Safety and data:** X4 Pro power-latch sequencing, running/candidate image chip
+  guards, stable wake detection, and board-aware USB fallback, while retaining
+  the fork's resume, credential, cache, GT911 Home-key, and battery semantics.
+- **Power and performance:** KOReader Wi-Fi lifetime locking, lossless built-in
+  font compression, style-aware prewarming, one bounded low-memory CSS retry,
+  and the lower X4 Pro frontlight range with separate cool/warm calibration.
+- **Reader and UI:** StarDict synonyms and styled definitions, first-page and
+  heading fixes, bounded EPUB table columns, Extra Wide spacing, transparent
+  sleep overlays and retained-frame wake, a touch control centre, and transient
+  password reveal. Home now has a true clipped half-star, a confidence-gated
+  whole-book ETA beside chapter ETA, and a double-thickness progress bar directly
+  below the cover without changing the surrounding visual hierarchy.
 
 CrossPoint is open-source e-reader firmware - community-built, fully hackable, free forever. It's maintained by a growing community of developers and readers who believe your device should do what you want - not what a manufacturer decided for you.
 
-**Now running on:** ESP32C3-based Xteink [X4](https://www.xteink.com/products/xteink-x4) and [X3](https://www.xteink.com/products/xteink-x3).
+**Device targets:** upstream CrossPoint runs on ESP32-C3-based Xteink [X4](https://www.xteink.com/products/xteink-x4) and [X3](https://www.xteink.com/products/xteink-x3); this fork additionally targets the ESP32-S3-based X4 Pro.
 
 ![CrossPoint Reader running on Xteink device](./docs/images/cover.jpg)
 
@@ -39,7 +44,7 @@ CrossPoint is open-source e-reader firmware - community-built, fully hackable, f
 
 ## What can CrossPoint do?
 
-- **Reader engine**: EPUB 2/3 rendering with embedded-style option, image handling, hyphenation, kerning, chapter navigation, footnotes, bookmarks, dictionary lookups ([StarDict](docs/dictionary.md)), go-to-percent, auto page turn, orientation control, focus reading, KOReader progress sync and more. 
+- **Reader engine**: EPUB 2/3 rendering with embedded-style option, image handling, hyphenation, kerning, chapter navigation, footnotes, bookmarks, dictionary lookups ([StarDict](docs/dictionary.md)), go-to-percent, auto page turn, orientation control, focus reading, KOReader progress sync and more.
 
 - **Various formats**: native handling for `.epub`, `.xtc/.xtch`, `.txt`, and `.bmp`.
 
@@ -52,7 +57,7 @@ CrossPoint is open-source e-reader firmware - community-built, fully hackable, f
 - **Library workflow**: folder browser, hidden-file toggle, long-press delete, recent books, SD-cache management.
 
 - **Wireless workflows**:
-  
+
   - File transfer web UI
   - EPUB Optimizer
   - Web settings UI/API (edit many device settings from browser)
@@ -65,7 +70,7 @@ CrossPoint is open-source e-reader firmware - community-built, fully hackable, f
 
 - **Customization**: multiple themes (Classic, Lyra, Lyra Extended, RoundedRaff), sleep screen modes including transparent overlays, front/side button remapping, status bar controls, power-button behavior, refresh cadence, and more.
 
-- **Localization**: 24 UI languages and counting. RTL support.
+- **Localization**: 31 UI languages and counting, with RTL support.
 
 ### Coming soon:
 
@@ -76,6 +81,8 @@ CrossPoint is open-source e-reader firmware - community-built, fully hackable, f
 ---
 
 ## USB-locked devices (Xteink Unlocker)
+
+> This upstream guidance applies to the ESP32-C3 X3 and X4. Do not treat an X3/X4 web-flasher selection as an X4 Pro target.
 
 Some Xteink units purchased from third-party stores (e.g. AliExpress) ship with USB flashing locked from the factory.
 If your device is locked, you will need to use the **Xteink Unlocker** tool available at
@@ -88,31 +95,56 @@ https://crosspointreader.com/#unlock-tool before you can flash CrossPoint.
 USB port or browser before assuming the device is locked. Only reach for the unlocker if the device still doesn't appear.
 
 > ### ⚠️ WARNING: READ THIS BEFORE USING THE UNLOCKER ⚠️
-> 
+>
 > **The only officially supported firmwares in the unlock tool are CrossPoint and CrossInk.**
-> 
+>
 > Flashing any other firmware on a USB-locked device may **permanently brick the device** or leave it **permanently
 > stuck on that firmware with no recovery path**. Once USB flashing is re-locked, your only way back is via OTA, and if
 > the firmware you flashed doesn't support OTA, **there is no way out**.
 
 ## Install firmware
 
-### Web installer (recommended)
+### Web installer (upstream X3/X4, recommended)
 
-1. Connect your device to your computer via USB-C and wake/unlock the device
-2. Go to https://crosspointreader.com/#flash-tools, select device (X3 or X4), and choose an official CrossPoint release.
+1. Connect your ESP32-C3 X3 or X4 to your computer via USB-C and wake/unlock the device.
+2. Go to https://crosspointreader.com/#flash-tools, select X3 or X4, and choose an official CrossPoint release.
 
-### Web installer (specific version)
+### Web installer (upstream X3/X4, specific version)
 
 1. Connect your device to your computer via USB-C and wake/unlock the device
 2. Download a `firmware.bin` from [Releases](https://github.com/crosspoint-reader/crosspoint-reader/releases), local build, or continuous integration artifact.
 3. Go to https://crosspointreader.com/#flash-tools, select device (X3 or X4), click "Custom .bin" and upload a `firmware.bin`.
 
-### Revert to Official Firmware
+### Revert an upstream X3/X4 to official firmware
 
-To revert to the official firmware, you can also flash the latest official firmware using https://crosspointreader.com/#flash-tools.
+To revert an X3 or X4 to the official firmware, you can also flash the latest official firmware using https://crosspointreader.com/#flash-tools.
 
-### Command line
+### X4 Pro fork (ESP32-S3)
+
+The web installer's X3 and X4 choices are ESP32-C3 targets and must not be used
+for an X4 Pro image. Build the X4 Pro fork with its production environment:
+
+```bash
+git clone --recursive --branch feature/reader-convergence-20260825 \
+  https://github.com/MrStu82/crosspoint-llama-pro.git
+cd crosspoint-llama-pro
+git checkout b2036ff973ab0cc718bf8b47e9fdeb0a1b7b4af6
+git submodule update --init --recursive
+pio run -e x4pro
+```
+
+The single application image is `.pio/build/x4pro/firmware.bin`. It targets an
+ESP32-S3 and belongs at the app0 offset `0x10000`:
+
+```bash
+esptool --chip esp32s3 --port /dev/ttyACM0 --baud 921600 \
+  write-flash 0x10000 .pio/build/x4pro/firmware.bin
+```
+
+Adjust the port for your system. This is an application image, not a merged
+factory image; do not flash it at offset zero.
+
+### Command line (upstream X3/X4)
 
 1. Install [`esptool`](https://github.com/espressif/esptool):
 
@@ -164,6 +196,7 @@ Conversion runs the firmware repo's `lib/EpdFont/scripts/fontconvert_sdcard.py` 
 - [Project scope](./SCOPE.md)
 - [Contributing docs](./docs/contributing/README.md)
 - [Touch and UI development](./docs/contributing/touch-and-ui.md) - FreeInkUI components for new screens, the touch bridge for existing ones, and build envs for the non-Xteink touch devices
+- [Selected upstream PR audit](./.planning/UPSTREAM_PR_AUDIT.md) - the review, deduplication, and conflict rules used for the selective 1.6 adoption
 
 ---
 
@@ -207,8 +240,16 @@ After rebuilding the system configuration, reconnect the device or reload udev r
 ### Build / flash / monitor
 
 ```bash
+# Upstream ESP32-C3 X3/X4 default environment
 pio run --target upload
+
+# X4 Pro fork production environment
+pio run -e x4pro
+# Output: .pio/build/x4pro/firmware.bin (ESP32-S3 app image at 0x10000)
 ```
+
+Use the [X4 Pro flashing command](#x4-pro-fork-esp32-s3) above rather than an
+upstream X3/X4 target selection.
 
 ### Contributor pre-PR checks
 
@@ -245,7 +286,7 @@ Minor adjustments may be required for Windows.
 
 ## Internals
 
-CrossPoint Reader is pretty aggressive about caching data down to the SD card to minimise RAM usage. The ESP32-C3 only has ~380KB of usable RAM, so we have to be careful. A lot of the decisions made in the design of the firmware were based on this constraint.
+CrossPoint Reader is pretty aggressive about caching data down to the SD card to minimise RAM usage. The upstream ESP32-C3 X3/X4 targets have only ~380KB of usable RAM, so many design decisions are based on that constraint. The ESP32-S3 X4 Pro fork retains the same bounded cache and persistence behaviour even though its hardware profile differs.
 
 ### Data caching
 
@@ -299,7 +340,7 @@ One of the best things about open source is that anyone can take the code in a d
 
 - ~~[PlusPoint](https://github.com/ngxson/pluspoint-reader) — custom JS apps support.~~ (Unmaintained)
 
-- [crosspoint-reader-papers3](https://github.com/juicecultus/crosspoint-reader-papers3) — Crosspoint port for M5Stack Paper S3. 
+- [crosspoint-reader-papers3](https://github.com/juicecultus/crosspoint-reader-papers3) — Crosspoint port for M5Stack Paper S3.
 
 - [t5s3-reader](https://github.com/ShallowGreen123/t5s3-reader) — Crosspoint port for LilyGo T5 ePaper S3 / T5S3 4.7-inch e-paper device.
 

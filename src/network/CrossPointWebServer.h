@@ -23,7 +23,16 @@ struct FileInfo {
 class CheckedWebServer final : public WebServer {
  public:
   using WebServer::WebServer;
-  bool isListening() { return static_cast<bool>(_server); }
+  bool isListening() {
+#ifdef SIMULATOR
+    // The simulator WebServer stub has no protected NetworkServer socket. It
+    // never binds a real listener, so successful construction is the complete
+    // lifecycle contract available to simulator-only framebuffer tests.
+    return true;
+#else
+    return static_cast<bool>(_server);
+#endif
+  }
 };
 
 class CrossPointWebServer {

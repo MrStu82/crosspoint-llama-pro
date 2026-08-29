@@ -114,7 +114,13 @@ void CrossPointWebServer::begin() {
 
   const IPAddress listenAddress = apMode ? WiFi.softAPIP() : WiFi.localIP();
   LOG_DBG("WEB", "Creating web server on %s:%d...", listenAddress.toString().c_str(), port);
+#ifdef SIMULATOR
+  // The simulator WebServer stub exposes only the port constructor. Device
+  // builds retain the address-bound listener required by AP/STA readiness.
+  server.reset(new CheckedWebServer(port));
+#else
   server.reset(new CheckedWebServer(listenAddress, port));
+#endif
 
   // Disable WiFi sleep to improve responsiveness and prevent 'unreachable' errors.
   // This is critical for reliable web server operation on ESP32.

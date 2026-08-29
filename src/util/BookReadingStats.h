@@ -12,6 +12,8 @@ struct BookReadingStatsValue {
   bool remainingAvailable = false;
   bool currentRate = false;
   bool fallbackRate = false;
+  bool legacyRate = false;
+  bool rateConfident = false;
   uint8_t qualifiedSamples = 0;
   uint32_t qualifiedSeconds = 0;
   uint32_t fingerprint = 0;
@@ -36,8 +38,9 @@ struct QualifiedPageSample {
 
 namespace BookReadingStats {
 BookReadingStatsValue read(const std::string& bookPath);
-// Preserves the historical TIME READ counter only. `forwardPages` is accepted
-// for source compatibility but is never pace evidence.
+// Preserves historical TIME READ. Legacy v1 files also migrate a bounded
+// forwardPages/totalSeconds pace; new calls record pace only through
+// recordQualifiedPage().
 bool add(const std::string& bookPath, uint32_t seconds, uint32_t forwardPages);
 bool recordQualifiedPage(const std::string& bookPath, const QualifiedPageSample& sample);
 bool updatePosition(const std::string& bookPath, uint32_t fingerprint,

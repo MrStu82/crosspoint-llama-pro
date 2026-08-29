@@ -21,9 +21,11 @@ inline constexpr uint8_t kCurrentMinSamples = 5;
 inline constexpr uint32_t kCurrentMinSeconds = 300;
 inline constexpr uint8_t kOverallMinSamples = 20;
 inline constexpr uint8_t kOverallMinBooks = 2;
-inline constexpr uint32_t kBookMagic = 0x32535242U;     // BRS2
+inline constexpr uint32_t kBookMagicV2 = 0x32535242U;   // BRS2 (deployed compatibility)
+inline constexpr uint32_t kBookMagic = 0x33535242U;     // BRS3
 inline constexpr uint32_t kOverallMagic = 0x32525242U;  // BRR2
-inline constexpr uint8_t kVersion = 2;
+inline constexpr uint8_t kVersion = 3;
+inline constexpr uint8_t kOverallVersion = 2;
 
 enum class ContentBasis : uint8_t { Unknown = 0, ExactPages = 1, FineProgress = 2 };
 
@@ -49,8 +51,8 @@ struct LegacyBookV1 {
 };
 
 struct StoredBookV2 {
-  uint32_t magic = kBookMagic;
-  uint8_t version = kVersion;
+  uint32_t magic = kBookMagicV2;
+  uint8_t version = 2;
   uint8_t sampleCount = 0;
   uint8_t sampleNext = 0;
   ContentBasis basis = ContentBasis::Unknown;
@@ -62,9 +64,26 @@ struct StoredBookV2 {
   uint32_t checksum = 0;
 };
 
+struct StoredBookV3 {
+  uint32_t magic = kBookMagic;
+  uint8_t version = kVersion;
+  uint8_t sampleCount = 0;
+  uint8_t sampleNext = 0;
+  ContentBasis basis = ContentBasis::Unknown;
+  uint32_t totalSeconds = 0;
+  uint32_t fingerprint = 0;
+  uint32_t remainingPagesQ16 = 0;
+  uint32_t progressQ24 = 0;
+  std::array<RateSample, kBookSampleCapacity> samples{};
+  // Exact legacy forwardPages/totalSeconds rate. It is used only until a new
+  // qualified current-layout dwell sample exists; it never supplies position.
+  uint32_t legacyPagesPerMinuteQ16 = 0;
+  uint32_t checksum = 0;
+};
+
 struct StoredOverallV2 {
   uint32_t magic = kOverallMagic;
-  uint8_t version = kVersion;
+  uint8_t version = kOverallVersion;
   uint8_t sampleCount = 0;
   uint8_t sampleNext = 0;
   uint8_t reserved = 0;
@@ -149,11 +168,13 @@ enum class RateSource : uint8_t { None, CurrentBook, OverallFallback };
 struct SelectedRate {
   uint32_t pagesPerMinuteQ16 = 0;
   RateSource source = RateSource::None;
+  bool confident = false;
 };
 inline SelectedRate selectRate(uint32_t currentRateQ16, bool currentIsConfident,
                                uint32_t overallRateQ16, bool overallIsConfident) {
-  if (currentIsConfident && currentRateQ16 != 0) return {currentRateQ16, RateSource::CurrentBook};
-  if (overallIsConfident && overallRateQ16 != 0) return {overallRateQ16, RateSource::OverallFallback};
+  // Confidence describes precision; it must not erase a real measured rate.
+  if (currentRateQ16 != 0) return {currentRateQ16, RateSource::CurrentBook, currentIsConfident};
+  if (overallRateQ16 != 0) return {overallRateQ16, RateSource::OverallFallback, overallIsConfident};
   return {};
 }
 
@@ -183,12 +204,16 @@ inline void seal(StoredBookV2& stored) {
   stored.checksum = 0;
   stored.checksum = checksumBytes(&stored, sizeof(stored));
 }
+inline void seal(StoredBookV3& stored) {
+  stored.checksum = 0;
+  stored.checksum = checksumBytes(&stored, sizeof(stored));
+}
 inline void seal(StoredOverallV2& stored) {
   stored.checksum = 0;
   stored.checksum = checksumBytes(&stored, sizeof(stored));
 }
 inline bool valid(const StoredBookV2& stored) {
-  if (stored.magic != kBookMagic || stored.version != kVersion || stored.sampleCount > kBookSampleCapacity ||
+  if (stored.magic != kBookMagicV2 || stored.version != 2 || stored.sampleCount > kBookSampleCapacity ||
       stored.sampleNext >= kBookSampleCapacity)
     return false;
   StoredBookV2 copy = stored;
@@ -196,8 +221,18 @@ inline bool valid(const StoredBookV2& stored) {
   seal(copy);
   return expected == copy.checksum;
 }
+inline bool valid(const StoredBookV3& stored) {
+  if (stored.magic != kBookMagic || stored.version != kVersion || stored.sampleCount > kBookSampleCapacity ||
+      stored.sampleNext >= kBookSampleCapacity)
+    return false;
+  StoredBookV3 copy = stored;
+  const uint32_t expected = copy.checksum;
+  seal(copy);
+  return expected == copy.checksum;
+}
 inline bool valid(const StoredOverallV2& stored) {
-  if (stored.magic != kOverallMagic || stored.version != kVersion || stored.sampleCount > kOverallSampleCapacity ||
+  if (stored.magic != kOverallMagic || stored.version != kOverallVersion ||
+      stored.sampleCount > kOverallSampleCapacity ||
       stored.sampleNext >= kOverallSampleCapacity)
     return false;
   StoredOverallV2 copy = stored;
@@ -206,10 +241,40 @@ inline bool valid(const StoredOverallV2& stored) {
   return expected == copy.checksum;
 }
 
-inline StoredBookV2 migrate(const LegacyBookV1& legacy) {
-  StoredBookV2 migrated;
-  if (legacy.version == 1) migrated.totalSeconds = legacy.totalSeconds;
-  // Legacy forwardPages is deliberately discarded: it has no qualified dwell evidence.
+inline uint32_t legacyPagesPerMinuteQ16(const uint32_t forwardPages, const uint32_t totalSeconds) {
+  if (forwardPages == 0 || totalSeconds == 0) return 0;
+  const uint64_t averageDwellMs = static_cast<uint64_t>(totalSeconds) * 1000U / forwardPages;
+  // Retain only a pace inside the same usable dwell envelope as new samples.
+  if (averageDwellMs < kMinDwellMs || averageDwellMs > kMaxDwellMs) return 0;
+  return static_cast<uint32_t>(std::min<uint64_t>(
+      static_cast<uint64_t>(forwardPages) * 60U * kQ16One / totalSeconds,
+      std::numeric_limits<uint32_t>::max()));
+}
+
+inline StoredBookV3 migrate(const LegacyBookV1& legacy) {
+  StoredBookV3 migrated;
+  if (legacy.version == 1) {
+    migrated.totalSeconds = legacy.totalSeconds;
+    migrated.legacyPagesPerMinuteQ16 = legacyPagesPerMinuteQ16(legacy.forwardPages, legacy.totalSeconds);
+  }
+  seal(migrated);
+  return migrated;
+}
+
+inline StoredBookV3 migrate(const StoredBookV2& old) {
+  StoredBookV3 migrated;
+  if (!valid(old)) {
+    seal(migrated);
+    return migrated;
+  }
+  migrated.sampleCount = old.sampleCount;
+  migrated.sampleNext = old.sampleNext;
+  migrated.basis = old.basis;
+  migrated.totalSeconds = old.totalSeconds;
+  migrated.fingerprint = old.fingerprint;
+  migrated.remainingPagesQ16 = old.remainingPagesQ16;
+  migrated.progressQ24 = old.progressQ24;
+  migrated.samples = old.samples;
   seal(migrated);
   return migrated;
 }

@@ -72,6 +72,33 @@ TEST(HomeInkPointGeometry, EtaUsesOnlyTheMeasuredPerBookRate) {
   EXPECT_EQ(*eta.bookMinutes, 40U);
 }
 
+TEST(HomeInkPointGeometry, OneUsableMeasuredSampleProducesBothHomeEtaValues) {
+  const uint16_t oneRealDwell[] = {30};
+  const uint32_t measuredRate = BookReadingRate::pagesPerMinuteQ16(oneRealDwell, 1);
+  const auto selected = BookReadingRate::selectRate(
+      measuredRate, false, BookReadingRate::kQ16One, true);
+  ASSERT_EQ(selected.source, BookReadingRate::RateSource::CurrentBook);
+  EXPECT_FALSE(selected.confident);
+  const auto eta = InkPointHomeGeometry::estimateEtas(
+      selected.pagesPerMinuteQ16, 40U * BookReadingRate::kQ16One, true, 6, true);
+  ASSERT_TRUE(eta.chapterMinutes);
+  ASSERT_TRUE(eta.bookMinutes);
+  EXPECT_EQ(*eta.chapterMinutes, 3U);
+  EXPECT_EQ(*eta.bookMinutes, 20U);
+}
+
+TEST(HomeInkPointGeometry, OverallMeasuredRateIsUsedOnlyWhenCurrentBookHasNone) {
+  const auto selected = BookReadingRate::selectRate(
+      0, false, BookReadingRate::kQ16One, false);
+  ASSERT_EQ(selected.source, BookReadingRate::RateSource::OverallFallback);
+  const auto eta = InkPointHomeGeometry::estimateEtas(
+      selected.pagesPerMinuteQ16, 20U * BookReadingRate::kQ16One, true, 4, true);
+  ASSERT_TRUE(eta.chapterMinutes);
+  ASSERT_TRUE(eta.bookMinutes);
+  EXPECT_EQ(*eta.chapterMinutes, 4U);
+  EXPECT_EQ(*eta.bookMinutes, 20U);
+}
+
 TEST(HomeInkPointGeometry, WholeBookEtaIsHiddenWhenEvidenceIsInsufficient) {
   EXPECT_FALSE(InkPointHomeGeometry::estimateEtas(BookReadingRate::kQ16One, 40U << 16, false, 3, true)
                    .bookMinutes);

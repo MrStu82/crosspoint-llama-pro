@@ -22,14 +22,18 @@ readers = [
     source("src/activities/reader/XtcReaderActivity.cpp"),
 ]
 
-# Both bounded state files retain the proven atomic rename/write path. Legacy
-# cumulative forwardPages remains source-compatible but is never pace input.
+# Both bounded state files retain the proven atomic rename/write path. V1 and
+# deployed-v2 book files migrate atomically into v3; valid legacy page/time pace
+# is retained while an already-migrated v2 keeps any qualified samples.
 assert stats.count("ProgressFile::writeAtomic") == 2
 assert "stored.totalSeconds = satAdd(stored.totalSeconds, seconds);" in stats
-assert "forwardPages" not in stats
+assert "file.size() == sizeof(LegacyBookV1)" in stats
+assert "file.size() == sizeof(StoredBookV2)" in stats
+assert "if (needsSave) saveBook(bookPath, stored);" in stats
+assert "stored.legacyPagesPerMinuteQ16" in stats
 assert "progressPercent" not in stats
-assert "overallRate(overall, stored.fingerprint)" in stats
-assert "if (!result.currentRate" in stats
+assert "overallRate(overall, stored.fingerprint, overallIsConfident)" in stats
+assert "selectRate(current, currentConfident, overallValue, overallIsConfident)" in stats
 
 # Every reader exposes compatible pagination identity, records only qualified
 # visible forward dwell, persists a non-percent content basis, and is paused
@@ -45,10 +49,13 @@ assert manager.count("onUncovered()") >= 2
 assert "popupObscuresPage = pendingSyncSaveError || showBookmarkMessage || showDictionaryMessage" in readers[0]
 assert "section && !popupObscuresPage" in readers[0]
 
-# BOOK LEFT keeps its shipped sufficient/insufficient row states: a selected
-# qualified rate renders the value; insufficient evidence withholds the group.
+# All labels and rows remain stable. A selected measured rate renders both ETAs;
+# true no-data state is explicit text rather than collapsing BOOK LEFT.
 assert "if (eta.bookMinutes)" in home
-assert "if (i == 2 && !valueAvailable[i]) continue;" in home
+assert "if (i == 2 && !valueAvailable[i]) continue;" not in home
+assert '{"TIME READ", "CHAPTER LEFT", "BOOK LEFT"}' in home
+assert '"CALIBRATING"' in home
+assert "for (int i = 0; i < 3; ++i)" in home
 assert "bookStats.pagesPerMinuteQ16, bookStats.remainingPagesQ16" in home
 assert "progressPercent" not in geometry[geometry.index("inline EtaState estimateEtas") :]
 

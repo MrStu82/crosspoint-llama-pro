@@ -778,8 +778,8 @@ void HomeActivity::renderInkPointHome() {
                           kInkChevronHalf + kInkChevronRuleGap + kInkChevronRuleHeight;
   const int statStart = std::min(metadataBottom + 24, kChevronSafeBottom - statsHeight);
 
-  // Available values use Caveat; unavailable time/chapter values retain the
-  // readable UI em dash. Whole-book ETA is withheld until it is honest.
+  // All three rows are stable geometry. A missing measured rate changes only
+  // the value state; it never collapses BOOK LEFT or moves the Stats chevron.
   constexpr const char* labels[3] = {"TIME READ", "CHAPTER LEFT", "BOOK LEFT"};
   char timeRead[16] = {}, chapterLeft[16] = {}, bookLeft[16] = {};
   bool valueAvailable[3] = {false, false, false};
@@ -812,12 +812,9 @@ void HomeActivity::renderInkPointHome() {
   const int statX[3] = {statsLayout.timeX, statsLayout.chapterX, statsLayout.bookX};
   const int statY[3] = {statsLayout.timeY, statsLayout.chapterY, statsLayout.bookY};
   for (int i = 0; i < 3; ++i) {
-    // Whole-book ETA is the only optional group: without a confident measured
-    // pace it is hidden, rather than implying precision with a permanent slot.
-    if (i == 2 && !valueAvailable[i]) continue;
     renderer.drawText(UI_10_FONT_ID, statX[i], statY[i], labels[i]);
     if (valueAvailable[i]) renderer.drawText(CAVEAT_18_FONT_ID, statX[i], statY[i] + 20, values[i]);
-    else renderer.drawText(UI_12_FONT_ID, statX[i], statY[i] + 20, "\xE2\x80\x94");
+    else renderer.drawText(UI_10_FONT_ID, statX[i], statY[i] + 20, book && i > 0 ? "CALIBRATING" : "\xE2\x80\x94");
   }
   drawStatsChevron(renderer, statsLayout.chevronY);
 

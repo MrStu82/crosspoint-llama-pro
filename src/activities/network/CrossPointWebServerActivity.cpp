@@ -213,7 +213,14 @@ void CrossPointWebServerActivity::startAccessPoint() {
   // Configure a deterministic AP netif and DHCP lease before publishing its
   // SSID. Association alone does not prove that the IPv4 netif is ready.
   WiFi.mode(WIFI_AP);
-  if (!WiFi.softAPConfig(AP_IP, AP_GATEWAY, AP_SUBNET, AP_DHCP_START, AP_IP)) {
+#ifdef SIMULATOR
+  // The simulator WiFi stub does not model AP netifs or DHCP. Device builds
+  // must still prove the real five-argument softAPConfig call below.
+  const bool apNetifConfigured = true;
+#else
+  const bool apNetifConfigured = WiFi.softAPConfig(AP_IP, AP_GATEWAY, AP_SUBNET, AP_DHCP_START, AP_IP);
+#endif
+  if (!apNetifConfigured) {
     LOG_ERR("WEBACT", "ERROR: Failed to configure Access Point IPv4/DHCP!");
     WiFi.softAPdisconnect(true);
     onGoHome();

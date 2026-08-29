@@ -30,8 +30,9 @@ uint32_t satAdd(uint32_t a, uint32_t b) {
 
 bool ensureDir(const std::string& dir) { return Storage.exists(dir.c_str()) || Storage.mkdir(dir.c_str()); }
 
-bool loadBook(const std::string& path, StoredBookV2& stored, bool& available) {
+bool loadBook(const std::string& path, StoredBookV3& stored, bool& available, bool& needsSave) {
   available = false;
+  needsSave = false;
   HalFile file;
   const std::string filename = cachePath(path) + "/" + BOOK_FILENAME;
   if (!Storage.openFileForRead("BRS", filename, file)) return true;
@@ -41,16 +42,24 @@ bool loadBook(const std::string& path, StoredBookV2& stored, bool& available) {
       return false;
     stored = migrate(legacy);
     available = true;
+    needsSave = true;
     return true;
   }
-  if (file.size() != sizeof(StoredBookV2) ||
-      file.read(reinterpret_cast<uint8_t*>(&stored), sizeof(stored)) != sizeof(stored) || !valid(stored))
-    return false;
+  if (file.size() == sizeof(StoredBookV2)) {
+    StoredBookV2 old{};
+    if (file.read(reinterpret_cast<uint8_t*>(&old), sizeof(old)) != sizeof(old) || !valid(old)) return false;
+    stored = migrate(old);
+    available = true;
+    needsSave = true;
+    return true;
+  }
+  if (file.size() != sizeof(StoredBookV3) ||
+      file.read(reinterpret_cast<uint8_t*>(&stored), sizeof(stored)) != sizeof(stored) || !valid(stored)) return false;
   available = true;
   return true;
 }
 
-bool saveBook(const std::string& path, StoredBookV2& stored) {
+bool saveBook(const std::string& path, StoredBookV3& stored) {
   const std::string dir = cachePath(path);
   if (!ensureDir(dir)) return false;
   seal(stored);
@@ -79,18 +88,18 @@ void append(std::array<T, N>& values, uint8_t& count, uint8_t& next, const T& va
   if (count < N) ++count;
 }
 
-uint32_t currentRate(const StoredBookV2& stored, uint32_t& seconds) {
+uint32_t currentRate(const StoredBookV3& stored, uint32_t& seconds, bool& confident) {
   std::array<uint16_t, kBookSampleCapacity> dwell{};
   seconds = 0;
   for (uint8_t i = 0; i < stored.sampleCount; ++i) {
     dwell[i] = stored.samples[i].dwellSeconds;
     seconds = satAdd(seconds, dwell[i]);
   }
-  if (!currentConfident(stored.sampleCount, seconds)) return 0;
+  confident = currentConfident(stored.sampleCount, seconds);
   return pagesPerMinuteQ16(dwell.data(), stored.sampleCount);
 }
 
-uint32_t overallRate(const StoredOverallV2& stored, uint32_t fingerprint) {
+uint32_t overallRate(const StoredOverallV2& stored, uint32_t fingerprint, bool& confident) {
   std::array<uint16_t, kOverallSampleCapacity> dwell{};
   std::array<uint32_t, kOverallSampleCapacity> books{};
   size_t count = 0;
@@ -103,11 +112,11 @@ uint32_t overallRate(const StoredOverallV2& stored, uint32_t fingerprint) {
         books.begin() + static_cast<ptrdiff_t>(bookCount))
       books[bookCount++] = sample.bookHash;
   }
-  if (!overallConfident(count, bookCount)) return 0;
+  confident = overallConfident(count, bookCount);
   return pagesPerMinuteQ16(dwell.data(), count);
 }
 
-uint32_t fineRemaining(const StoredBookV2& stored) {
+uint32_t fineRemaining(const StoredBookV3& stored) {
   std::array<uint32_t, kBookSampleCapacity> deltas{};
   for (uint8_t i = 0; i < stored.sampleCount; ++i) deltas[i] = stored.samples[i].progressDeltaQ24;
   return remainingFromFineProgressQ16(stored.progressQ24, deltas.data(), stored.sampleCount);
@@ -117,9 +126,13 @@ uint32_t fineRemaining(const StoredBookV2& stored) {
 namespace BookReadingStats {
 BookReadingStatsValue read(const std::string& bookPath) {
   BookReadingStatsValue result;
-  StoredBookV2 stored;
+  StoredBookV3 stored;
   bool available = false;
-  if (!loadBook(bookPath, stored, available) || !available) return result;
+  bool needsSave = false;
+  if (!loadBook(bookPath, stored, available, needsSave) || !available) return result;
+  // V1/V2 upgrades are persisted through the same atomic rename path as all
+  // other reader stats. A write failure does not hide the valid in-memory rate.
+  if (needsSave) saveBook(bookPath, stored);
 
   result.available = true;
   result.totalSeconds = stored.totalSeconds;
@@ -131,21 +144,32 @@ BookReadingStatsValue read(const std::string& bookPath) {
                               (stored.basis != ContentBasis::FineProgress || result.remainingPagesQ16 != 0 ||
                                stored.progressQ24 == kQ24One);
 
-  result.pagesPerMinuteQ16 = currentRate(stored, result.qualifiedSeconds);
-  result.currentRate = result.pagesPerMinuteQ16 != 0;
-  if (!result.currentRate && stored.fingerprint != 0) {
-    StoredOverallV2 overall;
-    if (loadOverall(overall)) result.pagesPerMinuteQ16 = overallRate(overall, stored.fingerprint);
-    result.fallbackRate = result.pagesPerMinuteQ16 != 0;
+  bool currentConfident = false;
+  uint32_t current = currentRate(stored, result.qualifiedSeconds, currentConfident);
+  if (current == 0 && stored.legacyPagesPerMinuteQ16 != 0) {
+    current = stored.legacyPagesPerMinuteQ16;
+    result.legacyRate = true;
   }
+  uint32_t overallValue = 0;
+  bool overallIsConfident = false;
+  if (current == 0 && stored.fingerprint != 0) {
+    StoredOverallV2 overall;
+    if (loadOverall(overall)) overallValue = overallRate(overall, stored.fingerprint, overallIsConfident);
+  }
+  const auto selected = selectRate(current, currentConfident, overallValue, overallIsConfident);
+  result.pagesPerMinuteQ16 = selected.pagesPerMinuteQ16;
+  result.currentRate = selected.source == RateSource::CurrentBook;
+  result.fallbackRate = selected.source == RateSource::OverallFallback;
+  result.rateConfident = selected.confident;
   return result;
 }
 
 bool add(const std::string& bookPath, uint32_t seconds, uint32_t) {
   if (seconds == 0) return true;
-  StoredBookV2 stored;
+  StoredBookV3 stored;
   bool available = false;
-  if (!loadBook(bookPath, stored, available)) stored = StoredBookV2{};
+  bool needsSave = false;
+  if (!loadBook(bookPath, stored, available, needsSave)) stored = StoredBookV3{};
   stored.totalSeconds = satAdd(stored.totalSeconds, seconds);
   return saveBook(bookPath, stored);
 }
@@ -155,14 +179,17 @@ bool recordQualifiedPage(const std::string& bookPath, const QualifiedPageSample&
       sample.fingerprint == 0 || sample.bookHash == 0 || sample.basis == ContentBasis::Unknown)
     return false;
 
-  StoredBookV2 stored;
+  StoredBookV3 stored;
   bool available = false;
-  if (!loadBook(bookPath, stored, available)) stored = StoredBookV2{};
+  bool needsSave = false;
+  if (!loadBook(bookPath, stored, available, needsSave)) stored = StoredBookV3{};
   if (stored.fingerprint != sample.fingerprint) {
     const uint32_t preservedSeconds = stored.totalSeconds;
-    stored = StoredBookV2{};
+    const uint32_t preservedLegacyRate = stored.fingerprint == 0 ? stored.legacyPagesPerMinuteQ16 : 0;
+    stored = StoredBookV3{};
     stored.totalSeconds = preservedSeconds;
     stored.fingerprint = sample.fingerprint;
+    stored.legacyPagesPerMinuteQ16 = preservedLegacyRate;
   }
   stored.basis = sample.basis;
   stored.progressQ24 = sample.progressQ24;
@@ -186,14 +213,17 @@ bool updatePosition(const std::string& bookPath, const uint32_t fingerprint,
                     const ContentBasis basis, const uint32_t exactRemainingPages,
                     const uint32_t progressQ24) {
   if (fingerprint == 0 || basis == ContentBasis::Unknown) return false;
-  StoredBookV2 stored;
+  StoredBookV3 stored;
   bool available = false;
-  if (!loadBook(bookPath, stored, available)) stored = StoredBookV2{};
+  bool needsSave = false;
+  if (!loadBook(bookPath, stored, available, needsSave)) stored = StoredBookV3{};
   if (stored.fingerprint != fingerprint) {
     const uint32_t preservedSeconds = stored.totalSeconds;
-    stored = StoredBookV2{};
+    const uint32_t preservedLegacyRate = stored.fingerprint == 0 ? stored.legacyPagesPerMinuteQ16 : 0;
+    stored = StoredBookV3{};
     stored.totalSeconds = preservedSeconds;
     stored.fingerprint = fingerprint;
+    stored.legacyPagesPerMinuteQ16 = preservedLegacyRate;
   }
   stored.basis = basis;
   stored.progressQ24 = progressQ24;

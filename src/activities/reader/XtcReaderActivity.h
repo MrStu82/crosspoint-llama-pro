@@ -34,6 +34,7 @@ class XtcReaderActivity final : public Activity {
   uint32_t rateFingerprint() const;
   uint32_t visiblePageKey() const;
   void recordQualifiedForward(uint16_t dwellSeconds);
+  void openReaderTools();
 
   enum class StatusBarOverlayPosition { Bottom, Top };
   struct StatusBarInfo {

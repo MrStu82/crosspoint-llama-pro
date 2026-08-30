@@ -190,6 +190,7 @@ class EpubReaderActivity final : public Activity {
   void onReaderMenuConfirm(EpubReaderMenuActivity::MenuAction action);
   // Opens the reader menu for the current position (short-press Confirm)
   void openReaderMenu();
+  void openReaderTools();
   void openDictionaryWordSelect();
   // Post-close re-layout for TextSettingsActivity, used by the reader-menu TEXT_SETTINGS entry.
   void onTextSettingsClosed();

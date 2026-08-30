@@ -13,8 +13,11 @@
 #include "MappedInputManager.h"
 #include "ProgressFile.h"
 #include "ReaderUtils.h"
+#include "ReaderToolsActivity.h"
 #include "RecentBooksStore.h"
 #include "activities/home/StatsManager.h"
+#include "activities/reader/EpubReaderPercentSelectionActivity.h"
+#include "activities/settings/TextSettingsActivity.h"
 #include "util/BookReadingStats.h"
 #include "components/UITheme.h"
 #include "fontIds.h"
@@ -104,6 +107,38 @@ void TxtReaderActivity::recordQualifiedForward(const uint16_t dwellSeconds) {
                        static_cast<uint32_t>(std::max(0, totalPages - currentPage - 1)), 0, 0});
 }
 
+void TxtReaderActivity::openReaderTools() {
+  startActivityForResult(std::make_unique<ReaderToolsActivity>(renderer, mappedInput, ReaderToolsActivity::Format::Txt),
+                         [this](const ActivityResult& result) {
+                           if (result.isCancelled) return;
+                           const auto action = static_cast<ReaderToolsActivity::Action>(
+                               std::get<MenuResult>(result.data).action);
+                           if (action == ReaderToolsActivity::Action::GoToPercent) {
+                             const int percent = totalPages > 1 ? currentPage * 100 / (totalPages - 1) : 0;
+                             startActivityForResult(
+                                 std::make_unique<EpubReaderPercentSelectionActivity>(renderer, mappedInput, percent),
+                                 [this](const ActivityResult& selected) {
+                                   if (!selected.isCancelled && totalPages > 0) {
+                                     currentPage =
+                                         std::get<PercentResult>(selected.data).percent * (totalPages - 1) / 100;
+                                     requestUpdate();
+                                   }
+                                 });
+                           } else if (action == ReaderToolsActivity::Action::TextSettings) {
+                             saveProgress();
+                             startActivityForResult(
+                                 std::make_unique<TextSettingsActivity>(renderer, mappedInput, nullptr,
+                                                                         TextSettingsActivity::Tab::Family),
+                                 [this](const ActivityResult&) {
+                                   initialized = false;
+                                   pageOffsets.clear();
+                                   currentPageLines.clear();
+                                   requestUpdate();
+                                 });
+                           }
+                         });
+}
+
 void TxtReaderActivity::loop() {
   if (ReaderUtils::handleBackNavigation(mappedInput, activityManager, txt ? txt->getPath().c_str() : "",
                                         {this, [](void* ctx) { static_cast<TxtReaderActivity*>(ctx)->onGoHome(); }})) {
@@ -111,6 +146,10 @@ void TxtReaderActivity::loop() {
   }
 
   const auto touch = ReaderUtils::detectTouchPageTurn(renderer, mappedInput);
+  if (ReaderUtils::shouldOpenReaderTools(touch) && initialized && totalPages > 0) {
+    openReaderTools();
+    return;
+  }
   auto [prevTriggered, nextTriggered, fromTilt] = ReaderUtils::detectPageTurn(mappedInput);
   prevTriggered = prevTriggered || touch.prev;
   nextTriggered = nextTriggered || touch.next;

@@ -32,6 +32,7 @@
 #include "ProgressMapper.h"
 #include "QrDisplayActivity.h"
 #include "ReaderUtils.h"
+#include "ReaderToolsActivity.h"
 #include "RecentBooksStore.h"
 #include "SdCardFontSystem.h"
 #include "activities/home/StatsManager.h"
@@ -334,6 +335,36 @@ void EpubReaderActivity::openReaderMenu() {
                          });
 }
 
+void EpubReaderActivity::openReaderTools() {
+  startActivityForResult(
+      std::make_unique<ReaderToolsActivity>(renderer, mappedInput, ReaderToolsActivity::Format::Epub),
+                         [this](const ActivityResult& result) {
+                           if (result.isCancelled) return;
+                           const auto action = static_cast<ReaderToolsActivity::Action>(
+                               std::get<MenuResult>(result.data).action);
+                           switch (action) {
+                             case ReaderToolsActivity::Action::GoToPercent:
+                               onReaderMenuConfirm(EpubReaderMenuActivity::MenuAction::GO_TO_PERCENT);
+                               break;
+                             case ReaderToolsActivity::Action::AddBookmark:
+                               if (!currentPageBookmarked) addBookmark();
+                               break;
+                             case ReaderToolsActivity::Action::Bookmarks:
+                               onReaderMenuConfirm(EpubReaderMenuActivity::MenuAction::BOOKMARKS);
+                               break;
+                             case ReaderToolsActivity::Action::Dictionary:
+                               onReaderMenuConfirm(EpubReaderMenuActivity::MenuAction::DICTIONARY);
+                               break;
+                             case ReaderToolsActivity::Action::KOReaderSync:
+                               onReaderMenuConfirm(EpubReaderMenuActivity::MenuAction::SYNC);
+                               break;
+                             case ReaderToolsActivity::Action::TextSettings:
+                               onReaderMenuConfirm(EpubReaderMenuActivity::MenuAction::TEXT_SETTINGS);
+                               break;
+                           }
+                         });
+}
+
 bool EpubReaderActivity::buildTickHeapGate() {
   const size_t freeHeap = ESP.getFreeHeap();
   const size_t maxBlock = ESP.getMaxAllocHeap();
@@ -524,6 +555,10 @@ void EpubReaderActivity::loop() {
   }
 
   const auto touch = ReaderUtils::detectTouchPageTurn(renderer, mappedInput);
+  if (ReaderUtils::shouldOpenReaderTools(touch) && section && currentSpineIndex < epub->getSpineItemsCount()) {
+    openReaderTools();
+    return;
+  }
 
   if (automaticPageTurnActive) {
     if (mappedInput.wasReleased(MappedInputManager::Button::Confirm) ||

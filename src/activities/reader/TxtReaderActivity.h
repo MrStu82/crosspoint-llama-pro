@@ -39,6 +39,7 @@ class TxtReaderActivity final : public Activity {
   uint32_t rateFingerprint() const;
   uint32_t visiblePageKey() const;
   void recordQualifiedForward(uint16_t dwellSeconds);
+  void openReaderTools();
 
   void renderPage();
   void renderStatusBar() const;

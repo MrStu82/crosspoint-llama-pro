@@ -19,9 +19,11 @@
 #include "MappedInputManager.h"
 #include "ProgressFile.h"
 #include "ReaderUtils.h"
+#include "ReaderToolsActivity.h"
 #include "RecentBooksStore.h"
 #include "XtcReaderChapterSelectionActivity.h"
 #include "activities/home/StatsManager.h"
+#include "activities/reader/EpubReaderPercentSelectionActivity.h"
 #include "util/BookReadingStats.h"
 #include "components/UITheme.h"
 #include "fontIds.h"
@@ -95,6 +97,27 @@ void XtcReaderActivity::recordQualifiedForward(const uint16_t dwellSeconds) {
                        currentPage < total ? total - currentPage - 1 : 0, 0, 0});
 }
 
+void XtcReaderActivity::openReaderTools() {
+  startActivityForResult(std::make_unique<ReaderToolsActivity>(renderer, mappedInput, ReaderToolsActivity::Format::Xtc),
+                         [this](const ActivityResult& result) {
+                           if (result.isCancelled || !xtc || xtc->getPageCount() == 0) return;
+                           const auto action = static_cast<ReaderToolsActivity::Action>(
+                               std::get<MenuResult>(result.data).action);
+                           if (action != ReaderToolsActivity::Action::GoToPercent) return;
+                           const int percent =
+                               xtc->getPageCount() > 1 ? currentPage * 100 / (xtc->getPageCount() - 1) : 0;
+                           startActivityForResult(
+                               std::make_unique<EpubReaderPercentSelectionActivity>(renderer, mappedInput, percent),
+                               [this](const ActivityResult& selected) {
+                                 if (!selected.isCancelled && xtc && xtc->getPageCount() > 0) {
+                                   currentPage = static_cast<uint32_t>(std::get<PercentResult>(selected.data).percent) *
+                                                 (xtc->getPageCount() - 1) / 100;
+                                   requestUpdate();
+                                 }
+                               });
+                         });
+}
+
 void XtcReaderActivity::openChapterSelection() {
   if (xtc && xtc->hasChapters() && !xtc->getChapters().empty()) {
     startActivityForResult(std::make_unique<XtcReaderChapterSelectionActivity>(renderer, mappedInput, xtc, currentPage),
@@ -112,6 +135,10 @@ void XtcReaderActivity::loop() {
   }
 
   const auto touch = ReaderUtils::detectTouchPageTurn(renderer, mappedInput);
+  if (ReaderUtils::shouldOpenReaderTools(touch) && currentPage < xtc->getPageCount()) {
+    openReaderTools();
+    return;
+  }
 
   const bool atEndOfBook = currentPage >= xtc->getPageCount();
 

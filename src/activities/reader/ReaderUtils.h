@@ -74,6 +74,11 @@ struct TouchPageTurn {
   unsigned long heldMs;
 };
 
+inline bool shouldOpenReaderTools(const TouchPageTurn& touch) {
+  return SETTINGS.longPressButtonBehavior == CrossPointSettings::READER_TOOLS &&
+         (touch.prev || touch.next) && touch.heldMs > SKIP_HOLD_MS;
+}
+
 inline TouchPageTurn detectTouchPageTurn(GfxRenderer& renderer, const MappedInputManager& input) {
   TouchPageTurn result{false, false, 0};
   if (!SETTINGS.touchReaderControls || !input.hasTouch()) {

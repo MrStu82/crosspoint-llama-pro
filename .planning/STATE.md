@@ -1,5 +1,15 @@
 # State — Upstream Safety/Reader Convergence
 
+## Active prototype — Reader top spacing (2026-08-31)
+
+- Base: `06c974e551ffd68f8ce6c56753377957c3d98630`; branch: `ui/reader-top-spacing-20260831`.
+- Scope: revised code-native/simulator prototype only. Keep the production top progress fill inset and thickness
+  unchanged; lift only the top status text lane by exactly 8 px. Target the measured visual bar-to-status gap at
+  12–16 px while retaining about 8 px before the unchanged chapter heading. Bottom status geometry, viewport
+  reservation, reader behavior, themes and sleep imagery remain unchanged.
+- Gate: deterministic geometry/source contract plus one clean X4 Pro simulator capture. No firmware build or release.
+- Stop after prototype evidence for Stuart visual approval.
+
 ## Current position
 
 - **Phase 1:** complete. `a9f20903` adds explicit held X4 latch sequencing and candidate/running-image chip validation; focused host gate 20/20 PASS.

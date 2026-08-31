@@ -26,6 +26,7 @@ constexpr int bookmarkStatusIconWidth = 16;
 constexpr int bookmarkStatusIconHeight = 14;
 constexpr int bookmarkStatusIconGap = 4;
 constexpr int bookmarkStatusIconTopCrop = 2;
+constexpr int readerTopStatusLift = 8;
 
 void drawBookmarkStatusIcon(const GfxRenderer& renderer, const int x, const int y) {
   constexpr int bytesPerRow = bookmarkStatusIconWidth / 8;
@@ -868,7 +869,7 @@ void BaseTheme::drawStatusBar(GfxRenderer& renderer, const float bookProgress, c
   // Top bar mirrors this from the top edge: progress bar hugs the edge, text lane sits below it.
   auto textY = isTopEdge ? orientedMarginTop + paddingBottom +
                                (sb.showsProgressBar() ? sb.progressBarHeightPx + metrics.progressBarMarginTop : 0) +
-                               metrics.statusBarVerticalMargin - 4
+                               metrics.statusBarVerticalMargin - 4 - readerTopStatusLift
                          : screenHeight - UITheme::getInstance().getStatusBarHeight(edge) - orientedMarginBottom -
                                paddingBottom - 4;
 

@@ -26,6 +26,8 @@ constexpr int bookmarkStatusIconWidth = 16;
 constexpr int bookmarkStatusIconHeight = 14;
 constexpr int bookmarkStatusIconGap = 4;
 constexpr int bookmarkStatusIconTopCrop = 2;
+constexpr int readerTopProgressBarY = 0;
+constexpr int readerTopStatusGap = 1;
 
 void drawBookmarkStatusIcon(const GfxRenderer& renderer, const int x, const int y) {
   constexpr int bytesPerRow = bookmarkStatusIconWidth / 8;
@@ -861,16 +863,18 @@ void BaseTheme::drawStatusBar(GfxRenderer& renderer, const float bookProgress, c
   const auto sb = SETTINGS.statusBarSpec(edge);
   const bool showStatusBarTextLane = sb.textLaneVisible(halClock.isAvailable());
   const bool isTopEdge = edge == CrossPointSettings::Edge::TOP;
+  const int progressBarHeight = sb.progressBarHeightPx + (fillMargin ? orientedMarginBottom - 1 : 0);
 
   // Draw Progress Text
   const auto screenHeight = renderer.getScreenHeight();
   // Bottom bar: text lane sits above the progress bar, both hugging the bottom edge.
   // Top bar mirrors this from the top edge: progress bar hugs the edge, text lane sits below it.
-  auto textY = isTopEdge ? orientedMarginTop + paddingBottom +
-                               (sb.showsProgressBar() ? sb.progressBarHeightPx + metrics.progressBarMarginTop : 0) +
-                               metrics.statusBarVerticalMargin - 4
-                         : screenHeight - UITheme::getInstance().getStatusBarHeight(edge) - orientedMarginBottom -
-                               paddingBottom - 4;
+  auto textY = isTopEdge
+                   ? (sb.showsProgressBar()
+                          ? readerTopProgressBarY + progressBarHeight + readerTopStatusGap
+                          : orientedMarginTop + paddingBottom + metrics.statusBarVerticalMargin - 4)
+                   : screenHeight - UITheme::getInstance().getStatusBarHeight(edge) - orientedMarginBottom -
+                         paddingBottom - 4;
 
   const int leftClusterX = metrics.statusBarHorizontalMargin + orientedMarginLeft + 1;
   const int rightClusterX = renderer.getScreenWidth() - metrics.statusBarHorizontalMargin - orientedMarginRight;
@@ -911,8 +915,8 @@ void BaseTheme::drawStatusBar(GfxRenderer& renderer, const float bookProgress, c
     const int barMarginLeft = fillMargin ? 0 : orientedMarginLeft;
     const int barMarginRight = fillMargin ? 0 : orientedMarginRight;
     const int progressBarMaxWidth = renderer.getScreenWidth() - barMarginLeft - barMarginRight;
-    // Top bar: progress bar hugs the top margin instead of the bottom one, no bottom-fillMargin nudge.
-    const int progressBarY = isTopEdge ? orientedMarginTop + paddingBottom
+    // Top bar starts at the physical first row; the bottom bar keeps its existing geometry.
+    const int progressBarY = isTopEdge ? readerTopProgressBarY
                                         : renderer.getScreenHeight() - orientedMarginBottom - sb.progressBarHeightPx -
                                               paddingBottom + (fillMargin ? 1 : 0);
     size_t progress;
@@ -923,8 +927,7 @@ void BaseTheme::drawStatusBar(GfxRenderer& renderer, const float bookProgress, c
       progress = (pageCount > 0) ? (static_cast<float>(currentPage) / pageCount) * 100 : 0;
     }
     const int barWidth = progressBarMaxWidth * progress / 100;
-    const int barHeight = sb.progressBarHeightPx + (fillMargin ? orientedMarginBottom - 1 : 0);
-    renderer.fillRect(barMarginLeft, progressBarY, barWidth, barHeight, true);
+    renderer.fillRect(barMarginLeft, progressBarY, barWidth, progressBarHeight, true);
   }
 
   // Draw Battery

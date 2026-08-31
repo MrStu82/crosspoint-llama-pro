@@ -1,5 +1,14 @@
 # State — Upstream Safety/Reader Convergence
 
+## Active prototype — Reader top spacing (2026-08-31)
+
+- Base: `06c974e551ffd68f8ce6c56753377957c3d98630`; branch: `ui/reader-top-spacing-20260831`.
+- Scope: code-native/simulator prototype only. Top reader progress fill begins at physical `y=0`; when the top
+  text lane is enabled its layout starts one clear pixel below the progress fill. Bottom status geometry,
+  viewport reservation, reader behavior, themes and sleep imagery remain unchanged.
+- Gate: deterministic geometry/source contract plus one clean X4 Pro simulator capture. No firmware build or release.
+- Stop after prototype evidence for Stuart visual approval.
+
 ## Current position
 
 - **Phase 1:** complete. `a9f20903` adds explicit held X4 latch sequencing and candidate/running-image chip validation; focused host gate 20/20 PASS.

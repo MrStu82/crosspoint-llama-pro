@@ -153,7 +153,7 @@ Result validateImageFile(const char* sdPath, size_t partitionSize) {
   size_t pos = HEADER_SIZE;
 
   for (uint8_t i = 0; i < segCount; i++) {
-    if (pos + SEG_HEADER_SIZE > fileSize) {
+    if (!safety_guards::rangeFits(pos, SEG_HEADER_SIZE, fileSize)) {
       LOG_ERR("FLASH", "validate: seg %u header overruns EOF at %u", i, static_cast<unsigned>(pos));
       mbedtls_sha256_free(&shaCtx);
       file.close();
@@ -170,7 +170,7 @@ Result validateImageFile(const char* sdPath, size_t partitionSize) {
 
     uint32_t dataLen;
     std::memcpy(&dataLen, segHdr + 4, sizeof(dataLen));
-    if (pos + dataLen > fileSize) {
+    if (!safety_guards::rangeFits(pos, dataLen, fileSize)) {
       LOG_ERR("FLASH", "validate: seg %u data overruns EOF (%u + %u > %u)", i, static_cast<unsigned>(pos),
               static_cast<unsigned>(dataLen), static_cast<unsigned>(fileSize));
       mbedtls_sha256_free(&shaCtx);

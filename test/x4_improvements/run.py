@@ -24,7 +24,7 @@ with tempfile.TemporaryDirectory() as t:
 if Path('/usr/include/openssl/evp.h').exists():
  with tempfile.TemporaryDirectory() as t:
   exe=str(Path(t)/'digest')
-  subprocess.run(['g++','-std=c++17','-O2','-DCROSSPOINT_SIMULATOR','-I'+str(d/'stubs'),'-I'+str(r),str(d/'DigestTest.cpp'),'-lcrypto','-o',exe],check=True)
+  subprocess.run(['g++','-std=c++17','-O2','-DSIMULATOR','-I'+str(d/'stubs'),'-I'+str(r),str(d/'DigestTest.cpp'),'-lcrypto','-o',exe],check=True)
   subprocess.run([exe],check=True)
 else:
  print('DIGEST NOT RUN locally: OpenSSL development headers unavailable; required on Trantor.')

@@ -125,7 +125,8 @@ inline uint32_t layoutFingerprint(uint32_t readerKind, uint32_t screenWidth, uin
 // Versioned, field-wise identity: never hash struct padding. All EPUB layout
 // fields are included; a schema bump deliberately invalidates old pace samples.
 template <typename Spec>
-inline uint32_t renderSpecFingerprint(const Spec& spec, uint32_t orientation) {
+inline uint32_t renderSpecFingerprint(const Spec& spec, uint32_t orientation,
+                                      const char* sdFontFamily = "", uint32_t pointSize = 0) {
   uint32_t compression = 0;
   static_assert(sizeof(compression) == sizeof(spec.lineCompression));
   std::memcpy(&compression, &spec.lineCompression, sizeof(compression));
@@ -134,7 +135,7 @@ inline uint32_t renderSpecFingerprint(const Spec& spec, uint32_t orientation) {
       spec.extraParagraphSpacing, spec.paragraphAlignment, spec.viewportWidth,
       spec.viewportHeight, spec.hyphenationEnabled, spec.embeddedStyle,
       spec.imageRendering, spec.focusReadingEnabled, spec.guideReadingEnabled,
-      spec.forceParagraphIndents, orientation};
+      spec.forceParagraphIndents, orientation, hashString(sdFontFamily), pointSize};
   for (uint32_t value : values) hash = hashValue(hash, value);
   return hash == 0 ? 1 : hash;
 }

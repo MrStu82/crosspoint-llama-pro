@@ -8,4 +8,6 @@ CHECK(fontId,1);CHECK(lineCompression,0.9f);CHECK(extraParagraphSpacing,true);CH
 CHECK(viewportWidth,480);CHECK(viewportHeight,760);CHECK(hyphenationEnabled,true);CHECK(embeddedStyle,false);
 CHECK(imageRendering,1);CHECK(focusReadingEnabled,true);CHECK(guideReadingEnabled,true);CHECK(forceParagraphIndents,true);
 assert(BookReadingRate::renderSpecFingerprint(s,1)!=base);
-puts("PASS 13 pagination/orientation identity mutations");}
+assert(BookReadingRate::renderSpecFingerprint(s,0,"FontA",14)!=BookReadingRate::renderSpecFingerprint(s,0,"FontB",14));
+assert(BookReadingRate::renderSpecFingerprint(s,0,"FontA",14)!=BookReadingRate::renderSpecFingerprint(s,0,"FontA",16));
+puts("PASS 15 pagination/orientation/SD-font identity mutations");}

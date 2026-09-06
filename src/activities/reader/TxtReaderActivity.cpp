@@ -81,10 +81,12 @@ void TxtReaderActivity::onExit() {
 }
 
 uint32_t TxtReaderActivity::rateFingerprint() const {
-  return BookReadingRate::layoutFingerprint(2, viewportWidth, linesPerPage,
+  const uint32_t layout = BookReadingRate::layoutFingerprint(2, viewportWidth, linesPerPage,
                                              SETTINGS.getReaderFontId(), SETTINGS.fontPointSize,
                                              0, SETTINGS.screenMargin,
                                              SETTINGS.paragraphAlignment, SETTINGS.orientation, 2);
+  const uint32_t fingerprint = BookReadingRate::hashValue(layout, BookReadingRate::hashString(SETTINGS.sdFontFamilyName));
+  return fingerprint == 0 ? 1 : fingerprint;
 }
 
 uint32_t TxtReaderActivity::visiblePageKey() const {

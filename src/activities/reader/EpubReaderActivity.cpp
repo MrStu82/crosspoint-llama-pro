@@ -276,7 +276,8 @@ void EpubReaderActivity::onExit() {
 
 uint32_t EpubReaderActivity::rateFingerprint() const {
   return BookReadingRate::renderSpecFingerprint(
-      SETTINGS.readerRenderSpec(buildViewportWidth, buildViewportHeight), SETTINGS.orientation);
+      SETTINGS.readerRenderSpec(buildViewportWidth, buildViewportHeight), SETTINGS.orientation,
+      SETTINGS.sdFontFamilyName, SETTINGS.fontPointSize);
 }
 
 uint32_t EpubReaderActivity::visiblePageKey() const {

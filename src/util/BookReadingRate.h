@@ -122,6 +122,23 @@ inline uint32_t layoutFingerprint(uint32_t readerKind, uint32_t screenWidth, uin
   return hash == 0 ? 1 : hash;
 }
 
+// Versioned, field-wise identity: never hash struct padding. All EPUB layout
+// fields are included; a schema bump deliberately invalidates old pace samples.
+template <typename Spec>
+inline uint32_t renderSpecFingerprint(const Spec& spec, uint32_t orientation) {
+  uint32_t compression = 0;
+  static_assert(sizeof(compression) == sizeof(spec.lineCompression));
+  std::memcpy(&compression, &spec.lineCompression, sizeof(compression));
+  uint32_t hash = 2166136261U;
+  const uint32_t values[] = {2, static_cast<uint32_t>(spec.fontId), compression,
+      spec.extraParagraphSpacing, spec.paragraphAlignment, spec.viewportWidth,
+      spec.viewportHeight, spec.hyphenationEnabled, spec.embeddedStyle,
+      spec.imageRendering, spec.focusReadingEnabled, spec.guideReadingEnabled,
+      spec.forceParagraphIndents, orientation};
+  for (uint32_t value : values) hash = hashValue(hash, value);
+  return hash == 0 ? 1 : hash;
+}
+
 inline uint32_t pageKey(uint32_t fingerprint, uint32_t major, uint32_t minor = 0) {
   return hashValue(hashValue(fingerprint, major), minor);
 }

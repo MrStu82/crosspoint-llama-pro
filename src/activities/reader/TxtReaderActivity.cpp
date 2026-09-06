@@ -81,14 +81,10 @@ void TxtReaderActivity::onExit() {
 }
 
 uint32_t TxtReaderActivity::rateFingerprint() const {
-  const uint32_t flags = static_cast<uint32_t>(SETTINGS.hyphenationEnabled) |
-                         (static_cast<uint32_t>(SETTINGS.embeddedStyle) << 8) |
-                         (static_cast<uint32_t>(SETTINGS.focusReadingEnabled) << 16) |
-                         (static_cast<uint32_t>(SETTINGS.forceParagraphIndents) << 24);
-  return BookReadingRate::layoutFingerprint(2, renderer.getScreenWidth(), renderer.getScreenHeight(),
+  return BookReadingRate::layoutFingerprint(2, viewportWidth, linesPerPage,
                                              SETTINGS.getReaderFontId(), SETTINGS.fontPointSize,
-                                             SETTINGS.lineSpacing, SETTINGS.screenMargin,
-                                             SETTINGS.paragraphAlignment, SETTINGS.orientation, flags);
+                                             0, SETTINGS.screenMargin,
+                                             SETTINGS.paragraphAlignment, SETTINGS.orientation, 2);
 }
 
 uint32_t TxtReaderActivity::visiblePageKey() const {
@@ -546,7 +542,7 @@ void TxtReaderActivity::saveProgress() const {
 
 void TxtReaderActivity::loadProgress() {
   HalFile f;
-  if (Storage.openFileForRead("TRS", txt->getCachePath() + "/progress.bin", f)) {
+  if (ProgressFile::openForRead("TRS", txt->getCachePath() + "/progress.bin", f)) {
     uint8_t data[4];
     if (f.read(data, 4) == 4) {
       currentPage = data[0] + (data[1] << 8);

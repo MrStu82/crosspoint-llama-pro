@@ -42,7 +42,7 @@ BookReadingStatsValue read(const std::string& bookPath);
 // forwardPages/totalSeconds pace; new calls record pace only through
 // recordQualifiedPage().
 bool add(const std::string& bookPath, uint32_t seconds, uint32_t forwardPages);
-bool recordQualifiedPage(const std::string& bookPath, const QualifiedPageSample& sample);
+bool recordQualifiedPage(const std::string& bookPath, const QualifiedPageSample& sample, uint32_t elapsedSeconds = 0);
 bool updatePosition(const std::string& bookPath, uint32_t fingerprint,
                     BookReadingRate::ContentBasis basis, uint32_t exactRemainingPages,
                     uint32_t progressQ24);

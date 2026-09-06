@@ -34,7 +34,7 @@ std::optional<int> read(const std::string& path) {
   }
 
   HalFile f;
-  if (!Storage.openFileForRead("BADGE", cachePath + "/" + BADGE_FILENAME, f)) {
+  if (!ProgressFile::openForRead("BADGE", cachePath + "/" + BADGE_FILENAME, f)) {
     return std::nullopt;
   }
   uint8_t percentByte = 0;

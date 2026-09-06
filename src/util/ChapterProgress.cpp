@@ -1,4 +1,5 @@
 #include "ChapterProgress.h"
+#include "activities/reader/ProgressFile.h"
 
 #include <Epub.h>
 #include <FsHelpers.h>
@@ -14,7 +15,7 @@ ChapterProgressValue read(const std::string& bookPath) {
 
   const std::string filename = Epub(bookPath, "/.crosspoint").getCachePath() + "/progress.bin";
   HalFile file;
-  if (!Storage.openFileForRead("CHP", filename, file)) return result;
+  if (!ProgressFile::openForRead("CHP", filename, file)) return result;
 
   // Layout written by EpubReaderUtils::saveProgress: spineIndex, pageNumber,
   // pageCount, then an optional visible-text offset. The 4-byte form predates

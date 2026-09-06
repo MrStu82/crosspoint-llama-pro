@@ -203,7 +203,7 @@ class EpubReaderActivity final : public Activity {
   uint32_t visiblePageKey() const;
   uint32_t fineProgressQ24(int spineIndex, int page, int pageCount) const;
   void recordQualifiedForward(uint16_t dwellSeconds, uint32_t progressBeforeQ24,
-                              uint32_t progressAfterQ24);
+                              uint32_t progressAfterQ24, uint32_t elapsedSeconds);
   void pageTurn(bool isForwardTurn, bool qualifyRate = true);
   void loadCachedBookmarks();
   void addBookmark();

@@ -175,7 +175,7 @@ void EpubReaderActivity::onEnter() {
   epub->setupCacheDir();
 
   HalFile f;
-  if (Storage.openFileForRead("ERS", epub->getCachePath() + "/progress.bin", f)) {
+  if (ProgressFile::openForRead("ERS", epub->getCachePath() + "/progress.bin", f)) {
     uint8_t data[10];
     int dataSize = f.read(data, sizeof(data));
     if (dataSize == 4 || dataSize == 6 || dataSize == 10) {
@@ -275,14 +275,8 @@ void EpubReaderActivity::onExit() {
 }
 
 uint32_t EpubReaderActivity::rateFingerprint() const {
-  const uint32_t flags = static_cast<uint32_t>(SETTINGS.hyphenationEnabled) |
-                         (static_cast<uint32_t>(SETTINGS.embeddedStyle) << 8) |
-                         (static_cast<uint32_t>(SETTINGS.focusReadingEnabled) << 16) |
-                         (static_cast<uint32_t>(SETTINGS.forceParagraphIndents) << 24);
-  return BookReadingRate::layoutFingerprint(1, renderer.getScreenWidth(), renderer.getScreenHeight(),
-                                             SETTINGS.getReaderFontId(), SETTINGS.fontPointSize,
-                                             SETTINGS.lineSpacing, SETTINGS.screenMargin,
-                                             SETTINGS.paragraphAlignment, SETTINGS.orientation, flags);
+  return BookReadingRate::renderSpecFingerprint(
+      SETTINGS.readerRenderSpec(buildViewportWidth, buildViewportHeight), SETTINGS.orientation);
 }
 
 uint32_t EpubReaderActivity::visiblePageKey() const {
@@ -303,12 +297,16 @@ void EpubReaderActivity::onUncovered() {
 
 void EpubReaderActivity::recordQualifiedForward(const uint16_t dwellSeconds,
                                                 const uint32_t progressBeforeQ24,
-                                                const uint32_t progressAfterQ24) {
-  if (!epub || progressAfterQ24 <= progressBeforeQ24) return;
+                                                const uint32_t progressAfterQ24, const uint32_t elapsedSeconds) {
+  if (!epub) return;
+  if (progressAfterQ24 <= progressBeforeQ24) {
+    BookReadingStats::add(epub->getPath(), elapsedSeconds, 0);
+    return;
+  }
   BookReadingStats::recordQualifiedPage(
       epub->getPath(), {dwellSeconds, rateFingerprint(), BookReadingRate::hashString(epub->getPath().c_str()),
                         BookReadingRate::ContentBasis::FineProgress, 0, progressAfterQ24,
-                        progressAfterQ24 - progressBeforeQ24});
+                        progressAfterQ24 - progressBeforeQ24}, elapsedSeconds);
 }
 
 void EpubReaderActivity::openReaderMenu() {
@@ -1204,12 +1202,14 @@ void EpubReaderActivity::pageTurn(bool isForwardTurn, bool qualifyRate) {
     }
   }
   lastPageTurnTime = millis();
+  uint32_t elapsedSeconds = 0;
   if (sessionStartTime != 0UL) {
     const unsigned long secs = (millis() - sessionStartTime) / 1000;
     StatsManager::getInstance().addReadingTimeSeconds(secs);
-    BookReadingStats::add(epub->getPath(), secs, 0);
+    elapsedSeconds = secs;
     sessionStartTime += secs * 1000;
   }
+  if (!isForwardTurn || !dwell) BookReadingStats::add(epub->getPath(), elapsedSeconds, 0);
   // Only forward turns count as pages read -- paging back to reread shouldn't inflate the count.
   if (isForwardTurn) {
     if (dwell) {
@@ -1222,7 +1222,7 @@ void EpubReaderActivity::pageTurn(bool isForwardTurn, bool qualifyRate) {
           progressAfterQ24 = BookReadingRate::progressQ24(epub->calculateProgress(currentSpineIndex, 0.0F));
         }
       }
-      recordQualifiedForward(*dwell, progressBeforeQ24, progressAfterQ24);
+      recordQualifiedForward(*dwell, progressBeforeQ24, progressAfterQ24, elapsedSeconds);
     }
     StatsManager::getInstance().incrementPagesRead();
   }
@@ -1660,7 +1660,7 @@ void EpubReaderActivity::render(RenderLock&& lock) {
   // bookmark and screenshot re-renders, and writeAtomic is several FAT ops for 6 bytes.
   // Every real page turn changes currentPage, so progress durability is unaffected.
   if (currentSpineIndex != lastSavedSpineIndex || section->currentPage != lastSavedPage ||
-      section->pageCount != lastSavedPageCount) {
+      section->estimatedTotalPages() != lastSavedPageCount) {
     if (saveProgress(currentSpineIndex, section->currentPage, section->estimatedTotalPages())) {
       lastSavedSpineIndex = currentSpineIndex;
       lastSavedPage = section->currentPage;

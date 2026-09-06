@@ -3,63 +3,69 @@
 #include <HalStorage.h>
 #include <Logging.h>
 
+#include <algorithm>
 #include <cstddef>
 #include <cstdint>
+#include <cstring>
+#include <mutex>
 #include <string>
 
 namespace ProgressFile {
+// Serializes replacement/recovery across destinations. No caller may retain
+// this lock while requesting a render. The storage HAL takes its own lock below.
+inline std::mutex transactionMutex;
 
-// Writes `len` bytes of reader progress to `<cachePath>/progress.bin` without
-// ever leaving the canonical file half-written.
-//
-// The bytes go to a temporary `progress.bin.tmp` first; only once that is fully
-// written and closed is it renamed over progress.bin. An interrupted write
-// (power loss or a crash mid-SPI) therefore damages only the throwaway temp file.
-// Previously a truncate-in-place write that was cut short left progress.bin with
-// a broken FAT cluster chain that the firmware could neither rewrite nor clear,
-// stranding the book on an old page (issue #2275).
-//
-// This is crash-safe, not metadata-atomic: on FAT the replace is remove + rename,
-// two separate directory operations, so a crash between them can leave neither
-// file -- which simply reads as "no saved progress" on next launch, never a
-// corrupt or unclearable file. The point is that progress.bin is never torn.
-//
-// Note: this prevents corruption on a healthy card going forward. It cannot
-// repair an already-corrupted progress.bin -- removing the stale file may itself
-// fail at the FAT level, in which case recovery still requires fsck on a host.
-//
-// Returns true only if the new file is fully in place.
-inline bool writeAtomic(const std::string& cachePath, const uint8_t* data, size_t len,
-                        const std::string& filename = "progress.bin") {
-  const std::string finalPath = cachePath + "/" + filename;
-  const std::string tmpPath = cachePath + "/" + filename + ".tmp";
-
-  {
-    HalFile f;
-    if (!Storage.openFileForWrite("PRG", tmpPath, f)) {
-      LOG_ERR("PRG", "Could not open temp progress file for write: %s", tmpPath.c_str());
-      return false;
-    }
-    const size_t written = f.write(data, len);
-    if (written != len) {
-      LOG_ERR("PRG", "Short write saving progress to %s: %u/%u bytes", tmpPath.c_str(), (unsigned)written,
-              (unsigned)len);
-      return false;
-    }
-    f.flush();
-    // f (the temp file) is closed at scope exit (DESTRUCTOR_CLOSES_FILE=1) before
-    // the rename below -- SdFat must not rename a path that still has an open FsFile.
-  }
-
-  // SdFat's rename does not overwrite an existing destination, so drop the old
-  // canonical file first. The brief window where neither file exists reads as
-  // "no saved progress" on next launch -- never a corrupt, unclearable file.
-  Storage.remove(finalPath.c_str());
-  if (!Storage.rename(tmpPath.c_str(), finalPath.c_str())) {
-    LOG_ERR("PRG", "Failed to rename temp progress into place: %s", finalPath.c_str());
-    return false;
-  }
-  return true;
+// A .bak is a formerly committed file, never an unverified temporary payload.
+// Restore it only if the canonical name is absent. Do not promote stale .tmp.
+inline bool recover(const std::string& path) {
+  if (Storage.exists(path.c_str())) return true;
+  const std::string backup = path + ".bak";
+  return Storage.exists(backup.c_str()) && Storage.rename(backup.c_str(), path.c_str());
 }
 
+inline bool openForRead(const char* module, const std::string& path, HalFile& file) {
+  std::lock_guard<std::mutex> lock(transactionMutex);
+  if (!recover(path)) return false;
+  return Storage.openFileForRead(module, path, file);
+}
+
+// FAT does not provide replace-rename. Keep the old committed file as .bak
+// until the new canonical name exists. Readers recover .bak after interruption.
+// Read back the closed temporary file before moving the old name. Physical
+// media corruption/torn directory sectors still require filesystem recovery.
+inline bool writeAtomic(const std::string& cachePath, const uint8_t* data, size_t len,
+                        const std::string& filename = "progress.bin") {
+  std::lock_guard<std::mutex> lock(transactionMutex);
+  const std::string finalPath = cachePath + "/" + filename;
+  const std::string tmpPath = finalPath + ".tmp";
+  const std::string backupPath = finalPath + ".bak";
+  if (Storage.exists(backupPath.c_str()) && !recover(finalPath)) return false;
+  {
+    HalFile f;
+    if (!Storage.openFileForWrite("PRG", tmpPath, f)) return false;
+    if (f.write(data, len) != len) return false;
+    f.flush();
+    if (!f.close()) return false;
+  }
+  {
+    HalFile f;
+    if (!Storage.openFileForRead("PRG", tmpPath, f) || f.size() != len) return false;
+    uint8_t check[64];
+    for (size_t offset = 0; offset < len;) {
+      const size_t n = std::min(sizeof(check), len - offset);
+      if (f.read(check, n) != static_cast<int>(n) || std::memcmp(check, data + offset, n) != 0) return false;
+      offset += n;
+    }
+    if (!f.close()) return false;
+  }
+  if (Storage.exists(backupPath.c_str()) && !Storage.remove(backupPath.c_str())) return false;
+  if (Storage.exists(finalPath.c_str()) && !Storage.rename(finalPath.c_str(), backupPath.c_str())) return false;
+  if (!Storage.rename(tmpPath.c_str(), finalPath.c_str())) {
+    recover(finalPath);  // best effort; a later read retries recovery
+    return false;
+  }
+  // A cleanup failure is harmless: canonical wins, backup is removed next write.
+  Storage.remove(backupPath.c_str());
+  return true;
+}
 }  // namespace ProgressFile

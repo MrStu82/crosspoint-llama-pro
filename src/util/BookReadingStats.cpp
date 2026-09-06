@@ -3,6 +3,7 @@
 #include <algorithm>
 #include <array>
 #include <limits>
+#include <mutex>
 
 #include <Epub.h>
 #include <FsHelpers.h>
@@ -12,6 +13,7 @@
 
 namespace {
 using namespace BookReadingRate;
+std::mutex statsMutex;
 constexpr char BOOK_FILENAME[] = "reading_stats.bin";
 constexpr char OVERALL_DIR[] = "/.crosspoint";
 constexpr char OVERALL_FILENAME[] = "reading_rate_v2.bin";
@@ -35,7 +37,8 @@ bool loadBook(const std::string& path, StoredBookV3& stored, bool& available, bo
   needsSave = false;
   HalFile file;
   const std::string filename = cachePath(path) + "/" + BOOK_FILENAME;
-  if (!Storage.openFileForRead("BRS", filename, file)) return true;
+  if (!ProgressFile::openForRead("BRS", filename, file))
+    return !Storage.exists(filename.c_str()) && !Storage.exists((filename + ".bak").c_str());
   if (file.size() == sizeof(LegacyBookV1)) {
     LegacyBookV1 legacy{};
     if (file.read(reinterpret_cast<uint8_t*>(&legacy), sizeof(legacy)) != sizeof(legacy) || legacy.version != 1)
@@ -69,7 +72,8 @@ bool saveBook(const std::string& path, StoredBookV3& stored) {
 bool loadOverall(StoredOverallV2& stored) {
   HalFile file;
   const std::string filename = std::string(OVERALL_DIR) + "/" + OVERALL_FILENAME;
-  if (!Storage.openFileForRead("BRR", filename, file)) return true;
+  if (!ProgressFile::openForRead("BRR", filename, file))
+    return !Storage.exists(filename.c_str()) && !Storage.exists((filename + ".bak").c_str());
   return file.size() == sizeof(stored) && file.read(reinterpret_cast<uint8_t*>(&stored), sizeof(stored)) == sizeof(stored) &&
          valid(stored);
 }
@@ -125,6 +129,7 @@ uint32_t fineRemaining(const StoredBookV3& stored) {
 
 namespace BookReadingStats {
 BookReadingStatsValue read(const std::string& bookPath) {
+  std::lock_guard<std::mutex> lock(statsMutex);
   BookReadingStatsValue result;
   StoredBookV3 stored;
   bool available = false;
@@ -165,16 +170,18 @@ BookReadingStatsValue read(const std::string& bookPath) {
 }
 
 bool add(const std::string& bookPath, uint32_t seconds, uint32_t) {
+  std::lock_guard<std::mutex> lock(statsMutex);
   if (seconds == 0) return true;
   StoredBookV3 stored;
   bool available = false;
   bool needsSave = false;
-  if (!loadBook(bookPath, stored, available, needsSave)) stored = StoredBookV3{};
+  if (!loadBook(bookPath, stored, available, needsSave)) return false;
   stored.totalSeconds = satAdd(stored.totalSeconds, seconds);
   return saveBook(bookPath, stored);
 }
 
-bool recordQualifiedPage(const std::string& bookPath, const QualifiedPageSample& sample) {
+bool recordQualifiedPage(const std::string& bookPath, const QualifiedPageSample& sample, const uint32_t elapsedSeconds) {
+  std::lock_guard<std::mutex> lock(statsMutex);
   if (sample.dwellSeconds < kMinDwellMs / 1000U || sample.dwellSeconds > kMaxDwellMs / 1000U ||
       sample.fingerprint == 0 || sample.bookHash == 0 || sample.basis == ContentBasis::Unknown)
     return false;
@@ -182,7 +189,7 @@ bool recordQualifiedPage(const std::string& bookPath, const QualifiedPageSample&
   StoredBookV3 stored;
   bool available = false;
   bool needsSave = false;
-  if (!loadBook(bookPath, stored, available, needsSave)) stored = StoredBookV3{};
+  if (!loadBook(bookPath, stored, available, needsSave)) return false;
   if (stored.fingerprint != sample.fingerprint) {
     const uint32_t preservedSeconds = stored.totalSeconds;
     const uint32_t preservedLegacyRate = stored.fingerprint == 0 ? stored.legacyPagesPerMinuteQ16 : 0;
@@ -191,6 +198,7 @@ bool recordQualifiedPage(const std::string& bookPath, const QualifiedPageSample&
     stored.fingerprint = sample.fingerprint;
     stored.legacyPagesPerMinuteQ16 = preservedLegacyRate;
   }
+  stored.totalSeconds = satAdd(stored.totalSeconds, elapsedSeconds);
   stored.basis = sample.basis;
   stored.progressQ24 = sample.progressQ24;
   if (sample.basis == ContentBasis::ExactPages) {
@@ -202,7 +210,7 @@ bool recordQualifiedPage(const std::string& bookPath, const QualifiedPageSample&
   const bool bookSaved = saveBook(bookPath, stored);
 
   StoredOverallV2 overall;
-  if (!loadOverall(overall)) overall = StoredOverallV2{};
+  if (!loadOverall(overall)) return false;
   append(overall.samples, overall.sampleCount, overall.sampleNext,
          OverallSample{sample.dwellSeconds, 0, sample.fingerprint, sample.bookHash});
   const bool overallSaved = saveOverall(overall);
@@ -212,11 +220,12 @@ bool recordQualifiedPage(const std::string& bookPath, const QualifiedPageSample&
 bool updatePosition(const std::string& bookPath, const uint32_t fingerprint,
                     const ContentBasis basis, const uint32_t exactRemainingPages,
                     const uint32_t progressQ24) {
+  std::lock_guard<std::mutex> lock(statsMutex);
   if (fingerprint == 0 || basis == ContentBasis::Unknown) return false;
   StoredBookV3 stored;
   bool available = false;
   bool needsSave = false;
-  if (!loadBook(bookPath, stored, available, needsSave)) stored = StoredBookV3{};
+  if (!loadBook(bookPath, stored, available, needsSave)) return false;
   if (stored.fingerprint != fingerprint) {
     const uint32_t preservedSeconds = stored.totalSeconds;
     const uint32_t preservedLegacyRate = stored.fingerprint == 0 ? stored.legacyPagesPerMinuteQ16 : 0;

@@ -33,6 +33,7 @@ bool HardcoverCredentialStore::fromJson(JsonVariantConst doc) {
 
 bool HardcoverCredentialStore::replaceTokenAtomic(const std::string& value) {
   if (!value.empty() && !isValidToken(value)) return false;
+  std::lock_guard<std::mutex> lock(storeMutex);
   return AtomicCredentialUpdate::replace(token, value, [this] { return saveAtomic(); });
 }
 

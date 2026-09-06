@@ -1232,6 +1232,7 @@ void EpubReaderActivity::pageTurn(bool isForwardTurn, bool qualifyRate) {
 
 // TODO: Failure handling
 void EpubReaderActivity::render(RenderLock&& lock) {
+  reader_diagnostics::Scope profile(reader_diagnostics::Stage::EpubRender);
   if (!epub) {
     return;
   }

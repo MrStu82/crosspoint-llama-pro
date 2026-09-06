@@ -1,5 +1,5 @@
 from pathlib import Path
-import subprocess,tempfile
+import subprocess,tempfile,os
 r=Path(__file__).resolve().parents[2];d=Path(__file__).resolve().parent
 with tempfile.TemporaryDirectory() as t:
  exe=str(Path(t)/'safety')
@@ -13,10 +13,18 @@ with tempfile.TemporaryDirectory() as t:
   if name=='OtaPolicyTest':
    args+=['-DFREEINK_DEVICE_X4PRO=1','-DCROSSPOINT_VERSION="v1.5.0-230-g252758d3"',str(r/'src/network/OtaUpdater.cpp')]
   elif name=='JsonRecoveryTest':
-   args+=['-fsanitize=address,undefined','-I'+str(d/'json_stubs'),'-I'+str(r/'src'),'-I'+str(r/'lib/Serialization'),'-I'+str(r/'.pio/libdeps/x4pro/ArduinoJson/src'),str(r/'lib/Serialization/PersistableStore.cpp'),str(r/'src/HardcoverCredentialStore.cpp')]
+   args+=['-fsanitize=address,undefined','-I'+str(d/'json_stubs'),'-I'+str(r/'src'),'-I'+str(r/'lib/Serialization'),'-I'+os.environ.get('ARDUINOJSON_INCLUDE',str(r/'.pio/libdeps/x4pro/ArduinoJson/src')),str(r/'lib/Serialization/PersistableStore.cpp'),str(r/'src/HardcoverCredentialStore.cpp')]
   else: args+=['-I'+str(d/'stubs')]
   subprocess.run(args+['-o',exe],check=True)
   subprocess.run([exe],check=True)
   if name=='OtaPolicyTest':
    symbols=subprocess.check_output(['nm','-u',exe],text=True)
    assert not any(x in symbols for x in ('esp_ota','esp_partition','fetchUrl'))
+
+if Path('/usr/include/openssl/evp.h').exists():
+ with tempfile.TemporaryDirectory() as t:
+  exe=str(Path(t)/'digest')
+  subprocess.run(['g++','-std=c++17','-O2','-DCROSSPOINT_SIMULATOR','-I'+str(d/'stubs'),'-I'+str(r),str(d/'DigestTest.cpp'),'-lcrypto','-o',exe],check=True)
+  subprocess.run([exe],check=True)
+else:
+ print('DIGEST NOT RUN locally: OpenSSL development headers unavailable; required on Trantor.')

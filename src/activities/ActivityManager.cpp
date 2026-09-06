@@ -1,4 +1,5 @@
 #include "ActivityManager.h"
+#include "util/ReaderDiagnostics.h"
 
 #include <FontCacheManager.h>
 #include <HalDisplay.h>
@@ -418,11 +419,13 @@ void ActivityManager::requestUpdateAndWait() {
 // RenderLock
 
 RenderLock::RenderLock() {
+  reader_diagnostics::Scope profile(reader_diagnostics::Stage::RenderLock);
   xSemaphoreTake(activityManager.renderingMutex, portMAX_DELAY);
   isLocked = true;
 }
 
 RenderLock::RenderLock([[maybe_unused]] Activity&) {
+  reader_diagnostics::Scope profile(reader_diagnostics::Stage::RenderLock);
   xSemaphoreTake(activityManager.renderingMutex, portMAX_DELAY);
   isLocked = true;
 }

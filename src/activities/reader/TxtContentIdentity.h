@@ -23,7 +23,7 @@ template <class File> bool digest(File& f, std::array<uint8_t, 32>& result) {
   mbedtls_sha256_init(&sha);
   bool ok = mbedtls_sha256_starts(&sha, 0) == 0;
 #endif
-  uint8_t buffer[4096];
+  uint8_t buffer[512];
   size_t remaining = f.size();
   while (ok && remaining) {
     const size_t want = std::min(sizeof(buffer), remaining);

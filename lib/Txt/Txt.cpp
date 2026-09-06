@@ -1,4 +1,5 @@
 #include "Txt.h"
+#include "../../src/util/ReaderDiagnostics.h"
 
 #include <FsHelpers.h>
 #include <JpegToBmpConverter.h>
@@ -171,6 +172,7 @@ bool Txt::clearCache() const {
 }
 
 bool Txt::readContent(uint8_t* buffer, size_t offset, size_t length) const {
+  reader_diagnostics::Scope profile(reader_diagnostics::Stage::BookRead);
   if (!loaded) {
     return false;
   }

@@ -14,7 +14,7 @@ int main(){
  for(size_t n:{size_t(1048576),size_t(10485760)}){
   a.assign(n,'a');f={&a};auto start=std::chrono::steady_clock::now();assert(txt_index::digest(f,x));
   const auto us=std::chrono::duration_cast<std::chrono::microseconds>(std::chrono::steady_clock::now()-start).count();
-  std::cout<<"HOST_MEMORY_SHA256 bytes="<<n<<" us="<<us<<" reads="<<(n+4095)/4096<<"; excludes SD latency\n";
+  std::cout<<"HOST_MEMORY_SHA256 bytes="<<n<<" us="<<us<<" reads="<<(n+511)/512<<"; excludes SD latency\n";
  }
- std::cout<<"PASS actual digest loop with system mbedtls; abc vector; same-size text and unchanged-header font revision cache rejection\n";
+ std::cout<<"PASS actual digest loop with real system SHA256; abc vector; same-size text and unchanged-header font revision cache rejection\n";
 }

@@ -99,7 +99,7 @@ void TxtReaderActivity::onUncovered() {
 }
 
 void TxtReaderActivity::recordQualifiedForward(const uint16_t dwellSeconds) {
-  if (!txt || totalPages <= 0) return;
+  if (!txt || !contentIdentityReady || totalPages <= 0) return;
   BookReadingStats::recordQualifiedPage(
       txt->getPath(), {dwellSeconds, rateFingerprint(), BookReadingRate::hashString(txt->getPath().c_str()),
                        BookReadingRate::ContentBasis::ExactPages,
@@ -288,6 +288,7 @@ void TxtReaderActivity::buildPageIndex() {
 }
 
 bool TxtReaderActivity::loadPageAtOffset(size_t offset, std::vector<std::string>& outLines, size_t& nextOffset) {
+  reader_diagnostics::Scope profile(reader_diagnostics::Stage::TxtLayout);
   outLines.clear();
   const size_t fileSize = txt->getFileSize();
 
@@ -467,7 +468,6 @@ void TxtReaderActivity::render(RenderLock&&) {
 }
 
 void TxtReaderActivity::renderPage() {
-  reader_diagnostics::Scope profile(reader_diagnostics::Stage::TxtLayout);
   const int lineHeight = renderer.getLineHeight(cachedFontId);
   const int contentWidth = viewportWidth;
 

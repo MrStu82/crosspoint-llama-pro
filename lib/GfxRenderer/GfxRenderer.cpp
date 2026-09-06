@@ -1,4 +1,5 @@
 #include "GfxRenderer.h"
+#include "../../src/util/ReaderDiagnostics.h"
 #include "LineGeometry.h"
 
 #include <BidiUtils.h>
@@ -1661,6 +1662,7 @@ HalDisplay::RefreshMode GfxRenderer::applyPromotedRefresh(const HalDisplay::Refr
 }
 
 void GfxRenderer::displayBuffer(const HalDisplay::RefreshMode refreshMode) const {
+  reader_diagnostics::Scope profile(reader_diagnostics::Stage::Refresh);
   auto elapsed = millis() - start_ms;
   LOG_DBG("GFX", "Time = %lu ms from clearScreen to displayBuffer", elapsed);
   display.displayBuffer(applyPromotedRefresh(refreshMode), fadingFix);

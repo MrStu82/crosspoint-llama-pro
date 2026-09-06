@@ -1,7 +1,7 @@
 #pragma once
 
 namespace reader_diagnostics {
-enum class Stage { Persistence, TxtOpen, TxtLayout, EpubLayout, RenderLock, Refresh, Count };
+enum class Stage { Persistence, TxtOpen, TxtLayout, EpubRender, RenderLock, Refresh, EpubLayout, BookRead, Count };
 }
 
 // Opt-in compiler flag only; production has no timers, buffers, logging or UI.

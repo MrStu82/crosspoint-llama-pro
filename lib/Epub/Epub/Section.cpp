@@ -1,4 +1,5 @@
 #include "Section.h"
+#include "../../../src/util/ReaderDiagnostics.h"
 
 #include <HalStorage.h>
 #include <Logging.h>
@@ -438,6 +439,7 @@ bool Section::startBuild(const ReaderRenderSpec& spec, const std::function<void(
 }
 
 bool Section::buildSomeMore(const int maxPages) {
+  reader_diagnostics::Scope profile(reader_diagnostics::Stage::EpubLayout);
   if (!build_ || !build_->parser) {
     LOG_ERR("SCT", "buildSomeMore with no active build");
     return false;

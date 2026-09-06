@@ -1,6 +1,7 @@
 #pragma once
 
 #include <HalStorage.h>
+#include "../../util/ReaderDiagnostics.h"
 #include <Logging.h>
 
 #include <algorithm>
@@ -35,6 +36,7 @@ inline bool openForRead(const char* module, const std::string& path, HalFile& fi
 // media corruption/torn directory sectors still require filesystem recovery.
 inline bool writeAtomic(const std::string& cachePath, const uint8_t* data, size_t len,
                         const std::string& filename = "progress.bin") {
+  reader_diagnostics::Scope profile(reader_diagnostics::Stage::Persistence);
   std::lock_guard<std::mutex> lock(transactionMutex);
   const std::string finalPath = cachePath + "/" + filename;
   const std::string tmpPath = finalPath + ".tmp";

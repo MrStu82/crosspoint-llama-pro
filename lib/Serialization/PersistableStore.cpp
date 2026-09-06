@@ -1,4 +1,5 @@
 #include "PersistableStore.h"
+#include "../../src/activities/reader/ProgressFile.h"
 
 #include <HalStorage.h>
 #include <Logging.h>
@@ -9,24 +10,22 @@
 
 bool PersistableStoreBase::writeDocToFile(const char* path, const JsonDocument& doc) {
   Storage.mkdir("/.crosspoint");
-  String json;
+  std::string json;
   serializeJson(doc, json);
-  if (!Storage.writeFile(path, json)) {
-    LOG_ERR("PERSIST", "Failed to write %s", path);
-    return false;
-  }
-  return true;
+  const std::string fullPath(path);
+  const auto slash = fullPath.rfind('/');
+  if (slash == std::string::npos || slash + 1 == fullPath.size()) return false;
+  return ProgressFile::writeAtomic(fullPath.substr(0, slash),
+      reinterpret_cast<const uint8_t*>(json.data()), json.size(), fullPath.substr(slash + 1));
 }
 
 bool PersistableStoreBase::readDocFromFile(const char* path, JsonDocument& doc) {
-  if (!Storage.exists(path)) {
-    return false;  // Expected on first boot — not an error.
-  }
-  String json = Storage.readFile(path);
-  if (json.isEmpty()) {
-    LOG_ERR("PERSIST", "Failed to read %s (empty)", path);
+  HalFile file;
+  if (!ProgressFile::openForRead("PERSIST", path, file)) return false;
+  std::string json(file.size(), '\0');
+  if (json.empty() || file.read(reinterpret_cast<uint8_t*>(json.data()), json.size()) != static_cast<int>(json.size()))
     return false;
-  }
+  file.close();
   auto error = deserializeJson(doc, json);
   if (error) {
     LOG_ERR("PERSIST", "JSON parse error in %s: %s", path, error.c_str());

@@ -1,6 +1,7 @@
 #include "OtaUpdater.h"
 #include "OtaVersion.h"
 
+#if !defined(FREEINK_DEVICE_X4PRO)
 // clang-format off
 // HttpDownloader.h pulls Arduino/SdFat, whose macros collide with lwip's
 // ip4_addr.h unless seen first. Pin this order; clang-format would otherwise sort
@@ -11,14 +12,30 @@
 #include <esp_ota_ops.h>
 #include <esp_wifi.h>
 // clang-format on
+#endif
 
 #include <string>
 
 namespace {
+#if defined(FREEINK_DEVICE_X4PRO)
+// Audited 2026-09-06: MrStu82/crosspoint-llama-pro has no published release
+// assets. Neither a .bin name nor the shared project descriptor distinguishes
+// X4 Pro from Deck. Do not invent an allowlist or offer an upstream fallback.
+constexpr bool publishedX4ProDistribution = false;
+#else
 constexpr char latestReleaseUrl[] = "https://api.github.com/repos/crosspoint-reader/crosspoint-reader/releases/latest";
+#endif
 }  // namespace
 
 OtaUpdater::OtaUpdaterError OtaUpdater::checkForUpdate() {
+  updateAvailable = false;
+  latestVersion.clear();
+  otaUrl.clear();
+  otaSize = processedSize = totalSize = 0;
+#if defined(FREEINK_DEVICE_X4PRO)
+  static_assert(!publishedX4ProDistribution, "Define and test a real fork/target release contract before enabling OTA");
+  return NO_UPDATE;
+#else
   LOG_DBG("OTA", "Checking for update (current: %s)", CROSSPOINT_VERSION);
 
   // Stream the ~32KB release JSON straight into the parser as it arrives.
@@ -58,6 +75,7 @@ OtaUpdater::OtaUpdaterError OtaUpdater::checkForUpdate() {
   LOG_DBG("OTA", "Found update: tag=%s size=%zu", latestVersion.c_str(), otaSize);
   LOG_DBG("OTA", "Firmware URL: %s", otaUrl.c_str());
   return OK;
+#endif
 }
 
 bool OtaUpdater::isUpdateNewer() const {
@@ -71,6 +89,12 @@ bool OtaUpdater::isUpdateNewer() const {
 const std::string& OtaUpdater::getLatestVersion() const { return latestVersion; }
 
 OtaUpdater::OtaUpdaterError OtaUpdater::installUpdate(ProgressCallback onProgress, void* ctx) {
+#if defined(FREEINK_DEVICE_X4PRO)
+  // Independent install-time guard: even stale state cannot touch a partition.
+  (void)onProgress;
+  (void)ctx;
+  return NO_UPDATE;
+#else
   if (!isUpdateNewer()) {
     return UPDATE_OLDER_ERROR;
   }
@@ -141,4 +165,5 @@ OtaUpdater::OtaUpdaterError OtaUpdater::installUpdate(ProgressCallback onProgres
 
   LOG_INF("OTA", "Update completed");
   return OK;
+#endif
 }

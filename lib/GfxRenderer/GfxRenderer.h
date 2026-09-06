@@ -175,6 +175,10 @@ class GfxRenderer {
   }
   const std::map<int, SdCardFont*>& getSdCardFonts() const { return sdCardFonts_; }
   bool isSdCardFont(int fontId) const { return sdCardFonts_.count(fontId) > 0; }
+  const SdCardFont* sdCardFontSource(int fontId) const {
+    const auto it = sdCardFonts_.find(fontId);
+    return it == sdCardFonts_.end() ? nullptr : it->second;
+  }
   // Register/clear size-matched CJK UI fallbacks (see fallbackFontMap_).
   // setFallbackFont maps a primary UI font id to an SD font id of the same size.
   void setFallbackFont(int primaryFontId, int fallbackFontId) { fallbackFontMap_[primaryFontId] = fallbackFontId; }

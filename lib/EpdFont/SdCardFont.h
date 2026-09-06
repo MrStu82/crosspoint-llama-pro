@@ -21,6 +21,7 @@
 
 class SdCardFont {
  public:
+  const char* sourcePath() const { return filePath_; }
   static constexpr uint16_t MAX_PAGE_GLYPHS = 512;
   static constexpr uint8_t MAX_STYLES = 4;
 

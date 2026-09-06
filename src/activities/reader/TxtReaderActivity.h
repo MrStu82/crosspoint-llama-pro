@@ -1,6 +1,7 @@
 #pragma once
 
 #include <Txt.h>
+#include "TxtPageIndex.h"
 
 #include <vector>
 
@@ -21,6 +22,8 @@ class TxtReaderActivity final : public Activity {
   int linesPerPage = 0;
   int viewportWidth = 0;
   bool initialized = false;
+  bool contentIdentityReady = false;
+  txt_index::Identity cacheIdentity;
 
   // Cached settings for cache validation (different fonts/margins require re-indexing)
   int cachedFontId = 0;

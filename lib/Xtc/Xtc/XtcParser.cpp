@@ -6,6 +6,7 @@
  */
 
 #include "XtcParser.h"
+#include "XtcPageBounds.h"
 
 #include <FsHelpers.h>
 #include <HalStorage.h>
@@ -224,6 +225,8 @@ XtcError XtcParser::readFirstPageInfo() {
     return XtcError::READ_ERROR;
   }
 
+  if (!validPageEntry(entry, m_bitDepth, fileSize)) return XtcError::CORRUPTED_HEADER;
+
   m_defaultWidth = entry.width;
   m_defaultHeight = entry.height;
 
@@ -254,6 +257,8 @@ bool XtcParser::readPageTableEntry(uint32_t pageIndex, PageInfo& info) {
     LOG_DBG("XTC", "Failed to read page table entry %lu", pageIndex);
     return false;
   }
+
+  if (!validPageEntry(entry, m_bitDepth, m_file.fileSize64())) return false;
 
   info.offset = entry.dataOffset;
   info.size = entry.dataSize;
@@ -437,6 +442,11 @@ size_t XtcParser::loadPage(uint32_t pageIndex, uint8_t* buffer, size_t bufferSiz
     return 0;
   }
 
+  if (!validPageHeader(pageHeader, page)) {
+    m_lastError = XtcError::CORRUPTED_HEADER;
+    return 0;
+  }
+
   // Calculate bitmap size based on bit depth
   // XTG (1-bit): Row-major, ((width+7)/8) * height bytes
   // XTH (2-bit): Two bit planes, column-major, ((width * height + 7) / 8) * 2 bytes
@@ -470,6 +480,7 @@ size_t XtcParser::loadPage(uint32_t pageIndex, uint8_t* buffer, size_t bufferSiz
 XtcError XtcParser::loadPageStreaming(uint32_t pageIndex,
                                       std::function<void(const uint8_t* data, size_t size, size_t offset)> callback,
                                       size_t chunkSize) {
+  if (chunkSize == 0 || chunkSize > 64 * 1024) return XtcError::MEMORY_ERROR;
   if (!m_isOpen) {
     return XtcError::FILE_NOT_FOUND;
   }
@@ -499,6 +510,8 @@ XtcError XtcParser::loadPageStreaming(uint32_t pageIndex,
   if (headerRead != sizeof(XtgPageHeader) || pageHeader.magic != expectedMagic) {
     return XtcError::READ_ERROR;
   }
+
+  if (!validPageHeader(pageHeader, page)) return XtcError::CORRUPTED_HEADER;
 
   // Calculate bitmap size based on bit depth
   // XTG (1-bit): Row-major, ((width+7)/8) * height bytes

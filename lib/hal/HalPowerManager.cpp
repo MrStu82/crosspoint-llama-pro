@@ -90,6 +90,10 @@ void HalPowerManager::startDeepSleep(HalGPIO& gpio) const {
   constexpr int8_t kC3PowerOffPin = 13;
   for (const int8_t pin : {BoardConfig::ACTIVE.power.latch0, BoardConfig::ACTIVE.power.latch1}) {
     if (!safety_guards::shouldHoldPowerLatch(pin, kC3PowerOffPin, BoardConfig::latchConflictsWithBus(pin))) continue;
+#if FREEINK_DEVICE_X4PRO && !defined(SIMULATOR)
+    // GPIO1 is deliberately taken low after the panel/SD/touch shutdown below.
+    if (pin == 1) continue;
+#endif
     const auto held = static_cast<gpio_num_t>(pin);
     gpio_hold_dis(held);
     pinMode(pin, OUTPUT);
@@ -109,6 +113,9 @@ void HalPowerManager::startDeepSleep(HalGPIO& gpio) const {
   // Waits for the power button to be physically released (so holding it doesn't
   // immediately wake the device again), then arms the wake source and sleeps.
 #if FREEINK_DEVICE_X4PRO && !defined(SIMULATOR)
+  // Main has already parked the SSD1677. With the switched SD/touch rails off,
+  // remove the master panel rail instead of retaining it for fast wake.
+  x4pro_sleep::holdPanelMasterRailOff();
   freeink::PowerManager::deepSleep();
 #else
   freeink::PowerManager::deepSleepUntilPowerButton();

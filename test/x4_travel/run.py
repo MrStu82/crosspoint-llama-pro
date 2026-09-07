@@ -7,7 +7,9 @@ with tempfile.TemporaryDirectory() as t:
 main=(r/'src/main.cpp').read_text();hal=(r/'lib/hal/HalPowerManager.cpp').read_text()
 assert main.index('x4pro_sleep::releaseFrontlightHold()')<main.index('frontlightManager.begin()')
 assert main.index('frontlightManager.off()',main.index('void enterDeepSleep'))<main.index('activityManager.goToSleep')
-assert hal.index('holdFrontlightOff()')<hal.index('powerDownRailsForSleep()')<hal.index('freeink::PowerManager::deepSleep();')
+assert hal.index('holdFrontlightOff()')<hal.index('powerDownRailsForSleep()')<hal.index('holdPanelMasterRailOff()')<hal.index('freeink::PowerManager::deepSleep();')
+assert 'if (pin == 1) continue;' in hal
+assert main.index('BoardConfig::holdPowerRails();') < main.index('gpio.begin();')
 assert '#else\n  freeink::PowerManager::deepSleepUntilPowerButton();\n#endif' in hal
 assert 'enable_timer' not in (r/'lib/hal/X4ProSleep.h').read_text()
 # Byte-identical storage, reader, OTA and SDK versus delivered v234.

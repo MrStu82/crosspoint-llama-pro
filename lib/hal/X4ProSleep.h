@@ -29,6 +29,16 @@ inline void releaseFrontlightHold() {
     gpio_hold_dis(static_cast<gpio_num_t>(pin));
   }
 }
+// GPIO1 is the X4 Pro panel/master rail latch. The boot path's
+// BoardConfig::holdPowerRails() releases this hold and restores HIGH before any
+// peripheral initialization, so this is reversible on a GPIO3 deep-sleep wake.
+inline void holdPanelMasterRailOff() {
+  constexpr int pin = 1;
+  gpio_hold_dis(static_cast<gpio_num_t>(pin));
+  pinMode(pin, OUTPUT);
+  digitalWrite(pin, LOW);
+  gpio_hold_en(static_cast<gpio_num_t>(pin));
+}
 // A stuck button must not leave an awake CPU behind a sleep-looking frame.
 // If still held after 2s, sleep until RELEASE, not the already-active press.
 // Release wake is rejected by the existing physical-held wake validator, which

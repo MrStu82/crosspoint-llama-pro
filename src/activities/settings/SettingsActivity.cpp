@@ -602,7 +602,12 @@ void SettingsActivity::render(RenderLock&&) {
   const auto& metrics = UITheme::getInstance().getMetrics();
 
   const bool inkPoint = InkPointShell::enabled(renderer);
-  if (inkPoint) InkPointShell::drawHeader(renderer, "Settings");
+  if (inkPoint) {
+    InkPointShell::drawHeader(renderer, "Settings");
+#if FREEINK_DEVICE_X4PRO
+    renderer.drawText(SMALL_FONT_ID, 20, 5, CROSSPOINT_VERSION);
+#endif
+  }
   else GUI.drawHeader(renderer, Rect{0, metrics.topPadding, pageWidth, metrics.headerHeight}, tr(STR_SETTINGS_TITLE),
                       CROSSPOINT_VERSION);
 

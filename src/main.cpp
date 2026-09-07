@@ -9,6 +9,11 @@
 #include <HalDisplay.h>
 #include <HalGPIO.h>
 #include <HalPowerManager.h>
+#include <X4ProSleep.h>
+#if FREEINK_DEVICE_X4PRO && !defined(SIMULATOR)
+#include <esp_sleep.h>
+#include <esp_system.h>
+#endif
 #include <HalStorage.h>
 #include <HalSystem.h>
 #include <HalTiltSensor.h>
@@ -245,6 +250,10 @@ static bool loadSleepFrameBuffer() {
 
 // Enter deep sleep mode
 void enterDeepSleep(bool fromTimeout = false) {
+#if FREEINK_DEVICE_X4PRO
+  LOG_INF("SLP", "stage=prepare version=" CROSSPOINT_VERSION);
+  frontlightManager.off();
+#endif
   HalPowerManager::Lock powerLock;  // Ensure we are at normal CPU frequency for sleep preparation
   APP_STATE.lastSleepFromReader = activityManager.isReaderActivity();
 
@@ -280,6 +289,9 @@ void enterDeepSleep(bool fromTimeout = false) {
 
   halTiltSensor.deepSleep();
   display.deepSleep();
+#if FREEINK_DEVICE_X4PRO
+  LOG_INF("SLP", "stage=panel-sleep");
+#endif
   LOG_DBG("MAIN", "Entering deep sleep");
 
   powerManager.startDeepSleep(gpio);
@@ -366,6 +378,9 @@ void setup() {
   // The sampling updates InputManager too, so a held recovery side-button is
   // already debounced when it is read below.
   const auto wakeupReason = gpio.getWakeupReason();
+#if FREEINK_DEVICE_X4PRO && !defined(SIMULATOR)
+  LOG_INF("SLP", "boot reset=%d wake=%d", static_cast<int>(esp_reset_reason()), static_cast<int>(esp_sleep_get_wakeup_cause()));
+#endif
   if (wakeupReason == HalGPIO::WakeupReason::PowerButton &&
       !gpio_policy::verifyPowerButtonWakeup(gpio)) {
     powerManager.startDeepSleep(gpio);
@@ -381,6 +396,9 @@ void setup() {
 
   halTiltSensor.begin();
   halClock.begin();
+#if FREEINK_DEVICE_X4PRO && !defined(SIMULATOR)
+  x4pro_sleep::releaseFrontlightHold();
+#endif
   if (!frontlightManager.begin()) {
     LOG_ERR("MAIN", "frontlight channel attach failed: cool=%d warm=%d",
             frontlightManager.coolChannelAttachOk(), frontlightManager.warmChannelAttachOk());

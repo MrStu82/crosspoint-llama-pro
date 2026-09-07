@@ -11,6 +11,7 @@
 
 #include "HalGPIO.h"
 #include "SafetyGuards.h"
+#include "X4ProSleep.h"
 
 HalPowerManager powerManager;  // Singleton instance
 
@@ -59,6 +60,11 @@ void HalPowerManager::setPowerSaving(bool enabled) {
 }
 
 void HalPowerManager::startDeepSleep(HalGPIO& gpio) const {
+#if FREEINK_DEVICE_X4PRO && !defined(SIMULATOR)
+  x4pro_sleep::holdFrontlightOff();
+  const bool releaseWake = x4pro_sleep::armBoundedPowerWake();
+  LOG_INF("SLP", "stage=armed wake=%s", releaseWake ? "release" : "press");
+#endif
 #ifdef ENABLE_SERIAL_LOG
   // Tear down the USB CDC device so the host sees a clean disconnect and the
   // peripheral doesn't hold power domains that interfere with USB-powered GPIO
@@ -102,7 +108,11 @@ void HalPowerManager::startDeepSleep(HalGPIO& gpio) const {
 
   // Waits for the power button to be physically released (so holding it doesn't
   // immediately wake the device again), then arms the wake source and sleeps.
+#if FREEINK_DEVICE_X4PRO && !defined(SIMULATOR)
+  freeink::PowerManager::deepSleep();
+#else
   freeink::PowerManager::deepSleepUntilPowerButton();
+#endif
 }
 
 uint16_t HalPowerManager::getBatteryPercentage() const {

@@ -13,7 +13,8 @@
     "test/phase5a_controls/Phase5AContractTest.py",
     "test/x4_improvements/run.py",
     "test/panel_park/PanelParkCommandStateContractTest.py",
-    "test/recent_books_hardcover_touch/RecentBooksHardcoverTouchTest.py"
+    "test/recent_books_hardcover_touch/RecentBooksHardcoverTouchTest.py",
+    "test/x4_travel/run.py"
   ],
   "sha256": {
     "test/progress_recovery/run.py": "36d2ad7181eb49253a4bd7a1f9300f91263bdbbbd1ce9533af070592331fff6b",
@@ -32,13 +33,18 @@
     "src/activities/home/HomeActivity.cpp": "4abf75eef2536717142f3b1e873ec8dd9ee195209b6b0944b70998e94b802cba",
     "src/activities/reader/ReaderToolsActivity.cpp": "5dbddfb716afff65504c8c764e07c042e096a5a4026bf6706fa33a8b3446b891",
     "src/MappedInputManager.cpp": "d62814ff47fc9e8264b04463a947d255576716453a402030e30f70d2f57b1f92",
-    "src/main.cpp": "c2c594469fdfd00f9fab9e9017aa509cbcd2a4abf5fd38b6c464e62a8a6980a7",
+    "src/main.cpp": "6c105a0664a3a9397ac87b1528b597305db1acec5c76d9ffc4b21cacb0b74930",
     "partitions.csv": "8eab8ddac3fe3b14ab1f5b3a108b8982ac7a6851d7e3e28d1848d37f9a62d2ed",
     "sdkconfig.x4pro": "b956276f464b66012adf56530556bc16b2271fbd83125364de1bbc0dceef4436",
     "test/x4_improvements/SafetyTest.cpp": "79c573bf4865221a5bfb97376b9d5adf6e9eb5a43691f4f07e03538675f77dc5",
     "test/x4_improvements/OtaPolicyTest.cpp": "f8190744bb3f92a2b900170464e2e683af4ca8cb77ed52a29d3f3ebcbaf581a5",
     "test/x4_improvements/JsonRecoveryTest.cpp": "d77187be55793b7ad0c4c1caa5235e9278d3ac87f36d36a7f2af17b922a32cc3",
     "test/x4_improvements/DigestTest.cpp": "0561fc64f4415d341f55635ec17a730d9c6244aba543bb25fef66c552ddb981a",
-    "test/x4_improvements/DiagnosticsTest.cpp": "a03a8059b3d98bef5e0d8e7e3f98190f69c5b9f9eed97c460d9c4c6d28d0cf0f"
+    "test/x4_improvements/DiagnosticsTest.cpp": "a03a8059b3d98bef5e0d8e7e3f98190f69c5b9f9eed97c460d9c4c6d28d0cf0f",
+    "lib/hal/X4ProSleep.h": "020351bfc7d6432bbe3a87e156d6ad59e00e259135104dccc54a4c4472be9c3a",
+    "lib/hal/HalPowerManager.cpp": "5534d20491a3e379e9785988dd1839bf840bd334f58c27e1f28b0797622f98b1",
+    "src/activities/settings/SettingsActivity.cpp": "ef112ef4d99d237530be872acc6ac8117f24da294336937b076e25fac4b42c16",
+    "test/x4_travel/run.py": "ddf89951969ba5aefc3a2060508b98bb7c4863316168f931d22462c1df6206cc",
+    "test/x4_travel/Test.cpp": "f78f4ab33e4f802d5061363a4ef738de1047a9864c9371babd11a40d66c7b58a"
   }
 }

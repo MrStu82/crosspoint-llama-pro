@@ -12,7 +12,7 @@ assert '#else\n  freeink::PowerManager::deepSleepUntilPowerButton();\n#endif' in
 assert 'enable_timer' not in (r/'lib/hal/X4ProSleep.h').read_text()
 # Byte-identical storage, reader, OTA and SDK versus delivered v234.
 changed=subprocess.check_output(['git','diff','d94a2890057ccc39f5d7b1d1cdbf43aff6572953','--name-only'],cwd=r,text=True).splitlines()
-allowed={'src/main.cpp','lib/hal/HalPowerManager.cpp','lib/hal/X4ProSleep.h','src/activities/settings/SettingsActivity.cpp'}
+allowed={'test/x4_improvements/preservation.json','src/main.cpp','lib/hal/HalPowerManager.cpp','lib/hal/X4ProSleep.h','src/activities/settings/SettingsActivity.cpp'}
 assert all(x in allowed or x.startswith('test/x4_travel/') for x in changed),changed
 assert subprocess.check_output(['git','rev-parse','HEAD:freeink-sdk'],cwd=r,text=True).strip()=='8c960bc2a713c2e3df8700b37cf4ef2361548095'
 print('PASS wake reinit/sleep integration, unchanged SDK/storage/reader/OTA; non-X4 original sleep branch retained')

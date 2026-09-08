@@ -1,5 +1,4 @@
 #pragma once
-#include <cstdint>
 #include <functional>
 #include <optional>
 #include <vector>
@@ -20,10 +19,6 @@ class HomeActivity final : public Activity {
   bool recentsLoading = false;
   bool recentsLoaded = false;
   bool firstRenderDone = false;
-  // The screen can remain awake across local midnight. Keep the currently
-  // rendered date so Home requests one redraw when the RTC day advances.
-  int renderedQuoteDate = 0;
-  uint32_t nextQuoteDatePollMs = 0;
   bool hasOpdsServers = false;
   bool coverRendered = false;      // Track if cover has been rendered once
   int inkPointFocus = 0;  // 0=cover, 1..6=persistent footer destinations

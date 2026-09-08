@@ -12,12 +12,13 @@ assert 'if (pin == 1) continue;' in hal
 assert main.index('BoardConfig::holdPowerRails();') < main.index('gpio.begin();')
 assert '#else\n  freeink::PowerManager::deepSleepUntilPowerButton();\n#endif' in hal
 assert 'enable_timer' not in (r/'lib/hal/X4ProSleep.h').read_text()
-assert 'kQuoteDatePollIntervalMs = 60000' in home
-assert 'today > 0 && today != renderedQuoteDate' in home
-assert home.index('renderedQuoteDate = today;') < home.index('DailyQuote::select(today / 10000, quoteDay)')
+assert 'kQuoteDatePollIntervalMs' not in home
+assert 'RTC_DATA_ATTR int retainedHomeQuoteDate = 0' in home
+assert home.index('DailyQuote::dateChangedSinceRender(retainedHomeQuoteDate, today)') < home.index('DailyQuote::select(today / 10000, quoteDay)')
+assert 'retainedHomeQuoteDate' not in main
 # Byte-identical storage, reader, OTA and SDK versus delivered v234.
 changed=subprocess.check_output(['git','diff','d94a2890057ccc39f5d7b1d1cdbf43aff6572953','--name-only'],cwd=r,text=True).splitlines()
-allowed={'test/x4_improvements/preservation.json','src/main.cpp','lib/hal/HalPowerManager.cpp','lib/hal/X4ProSleep.h','src/activities/settings/SettingsActivity.cpp','src/activities/home/HomeActivity.cpp','src/activities/home/HomeActivity.h','test/daily_quote/DailyQuoteTest.cpp'}
+allowed={'test/x4_improvements/preservation.json','src/main.cpp','lib/hal/HalPowerManager.cpp','lib/hal/X4ProSleep.h','src/activities/settings/SettingsActivity.cpp','src/activities/home/HomeActivity.cpp','src/activities/home/HomeActivity.h','src/util/DailyQuote.cpp','src/util/DailyQuote.h','test/daily_quote/DailyQuoteTest.cpp'}
 assert all(x in allowed or x.startswith('test/x4_travel/') for x in changed),changed
 assert subprocess.check_output(['git','rev-parse','HEAD:freeink-sdk'],cwd=r,text=True).strip()=='8c960bc2a713c2e3df8700b37cf4ef2361548095'
 print('PASS wake reinit/sleep integration, unchanged SDK/storage/reader/OTA; non-X4 original sleep branch retained')

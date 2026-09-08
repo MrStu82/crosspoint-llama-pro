@@ -23,6 +23,11 @@ const DailyQuoteRecord& select(int year, int dayOfYear);
 // dependency so the caller owns "which day is it" and this stays host-testable.
 int dayOfYearFromYmd(int yyyymmdd);
 
+// A known local date changes the rendered quote only when it differs from the
+// date the current/retained Home frame represents. Unknown RTC dates never
+// cause a refresh loop.
+bool dateChangedSinceRender(int renderedYmd, int currentYmd);
+
 // One comma-separated line, in speaker/title/author order, skipping any field
 // the pack leaves empty. Narration has no speaker, so that line collapses to
 // "Title, Author" with no leading comma.

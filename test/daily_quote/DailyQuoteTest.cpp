@@ -21,6 +21,12 @@ TEST(DailyQuote, NextLocalDateRotatesRecord) {
   EXPECT_STRNE(DailyQuote::select(2026, sept7).quote, DailyQuote::select(2026, sept8).quote);
 }
 
+TEST(DailyQuote, RefreshesOnlyForKnownChangedDate) {
+  EXPECT_FALSE(DailyQuote::dateChangedSinceRender(20260908, 20260908));
+  EXPECT_TRUE(DailyQuote::dateChangedSinceRender(20260907, 20260908));
+  EXPECT_FALSE(DailyQuote::dateChangedSinceRender(20260907, 0));
+}
+
 TEST(DailyQuote, LeapYearCycleHas366UniqueAuditedRecords) {
   std::set<std::string> quotes;
   for (int day = 0; day < 366; ++day) {

@@ -52,6 +52,10 @@ int dayOfYearFromYmd(int yyyymmdd) {
   return dayOfYear;
 }
 
+bool dateChangedSinceRender(int renderedYmd, int currentYmd) {
+  return currentYmd > 0 && currentYmd != renderedYmd;
+}
+
 std::string attributionLine(const DailyQuoteRecord& record) {
   std::string line;
   for (const char* field : {record.character, record.title, record.author}) {

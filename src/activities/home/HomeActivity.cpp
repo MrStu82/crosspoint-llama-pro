@@ -9,6 +9,7 @@
 #include <HalPowerManager.h>
 #include <HalStorage.h>
 #include <I18n.h>
+#include <Logging.h>
 #include <Utf8.h>
 #include <Xtc.h>
 
@@ -59,7 +60,17 @@ constexpr int kInkChevronRight = 458;
 constexpr int kInkChevronLeft = kInkChevronRight - 2 * kInkChevronStep - 2 * kInkChevronHalf;
 constexpr int kInkChevronRuleGap = 5;
 constexpr int kInkChevronRuleHeight = 2;
-constexpr unsigned long kQuoteDatePollIntervalMs = 60000;
+
+// A deep-sleep wake resets normal RAM but retains RTC slow memory. This is not
+// filesystem persistence: it records only which local date the retained Home
+// frame represented, so the normal Home event path can decide whether its
+// quote changed. Cold/invalid RTC state naturally falls back to a normal Home
+// render without a retry loop.
+#if FREEINK_DEVICE_X4PRO && !defined(SIMULATOR)
+RTC_DATA_ATTR int retainedHomeQuoteDate = 0;
+#else
+int retainedHomeQuoteDate = 0;
+#endif
 
 void drawStatsChevron(const GfxRenderer& renderer, const int cy) {
   const int rightCx = kInkChevronRight - kInkChevronHalf;
@@ -340,7 +351,16 @@ void HomeActivity::onEnter() {
   const auto base = static_cast<int>(recentBooks.size());
   selectorIndex = initialMenuItem == HomeMenuItem::NONE ? 0 : base + menuItemToIndex(initialMenuItem, hasOpdsServers);
 
-  // Trigger first update
+  if (usesInkPointHome()) {
+    const int today = READING_STATS.getCurrentDate();
+    if (DailyQuote::dateChangedSinceRender(retainedHomeQuoteDate, today)) {
+      LOG_DBG("HOME", "Quote date changed on Home event: %d -> %d", retainedHomeQuoteDate, today);
+    }
+  }
+
+  // Trigger the existing first/Home-entry update. On a sleep wake this is the
+  // one normal paint; it selects a different quote only when the RTC date above
+  // differs from the retained Home frame's date.
   requestUpdate();
 }
 
@@ -616,16 +636,6 @@ bool HomeActivity::usesInkPointHome() const {
 }
 
 void HomeActivity::loopInkPointHome() {
-  // A Home instance otherwise redraws only on entry or input.  Polling the
-  // already cache-bounded RTC once a minute makes a device left awake through
-  // local midnight rotate its quote without adding a timer wake or persistence.
-  const unsigned long now = millis();
-  if (static_cast<long>(now - nextQuoteDatePollMs) >= 0) {
-    nextQuoteDatePollMs = now + kQuoteDatePollIntervalMs;
-    const int today = READING_STATS.getCurrentDate();
-    if (today > 0 && today != renderedQuoteDate) requestUpdate();
-  }
-
   buttonNavigator.onNext([this] { inkPointFocus = ButtonNavigator::nextIndex(inkPointFocus, 8); requestUpdate(); });
   buttonNavigator.onPrevious([this] { inkPointFocus = ButtonNavigator::previousIndex(inkPointFocus, 8); requestUpdate(); });
 
@@ -834,7 +844,9 @@ void HomeActivity::renderInkPointHome() {
   // rolls over on -- libc time() is only set as a side effect of an NTP sync and
   // reverts to 1970 on reboot, so localtime() served a stale quote indefinitely.
   const int today = READING_STATS.getCurrentDate();
-  renderedQuoteDate = today;
+  if (DailyQuote::dateChangedSinceRender(retainedHomeQuoteDate, today)) {
+    retainedHomeQuoteDate = today;
+  }
   const int quoteDay = today > 0 ? DailyQuote::dayOfYearFromYmd(today) : -1;
   const auto& daily =
       quoteDay >= 0 ? DailyQuote::select(today / 10000, quoteDay) : DailyQuote::select(2026, 0);

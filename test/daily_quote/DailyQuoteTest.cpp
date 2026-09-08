@@ -12,6 +12,15 @@ TEST(DailyQuote, StableWithinLocalDate) {
   EXPECT_STREQ(first.title, again.title);
 }
 
+TEST(DailyQuote, NextLocalDateRotatesRecord) {
+  const int sept7 = DailyQuote::dayOfYearFromYmd(20260907);
+  const int sept8 = DailyQuote::dayOfYearFromYmd(20260908);
+  ASSERT_GE(sept7, 0);
+  ASSERT_GE(sept8, 0);
+  EXPECT_NE(sept7, sept8);
+  EXPECT_STRNE(DailyQuote::select(2026, sept7).quote, DailyQuote::select(2026, sept8).quote);
+}
+
 TEST(DailyQuote, LeapYearCycleHas366UniqueAuditedRecords) {
   std::set<std::string> quotes;
   for (int day = 0; day < 366; ++day) {

@@ -59,6 +59,7 @@ constexpr int kInkChevronRight = 458;
 constexpr int kInkChevronLeft = kInkChevronRight - 2 * kInkChevronStep - 2 * kInkChevronHalf;
 constexpr int kInkChevronRuleGap = 5;
 constexpr int kInkChevronRuleHeight = 2;
+constexpr unsigned long kQuoteDatePollIntervalMs = 60000;
 
 void drawStatsChevron(const GfxRenderer& renderer, const int cy) {
   const int rightCx = kInkChevronRight - kInkChevronHalf;
@@ -615,6 +616,16 @@ bool HomeActivity::usesInkPointHome() const {
 }
 
 void HomeActivity::loopInkPointHome() {
+  // A Home instance otherwise redraws only on entry or input.  Polling the
+  // already cache-bounded RTC once a minute makes a device left awake through
+  // local midnight rotate its quote without adding a timer wake or persistence.
+  const unsigned long now = millis();
+  if (static_cast<long>(now - nextQuoteDatePollMs) >= 0) {
+    nextQuoteDatePollMs = now + kQuoteDatePollIntervalMs;
+    const int today = READING_STATS.getCurrentDate();
+    if (today > 0 && today != renderedQuoteDate) requestUpdate();
+  }
+
   buttonNavigator.onNext([this] { inkPointFocus = ButtonNavigator::nextIndex(inkPointFocus, 8); requestUpdate(); });
   buttonNavigator.onPrevious([this] { inkPointFocus = ButtonNavigator::previousIndex(inkPointFocus, 8); requestUpdate(); });
 
@@ -823,6 +834,7 @@ void HomeActivity::renderInkPointHome() {
   // rolls over on -- libc time() is only set as a side effect of an NTP sync and
   // reverts to 1970 on reboot, so localtime() served a stale quote indefinitely.
   const int today = READING_STATS.getCurrentDate();
+  renderedQuoteDate = today;
   const int quoteDay = today > 0 ? DailyQuote::dayOfYearFromYmd(today) : -1;
   const auto& daily =
       quoteDay >= 0 ? DailyQuote::select(today / 10000, quoteDay) : DailyQuote::select(2026, 0);

@@ -8,6 +8,7 @@
 #include <algorithm>
 #include <cstdio>
 #include <cstring>
+#include <string>
 
 #include "I18nKeys.h"
 #include "MappedInputManager.h"
@@ -170,8 +171,13 @@ void SudokuActivity::loadOrGenerate() {
     const int readLen = file.read(buf, sizeof(buf));
     if (readLen == static_cast<int>(sizeof(buf)) && buf[0] == kStateFileVersion) {
       memcpy(&state, buf + 1, sizeof(State));
-      syncBoardFromState();
-      loaded = true;
+      // Reject a corrupt save: difficulty is Easy..Hard and cells hold 0 (empty) to 9.
+      bool valid = state.difficulty <= static_cast<uint8_t>(Difficulty::Hard);
+      for (int i = 0; valid && i < kCells; i++) valid = state.board[i] <= 9;
+      if (valid) {
+        syncBoardFromState();
+        loaded = true;
+      }
     }
   }
   if (!loaded) {
@@ -181,13 +187,20 @@ void SudokuActivity::loadOrGenerate() {
 
 void SudokuActivity::save() {
   syncStateFromBoard();
+  // Write beside the save and rename over it, so a failed write keeps the previous game.
+  const std::string tmpPath = std::string(kStateFilePath) + ".tmp";
   HalFile file;
-  if (Storage.openFileForWrite("SUDOKU", kStateFilePath, file)) {
-    uint8_t buf[sizeof(uint8_t) + sizeof(State)];
-    buf[0] = kStateFileVersion;
-    memcpy(buf + 1, &state, sizeof(State));
-    file.write(buf, sizeof(buf));
+  if (!Storage.openFileForWrite("SUDOKU", tmpPath.c_str(), file)) return;
+  uint8_t buf[sizeof(uint8_t) + sizeof(State)];
+  buf[0] = kStateFileVersion;
+  memcpy(buf + 1, &state, sizeof(State));
+  bool written = file.write(buf, sizeof(buf)) == sizeof(buf);
+  file.close();
+  if (written) {
+    Storage.remove(kStateFilePath);
+    written = Storage.rename(tmpPath.c_str(), kStateFilePath);
   }
+  if (!written) Storage.remove(tmpPath.c_str());
 }
 
 void SudokuActivity::syncStateFromBoard() {
@@ -352,7 +365,7 @@ int SudokuActivity::cellIndexAt(int tx, int ty) const {
 
 void SudokuActivity::showMenu() {
   static const StrId options[] = {StrId::STR_SUDOKU_NEW_GAME, StrId::STR_SUDOKU_ABANDON};
-  menuPopup.show(StrId::STR_SUDOKU_MENU, options, 2, 0, [this](int idx) {
+  menuPopup.show(StrId::STR_MENU, options, 2, 0, [this](int idx) {
     if (idx == 0) {
       showDifficultyPicker();
     } else {
@@ -475,7 +488,7 @@ void SudokuActivity::render(RenderLock&&) {
   menuButtonRect = Rect{pageWidth - marginX - btnW, contentTop + 2, btnW, btnH};
   renderer.drawRoundedRect(menuButtonRect.x, menuButtonRect.y, menuButtonRect.width, menuButtonRect.height, 1, 4, true);
   {
-    const char* label = tr(STR_SUDOKU_MENU);
+    const char* label = tr(STR_MENU);
     int tw = renderer.getTextWidth(UI_10_FONT_ID, label);
     renderer.drawText(UI_10_FONT_ID, menuButtonRect.x + (menuButtonRect.width - tw) / 2,
                        menuButtonRect.y + menuButtonRect.height / 2 - 6, label, true);
@@ -532,7 +545,7 @@ void SudokuActivity::render(RenderLock&&) {
                               BidiUtils::BidiBaseDir::AUTO, boxX, boxW);
   }
 
-  const auto labels = mappedInput.mapLabels(tr(STR_BACK), tr(STR_SUDOKU_MENU), "", "");
+  const auto labels = mappedInput.mapLabels(tr(STR_BACK), tr(STR_MENU), "", "");
   GUI.drawButtonHints(renderer, labels.btn1, labels.btn2, labels.btn3, labels.btn4);
 
   if (forceFullRefresh) {

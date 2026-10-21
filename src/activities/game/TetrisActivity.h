@@ -9,8 +9,8 @@ class MappedInputManager;
 // Small self-contained Tetris implementation: fixed 10-wide/20-tall well, one
 // next-piece preview, hold/swap bank slot, scoring from cleared lines only.
 // Touch (swipe left/right/down/up, tap-half-to-rotate, tap-bank-to-hold) is
-// the primary input per spec; the physical D-pad chain (reusing the exact
-// idiom from GameActivity::loop()) is kept as a secondary path. No engine or
+// the primary input per spec; the physical D-pad chain is kept as a
+// secondary path. No engine or
 // shared abstraction with the other games -- deliberately kept flat (YAGNI).
 class TetrisActivity final : public Activity {
  public:
@@ -20,7 +20,8 @@ class TetrisActivity final : public Activity {
   void onEnter() override;
   void loop() override;
   void render(RenderLock&&) override;
-  bool preventAutoSleep() override { return true; }
+  // Only a falling piece needs the device awake; the game-over screen may sleep.
+  bool preventAutoSleep() override { return !gameOver; }
 
  private:
   static constexpr int kCols = 10;

@@ -61,17 +61,6 @@ constexpr int kInkChevronLeft = kInkChevronRight - 2 * kInkChevronStep - 2 * kIn
 constexpr int kInkChevronRuleGap = 5;
 constexpr int kInkChevronRuleHeight = 2;
 
-// A deep-sleep wake resets normal RAM but retains RTC slow memory. This is not
-// filesystem persistence: it records only which local date the retained Home
-// frame represented, so the normal Home event path can decide whether its
-// quote changed. Cold/invalid RTC state naturally falls back to a normal Home
-// render without a retry loop.
-#if FREEINK_DEVICE_X4PRO && !defined(SIMULATOR)
-RTC_DATA_ATTR int retainedHomeQuoteDate = 0;
-#else
-int retainedHomeQuoteDate = 0;
-#endif
-
 void drawStatsChevron(const GfxRenderer& renderer, const int cy) {
   const int rightCx = kInkChevronRight - kInkChevronHalf;
   for (int i = 0; i < 3; ++i) {
@@ -351,16 +340,8 @@ void HomeActivity::onEnter() {
   const auto base = static_cast<int>(recentBooks.size());
   selectorIndex = initialMenuItem == HomeMenuItem::NONE ? 0 : base + menuItemToIndex(initialMenuItem, hasOpdsServers);
 
-  if (usesInkPointHome()) {
-    const int today = READING_STATS.getCurrentDate();
-    if (DailyQuote::dateChangedSinceRender(retainedHomeQuoteDate, today)) {
-      LOG_DBG("HOME", "Quote date changed on Home event: %d -> %d", retainedHomeQuoteDate, today);
-    }
-  }
-
   // Trigger the existing first/Home-entry update. On a sleep wake this is the
-  // one normal paint; it selects a different quote only when the RTC date above
-  // differs from the retained Home frame's date.
+  // one normal paint; render() picks the quote from the current RTC date.
   requestUpdate();
 }
 
@@ -844,9 +825,6 @@ void HomeActivity::renderInkPointHome() {
   // rolls over on -- libc time() is only set as a side effect of an NTP sync and
   // reverts to 1970 on reboot, so localtime() served a stale quote indefinitely.
   const int today = READING_STATS.getCurrentDate();
-  if (DailyQuote::dateChangedSinceRender(retainedHomeQuoteDate, today)) {
-    retainedHomeQuoteDate = today;
-  }
   const int quoteDay = today > 0 ? DailyQuote::dayOfYearFromYmd(today) : -1;
   const auto& daily =
       quoteDay >= 0 ? DailyQuote::select(today / 10000, quoteDay) : DailyQuote::select(2026, 0);

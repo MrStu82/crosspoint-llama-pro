@@ -34,7 +34,6 @@ class SudokuActivity final : public Activity {
   void onEnter() override;
   void loop() override;
   void render(RenderLock&&) override;
-  bool preventAutoSleep() override { return true; }
 
  private:
   enum class Difficulty : uint8_t { Easy = 0, Medium = 1, Hard = 2 };

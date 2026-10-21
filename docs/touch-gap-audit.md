@@ -205,7 +205,7 @@ not this one.
 Single-action `Button::Back` paths, no held-time branch, therefore fully
 reachable by a home-key tap:
 
-`TetrisActivity.cpp:210` (exit), `TamagotchiActivity.cpp:636`,
+`TetrisActivity.cpp:210` (exit), ~~`TamagotchiActivity.cpp:636`~~ (obsolete: removed),
 `SudokuActivity.cpp:392`, `MinesweeperActivity.cpp:174`,
 `SolitaireActivity.cpp:350`, `GamesListActivity.cpp:21`,
 `XtcReaderChapterSelectionActivity.cpp:59`,

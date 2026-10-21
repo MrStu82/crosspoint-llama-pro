@@ -129,6 +129,7 @@ void TxtReaderActivity::openReaderTools() {
                                  std::make_unique<TextSettingsActivity>(renderer, mappedInput, nullptr,
                                                                          TextSettingsActivity::Tab::Family),
                                  [this](const ActivityResult&) {
+                                   RenderLock lock(*this);
                                    initialized = false;
                                    pageOffsets.clear();
                                    currentPageLines.clear();
@@ -153,6 +154,10 @@ void TxtReaderActivity::loop() {
   prevTriggered = prevTriggered || touch.prev;
   nextTriggered = nextTriggered || touch.next;
   if (!prevTriggered && !nextTriggered) {
+    return;
+  }
+  // Pages are unknown until the first render has indexed the file.
+  if (!initialized) {
     return;
   }
 

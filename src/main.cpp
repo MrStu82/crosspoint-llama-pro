@@ -297,6 +297,27 @@ void enterDeepSleep(bool fromTimeout = false) {
   powerManager.startDeepSleep(gpio);
 }
 
+// One-shot cleanup of save data left by the removed World Dungeon and
+// Tamagotchi games. Exact names only; the game dir is removed only if empty.
+void removeRemovedGameSaves() {
+  constexpr char kGameDir[] = "/.crosspoint/game";
+  constexpr char kTamagotchiFile[] = "/.crosspoint/tamagotchi.bin";
+  if (Storage.exists(kTamagotchiFile)) {
+    Storage.remove(kTamagotchiFile);
+  }
+  if (!Storage.exists(kGameDir)) {
+    return;
+  }
+  char path[40];
+  for (unsigned depth = 1; depth <= 26; depth++) {
+    snprintf(path, sizeof(path), "%s/level_%02u.bin", kGameDir, depth);
+    Storage.remove(path);
+  }
+  Storage.remove("/.crosspoint/game/save.bin");
+  Storage.remove("/.crosspoint/game/achievements.bin");
+  Storage.rmdir(kGameDir);
+}
+
 void setupDisplayAndFonts(bool seamless = false) {
   display.begin(seamless);
   renderer.begin();
@@ -362,6 +383,9 @@ void setup() {
 #endif
 
   HalSystem::begin();
+  // checkPanic() clears the watchdog capture marker after a successful SD
+  // dump, so retain the boot classification for the later activity route.
+  const bool rebootedFromPanic = HalSystem::isRebootFromPanic();
 
   // Read-and-clear so a panic later in setup() doesn't loop into silent reboot.
   // Bound the target range too — RTC_NOINIT memory is uninitialized on cold boot.
@@ -416,6 +440,7 @@ void setup() {
   }
 
   HalSystem::checkPanic();
+  removeRemovedGameSaves();
 
   SETTINGS.loadFromFile();
   // Apply the persisted level now that settings are loaded. begin() above already
@@ -520,7 +545,7 @@ void setup() {
     // Skip normal home/reader routing: jump straight into the SD firmware picker.
     activityManager.replaceActivity(
         std::make_unique<SdFirmwareUpdateActivity>(renderer, mappedInputManager, /*recoveryMode=*/true));
-  } else if (HalSystem::isRebootFromPanic()) {
+  } else if (rebootedFromPanic) {
     // If we rebooted from a panic, go to crash report screen to show the panic info
     activityManager.goToCrashReport();
   } else if (resume == BootResume::Silent && snapshotTarget == SILENT_REBOOT_TARGET_READER &&

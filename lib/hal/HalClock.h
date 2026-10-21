@@ -17,8 +17,8 @@ class HalClock {
   static constexpr unsigned long CLOCK_POLL_MS = 10000;  // 10 seconds
   // Ceiling on how long a stale cached reading may be served after I2C reads start
   // failing (e.g. a bus glitch/dropout). Past this, pollRtc() reports failure instead
-  // of handing back an ever-more-stale timestamp forever — callers (e.g. the
-  // Tamagotchi incubation timer) must be able to tell "time unknown" from "time frozen".
+  // of handing back an ever-more-stale timestamp forever — callers must be able to
+  // tell "time unknown" from "time frozen".
   static constexpr unsigned long MAX_STALE_MS = 5 * CLOCK_POLL_MS;  // 50 seconds
 
   // Shared cache-checked RTC read used by getTime() and getDate().

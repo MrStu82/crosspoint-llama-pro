@@ -219,8 +219,8 @@ void TetrisActivity::loop() {
 
   bool acted = false;
 
-  // Secondary input: physical D-pad, same idiom as GameActivity::loop() /
-  // Deep Mines. Kept alongside touch so d-pad play isn't a regression.
+  // Secondary input: physical D-pad, kept alongside touch so d-pad play
+  // isn't a regression.
   if (mappedInput.wasReleased(Button::Left)) {
     tryMove(-1, 0);
     acted = true;

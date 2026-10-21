@@ -27,7 +27,8 @@ static_assert(ReaderLineSpacing::LABEL_IDS.size() == CrossPointSettings::LINE_CO
 // are appended after the built-in fonts. Otherwise only built-in fonts are listed.
 inline SettingInfo buildFontFamilySetting(const SdCardFontRegistry* registry) {
   // Built-in font labels (StrId)
-  std::vector<StrId> enumValues = {StrId::STR_NOTO_SERIF, StrId::STR_NOTO_SANS};
+  std::vector<StrId> enumValues = {StrId::STR_NOTO_SERIF, StrId::STR_NOTO_SANS, StrId::STR_LEXEND_DECA,
+                                    StrId::STR_BITTER};
   // Runtime string labels for SD card fonts
   std::vector<std::string> enumStringValues;
 
@@ -50,6 +51,8 @@ inline SettingInfo buildFontFamilySetting(const SdCardFontRegistry* registry) {
   if (sdFontCount > 0) {
     allStringValues.push_back(I18N.get(StrId::STR_NOTO_SERIF));
     allStringValues.push_back(I18N.get(StrId::STR_NOTO_SANS));
+    allStringValues.push_back(I18N.get(StrId::STR_LEXEND_DECA));
+    allStringValues.push_back(I18N.get(StrId::STR_BITTER));
     allStringValues.insert(allStringValues.end(), enumStringValues.begin(), enumStringValues.end());
   }
 

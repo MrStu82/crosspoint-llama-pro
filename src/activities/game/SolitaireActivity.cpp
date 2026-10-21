@@ -674,7 +674,7 @@ void SolitaireActivity::render(RenderLock&&) {
   }
 
   const auto labels =
-      mappedInput.mapLabels(tr(STR_BACK), tr(STR_DM_HINT_MENU), "", "");
+      mappedInput.mapLabels(tr(STR_BACK), tr(STR_MENU), "", "");
   GUI.drawButtonHints(renderer, labels.btn1, labels.btn2, labels.btn3, labels.btn4);
 
   if (forceFullRefresh) {

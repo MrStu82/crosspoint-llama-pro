@@ -34,14 +34,9 @@ class FontDownloadActivity : public Activity {
   void onExit() override;
   void loop() override;
   void render(RenderLock&&) override;
-  bool preventAutoSleep() override {
-    return state_ == LOADING_MANIFEST || state_ == DOWNLOADING ||
-           // The download is synchronous and blocks the main loop until it
-           // completes, so activityManager.preventAutoSleep() is never polled
-           // during downloading.
-           state_ == COMPLETE || state_ == ERROR;
-  }
-  bool skipLoopDelay() override { return true; }
+  // Only while work is in flight; COMPLETE/ERROR are idle result screens.
+  bool preventAutoSleep() override { return state_ == LOADING_MANIFEST || state_ == DOWNLOADING; }
+  bool skipLoopDelay() override { return preventAutoSleep(); }
 
  private:
   enum State {

@@ -24,7 +24,6 @@ class MinesweeperActivity final : public Activity {
   void onEnter() override;
   void loop() override;
   void render(RenderLock&&) override;
-  bool preventAutoSleep() override { return true; }
 
  private:
   struct Cell {

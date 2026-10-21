@@ -13,8 +13,7 @@ assert main.index('BoardConfig::holdPowerRails();') < main.index('gpio.begin();'
 assert '#else\n  freeink::PowerManager::deepSleepUntilPowerButton();\n#endif' in hal
 assert 'enable_timer' not in (r/'lib/hal/X4ProSleep.h').read_text()
 assert 'kQuoteDatePollIntervalMs' not in home
-assert 'RTC_DATA_ATTR int retainedHomeQuoteDate = 0' in home
-assert home.index('DailyQuote::dateChangedSinceRender(retainedHomeQuoteDate, today)') < home.index('DailyQuote::select(today / 10000, quoteDay)')
+assert 'retainedHomeQuoteDate' not in home
 assert 'retainedHomeQuoteDate' not in main
 # Byte-identical storage, reader, OTA and SDK versus delivered v234.
 changed=subprocess.check_output(['git','diff','d94a2890057ccc39f5d7b1d1cdbf43aff6572953','--name-only'],cwd=r,text=True).splitlines()

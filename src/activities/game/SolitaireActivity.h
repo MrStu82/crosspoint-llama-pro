@@ -11,7 +11,7 @@ class MappedInputManager;
 // Klondike Solitaire, mimicking Windows Solitaire per Stuart's spec: draw-3
 // stock/waste, 7 tableau columns, 4 suit foundations, red/black alternation,
 // kings into empty columns. Touch is tap-only (no drag, matching the
-// Tetris/Tamagotchi idiom -- dragging is a bad fit for e-ink): tap a card to
+// Tetris idiom -- dragging is a bad fit for e-ink): tap a card to
 // select it, tap a destination pile to move it, double-tap a card to
 // auto-send it to its foundation if legal. Tapping a face-up card partway
 // down a tableau column selects it and the whole ordered run beneath it
@@ -30,7 +30,6 @@ class SolitaireActivity final : public Activity {
   void onEnter() override;
   void loop() override;
   void render(RenderLock&&) override;
-  bool preventAutoSleep() override { return true; }
 
  private:
   struct Card {

@@ -53,6 +53,7 @@ void CalibreConnectActivity::onEnter() {
 void CalibreConnectActivity::onExit() {
   Activity::onExit();
 
+  stopWebServer();  // close open uploads and their files before the restart below
   MDNS.end();
 
   if (WiFi.getMode() != WIFI_MODE_NULL) {

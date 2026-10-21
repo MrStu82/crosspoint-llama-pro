@@ -109,6 +109,11 @@ void CrossPointWebServerActivity::onExit() {
   LOG_DBG("WEBACT", "Free heap at onExit start: %d bytes", ESP.getFreeHeap());
 
   state = WebServerActivityState::SHUTTING_DOWN;
+  // Close open uploads and their files before the restart below.
+  if (webServer) {
+    webServer->stop();
+    webServer.reset();
+  }
   stopDnsServer();
   MDNS.end();
 

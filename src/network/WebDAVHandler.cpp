@@ -4,11 +4,12 @@
 #include <HalStorage.h>
 #include <Logging.h>
 
+#include "ProtectedPath.h"
 #include "util/BookCacheUtils.h"
 #include "util/TaskWatchdog.h"
 
 namespace {
-constexpr const char* HIDDEN_ITEMS[] = {"System Volume Information", "XTCache"};
+using web_paths::HIDDEN_ITEMS;
 
 // RFC 1123 date format helper: "Sun, 06 Nov 1994 08:49:37 GMT"
 // ESP32 doesn't have real-time clock set by default, so we use a fixed epoch date
@@ -758,31 +759,7 @@ void WebDAVHandler::urlEncodePath(const String& path, String& out) const {
   }
 }
 
-bool WebDAVHandler::isProtectedPath(const String& path) const {
-  // Check every segment of the path, not just the last one.
-  // This prevents access to e.g. /.hidden/somefile or /System Volume Information/foo
-  int start = 0;
-  while (start < (int)path.length()) {
-    if (path.charAt(start) == '/') {
-      start++;
-      continue;
-    }
-    int end = path.indexOf('/', start);
-    if (end == -1) end = path.length();
-
-    String segment = path.substring(start, end);
-
-    if (segment.startsWith(".")) return true;
-
-    for (const auto* item : HIDDEN_ITEMS) {
-      if (segment.equals(item)) return true;
-    }
-
-    start = end + 1;
-  }
-
-  return false;
-}
+bool WebDAVHandler::isProtectedPath(const String& path) const { return web_paths::isProtectedPath(path); }
 
 int WebDAVHandler::getDepth(WebServer& s) const {
   String depth = s.header("Depth");

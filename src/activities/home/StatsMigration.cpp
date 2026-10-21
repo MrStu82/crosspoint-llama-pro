@@ -7,6 +7,8 @@ bool migrateStatsBlob(const uint8_t* buf, size_t len, GlobalStats& out, bool& ne
 
   if (len == sizeof(uint8_t) + sizeof(GlobalStats) && buf[0] == STATS_FILE_VERSION) {
     memcpy(&out, buf + 1, sizeof(GlobalStats));
+    // A corrupt file must not turn the write index into an out-of-bounds dailyHistory slot.
+    if (out.dailyHistoryWriteIndex >= DAILY_HISTORY_SLOTS) out.dailyHistoryWriteIndex = 0;
     return true;
   }
 

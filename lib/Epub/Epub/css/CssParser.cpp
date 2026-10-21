@@ -331,9 +331,11 @@ void CssParser::parseDeclarationIntoStyle(std::string_view decl, CssStyle& style
   if (colonPos == std::string_view::npos || colonPos == 0) return;
 
   const std::string_view name = trimCssWhitespace(decl.substr(0, colonPos));
-  const std::string_view value = trimCssWhitespace(decl.substr(colonPos + 1));
+  std::string_view value = trimCssWhitespace(decl.substr(colonPos + 1));
 
   if (name.empty() || value.empty()) return;
+
+  value = stripTrailingImportant(value);
 
   if (iequalsAscii(name, "text-align")) {
     style.textAlign = interpretAlignment(value);
@@ -408,18 +410,16 @@ void CssParser::parseDeclarationIntoStyle(std::string_view decl, CssStyle& style
       style.defined.imageWidth = 1;
     }
   } else if (iequalsAscii(name, "display")) {
-    const std::string_view displayValue = stripTrailingImportant(value);
-    style.display = iequalsAscii(displayValue, "none") ? CssDisplay::None : CssDisplay::Block;
+    style.display = iequalsAscii(value, "none") ? CssDisplay::None : CssDisplay::Block;
     style.defined.display = 1;
   } else if (iequalsAscii(name, "background") || iequalsAscii(name, "background-color")) {
     bool black = false;
     if (tryInterpretBackgroundBlack(value, black)) { style.backgroundBlack = black; style.defined.backgroundBlack = 1; }
   } else if (iequalsAscii(name, "direction")) {
-    const std::string_view directionValue = stripTrailingImportant(value);
-    if (iequalsAscii(directionValue, "rtl")) {
+    if (iequalsAscii(value, "rtl")) {
       style.direction = CssTextDirection::Rtl;
       style.defined.direction = 1;
-    } else if (iequalsAscii(directionValue, "ltr")) {
+    } else if (iequalsAscii(value, "ltr")) {
       style.direction = CssTextDirection::Ltr;
       style.defined.direction = 1;
     }
@@ -431,6 +431,10 @@ void CssParser::parseDeclarationIntoStyle(std::string_view decl, CssStyle& style
       style.verticalAlign = CssVerticalAlign::Sub;
       style.defined.verticalAlign = 1;
     }
+  } else if (iequalsAscii(name, "list-style-type")) {
+    const std::string_view listStyleValue = stripTrailingImportant(value);
+    style.listStyleType = iequalsAscii(listStyleValue, "none") ? CssListStyleType::None : CssListStyleType::Disc;
+    style.defined.listStyleType = 1;
   }
 }
 
@@ -812,6 +816,7 @@ bool CssParser::saveToCache() const {
     writeByte(static_cast<uint8_t>(style.display));
     writeByte(static_cast<uint8_t>(style.verticalAlign));
     writeByte(static_cast<uint8_t>(style.backgroundBlack ? 1 : 0));
+    writeByte(static_cast<uint8_t>(style.listStyleType));
 
     // Write defined flags as uint32_t
     uint32_t definedBits = 0;
@@ -834,6 +839,7 @@ bool CssParser::saveToCache() const {
     if (style.defined.direction) definedBits |= 1 << 16;
     if (style.defined.verticalAlign) definedBits |= 1 << 17;
     if (style.defined.backgroundBlack) definedBits |= 1 << 18;
+    if (style.defined.listStyleType) definedBits |= 1 << 19;
     writeBytes(&definedBits, sizeof(definedBits));
     if (!writeOk) break;
   }
@@ -1033,6 +1039,13 @@ bool CssParser::loadFromCacheOnce(bool& lowMemory) {
     if (file.read(&backgroundBlackVal, 1) != 1) { rulesBySelector_.clear(); return false; }
     style.backgroundBlack = backgroundBlackVal != 0;
 
+    uint8_t listStyleTypeVal;
+    if (file.read(&listStyleTypeVal, 1) != 1 || listStyleTypeVal > static_cast<uint8_t>(CssListStyleType::None)) {
+      rulesBySelector_.clear();
+      return false;
+    }
+    style.listStyleType = static_cast<CssListStyleType>(listStyleTypeVal);
+
     // Read defined flags
     uint32_t definedBits = 0;
     if (file.read(&definedBits, sizeof(definedBits)) != sizeof(definedBits)) {
@@ -1058,6 +1071,7 @@ bool CssParser::loadFromCacheOnce(bool& lowMemory) {
     style.defined.direction = (definedBits & 1 << 16) != 0;
     style.defined.verticalAlign = (definedBits & 1 << 17) != 0;
     style.defined.backgroundBlack = (definedBits & 1 << 18) != 0;
+    style.defined.listStyleType = (definedBits & 1 << 19) != 0;
 
     if (!cacheAllocationAllowed(sizeof(std::pair<const std::string, CssStyle>) + selectorLen + 1)) {
       lowMemory = true;

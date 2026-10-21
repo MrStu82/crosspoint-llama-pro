@@ -44,7 +44,10 @@ namespace {
 // v42: Text blocks persist simple black-background redaction flags.
 // v43: Simple HTML table rows are laid out as positioned columns instead of
 //      flattened paragraphs with synthetic row/cell labels.
-constexpr uint8_t SECTION_FILE_VERSION = 43;
+// v44: Hidden elements are skipped, closed blocks drop inherited vertical spacing, inline
+//      direction no longer sets paragraph direction, footnote links keep sup/sub, and
+//      ordered lists are numbered with <ul>/<ol> container insets.
+constexpr uint8_t SECTION_FILE_VERSION = 44;
 // Written into the version field while a build is in progress; patched to
 // SECTION_FILE_VERSION only when the build is finalized. An abandoned /
 // crash-interrupted .bin therefore carries version 0, which loadSectionFile rejects

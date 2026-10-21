@@ -52,7 +52,7 @@ constexpr uint8_t TABLE_ROW_SEPARATOR_THICKNESS = 1;
 constexpr int16_t TABLE_MIN_CELL_WIDTH_LINE_HEIGHTS = 3;
 
 constexpr const char* HEADER_TAGS[] = {"h1", "h2", "h3", "h4", "h5", "h6"};
-constexpr const char* BLOCK_TAGS[] = {"p", "li", "div", "br", "blockquote"};
+constexpr const char* BLOCK_TAGS[] = {"p", "li", "div", "br", "blockquote", "ul", "ol"};
 constexpr const char* BOLD_TAGS[] = {"b", "strong"};
 constexpr const char* ITALIC_TAGS[] = {"i", "em"};
 constexpr const char* UNDERLINE_TAGS[] = {"u", "ins"};
@@ -175,6 +175,17 @@ void ChapterHtmlSlimParser::applyTextDecorationToEntry(StyleStackEntry& entry, c
   }
 }
 
+void ChapterHtmlSlimParser::applyVerticalAlignToEntry(StyleStackEntry& entry, const CssStyle& css) {
+  if (!css.hasVerticalAlign()) return;
+  if (css.verticalAlign == CssVerticalAlign::Super) {
+    entry.hasSup = true;
+    entry.sup = true;
+  } else if (css.verticalAlign == CssVerticalAlign::Sub) {
+    entry.hasSub = true;
+    entry.sub = true;
+  }
+}
+
 void ChapterHtmlSlimParser::pushTableTextStyleEntry(const CssStyle& cssStyle) {
   if (!cssStyle.hasFontWeight() && !cssStyle.hasFontStyle() && !cssStyle.hasTextDecoration() &&
       !cssStyle.hasDirection() && !cssStyle.hasTextAlign()) {
@@ -193,6 +204,7 @@ void ChapterHtmlSlimParser::pushTableTextStyleEntry(const CssStyle& cssStyle) {
   }
   applyTextDecorationToEntry(entry, cssStyle);
   applyDirectionToEntry(entry, cssStyle);
+  entry.setsParagraphDirection = true;
   if (cssStyle.hasTextAlign()) {
     entry.hasTextAlign = true;
     entry.textAlign = cssStyle.textAlign;
@@ -234,8 +246,15 @@ void ChapterHtmlSlimParser::updateEffectiveInlineStyle() {
   effectiveItalic = currentCssStyle.hasFontStyle() && currentCssStyle.fontStyle == CssFontStyle::Italic;
   effectiveTextDecoration =
       currentCssStyle.hasTextDecoration() ? currentCssStyle.textDecoration : CssTextDecoration::None;
-  effectiveDirectionDefined = currentCssStyle.hasDirection();
-  effectiveDirection = currentCssStyle.direction;
+  bool paragraphDirectionDefined = false;
+  bool paragraphIsRtl = false;
+  if (!blockStyleStack.empty()) {
+    const auto& blockStyle = blockStyleStack.back();
+    paragraphDirectionDefined = blockStyle.directionDefined;
+    paragraphIsRtl = blockStyle.isRtl;
+  }
+  effectiveDirectionDefined = paragraphDirectionDefined;
+  effectiveDirection = paragraphIsRtl ? CssTextDirection::Rtl : CssTextDirection::Ltr;
   effectiveTextAlignDefined = currentCssStyle.hasTextAlign();
   effectiveTextAlign = currentCssStyle.textAlign;
   effectiveSup = false;
@@ -258,6 +277,10 @@ void ChapterHtmlSlimParser::updateEffectiveInlineStyle() {
     if (entry.hasDirection) {
       effectiveDirectionDefined = true;
       effectiveDirection = entry.direction;
+      if (entry.setsParagraphDirection) {
+        paragraphDirectionDefined = true;
+        paragraphIsRtl = entry.direction == CssTextDirection::Rtl;
+      }
     }
     if (entry.hasTextAlign) {
       effectiveTextAlignDefined = true;
@@ -274,17 +297,12 @@ void ChapterHtmlSlimParser::updateEffectiveInlineStyle() {
     if (entry.hasBackgroundBlack) effectiveBackgroundBlack = entry.backgroundBlack;
   }
 
-  // Keep inherited direction in the active empty text block so upcoming block starts
-  // can inherit from non-block ancestors such as <html dir="rtl"> / <body dir="rtl">.
+  // Keep flow direction in the active empty text block. Inline direction remains
+  // available for CSS inheritance without replacing the paragraph's base direction.
   if (currentTextBlock && currentTextBlock->isEmpty()) {
     auto& style = currentTextBlock->getBlockStyle();
-    if (effectiveDirectionDefined) {
-      style.directionDefined = true;
-      style.isRtl = (effectiveDirection == CssTextDirection::Rtl);
-    } else {
-      style.directionDefined = false;
-      style.isRtl = false;
-    }
+    style.directionDefined = paragraphDirectionDefined;
+    style.isRtl = paragraphIsRtl;
   }
 }
 
@@ -692,10 +710,11 @@ void XMLCALL ChapterHtmlSlimParser::startElement(void* userData, const XML_Char*
     self->xpathListItemIndex++;
   }
 
-  // Extract class, style, id, and dir attributes for CSS/RTL processing
+  // Extract class, style, id, dir and hidden attributes for CSS/RTL processing
   std::string classAttr;
   std::string styleAttr;
   std::string dirAttr;
+  bool hasHiddenAttr = false;
   if (atts != nullptr) {
     for (int i = 0; atts[i]; i += 2) {
       if (strcmp(atts[i], "class") == 0) {
@@ -726,6 +745,8 @@ void XMLCALL ChapterHtmlSlimParser::startElement(void* userData, const XML_Char*
         }
       } else if (strcmp(atts[i], "dir") == 0) {
         dirAttr = atts[i + 1];
+      } else if (strcmp(atts[i], "hidden") == 0) {
+        hasHiddenAttr = true;
       }
     }
   }
@@ -743,6 +764,12 @@ void XMLCALL ChapterHtmlSlimParser::startElement(void* userData, const XML_Char*
       CssStyle inlineStyle = CssParser::parseInlineStyle(styleAttr);
       cssStyle.applyOver(inlineStyle);
     }
+  }
+
+  // HTML hidden attribute overrides CSS display.
+  if (hasHiddenAttr) {
+    cssStyle.display = CssDisplay::None;
+    cssStyle.defined.display = 1;
   }
 
   // HTML dir attribute overrides CSS direction (case-insensitive per HTML spec)
@@ -1298,6 +1325,7 @@ void XMLCALL ChapterHtmlSlimParser::startElement(void* userData, const XML_Char*
       entry.hasTextDecoration = true;
       entry.textDecoration = CssTextDecoration::Underline;
       applyDirectionToEntry(entry, cssStyle);
+      applyVerticalAlignToEntry(entry, cssStyle);
       self->pushInlineStyle(entry);
 
       // Skip CSS resolution — we already handled styling for this <a> tag
@@ -1375,8 +1403,32 @@ void XMLCALL ChapterHtmlSlimParser::startElement(void* userData, const XML_Char*
       self->updateEffectiveInlineStyle();
 
       if (strcmp(name, "li") == 0) {
-        self->currentTextBlock->addWord("\xe2\x80\xa2", EpdFontFamily::REGULAR, false, false, self->visibleTextOffset, self->effectiveBackgroundBlack);
-        self->listItemBulletOnly = true;
+        // Innermost open <ul>/<ol> (if any) decides whether this item gets a bullet,
+        // a number, or no marker at all (list-style-type: none). A malformed <li>
+        // with no enclosing list falls back to the plain bullet.
+        if (!self->listStack.empty() && self->listStack.back().styleNone) {
+          // No marker: leave the block empty so it behaves like a normal paragraph.
+        } else if (!self->listStack.empty() && self->listStack.back().ordered) {
+          self->listStack.back().counter += 1;
+          char marker[16];
+          snprintf(marker, sizeof(marker), "%d.", self->listStack.back().counter);
+          self->currentTextBlock->addWord(marker, EpdFontFamily::REGULAR, false, false, self->visibleTextOffset,
+                                          self->effectiveBackgroundBlack);
+          self->listItemBulletOnly = true;
+        } else {
+          self->currentTextBlock->addWord("\xe2\x80\xa2", EpdFontFamily::REGULAR, false, false,
+                                          self->visibleTextOffset, self->effectiveBackgroundBlack);
+          self->listItemBulletOnly = true;
+        }
+      } else if (strcmp(name, "ul") == 0 || strcmp(name, "ol") == 0) {
+        // <ul>/<ol> container accumulation: pushing the block-style stack here includes
+        // the container's own margin/padding in the inset children combine with, so a
+        // hanging text-indent on <li><p> children keeps the first line on the page.
+        ChapterHtmlSlimParser::ListContext ctx;
+        ctx.ordered = strcmp(name, "ol") == 0;
+        ctx.styleNone = cssStyle.hasListStyleType() && cssStyle.listStyleType == CssListStyleType::None;
+        ctx.depth = self->depth;
+        self->listStack.push_back(ctx);
       }
     }
   } else if (matches(name, UNDERLINE_TAGS, std::size(UNDERLINE_TAGS))) {
@@ -1447,7 +1499,7 @@ void XMLCALL ChapterHtmlSlimParser::startElement(void* userData, const XML_Char*
     }
     self->pushInlineStyle(entry);
   } else if (strcmp(name, "span") == 0 || !isHeaderOrBlock(name)) {
-    // Handle span and other inline elements for CSS styling
+    // Handle span and other inline elements for CSS styling.
     const bool inheritedTableTextAlign = self->tableDepth >= 1 && cssStyle.hasTextAlign();
     if (cssStyle.hasFontWeight() || cssStyle.hasFontStyle() || cssStyle.hasTextDecoration() ||
         cssStyle.hasDirection() || cssStyle.hasVerticalAlign() || cssStyle.hasBackgroundBlack() ||
@@ -1469,19 +1521,12 @@ void XMLCALL ChapterHtmlSlimParser::startElement(void* userData, const XML_Char*
       }
       applyTextDecorationToEntry(entry, cssStyle);
       applyDirectionToEntry(entry, cssStyle);
+      entry.setsParagraphDirection = strcmp(name, "html") == 0 || strcmp(name, "body") == 0;
       if (inheritedTableTextAlign) {
         entry.hasTextAlign = true;
         entry.textAlign = cssStyle.textAlign;
       }
-      if (cssStyle.hasVerticalAlign()) {
-        if (cssStyle.verticalAlign == CssVerticalAlign::Super) {
-          entry.hasSup = true;
-          entry.sup = true;
-        } else if (cssStyle.verticalAlign == CssVerticalAlign::Sub) {
-          entry.hasSub = true;
-          entry.sub = true;
-        }
-      }
+      applyVerticalAlignToEntry(entry, cssStyle);
       self->pushInlineStyle(entry);
     }
   }
@@ -1935,7 +1980,9 @@ void XMLCALL ChapterHtmlSlimParser::endElement(void* userData, const XML_Char* n
       self->blockStyleStack.pop_back();
       // Start a new text block with the parent style to prevent subsequent bare text
       // from inheriting the closed block style (e.g. alignment or margins).
-      self->startNewTextBlock(self->blockStyleStack.back());
+      // Vertical margins and paddings are stripped
+      self->startNewTextBlock(self->blockStyleStack.back().withoutTop().withoutBottom());
+      self->updateEffectiveInlineStyle();
     }
 
     // </li> closes: if the bullet never got inline text (empty <li> or <li> with only
@@ -1944,6 +1991,17 @@ void XMLCALL ChapterHtmlSlimParser::endElement(void* userData, const XML_Char* n
     if (strcmp(name, "li") == 0) {
       self->listItemBulletOnly = false;
     }
+  }
+
+  // </ul> or </ol> closes: pop its list context so a following sibling list at the
+  // same nesting level starts its own counter/style instead of inheriting this one's.
+  // Guarded by depth (not just tag name + non-empty stack): a display:none <ul>/<ol>
+  // returns early in startElement without ever pushing a context (see the
+  // hasDisplay()/CssDisplay::None branch above), so its closing tag must not pop
+  // the *parent* list's context out from under still-unprocessed siblings.
+  if ((strcmp(name, "ul") == 0 || strcmp(name, "ol") == 0) && !self->listStack.empty() &&
+      self->listStack.back().depth == self->depth) {
+    self->listStack.pop_back();
   }
   if (strcmp(name, "body") == 0) {
     self->insideBody = false;
@@ -1968,6 +2026,8 @@ bool ChapterHtmlSlimParser::beginParse() {
   blockStyleStack.reserve(8);
   blockStyleStack.push_back(rootBlockStyle);
 
+  listStack.clear();
+  listStack.reserve(4);
   tableDepth = 0;
   insideTableCell = false;
   tableRowStacked = false;

@@ -4,6 +4,7 @@
 #include <Logging.h>
 #include <SecureHttpClient.h>
 #include <base64.h>
+#include <esp_heap_caps.h>
 
 #include <string>
 
@@ -43,6 +44,8 @@ constexpr char DEVICE_ID[] = "crosspoint-reader";
 // SP ECC removed, and sat inside the 51.9-58.2 KB band a reading session
 // normally leaves, refusing syncs that would have succeeded. A wrong guess
 // here fails soft: MEMORY_E aborts the handshake within its 15 s deadline.
+// wolfSSL uses the default allocator, which can use PSRAM on supported builds,
+// so the gate measures the default heap rather than internal RAM only.
 constexpr uint32_t MIN_FREE_FOR_TLS = 35000;
 constexpr uint32_t MIN_BLOCK_FOR_TLS = 20000;
 
@@ -59,11 +62,12 @@ void applyAuthHeaders(freeink::SecureHttpClient& http) {
 
 // True when free heap is too low to risk a TLS handshake.
 bool insufficientHeap() {
-  const uint32_t freeHeap = ESP.getFreeHeap();
-  const uint32_t maxAllocHeap = ESP.getMaxAllocHeap();
+  const size_t freeHeap = heap_caps_get_free_size(MALLOC_CAP_DEFAULT);
+  const size_t maxAllocHeap = heap_caps_get_largest_free_block(MALLOC_CAP_DEFAULT);
   if (freeHeap < MIN_FREE_FOR_TLS || maxAllocHeap < MIN_BLOCK_FOR_TLS) {
-    LOG_ERR("KOSync", "Insufficient heap for TLS handshake: %u bytes free (need %u), %u max alloc (need %u)", freeHeap,
-            MIN_FREE_FOR_TLS, maxAllocHeap, MIN_BLOCK_FOR_TLS);
+    LOG_ERR("KOSync",
+            "Insufficient allocatable heap for TLS handshake: %zu bytes free (need %u), %zu max alloc (need %u)",
+            freeHeap, MIN_FREE_FOR_TLS, maxAllocHeap, MIN_BLOCK_FOR_TLS);
     return true;
   }
   return false;

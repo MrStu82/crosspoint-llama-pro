@@ -42,7 +42,7 @@ void HalPowerManager::setPowerSaving(bool enabled) {
   if (mode == None && enabled && !isLowPower) {
     LOG_DBG("PWR", "Going to low-power mode");
     if (!setCpuFrequencyMhz(LOW_POWER_FREQ)) {
-      LOG_DBG("PWR", "Failed to set CPU frequency = %d MHz", LOW_POWER_FREQ);
+      LOG_INF("PWR", "Failed to set CPU frequency = %d MHz", LOW_POWER_FREQ);
       return;
     }
     isLowPower = true;
@@ -50,7 +50,7 @@ void HalPowerManager::setPowerSaving(bool enabled) {
   } else if ((!enabled || mode != None) && isLowPower) {
     LOG_DBG("PWR", "Restoring normal CPU frequency");
     if (!setCpuFrequencyMhz(normalFreq)) {
-      LOG_DBG("PWR", "Failed to set CPU frequency = %d MHz", normalFreq);
+      LOG_INF("PWR", "Failed to set CPU frequency = %d MHz", normalFreq);
       return;
     }
     isLowPower = false;

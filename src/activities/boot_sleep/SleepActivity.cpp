@@ -563,7 +563,7 @@ void SleepActivity::renderCustomSleepScreen() const {
       Storage.openFileForRead("SLP", APP_STATE.favoriteSleepImagePath, file)) {
     Bitmap bitmap(file, true);
     if (bitmap.parseHeaders() == BmpReaderError::Ok) {
-      LOG_DBG("SLP", "Loading pinned image: %s", APP_STATE.favoriteSleepImagePath.c_str());
+      LOG_INF("SLP", "Loading pinned image: %s", APP_STATE.favoriteSleepImagePath.c_str());
       renderBitmapSleepScreen(bitmap);
       file.close();
       return;
@@ -575,7 +575,7 @@ void SleepActivity::renderCustomSleepScreen() const {
   if (Storage.openFileForRead("SLP", "/sleep.bmp", file)) {
     Bitmap bitmap(file, true);
     if (bitmap.parseHeaders() == BmpReaderError::Ok) {
-      LOG_DBG("SLP", "Loading: /sleep.bmp");
+      LOG_INF("SLP", "Loading: /sleep.bmp");
       renderBitmapSleepScreen(bitmap);
       file.close();
       return;
@@ -591,7 +591,7 @@ void SleepActivity::renderCustomSleepScreen() const {
   if (!selectedPath.empty()) {
     HalFile randFile;
     if (Storage.openFileForRead("SLP", selectedPath, randFile)) {
-      LOG_DBG("SLP", "Randomly loading: %s", selectedPath.c_str());
+      LOG_INF("SLP", "Randomly loading: %s", selectedPath.c_str());
       delay(100);
       Bitmap bitmap(randFile, true);
       if (bitmap.parseHeaders() == BmpReaderError::Ok) {
@@ -843,7 +843,7 @@ void SleepActivity::renderCoverSleepScreen() const {
   if (Storage.openFileForRead("SLP", coverBmpPath, file)) {
     Bitmap bitmap(file);
     if (bitmap.parseHeaders() == BmpReaderError::Ok) {
-      LOG_DBG("SLP", "Rendering sleep cover: %s", coverBmpPath.c_str());
+      LOG_INF("SLP", "Rendering sleep cover: %s", coverBmpPath.c_str());
       renderBitmapSleepScreen(bitmap);
       return;
     }

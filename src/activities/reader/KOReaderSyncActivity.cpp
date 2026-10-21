@@ -515,6 +515,11 @@ void KOReaderSyncActivity::render(RenderLock&&) {
 
 void KOReaderSyncActivity::loop() {
   if (state == NO_CREDENTIALS || state == SYNC_FAILED || state == UPLOAD_COMPLETE || state == SYNC_COMPLETE) {
+    // Result screen: drop the radio now so power saving can engage; onExit still silent-restarts.
+    if (wifiActivated && WiFi.getMode() != WIFI_MODE_NULL) {
+      WiFi.disconnect(false);
+      WiFi.mode(WIFI_OFF);
+    }
     if (autoReturnAt != 0 && millis() >= autoReturnAt) {
       returnToReader();
       return;

@@ -32,7 +32,7 @@ class UsbTransferActivity : public Activity {
   void onExit() override;
   void loop() override;
   void render(RenderLock&&) override;
-  bool preventAutoSleep() override { return state != State::ERROR; }
+  bool preventAutoSleep() override { return state == State::CONNECTED; }
 
  private:
   State state = State::WAITING;

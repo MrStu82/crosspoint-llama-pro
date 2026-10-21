@@ -278,6 +278,13 @@ void ActivityManager::goToReader(std::string path, const bool allowFastInitialRe
 }
 
 void ActivityManager::goToSleep(bool fromTimeout) {
+  // An open brightness sheet consumes every loop() and would block the Replace
+  // below; repaint the activity underneath so a quick-resume frame excludes it.
+  if (brightnessSheet.isOpen()) {
+    brightnessSheet.close();
+    if (currentActivity) currentActivity->onUncovered();
+    requestUpdateAndWait();
+  }
   replaceActivity(std::make_unique<SleepActivity>(renderer, mappedInput, fromTimeout));
   loop();  // Important: sleep screen must be rendered immediately, the caller will go to sleep right after this returns
 }

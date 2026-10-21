@@ -32,7 +32,7 @@ void ClockSyncActivity::onEnter() {
 void ClockSyncActivity::onExit() {
   Activity::onExit();
 
-  if (shouldTearDownWifiOnExit && WiFi.getMode() != WIFI_MODE_NULL) {
+  if (shouldTearDownWifiOnExit) {
     WiFi.disconnect(false);
     delay(30);
     silentRestart();
@@ -90,6 +90,11 @@ void ClockSyncActivity::loop() {
     // requestUpdateAndWait below forces the render before we block on WiFi.
     requestUpdateAndWait();
     runSync();
+    // Result screen: drop the radio we brought up; onExit still silent-restarts.
+    if (shouldTearDownWifiOnExit) {
+      WiFi.disconnect(false);
+      WiFi.mode(WIFI_OFF);
+    }
     return;
   }
 

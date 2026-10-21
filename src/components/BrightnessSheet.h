@@ -34,6 +34,8 @@ class BrightnessSheet {
   // must skip dispatching to currentActivity for any frame this returns true.
   bool loop();
 
+  void close();
+
  private:
   enum class DragTarget { None, Brightness, Warmth };
 
@@ -52,6 +54,5 @@ class BrightnessSheet {
   void trimWarmth(int delta);
   void toggleLight();
   void activateTile(int index);
-  void close();
   void draw(bool cleanRefresh = false) const;
 };

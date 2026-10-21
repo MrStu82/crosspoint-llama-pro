@@ -41,6 +41,14 @@ class HalStorage::StorageLock {
   ~StorageLock() { xSemaphoreGiveRecursive(HalStorage::getInstance().storageMutex); }
 };
 
+void HalStorage::prepareForDeepSleep() {
+  StorageLock lock;
+#if FREEINK_SD_SDMMC
+  // Fork SDK 8c960bc2 has no SDCard.shutdown(); end the raw SDMMC device it exposes.
+  if (FsBlockDeviceInterface* dev = SDCard.rawBlockDevice()) dev->end();
+#endif
+}
+
 #define HAL_STORAGE_WRAPPED_CALL(method, ...) \
   HalStorage::StorageLock lock;               \
   return SDCard.method(__VA_ARGS__);

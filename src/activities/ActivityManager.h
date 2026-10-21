@@ -100,9 +100,7 @@ class ActivityManager {
   void goToFullScreenMessage(std::string message, EpdFontFamily::Style style = EpdFontFamily::REGULAR);
   void goToCrashReport();
   void goToGames();
-  void goToDeepMines();
   void goToTetris();
-  void goToTamagotchi();
   void goToSolitaire();
   void goToMinesweeper();
   void goToSudoku();

@@ -1,1 +1,0 @@
-../../../../../../src/activities/game/GameTitleActivity.cpp

@@ -66,21 +66,15 @@ void GamesListActivity::loop() {
 void GamesListActivity::handleSelection() {
   switch (selectedIndex) {
     case 0:
-      activityManager.goToDeepMines();
-      return;
-    case 1:
       activityManager.goToTetris();
       return;
-    case 2:
-      activityManager.goToTamagotchi();
-      return;
-    case 3:
+    case 1:
       activityManager.goToSolitaire();
       return;
-    case 4:
+    case 2:
       activityManager.goToMinesweeper();
       return;
-    case 5:
+    case 3:
       activityManager.goToSudoku();
       return;
     default:
@@ -107,16 +101,12 @@ void GamesListActivity::render(RenderLock&&) {
       renderer, Rect{0, contentTop, pageWidth, contentHeight}, kItemCount, selectedIndex, [](int index) {
         switch (index) {
           case 0:
-            return std::string(tr(STR_DM_TITLE));
-          case 1:
             return std::string(tr(STR_TETRIS_TITLE));
-          case 2:
-            return std::string(tr(STR_TAMA_TITLE));
-          case 3:
+          case 1:
             return std::string(tr(STR_SOLITAIRE_TITLE));
-          case 4:
+          case 2:
             return std::string(tr(STR_MINESWEEPER_TITLE));
-          case 5:
+          case 3:
             return std::string(tr(STR_SUDOKU_TITLE));
           default:
             return std::string();

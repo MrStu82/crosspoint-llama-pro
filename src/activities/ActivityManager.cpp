@@ -12,12 +12,10 @@
 #include "boot_sleep/BootActivity.h"
 #include "boot_sleep/SleepActivity.h"
 #include "browser/OpdsBookBrowserActivity.h"
-#include "game/GameTitleActivity.h"
 #include "game/GamesListActivity.h"
 #include "game/MinesweeperActivity.h"
 #include "game/SolitaireActivity.h"
 #include "game/SudokuActivity.h"
-#include "game/TamagotchiActivity.h"
 #include "game/TetrisActivity.h"
 #include "home/CrashActivity.h"
 #include "home/FileBrowserActivity.h"
@@ -313,16 +311,8 @@ void ActivityManager::goToGames() {
   replaceActivity(std::make_unique<GamesListActivity>(renderer, mappedInput));
 }
 
-void ActivityManager::goToDeepMines() {
-  replaceActivity(std::make_unique<GameTitleActivity>(renderer, mappedInput));
-}
-
 void ActivityManager::goToTetris() {
   replaceActivity(std::make_unique<TetrisActivity>(renderer, mappedInput));
-}
-
-void ActivityManager::goToTamagotchi() {
-  replaceActivity(std::make_unique<TamagotchiActivity>(renderer, mappedInput));
 }
 
 void ActivityManager::goToSolitaire() {

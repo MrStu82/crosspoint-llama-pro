@@ -197,8 +197,7 @@ void ChapterHtmlSlimParser::pushTableTextStyleEntry(const CssStyle& cssStyle) {
     entry.hasTextAlign = true;
     entry.textAlign = cssStyle.textAlign;
   }
-  inlineStyleStack.push_back(entry);
-  updateEffectiveInlineStyle();
+  pushInlineStyle(entry);
 }
 
 void ChapterHtmlSlimParser::pushDecorationStyleEntry(const CssTextDecoration defaultDecoration,
@@ -216,6 +215,14 @@ void ChapterHtmlSlimParser::pushDecorationStyleEntry(const CssTextDecoration def
     entry.italic = cssStyle.fontStyle == CssFontStyle::Italic;
   }
   applyDirectionToEntry(entry, cssStyle);
+  pushInlineStyle(entry);
+}
+
+// Push an inline style entry. Entries pop by depth, so skipping past the cap stays symmetric
+// and bounds the O(depth) recompute for pathologically nested markup.
+void ChapterHtmlSlimParser::pushInlineStyle(const StyleStackEntry& entry) {
+  constexpr size_t MAX_INLINE_STYLE_DEPTH = 64;
+  if (inlineStyleStack.size() >= MAX_INLINE_STYLE_DEPTH) return;
   inlineStyleStack.push_back(entry);
   updateEffectiveInlineStyle();
 }
@@ -1291,8 +1298,7 @@ void XMLCALL ChapterHtmlSlimParser::startElement(void* userData, const XML_Char*
       entry.hasTextDecoration = true;
       entry.textDecoration = CssTextDecoration::Underline;
       applyDirectionToEntry(entry, cssStyle);
-      self->inlineStyleStack.push_back(entry);
-      self->updateEffectiveInlineStyle();
+      self->pushInlineStyle(entry);
 
       // Skip CSS resolution — we already handled styling for this <a> tag
       self->depth += 1;
@@ -1405,8 +1411,7 @@ void XMLCALL ChapterHtmlSlimParser::startElement(void* userData, const XML_Char*
     }
     applyTextDecorationToEntry(entry, cssStyle);
     applyDirectionToEntry(entry, cssStyle);
-    self->inlineStyleStack.push_back(entry);
-    self->updateEffectiveInlineStyle();
+    self->pushInlineStyle(entry);
   } else if (matches(name, ITALIC_TAGS, std::size(ITALIC_TAGS))) {
     // Flush buffer before style change so preceding text gets current style
     if (self->partWordBufferIndex > 0) {
@@ -1425,8 +1430,7 @@ void XMLCALL ChapterHtmlSlimParser::startElement(void* userData, const XML_Char*
     }
     applyTextDecorationToEntry(entry, cssStyle);
     applyDirectionToEntry(entry, cssStyle);
-    self->inlineStyleStack.push_back(entry);
-    self->updateEffectiveInlineStyle();
+    self->pushInlineStyle(entry);
   } else if (strcmp(name, "sup") == 0 || strcmp(name, "sub") == 0) {
     if (self->partWordBufferIndex > 0) {
       self->flushPartWordBuffer();
@@ -1441,8 +1445,7 @@ void XMLCALL ChapterHtmlSlimParser::startElement(void* userData, const XML_Char*
       entry.hasSub = true;
       entry.sub = true;
     }
-    self->inlineStyleStack.push_back(entry);
-    self->updateEffectiveInlineStyle();
+    self->pushInlineStyle(entry);
   } else if (strcmp(name, "span") == 0 || !isHeaderOrBlock(name)) {
     // Handle span and other inline elements for CSS styling
     const bool inheritedTableTextAlign = self->tableDepth >= 1 && cssStyle.hasTextAlign();
@@ -1479,8 +1482,7 @@ void XMLCALL ChapterHtmlSlimParser::startElement(void* userData, const XML_Char*
           entry.sub = true;
         }
       }
-      self->inlineStyleStack.push_back(entry);
-      self->updateEffectiveInlineStyle();
+      self->pushInlineStyle(entry);
     }
   }
 

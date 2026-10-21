@@ -12,6 +12,7 @@
 #include <HalStorage.h>
 #include <Logging.h>
 
+#include <algorithm>
 #include <cstring>
 
 namespace xtc {
@@ -327,7 +328,7 @@ XtcError XtcParser::readChapters() {
     return XtcError::READ_ERROR;
   }
 
-  m_chapters.reserve(chapterCount);
+  m_chapters.reserve(std::min<size_t>(chapterCount, 1024));
   std::vector<uint8_t> chapterBuf(chapterSize);
   for (size_t i = 0; i < chapterCount; i++) {
     if (m_file.read(chapterBuf.data(), chapterSize) != chapterSize) {

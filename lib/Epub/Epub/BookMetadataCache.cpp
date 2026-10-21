@@ -508,6 +508,14 @@ uint32_t BookMetadataCache::getCumulativeSize(const int index) const {
   return cumulativeSizes[index];
 }
 
+// Read a LUT slot at lutPos and seek to the entry it points at; false if either lies outside the file.
+bool BookMetadataCache::seekLutEntry(const size_t lutPos, uint32_t& entryPos) {
+  const size_t fileSize = bookFile.size();
+  if (lutPos + sizeof(uint32_t) > fileSize || !bookFile.seek(lutPos)) return false;
+  serialization::readPod(bookFile, entryPos);
+  return entryPos < fileSize && bookFile.seek(entryPos);
+}
+
 BookMetadataCache::SpineEntry BookMetadataCache::getSpineEntry(const int index) {
   if (!loaded) {
     LOG_ERR("BMC", "getSpineEntry called but cache not loaded");
@@ -520,10 +528,11 @@ BookMetadataCache::SpineEntry BookMetadataCache::getSpineEntry(const int index) 
   }
 
   // Seek to spine LUT item, read from LUT and get out data
-  bookFile.seek(lutOffset + sizeof(uint32_t) * index);
-  uint32_t spineEntryPos;
-  serialization::readPod(bookFile, spineEntryPos);
-  bookFile.seek(spineEntryPos);
+  uint32_t spineEntryPos = 0;
+  if (!seekLutEntry(lutOffset + sizeof(uint32_t) * index, spineEntryPos)) {
+    LOG_ERR("BMC", "getSpineEntry LUT entry %d invalid", index);
+    return {};
+  }
   return readSpineEntry(bookFile);
 }
 
@@ -539,10 +548,11 @@ BookMetadataCache::TocEntry BookMetadataCache::getTocEntry(const int index) {
   }
 
   // Seek to TOC LUT item, read from LUT and get out data
-  bookFile.seek(lutOffset + sizeof(uint32_t) * spineCount + sizeof(uint32_t) * index);
-  uint32_t tocEntryPos;
-  serialization::readPod(bookFile, tocEntryPos);
-  bookFile.seek(tocEntryPos);
+  uint32_t tocEntryPos = 0;
+  if (!seekLutEntry(lutOffset + sizeof(uint32_t) * spineCount + sizeof(uint32_t) * index, tocEntryPos)) {
+    LOG_ERR("BMC", "getTocEntry LUT entry %d invalid", index);
+    return {};
+  }
   return readTocEntry(bookFile);
 }
 

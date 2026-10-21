@@ -744,12 +744,19 @@ std::unique_ptr<Page> Section::loadPageAt(const int page) const {
     return nullptr;
   }
 
+  const size_t fileSize = f.size();
   f.seek(HEADER_SIZE - sizeof(uint32_t) * 5);
-  uint32_t lutOffset;
+  uint32_t lutOffset = 0;
   serialization::readPod(f, lutOffset);
-  f.seek(lutOffset + sizeof(uint32_t) * page);
-  uint32_t pagePos;
+  const size_t lutEntry = lutOffset + sizeof(uint32_t) * static_cast<size_t>(page);
+  if (lutOffset < HEADER_SIZE || lutEntry + sizeof(uint32_t) > fileSize || !f.seek(lutEntry)) {
+    return nullptr;
+  }
+  uint32_t pagePos = 0;
   serialization::readPod(f, pagePos);
+  if (pagePos < HEADER_SIZE || pagePos >= fileSize) {
+    return nullptr;
+  }
 
   // Read this page's visible-codepoint start offset from the visible-offset LUT (last header slot)
   // in the same open handle, so the reader can persist progress without reopening the section file

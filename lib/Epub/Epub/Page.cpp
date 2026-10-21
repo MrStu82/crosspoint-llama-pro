@@ -76,6 +76,7 @@ std::unique_ptr<PageImage> PageImage::deserialize(HalFile& file) {
   serialization::readPod(file, yPos);
 
   auto ib = ImageBlock::deserialize(file);
+  if (!ib) return nullptr;
   return std::unique_ptr<PageImage>(new PageImage(std::move(ib), xPos, yPos));
 }
 

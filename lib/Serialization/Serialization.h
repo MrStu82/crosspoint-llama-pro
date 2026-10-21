@@ -36,17 +36,29 @@ inline void writeString(HalFile& file, const std::string& s) {
   file.write(reinterpret_cast<const uint8_t*>(s.data()), len);
 }
 
+// Upper bound for a serialized string; a larger length means a corrupt cache.
+constexpr uint32_t MAX_STRING_LEN = 4096;
+
 inline void readString(std::istream& is, std::string& s) {
-  uint32_t len;
+  uint32_t len = 0;
   readPod(is, len);
+  if (!is || len > MAX_STRING_LEN) {
+    s.clear();
+    return;
+  }
   s.resize(len);
   is.read(&s[0], len);
+  s.resize(is.gcount());
 }
 
 inline void readString(HalFile& file, std::string& s) {
-  uint32_t len;
-  readPod(file, len);
+  uint32_t len = 0;
+  if (file.read(&len, sizeof(len)) != static_cast<int>(sizeof(len)) || len > MAX_STRING_LEN) {
+    s.clear();
+    return;
+  }
   s.resize(len);
-  file.read(&s[0], len);
+  const int got = file.read(&s[0], len);
+  s.resize(got > 0 ? got : 0);
 }
 }  // namespace serialization

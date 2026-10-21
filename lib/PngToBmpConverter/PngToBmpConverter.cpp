@@ -447,6 +447,28 @@ bool PngToBmpConverter::pngFileToBmpStreamInternal(HalFile& pngFile, Print& bmpO
     return false;
   }
 
+  // Reject (colorType, bitDepth) pairs outside the PNG spec; bad depths divide by zero below.
+  bool validDepth;
+  switch (colorType) {
+    case PNG_COLOR_GRAYSCALE:
+      validDepth = bitDepth == 1 || bitDepth == 2 || bitDepth == 4 || bitDepth == 8 || bitDepth == 16;
+      break;
+    case PNG_COLOR_PALETTE:
+      validDepth = bitDepth == 1 || bitDepth == 2 || bitDepth == 4 || bitDepth == 8;
+      break;
+    case PNG_COLOR_RGB:
+    case PNG_COLOR_GRAYSCALE_ALPHA:
+    case PNG_COLOR_RGBA:
+      validDepth = bitDepth == 8 || bitDepth == 16;
+      break;
+    default:
+      validDepth = false;
+  }
+  if (!validDepth) {
+    LOG_ERR("PNG", "Invalid bit depth %u for color type %u", bitDepth, colorType);
+    return false;
+  }
+
   // Safety limits
   constexpr int MAX_IMAGE_WIDTH = 2048;
   constexpr int MAX_IMAGE_HEIGHT = 3072;

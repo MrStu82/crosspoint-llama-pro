@@ -144,6 +144,7 @@ class ChapterHtmlSlimParser {
   uint32_t parseStartTime_ = 0;
 
   void updateEffectiveInlineStyle();
+  void pushInlineStyle(const StyleStackEntry& entry);
   void startNewTextBlock(const BlockStyle& blockStyle);
   void flushPendingAnchor();
   void flushPartWordBuffer();

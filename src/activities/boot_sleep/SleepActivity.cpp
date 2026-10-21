@@ -489,6 +489,9 @@ void releaseSdFontCachesForDecode(const GfxRenderer& renderer) {
 
 void SleepActivity::onEnter() {
   Activity::onEnter();
+  // onEnter runs unlocked; hold the render lock for the whole sleep paint so a
+  // pending render cannot flip inversion or draw on the shared framebuffer.
+  RenderLock lock;
 
   // Capture the visible frame polarity before returning the display driver to
   // normal. Transparent sleep materializes that polarity in the framebuffer;

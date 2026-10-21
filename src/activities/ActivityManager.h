@@ -61,6 +61,10 @@ class ActivityManager {
   // Set by requestUpdateAndWait(); read and cleared by the render task after render completes.
   // Note: only one waiting task is supported at a time
   TaskHandle_t waitingTaskHandle = nullptr;
+  // Renders started so far, and the count when the waiter registered: a waiter is
+  // only woken by a render that started after it asked (guarded by the spinlock).
+  uint32_t renderStartGen = 0;
+  uint32_t waitRegisteredGen = 0;
 
   // Mutex to protect rendering operations from race conditions
   // Must only be used via RenderLock

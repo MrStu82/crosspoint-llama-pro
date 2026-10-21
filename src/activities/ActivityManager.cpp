@@ -70,6 +70,9 @@ void ActivityManager::renderTaskLoop() {
     // Acquire the lock before reading currentActivity to avoid a TOCTOU race
     // where the main task deletes the activity between the null-check and render().
     RenderLock lock;
+    taskENTER_CRITICAL(&activityManagerSpinlock);
+    const uint32_t renderGen = ++renderStartGen;
+    taskEXIT_CRITICAL(&activityManagerSpinlock);
     if (currentActivity) {
       HalPowerManager::Lock powerLock;  // Ensure we don't go into low-power mode while rendering
       display.setInverted(SETTINGS.screenInverted != 0);
@@ -83,11 +86,14 @@ void ActivityManager::renderTaskLoop() {
     }
     assert(stackWordsFree >= kStackWatermarkMinWords && "Render task stack margin critically low");
 
-    // Notify any task blocked in requestUpdateAndWait() that the render is done.
+    // Notify a task blocked in requestUpdateAndWait() once a render that started
+    // after it registered is done; an in-flight stale render does not count.
     TaskHandle_t waiter = nullptr;
     taskENTER_CRITICAL(&activityManagerSpinlock);
-    waiter = waitingTaskHandle;
-    waitingTaskHandle = nullptr;
+    if (renderGen > waitRegisteredGen) {
+      waiter = waitingTaskHandle;
+      waitingTaskHandle = nullptr;
+    }
     taskEXIT_CRITICAL(&activityManagerSpinlock);
     if (waiter) {
       xTaskNotify(waiter, 1, eIncrement);
@@ -397,6 +403,7 @@ void ActivityManager::requestUpdateAndWait() {
   bool holdingRenderLock = (mutexHolder == currTaskHandler);
   if (!alreadyWaiting && !isRenderTask && !holdingRenderLock) {
     waitingTaskHandle = currTaskHandler;
+    waitRegisteredGen = renderStartGen;
   }
   taskEXIT_CRITICAL(&activityManagerSpinlock);
 

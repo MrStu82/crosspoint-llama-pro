@@ -13,6 +13,10 @@
 #if FREEINK_DEVICE_X4PRO && !defined(SIMULATOR)
 #include <esp_sleep.h>
 #include <esp_system.h>
+#include <soc/soc_caps.h>
+#if SOC_USB_SERIAL_JTAG_SUPPORTED
+#include <soc/usb_serial_jtag_reg.h>
+#endif
 #endif
 #include <HalStorage.h>
 #include <HalSystem.h>
@@ -373,6 +377,21 @@ void setupDisplayAndFonts(bool seamless = false) {
   LOG_DBG("MAIN", "Fonts setup");
 }
 
+#ifdef ENABLE_SERIAL_LOG
+// A deep-sleep wake with no USB host has nothing to enumerate. The USB
+// Serial/JTAG frame counter advances every 1 ms only while a host is attached.
+static bool serialNeedsEnumerationStall() {
+#if FREEINK_DEVICE_X4PRO && !defined(SIMULATOR) && SOC_USB_SERIAL_JTAG_SUPPORTED
+  if (esp_sleep_get_wakeup_cause() == ESP_SLEEP_WAKEUP_UNDEFINED) return true;
+  const uint32_t first = REG_READ(USB_SERIAL_JTAG_FRAM_NUM_REG) & USB_SERIAL_JTAG_SOF_FRAME_INDEX;
+  delay(3);
+  return (REG_READ(USB_SERIAL_JTAG_FRAM_NUM_REG) & USB_SERIAL_JTAG_SOF_FRAME_INDEX) != first;
+#else
+  return true;
+#endif
+}
+#endif
+
 void setup() {
   BoardConfig::holdPowerRails();
 
@@ -382,7 +401,8 @@ void setup() {
   // enumeration before we touch the CDC state — otherwise cold boot races
   // and the host has to be physically replugged for logs to flow. Warm reboot
   // worked without the delay because USB was already enumerated.
-  delay(250);
+  // Battery deep-sleep wakes skip it (see serialNeedsEnumerationStall).
+  if (serialNeedsEnumerationStall()) delay(250);
   Serial.begin(115200);
 #if LOG_SERIAL_HAS_TX_TIMEOUT
   logSerial.setTxTimeoutMs(1);  // This is a load-bearing 1. Do not modify.

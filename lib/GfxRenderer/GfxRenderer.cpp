@@ -2032,11 +2032,12 @@ int GfxRenderer::getTextAdvanceX(const int fontId, const char* text, EpdFontFami
   text = resolveVisualText(text, visual, BidiUtils::BidiBaseDir::AUTO);
 
   // Advance table fast-path for SD card fonts during layout.
-  // No kerning/ligature lookup — consistent with previous metadataOnly behavior
-  // where kern/lig data was not loaded.
+  // Mirrors drawText: resident ligatures are applied and each advance is snapped
+  // per glyph, so measured width matches drawn width. Kerning is not measured:
+  // the kern matrix is not resident during layout and would cost SD reads.
   auto sdIt = sdCardFonts_.find(resolvedFontId);
   if (sdIt != sdCardFonts_.end() && sdIt->second->hasAdvanceTable()) {
-    int32_t widthFP = 0;
+    int widthPx = 0;
     const bool isSupSub = (style & (EpdFontFamily::SUP | EpdFontFamily::SUB)) != 0;
     const uint8_t styleIdx = resolveSdCardStyle(*sdIt->second, style);
     const auto fontIt = fontMap.find(resolvedFontId);
@@ -2050,14 +2051,16 @@ int GfxRenderer::getTextAdvanceX(const int fontId, const char* text, EpdFontFami
       if (BidiUtils::isTransparentMark(cp)) {
         continue;
       }
+      if (utf8IsCombiningMark(cp)) continue;  // zero-advance overlay in drawText
+      cp = font.applyLigatures(cp, text, style);
       int32_t advFP = sdIt->second->getAdvance(cp, styleIdx);
-      if (advFP == 0 && !utf8IsCombiningMark(cp)) {
+      if (advFP == 0) {
         const EpdGlyph* glyph = font.getGlyph(cp, style);
         advFP = glyph ? glyph->advanceX : 0;
       }
-      widthFP += isSupSub ? (advFP + 1) / 2 : advFP;
+      widthPx += fp4::toPixel(isSupSub ? (advFP + 1) / 2 : advFP);
     }
-    return fp4::toPixel(widthFP);
+    return widthPx;
   }
 
   const auto fontIt = fontMap.find(resolvedFontId);

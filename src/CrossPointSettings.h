@@ -302,6 +302,10 @@ class CrossPointSettings : public PersistableStore<CrossPointSettings> {
   uint8_t guideReadingEnabled = 0;
   uint8_t forceParagraphIndents = 0;
   uint8_t capWordGaps = 0;
+  // JSON/web-only reader options (default off): HALF refresh on the first page of a new
+  // chapter; top margin = max(screen margin, top bar) like the bottom instead of the sum.
+  uint8_t fullRefreshOnChapter = 0;
+  uint8_t compactTopMargin = 0;
   // SD card font family name (empty = use built-in fontFamily)
   char sdFontFamilyName[32] = "";
   // Dictionary folder name under /dictionaries (empty = no dictionary)

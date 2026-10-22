@@ -335,6 +335,12 @@ inline std::vector<SettingInfo> getSettingsList(const SdCardFontRegistry* regist
         SettingInfo::Toggle(StrId::STR_MOVE_FINISHED_TO_READ, &CrossPointSettings::moveFinishedToReadFolder,
                             "moveFinishedToReadFolder", StrId::STR_CAT_SYSTEM),
 
+        // Reader refresh/margin options: persisted + web-exposed, category-less so they
+        // stay off the on-device Settings screen.
+        SettingInfo::Toggle(StrId::STR_FULL_REFRESH_ON_CHAPTER, &CrossPointSettings::fullRefreshOnChapter,
+                            "fullRefreshOnChapter"),
+        SettingInfo::Toggle(StrId::STR_COMPACT_TOP_MARGIN, &CrossPointSettings::compactTopMargin, "compactTopMargin"),
+
         // OPDS download folder: persisted + web-exposed, but category-less so it
         // is hidden from the on-device Settings screen (edited via OPDS UI).
         SettingInfo::String(StrId::STR_OPDS_DOWNLOAD_FOLDER, &SETTINGS.opdsDownloadFolder[0],

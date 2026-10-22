@@ -1289,7 +1289,6 @@ void EpubReaderActivity::render(RenderLock&& lock) {
   int orientedMarginTop, orientedMarginRight, orientedMarginBottom, orientedMarginLeft;
   renderer.getOrientedViewableTRBL(&orientedMarginTop, &orientedMarginRight, &orientedMarginBottom,
                                    &orientedMarginLeft);
-  orientedMarginTop += SETTINGS.screenMargin;
   orientedMarginLeft += SETTINGS.screenMargin;
   orientedMarginRight += SETTINGS.screenMargin;
 
@@ -1307,7 +1306,9 @@ void EpubReaderActivity::render(RenderLock&& lock) {
 
   // Reserve viewport space for the top status bar, mirroring the bottom bar's reservation above.
   const uint8_t topStatusBarHeight = UITheme::getInstance().getStatusBarHeight(CrossPointSettings::Edge::TOP);
-  orientedMarginTop += topStatusBarHeight;
+  // Default: margin + bar, as before. Compact Top Margin mirrors the bottom's max().
+  orientedMarginTop += SETTINGS.compactTopMargin ? std::max(SETTINGS.screenMargin, topStatusBarHeight)
+                                                 : SETTINGS.screenMargin + topStatusBarHeight;
 
   const uint16_t viewportWidth = renderer.getScreenWidth() - orientedMarginLeft - orientedMarginRight;
   const uint16_t viewportHeight = renderer.getScreenHeight() - orientedMarginTop - orientedMarginBottom;
@@ -1321,6 +1322,7 @@ void EpubReaderActivity::render(RenderLock&& lock) {
     const auto filepath = epub->getSpineItem(currentSpineIndex).href;
     LOG_DBG("ERS", "Loading file: %s, index: %d", filepath.c_str(), currentSpineIndex);
     section = std::unique_ptr<Section>(new Section(epub, currentSpineIndex, renderer));
+    if (SETTINGS.fullRefreshOnChapter) pagesUntilFullRefresh = 1;
     // Fresh section, fresh chance: a failed lazy extension start in a previous
     // section must not suppress watermark-triggered rebuilds for this one.
     partialRebuildStartFailed = false;

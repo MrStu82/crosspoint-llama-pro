@@ -57,6 +57,9 @@ class ParsedText {
   bool forceParagraphIndents;
   bool isNaturalAlign;
   bool hasRtlWord;
+  // Set once a line has been extracted; later soft-flush chunks of the same
+  // paragraph must not re-apply the first-line indent.
+  bool firstLineEmitted = false;
   std::vector<std::string> reorderedWordsScratch;
   std::vector<EpdFontFamily::Style> reorderedStylesScratch;
   std::vector<uint16_t> reorderedWidthsScratch;

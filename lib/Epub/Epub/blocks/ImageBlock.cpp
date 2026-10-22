@@ -34,12 +34,14 @@ bool ImageBlock::imageExists() const { return Storage.exists(imagePath.c_str());
 namespace {
 
 std::string getCachePath(const std::string& imagePath) {
-  // Replace extension with .pxc (pixel cache)
+  // Replace extension with the pixel-cache extension. The file has no version
+  // field, so the extension is the version: ".px2" = all20 dither/downscale.
+  static constexpr const char* PIXEL_CACHE_EXT = ".px2";
   size_t dotPos = imagePath.rfind('.');
   if (dotPos != std::string::npos) {
-    return imagePath.substr(0, dotPos) + ".pxc";
+    return imagePath.substr(0, dotPos) + PIXEL_CACHE_EXT;
   }
-  return imagePath + ".pxc";
+  return imagePath + PIXEL_CACHE_EXT;
 }
 
 bool readValidCacheHeader(HalFile& cacheFile, const int expectedWidth, const int expectedHeight, uint16_t& cachedWidth,

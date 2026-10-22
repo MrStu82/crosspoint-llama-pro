@@ -944,20 +944,33 @@ std::vector<size_t> ParsedText::computeLineBreaks(const GfxRenderer& renderer, c
     }
   }
 
-  const size_t totalWordCount = words.size();
+  std::vector<size_t> lineBreakIndices;
+  appendBalancedLineBreaks(renderer, fontId, pageWidth, firstLineIndent, wordWidths, continuesVec, noSpaceBeforeVec, 0,
+                           words.size(), lineBreakIndices);
+  return lineBreakIndices;
+}
 
-  // DP table to store the minimum badness (cost) of lines starting at index i
-  std::vector<int> dp(totalWordCount);
+// Minimum-squared-slack breaks for words [from, to), appended as next-line start indices. The line ending
+// at 'to' is free only when it is the paragraph's last line; otherwise it is costed like any other.
+void ParsedText::appendBalancedLineBreaks(const GfxRenderer& renderer, const int fontId, const int pageWidth,
+                                          const int firstLineIndent, const std::vector<uint16_t>& wordWidths,
+                                          const std::vector<bool>& continuesVec,
+                                          const std::vector<bool>& noSpaceBeforeVec, const size_t from,
+                                          const size_t to, std::vector<size_t>& lineBreakIndices) const {
+  if (from >= to) {
+    return;
+  }
+  const size_t totalWordCount = to;
+  const bool lastLineFree = to == words.size();
+
+  // DP table to store the minimum badness (cost) of lines starting at index i (offset by 'from')
+  std::vector<int> dp(to - from);
   // 'ans[i]' stores the index 'j' of the *last word* in the optimal line starting at 'i'
-  std::vector<size_t> ans(totalWordCount);
+  std::vector<size_t> ans(to - from);
 
-  // Base Case
-  dp[totalWordCount - 1] = 0;
-  ans[totalWordCount - 1] = totalWordCount - 1;
-
-  for (int i = totalWordCount - 2; i >= 0; --i) {
+  for (int i = static_cast<int>(totalWordCount) - 1; i >= static_cast<int>(from); --i) {
     int currlen = 0;
-    dp[i] = MAX_COST;
+    dp[i - from] = MAX_COST;
 
     // First line has reduced width due to text-indent
     const int effectivePageWidth = i == 0 ? pageWidth - firstLineIndent : pageWidth;
@@ -997,12 +1010,13 @@ std::vector<size_t> ParsedText::computeLineBreaks(const GfxRenderer& renderer, c
       }
 
       int cost;
-      if (j == totalWordCount - 1) {
+      if (j == totalWordCount - 1 && lastLineFree) {
         cost = 0;  // Last line
       } else {
         const int remainingSpace = effectivePageWidth - currlen;
+        const int rest = j + 1 < totalWordCount ? dp[j + 1 - from] : 0;
         // Use long long for the square to prevent overflow
-        const long long cost_ll = static_cast<long long>(remainingSpace) * remainingSpace + dp[j + 1];
+        const long long cost_ll = static_cast<long long>(remainingSpace) * remainingSpace + rest;
 
         if (cost_ll > MAX_COST) {
           cost = MAX_COST;
@@ -1013,31 +1027,30 @@ std::vector<size_t> ParsedText::computeLineBreaks(const GfxRenderer& renderer, c
 
       // Favor longer lines when line-breaking costs are equal, to avoid unnecessary short lines in Chinese and Japanese
       // text.
-      if (cost <= dp[i]) {
-        dp[i] = cost;
-        ans[i] = j;  // j is the index of the last word in this optimal line
+      if (cost <= dp[i - from]) {
+        dp[i - from] = cost;
+        ans[i - from] = j;  // j is the index of the last word in this optimal line
       }
     }
 
     // Handle oversized word: if no valid configuration found, force single-word line
     // This prevents cascade failure where one oversized word breaks all preceding words
-    if (dp[i] == MAX_COST) {
-      ans[i] = i;  // Just this word on its own line
+    if (dp[i - from] == MAX_COST) {
+      ans[i - from] = i;  // Just this word on its own line
       // Inherit cost from next word to allow subsequent words to find valid configurations
       if (i + 1 < static_cast<int>(totalWordCount)) {
-        dp[i] = dp[i + 1];
+        dp[i - from] = dp[i + 1 - from];
       } else {
-        dp[i] = 0;
+        dp[i - from] = 0;
       }
     }
   }
 
   // Stores the index of the word that starts the next line (last_word_index + 1)
-  std::vector<size_t> lineBreakIndices;
-  size_t currentWordIndex = 0;
+  size_t currentWordIndex = from;
 
   while (currentWordIndex < totalWordCount) {
-    size_t nextBreakIndex = ans[currentWordIndex] + 1;
+    size_t nextBreakIndex = ans[currentWordIndex - from] + 1;
 
     // Safety check: prevent infinite loop if nextBreakIndex doesn't advance
     if (nextBreakIndex <= currentWordIndex) {
@@ -1048,8 +1061,6 @@ std::vector<size_t> ParsedText::computeLineBreaks(const GfxRenderer& renderer, c
     lineBreakIndices.push_back(nextBreakIndex);
     currentWordIndex = nextBreakIndex;
   }
-
-  return lineBreakIndices;
 }
 
 // Builds break indices while opportunistically splitting the word that would overflow the current line.
@@ -1059,7 +1070,9 @@ std::vector<size_t> ParsedText::computeHyphenatedLineBreaks(const GfxRenderer& r
                                                             std::vector<bool>& noSpaceBeforeVec) {
   const int firstLineIndent = resolveFirstLineIndent(true, renderer, fontId);
 
-  std::vector<size_t> lineBreakIndices;
+  // Line ends after a split prefix. The greedy pass only chooses where words split; those
+  // breaks are fixed, and the lines between them are re-chosen by the DP below.
+  std::vector<size_t> splitBreaks;
   size_t currentIndex = 0;
   bool isFirstLine = true;
 
@@ -1102,6 +1115,7 @@ std::vector<size_t> ParsedText::computeHyphenatedLineBreaks(const GfxRenderer& r
         // Prefix now fits; append it to this line and move to next line
         lineWidth += spacing + wordWidths[currentIndex];
         ++currentIndex;
+        splitBreaks.push_back(currentIndex);
         break;
       }
 
@@ -1120,10 +1134,19 @@ std::vector<size_t> ParsedText::computeHyphenatedLineBreaks(const GfxRenderer& r
       --currentIndex;
     }
 
-    lineBreakIndices.push_back(currentIndex);
     isFirstLine = false;
   }
 
+  // A split remainder sits after an ordinary word gap, so the DP must never rejoin it to its
+  // prefix: each split break closes a DP segment.
+  std::vector<size_t> lineBreakIndices;
+  splitBreaks.push_back(words.size());
+  size_t segmentStart = 0;
+  for (const size_t segmentEnd : splitBreaks) {
+    appendBalancedLineBreaks(renderer, fontId, pageWidth, firstLineIndent, wordWidths, continuesVec, noSpaceBeforeVec,
+                             segmentStart, segmentEnd, lineBreakIndices);
+    segmentStart = segmentEnd;
+  }
   return lineBreakIndices;
 }
 

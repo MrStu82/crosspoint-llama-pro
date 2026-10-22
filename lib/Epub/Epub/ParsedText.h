@@ -84,6 +84,10 @@ class ParsedText {
   std::vector<size_t> computeLineBreaks(const GfxRenderer& renderer, int fontId, int pageWidth,
                                         std::vector<uint16_t>& wordWidths, std::vector<bool>& continuesVec,
                                         std::vector<bool>& noSpaceBeforeVec);
+  void appendBalancedLineBreaks(const GfxRenderer& renderer, int fontId, int pageWidth, int firstLineIndent,
+                                const std::vector<uint16_t>& wordWidths, const std::vector<bool>& continuesVec,
+                                const std::vector<bool>& noSpaceBeforeVec, size_t from, size_t to,
+                                std::vector<size_t>& lineBreakIndices) const;
   std::vector<size_t> computeHyphenatedLineBreaks(const GfxRenderer& renderer, int fontId, int pageWidth,
                                                   std::vector<uint16_t>& wordWidths, std::vector<bool>& continuesVec,
                                                   std::vector<bool>& noSpaceBeforeVec);

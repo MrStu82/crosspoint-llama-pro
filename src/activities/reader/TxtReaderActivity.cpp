@@ -213,7 +213,7 @@ void TxtReaderActivity::initializeReader() {
 
   viewportWidth = renderer.getScreenWidth() - cachedOrientedMarginLeft - cachedOrientedMarginRight;
   const int viewportHeight = renderer.getScreenHeight() - cachedOrientedMarginTop - cachedOrientedMarginBottom;
-  const int lineHeight = renderer.getLineHeight(cachedFontId);
+  const int lineHeight = renderer.getLineHeight(cachedFontId, SETTINGS.getReaderLineCompression());
 
   linesPerPage = viewportHeight / lineHeight;
   if (linesPerPage < 1) linesPerPage = 1;
@@ -473,7 +473,7 @@ void TxtReaderActivity::render(RenderLock&&) {
 }
 
 void TxtReaderActivity::renderPage() {
-  const int lineHeight = renderer.getLineHeight(cachedFontId);
+  const int lineHeight = renderer.getLineHeight(cachedFontId, SETTINGS.getReaderLineCompression());
   const int contentWidth = viewportWidth;
 
   // Render text lines with alignment

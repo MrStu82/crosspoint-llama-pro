@@ -317,7 +317,8 @@ void TextSettingsActivity::render(RenderLock&&) {
       constexpr int STYLE_ROWS = static_cast<int>(StyleRow::Count);
       static constexpr StrId ROW_NAME_IDS[STYLE_ROWS] = {
           StrId::STR_FOCUS_READING, StrId::STR_GUIDE_DOTS, StrId::STR_FORCE_PARAGRAPH_INDENTS,
-          StrId::STR_HYPHENATION, StrId::STR_EMBEDDED_STYLE, StrId::STR_TEXT_AA};
+          StrId::STR_HYPHENATION, StrId::STR_EMBEDDED_STYLE, StrId::STR_TEXT_AA,
+          StrId::STR_DARKER_TEXT};
       GUI.drawList(
           renderer, listRect, STYLE_ROWS, selectedItem,
           [](int index) { return std::string(I18N.get(ROW_NAME_IDS[index])); }, nullptr, nullptr,
@@ -501,6 +502,9 @@ void TextSettingsActivity::confirmStyleRow(int row) {
     case StyleRow::AntiAliasing:
       SETTINGS.textAntiAliasing = !SETTINGS.textAntiAliasing;
       break;
+    case StyleRow::DarkerText:
+      SETTINGS.darkerText = !SETTINGS.darkerText;
+      break;
 
     default:
       return;
@@ -523,6 +527,8 @@ std::string TextSettingsActivity::styleValueText(int row) const {
       return SETTINGS.embeddedStyle ? tr(STR_STATE_ON) : tr(STR_STATE_OFF);
     case StyleRow::AntiAliasing:
       return SETTINGS.textAntiAliasing ? tr(STR_STATE_ON) : tr(STR_STATE_OFF);
+    case StyleRow::DarkerText:
+      return SETTINGS.darkerText ? tr(STR_STATE_ON) : tr(STR_STATE_OFF);
 
     default:
       return "";
@@ -535,7 +541,7 @@ bool TextSettingsActivity::focusedRowHasNoPreview() const {
   if (selectedIndex() == 0 || tab_ != Tab::Style) return false;
   const StyleRow row = static_cast<StyleRow>(selectedIndex() - 1);
   return row == StyleRow::GuideDots || row == StyleRow::ForceIndents || row == StyleRow::Hyphenation ||
-         row == StyleRow::EmbeddedStyle || row == StyleRow::AntiAliasing;
+         row == StyleRow::EmbeddedStyle || row == StyleRow::AntiAliasing || row == StyleRow::DarkerText;
 }
 
 void TextSettingsActivity::switchTab(int direction) {

@@ -516,6 +516,8 @@ static void renderCharImpl(const GfxRenderer& renderer, GfxRenderer::RenderMode 
           if (renderMode == GfxRenderer::BW && bmpVal < 3) {
             // Black (also paints over the grays in BW mode)
             renderer.drawPixel(screenX, screenY, pixelState);
+          } else if (bmpVal == 1 && renderer.isDarkerText()) {
+            // Darker text: dark-grey edge stays black from the BW pass
           } else if (renderMode == GfxRenderer::GRAYSCALE_MSB && (bmpVal == 1 || bmpVal == 2)) {
             // Light gray (also mark the MSB if it's going to be a dark gray too)
             // Dedicated X3 gray LUTs now provide proper 4-level gray on both devices

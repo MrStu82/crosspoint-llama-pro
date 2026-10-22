@@ -45,6 +45,7 @@ class GfxRenderer {
   RenderMode renderMode;
   Orientation orientation;
   bool fadingFix;
+  bool darkerText = false;
   uint8_t* frameBuffer = nullptr;
   uint16_t panelWidth = HalDisplay::DISPLAY_WIDTH;
   uint16_t panelHeight = HalDisplay::DISPLAY_HEIGHT;
@@ -196,6 +197,9 @@ class GfxRenderer {
 
   // Fading fix control
   void setFadingFix(const bool enabled) { fadingFix = enabled; }
+  // Darker text: anti-aliased glyphs keep dark-grey edge pixels black
+  void setDarkerText(const bool enabled) { darkerText = enabled; }
+  bool isDarkerText() const { return darkerText; }
 
   // Screen ops
   int getScreenWidth() const;

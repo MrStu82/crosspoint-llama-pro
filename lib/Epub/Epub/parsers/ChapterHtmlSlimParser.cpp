@@ -52,7 +52,7 @@ constexpr uint8_t TABLE_ROW_SEPARATOR_THICKNESS = 1;
 constexpr int16_t TABLE_MIN_CELL_WIDTH_LINE_HEIGHTS = 3;
 
 constexpr const char* HEADER_TAGS[] = {"h1", "h2", "h3", "h4", "h5", "h6"};
-constexpr const char* BLOCK_TAGS[] = {"p", "li", "div", "br", "blockquote", "ul", "ol"};
+constexpr const char* BLOCK_TAGS[] = {"p", "li", "div", "br", "blockquote", "ul", "ol", "pre"};
 constexpr const char* BOLD_TAGS[] = {"b", "strong"};
 constexpr const char* ITALIC_TAGS[] = {"i", "em"};
 constexpr const char* UNDERLINE_TAGS[] = {"u", "ins"};
@@ -382,8 +382,64 @@ void ChapterHtmlSlimParser::flushPartWordBuffer() {
 }
 
 // start a new text block if needed
+void ChapterHtmlSlimParser::breakLine() {
+  if (partWordBufferIndex > 0) {
+    // flush word preceding <br/> to currentTextBlock before calling startNewTextBlock
+    flushPartWordBuffer();
+  }
+  // A <br> after text is a line break: start the next block with the container's
+  // vertical margins stripped, matching browsers, which never apply paragraph
+  // margins at a <br>. This is what keeps <br>-per-paragraph books (common CJK
+  // web-novel formatting) from re-adding container spacing at every paragraph
+  // and collapsing page capacity.
+  // A <br> on an empty block (consecutive <br>s, or a standalone <br> between
+  // blocks) is a scene-break separator: keep the container margins so deposited
+  // vertical spacing survives. Either way the block is tagged so that if it
+  // stays empty, startNewTextBlock injects a full line-height gap when the next
+  // block opens; once text follows the tag is inert.
+  // Style comes from the block style stack, not the current block, so a closed
+  // element's style can't leak through (#2679).
+  BlockStyle brStyle = blockStyleStack.empty() ? BlockStyle() : blockStyleStack.back();
+  if (currentTextBlock && !currentTextBlock->isEmpty()) {
+    brStyle = brStyle.withoutTop().withoutBottom();
+    // A line after <br> continues the paragraph: no first-line indent.
+    brStyle.textIndent = 0;
+    brStyle.textIndentDefined = true;
+  }
+  brStyle.fromBrElement = true;
+  startNewTextBlock(brStyle);
+}
+
+// Emits a visible space as its own token that the line breaker may not split from the
+// following word (U+00A0 / U+202F, and preserved spaces in white-space: pre).
+void ChapterHtmlSlimParser::emitNoBreakSpace(const uint32_t visibleOffset, const bool attachToPrevious) {
+  if (partWordBufferIndex > 0) {
+    flushPartWordBuffer();
+  }
+  partWordBuffer[0] = ' ';
+  partWordBuffer[1] = '\0';
+  partWordBufferIndex = 1;
+  partWordVisibleOffset = visibleOffset;
+  nextWordContinues = attachToPrevious;
+  flushPartWordBuffer();
+  nextWordContinues = true;  // Next real word attaches to this space (no break).
+}
+
+void ChapterHtmlSlimParser::flushPendingNewlines() {
+  const int n = pendingNewlines;
+  pendingNewlines = 0;
+  for (int i = 0; i < n; i++) {
+    breakLine();
+  }
+  if (n > 0) {
+    preInSpaceRun = false;
+    preLastNbsp = false;
+  }
+}
+
 void ChapterHtmlSlimParser::startNewTextBlock(const BlockStyle& blockStyle) {
   nextWordContinues = false;  // New block = new paragraph, no continuation
+  pendingNewlines = 0;
   if (currentTextBlock) {
     // already have a text block running and it is empty - just reuse it
     if (currentTextBlock->isEmpty()) {
@@ -1372,31 +1428,7 @@ void XMLCALL ChapterHtmlSlimParser::startElement(void* userData, const XML_Char*
     self->updateEffectiveInlineStyle();
   } else if (matches(name, BLOCK_TAGS, std::size(BLOCK_TAGS))) {
     if (strcmp(name, "br") == 0) {
-      if (self->partWordBufferIndex > 0) {
-        // flush word preceding <br/> to currentTextBlock before calling startNewTextBlock
-        self->flushPartWordBuffer();
-      }
-      // A <br> after text is a line break: start the next block with the container's
-      // vertical margins stripped, matching browsers, which never apply paragraph
-      // margins at a <br>. This is what keeps <br>-per-paragraph books (common CJK
-      // web-novel formatting) from re-adding container spacing at every paragraph
-      // and collapsing page capacity.
-      // A <br> on an empty block (consecutive <br>s, or a standalone <br> between
-      // blocks) is a scene-break separator: keep the container margins so deposited
-      // vertical spacing survives. Either way the block is tagged so that if it
-      // stays empty, startNewTextBlock injects a full line-height gap when the next
-      // block opens; once text follows the tag is inert.
-      // Style comes from the block style stack, not the current block, so a closed
-      // element's style can't leak through (#2679).
-      BlockStyle brStyle = self->blockStyleStack.back();
-      if (self->currentTextBlock && !self->currentTextBlock->isEmpty()) {
-        brStyle = brStyle.withoutTop().withoutBottom();
-        // A line after <br> continues the paragraph: no first-line indent.
-        brStyle.textIndent = 0;
-        brStyle.textIndentDefined = true;
-      }
-      brStyle.fromBrElement = true;
-      self->startNewTextBlock(brStyle);
+      self->breakLine();
     } else {
       self->currentCssStyle = cssStyle;
       const auto accumulated = self->blockStyleStack.back().getCombinedBlockStyle(userAlignmentBlockStyle,
@@ -1534,6 +1566,18 @@ void XMLCALL ChapterHtmlSlimParser::startElement(void* userData, const XML_Char*
     }
   }
 
+  if (self->preserveWsUntilDepth == INT_MAX) {
+    const bool isPre = strcmp(name, "pre") == 0;
+    if (isPre || cssStyle.whiteSpace != CssWhiteSpace::Normal) {
+      self->preserveWsUntilDepth = self->depth;
+      self->preserveSpaces = isPre || cssStyle.whiteSpace == CssWhiteSpace::Pre;
+      self->dropLeadingNewline = isPre;
+      self->preInSpaceRun = false;
+      self->preLastNbsp = false;
+      self->pendingNewlines = 0;
+    }
+  }
+
   // Unprocessed tag, just increasing depth and continue forward
   self->depth += 1;
 }
@@ -1629,6 +1673,45 @@ void XMLCALL ChapterHtmlSlimParser::characterData(void* userData, const XML_Char
       nextCodepointOffset++;
     }
 
+    if (self->preserveWsUntilDepth != INT_MAX) {
+      const bool dropNewline = self->dropLeadingNewline && s[i] == '\n';
+      self->dropLeadingNewline = false;
+      if (s[i] == '\r' || dropNewline) {
+        continue;
+      }
+      if (s[i] == '\n') {
+        if (self->partWordBufferIndex > 0) {
+          self->flushPartWordBuffer();
+        }
+        self->pendingNewlines++;
+        self->preInSpaceRun = false;
+        self->preLastNbsp = false;
+        continue;
+      }
+      self->flushPendingNewlines();
+      if (self->preserveSpaces && (s[i] == ' ' || s[i] == '\t')) {
+        if (self->partWordBufferIndex > 0) {
+          self->flushPartWordBuffer();
+        }
+        const int count = s[i] == '\t' ? 4 : 1;
+        for (int k = 0; k < count; k++) {
+          const bool atLineStart = !self->currentTextBlock || self->currentTextBlock->isEmpty();
+          if (!self->preInSpaceRun && !atLineStart) {
+            self->nextWordContinues = false;  // first space after a word: ordinary breakable gap
+          } else {
+            self->emitNoBreakSpace(codepointOffset, self->preLastNbsp);
+            self->preLastNbsp = true;
+          }
+          self->preInSpaceRun = true;
+        }
+        continue;
+      }
+      if (!isWhitespace(s[i])) {
+        self->preInSpaceRun = false;
+        self->preLastNbsp = false;
+      }
+    }
+
     if (isWhitespace(s[i])) {
       // Currently looking at whitespace, if there's anything in the partWordBuffer, flush it
       if (self->partWordBufferIndex > 0) {
@@ -1659,18 +1742,7 @@ void XMLCALL ChapterHtmlSlimParser::characterData(void* userData, const XML_Char
     //   standalone word for hyphenation purposes, so Liang patterns can produce
     //   "200 Quadrat-" / "kilometer" instead of the unusable "200" / "Quadratkilometer".
     if (static_cast<uint8_t>(s[i]) == 0xC2 && i + 1 < len && static_cast<uint8_t>(s[i + 1]) == 0xA0) {
-      if (self->partWordBufferIndex > 0) {
-        self->flushPartWordBuffer();
-      }
-
-      self->partWordBuffer[0] = ' ';
-      self->partWordBuffer[1] = '\0';
-      self->partWordBufferIndex = 1;
-      self->partWordVisibleOffset = codepointOffset;
-      self->nextWordContinues = true;  // Attach space to previous word (no break).
-      self->flushPartWordBuffer();
-
-      self->nextWordContinues = true;  // Next real word attaches to this space (no break).
+      self->emitNoBreakSpace(codepointOffset, true);
 
       i++;  // Skip the second byte (0xA0)
       continue;
@@ -1679,18 +1751,7 @@ void XMLCALL ChapterHtmlSlimParser::characterData(void* userData, const XML_Char
     // U+202F (narrow no-break space) — identical logic to U+00A0 above.
     if (static_cast<uint8_t>(s[i]) == 0xE2 && i + 2 < len && static_cast<uint8_t>(s[i + 1]) == 0x80 &&
         static_cast<uint8_t>(s[i + 2]) == 0xAF) {
-      if (self->partWordBufferIndex > 0) {
-        self->flushPartWordBuffer();
-      }
-
-      self->partWordBuffer[0] = ' ';
-      self->partWordBuffer[1] = '\0';
-      self->partWordBufferIndex = 1;
-      self->partWordVisibleOffset = codepointOffset;
-      self->nextWordContinues = true;
-      self->flushPartWordBuffer();
-
-      self->nextWordContinues = true;
+      self->emitNoBreakSpace(codepointOffset, true);
 
       i += 2;  // Skip the remaining two bytes (0x80 0xAF)
       continue;
@@ -1893,6 +1954,12 @@ void XMLCALL ChapterHtmlSlimParser::endElement(void* userData, const XML_Char* n
   }
 
   self->depth -= 1;
+
+  if (self->depth == self->preserveWsUntilDepth) {
+    // A trailing newline before the close adds no empty line.
+    self->preserveWsUntilDepth = INT_MAX;
+    self->pendingNewlines = 0;
+  }
 
   // Closing a footnote link — create entry from collected text and href
   if (self->insideFootnoteLink && self->depth == self->footnoteLinkDepth) {

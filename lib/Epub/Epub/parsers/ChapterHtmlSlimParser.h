@@ -34,6 +34,15 @@ class ChapterHtmlSlimParser {
   int skipUntilDepth = INT_MAX;
   int boldUntilDepth = INT_MAX;
   int italicUntilDepth = INT_MAX;
+  // <pre> / white-space: pre|pre-wrap|pre-line. Newlines become line breaks; in Pre mode
+  // spaces are kept too: the first space after a word stays an ordinary (breakable) gap,
+  // any further or line-leading spaces become no-break space tokens.
+  int preserveWsUntilDepth = INT_MAX;
+  bool preserveSpaces = false;
+  bool dropLeadingNewline = false;
+  bool preInSpaceRun = false;
+  bool preLastNbsp = false;
+  int pendingNewlines = 0;
   // buffer for building up words from characters, will auto break if longer than this
   // leave one char at end for null pointer
   char partWordBuffer[MAX_WORD_SIZE + 1] = {};
@@ -164,6 +173,9 @@ class ChapterHtmlSlimParser {
   void startNewTextBlock(const BlockStyle& blockStyle);
   void flushPendingAnchor();
   void flushPartWordBuffer();
+  void breakLine();
+  void emitNoBreakSpace(uint32_t visibleOffset, bool attachToPrevious);
+  void flushPendingNewlines();
   void fallbackTableRowToStacked();
   void closeTableCell();
   void finishTableRow();

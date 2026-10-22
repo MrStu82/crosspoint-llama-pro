@@ -435,6 +435,13 @@ void CssParser::parseDeclarationIntoStyle(std::string_view decl, CssStyle& style
     const std::string_view listStyleValue = stripTrailingImportant(value);
     style.listStyleType = iequalsAscii(listStyleValue, "none") ? CssListStyleType::None : CssListStyleType::Disc;
     style.defined.listStyleType = 1;
+  } else if (iequalsAscii(name, "white-space")) {
+    const std::string_view ws = stripTrailingImportant(value);
+    style.whiteSpace = (iequalsAscii(ws, "pre") || iequalsAscii(ws, "pre-wrap") || iequalsAscii(ws, "break-spaces"))
+                           ? CssWhiteSpace::Pre
+                       : iequalsAscii(ws, "pre-line") ? CssWhiteSpace::PreLine
+                                                      : CssWhiteSpace::Normal;
+    style.defined.whiteSpace = 1;
   }
 }
 
@@ -817,6 +824,7 @@ bool CssParser::saveToCache() const {
     writeByte(static_cast<uint8_t>(style.verticalAlign));
     writeByte(static_cast<uint8_t>(style.backgroundBlack ? 1 : 0));
     writeByte(static_cast<uint8_t>(style.listStyleType));
+    writeByte(static_cast<uint8_t>(style.whiteSpace));
 
     // Write defined flags as uint32_t
     uint32_t definedBits = 0;
@@ -840,6 +848,7 @@ bool CssParser::saveToCache() const {
     if (style.defined.verticalAlign) definedBits |= 1 << 17;
     if (style.defined.backgroundBlack) definedBits |= 1 << 18;
     if (style.defined.listStyleType) definedBits |= 1 << 19;
+    if (style.defined.whiteSpace) definedBits |= 1 << 20;
     writeBytes(&definedBits, sizeof(definedBits));
     if (!writeOk) break;
   }
@@ -1046,6 +1055,13 @@ bool CssParser::loadFromCacheOnce(bool& lowMemory) {
     }
     style.listStyleType = static_cast<CssListStyleType>(listStyleTypeVal);
 
+    uint8_t whiteSpaceVal;
+    if (file.read(&whiteSpaceVal, 1) != 1 || whiteSpaceVal > static_cast<uint8_t>(CssWhiteSpace::Pre)) {
+      rulesBySelector_.clear();
+      return false;
+    }
+    style.whiteSpace = static_cast<CssWhiteSpace>(whiteSpaceVal);
+
     // Read defined flags
     uint32_t definedBits = 0;
     if (file.read(&definedBits, sizeof(definedBits)) != sizeof(definedBits)) {
@@ -1072,6 +1088,7 @@ bool CssParser::loadFromCacheOnce(bool& lowMemory) {
     style.defined.verticalAlign = (definedBits & 1 << 17) != 0;
     style.defined.backgroundBlack = (definedBits & 1 << 18) != 0;
     style.defined.listStyleType = (definedBits & 1 << 19) != 0;
+    style.defined.whiteSpace = (definedBits & 1 << 20) != 0;
 
     if (!cacheAllocationAllowed(sizeof(std::pair<const std::string, CssStyle>) + selectorLen + 1)) {
       lowMemory = true;

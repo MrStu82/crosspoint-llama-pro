@@ -75,6 +75,9 @@ enum class CssVerticalAlign : uint8_t { Baseline = 0, Super = 1, Sub = 2 };
 // list-style-type — only None and Disc (bullet) are relevant for rendering
 enum class CssListStyleType : uint8_t { Disc = 0, None = 1 };
 
+// white-space — PreLine keeps newlines; Pre (pre, pre-wrap) also keeps runs of spaces
+enum class CssWhiteSpace : uint8_t { Normal = 0, PreLine = 1, Pre = 2 };
+
 // Bitmask for tracking which properties have been explicitly set
 struct CssPropertyFlags {
   uint32_t textAlign : 1;
@@ -97,6 +100,7 @@ struct CssPropertyFlags {
   uint32_t verticalAlign : 1;
   uint32_t backgroundBlack : 1;
   uint32_t listStyleType : 1;
+  uint32_t whiteSpace : 1;
 
   CssPropertyFlags()
       : textAlign(0),
@@ -118,26 +122,28 @@ struct CssPropertyFlags {
         direction(0),
         verticalAlign(0),
         backgroundBlack(0),
-        listStyleType(0) {}
+        listStyleType(0),
+        whiteSpace(0) {}
 
   [[nodiscard]] bool anySet() const {
     return textAlign || fontStyle || fontWeight || textDecoration || textIndent || marginTop || marginBottom ||
            marginLeft || marginRight || paddingTop || paddingBottom || paddingLeft || paddingRight || imageHeight ||
-           imageWidth || display || direction || verticalAlign || backgroundBlack || listStyleType;
+           imageWidth || display || direction || verticalAlign || backgroundBlack || listStyleType ||
+           whiteSpace;
   }
 
   void clearAll() {
     textAlign = fontStyle = fontWeight = textDecoration = textIndent = 0;
     marginTop = marginBottom = marginLeft = marginRight = 0;
     paddingTop = paddingBottom = paddingLeft = paddingRight = 0;
-    imageHeight = imageWidth = display = direction = verticalAlign = backgroundBlack = listStyleType = 0;
+    imageHeight = imageWidth = display = direction = verticalAlign = backgroundBlack = listStyleType = whiteSpace = 0;
   }
 };
 
-// Cache serializes defined flags as uint32_t with bit indices 0..19.
+// Cache serializes defined flags as uint32_t with bit indices 0..20.
 static_assert(sizeof(CssPropertyFlags) <= sizeof(uint32_t),
               "CssPropertyFlags exceeds 32 bits; update cache read/write in CssParser.cpp");
-static_assert(sizeof(CssPropertyFlags) * 8 >= 20,
+static_assert(sizeof(CssPropertyFlags) * 8 >= 21,
               "CssPropertyFlags has fewer bits than properties; update bitfield widths");
 
 // Represents a collection of CSS style properties
@@ -165,6 +171,7 @@ struct CssStyle {
   CssVerticalAlign verticalAlign = CssVerticalAlign::Baseline;  // vertical-align (super/sub positioning)
   bool backgroundBlack = false;
   CssListStyleType listStyleType = CssListStyleType::Disc;      // list-style-type (Disc or None)
+  CssWhiteSpace whiteSpace = CssWhiteSpace::Normal;
 
   CssPropertyFlags defined;  // Tracks which properties were explicitly set
 
@@ -248,6 +255,10 @@ struct CssStyle {
       listStyleType = base.listStyleType;
       defined.listStyleType = 1;
     }
+    if (base.hasWhiteSpace()) {
+      whiteSpace = base.whiteSpace;
+      defined.whiteSpace = 1;
+    }
   }
 
   [[nodiscard]] bool hasTextAlign() const { return defined.textAlign; }
@@ -270,6 +281,7 @@ struct CssStyle {
   [[nodiscard]] bool hasDirection() const { return defined.direction; }
   [[nodiscard]] bool hasVerticalAlign() const { return defined.verticalAlign; }
   [[nodiscard]] bool hasListStyleType() const { return defined.listStyleType; }
+  [[nodiscard]] bool hasWhiteSpace() const { return defined.whiteSpace; }
 
   void reset() {
     textAlign = CssTextAlign::Left;
@@ -285,6 +297,7 @@ struct CssStyle {
     verticalAlign = CssVerticalAlign::Baseline;
     backgroundBlack = false;
     listStyleType = CssListStyleType::Disc;
+    whiteSpace = CssWhiteSpace::Normal;
     defined.clearAll();
   }
 };

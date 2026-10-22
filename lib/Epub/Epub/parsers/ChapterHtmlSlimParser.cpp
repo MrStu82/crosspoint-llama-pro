@@ -1391,6 +1391,9 @@ void XMLCALL ChapterHtmlSlimParser::startElement(void* userData, const XML_Char*
       BlockStyle brStyle = self->blockStyleStack.back();
       if (self->currentTextBlock && !self->currentTextBlock->isEmpty()) {
         brStyle = brStyle.withoutTop().withoutBottom();
+        // A line after <br> continues the paragraph: no first-line indent.
+        brStyle.textIndent = 0;
+        brStyle.textIndentDefined = true;
       }
       brStyle.fromBrElement = true;
       self->startNewTextBlock(brStyle);

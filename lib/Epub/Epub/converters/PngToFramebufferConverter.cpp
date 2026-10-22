@@ -14,6 +14,7 @@
 
 #include "DirectPixelWriter.h"
 #include "DitherUtils.h"
+#include "DownscaleUtils.h"
 #include "PixelCache.h"
 
 namespace {
@@ -45,6 +46,12 @@ struct PngContext {
   uint8_t* grayLineBuffer{nullptr};
   uint32_t lastYieldMs{0};
   uint8_t* alphaLineBuffer{nullptr};
+
+  // Opaque downscale only: one box-averaged output row, plus per-column sums
+  // of the source rows that fold into the current output row.
+  uint8_t* dstRow{nullptr};
+  uint16_t* rowSum{nullptr};
+  int rowCount{0};
 };
 
 // File I/O callbacks use pFile->fHandle to access the HalFile*,
@@ -233,9 +240,9 @@ int pngDrawCallback(PNGDRAW* pDraw) {
     endDstY = ((visibleSrcY + 1) * ctx->dstHeight) / ctx->visibleHeight;
   }
 
-  if (firstDstY <= ctx->lastDstY) firstDstY = ctx->lastDstY + 1;
-  if (firstDstY >= endDstY || firstDstY >= ctx->dstHeight) return 1;
-  if (endDstY > ctx->dstHeight) endDstY = ctx->dstHeight;
+  int dstWidth = ctx->dstWidth;
+  const bool foldRows = ctx->dstRow && ctx->dstHeight < ctx->visibleHeight;
+  if (!foldRows && firstDstY <= ctx->lastDstY) return 1;
 
   // PNGdec parses tRNS while decoding, after open() returns, so query the
   // transparent color here rather than caching its pre-decode value.
@@ -243,8 +250,30 @@ int pngDrawCallback(PNGDRAW* pDraw) {
   convertLineToGray(pDraw->pPixels, ctx->grayLineBuffer, srcWidth, pDraw->iPixelType, pDraw->iBpp, pDraw->pPalette,
                     pDraw->iHasAlpha, transparentColor, ctx->alphaLineBuffer);
 
+  if (ctx->dstRow) {
+    resampleRowBox(ctx->grayLineBuffer + ctx->cropLeft, ctx->visibleWidth, ctx->dstRow, dstWidth);
+    if (foldRows) {
+      // Average every source row that maps to this output row; emit on the last one.
+      if (ctx->rowCount < 256) {
+        for (int x = 0; x < dstWidth; x++) ctx->rowSum[x] += ctx->dstRow[x];
+        ctx->rowCount++;
+      }
+      const int nextDstY = ((visibleSrcY + 1) * ctx->dstHeight) / ctx->visibleHeight;
+      if (visibleSrcY + 1 < ctx->visibleHeight && nextDstY == firstDstY) return 1;
+      const int n = ctx->rowCount;
+      for (int x = 0; x < dstWidth; x++) {
+        ctx->dstRow[x] = static_cast<uint8_t>((ctx->rowSum[x] + n / 2) / n);
+        ctx->rowSum[x] = 0;
+      }
+      ctx->rowCount = 0;
+    }
+  }
+
+  if (firstDstY <= ctx->lastDstY) firstDstY = ctx->lastDstY + 1;
+  if (firstDstY >= endDstY || firstDstY >= ctx->dstHeight) return 1;
+  if (endDstY > ctx->dstHeight) endDstY = ctx->dstHeight;
+
   // Render scaled rows using Bresenham-style integer stepping (no floating-point division)
-  int dstWidth = ctx->dstWidth;
   int outXBase = ctx->config->x;
   int screenWidth = ctx->screenWidth;
   bool useDithering = ctx->config->useDithering;
@@ -284,7 +313,7 @@ int pngDrawCallback(PNGDRAW* pDraw) {
       if (outX < screenWidth) {
         const uint8_t alpha = ctx->alphaLineBuffer ? ctx->alphaLineBuffer[srcX] : 255;
         if (alpha >= 8 && alpha > alphaThreshold4x4(outX, outY)) {
-          uint8_t gray = ctx->grayLineBuffer[srcX];
+          uint8_t gray = ctx->dstRow ? ctx->dstRow[dstX] : ctx->grayLineBuffer[srcX];
 
           uint8_t ditheredGray;
           if (useDithering) {
@@ -446,6 +475,20 @@ bool PngToFramebufferConverter::decodeToFramebuffer(const std::string& imagePath
   ctx.grayLineBuffer = lineBuffers.get();
   ctx.alphaLineBuffer = retainAlpha ? ctx.grayLineBuffer + grayBufSize : nullptr;
 
+  // Opaque downscales area-average instead of sampling one pixel per output
+  // pixel. Alpha-preserving renders keep the original sampling.
+  std::unique_ptr<uint8_t[]> dstRowBuffer;
+  std::unique_ptr<uint16_t[]> rowSumBuffer;
+  if (!retainAlpha && (ctx.dstWidth < ctx.visibleWidth || ctx.dstHeight < ctx.visibleHeight)) {
+    dstRowBuffer = makeUniqueNoThrow<uint8_t[]>(ctx.dstWidth);
+    rowSumBuffer = makeUniqueNoThrow<uint16_t[]>(ctx.dstWidth);
+    if (dstRowBuffer && rowSumBuffer) {
+      memset(rowSumBuffer.get(), 0, ctx.dstWidth * sizeof(uint16_t));
+      ctx.dstRow = dstRowBuffer.get();
+      ctx.rowSum = rowSumBuffer.get();
+    }
+  }
+
   // Stream the pixel cache to disk. PNGdec delivers source scanlines top to
   // bottom and we emit at most one (downscaled) output row per callback, so the
   // band only needs a single row. Streaming keeps the working set tiny, so
@@ -466,6 +509,8 @@ bool PngToFramebufferConverter::decodeToFramebuffer(const std::string& imagePath
 
   ctx.grayLineBuffer = nullptr;
   ctx.alphaLineBuffer = nullptr;
+  ctx.dstRow = nullptr;
+  ctx.rowSum = nullptr;
 
   if (rc != PNG_SUCCESS) {
     LOG_ERR("PNG", "Decode failed: %d", rc);

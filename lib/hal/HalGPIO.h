@@ -70,6 +70,8 @@ class HalGPIO {
   bool wasAnyPressed() const;
   bool wasReleased(uint8_t buttonIndex) const;
   bool wasAnyReleased() const;
+  // True while a raw button change is still inside the debounce window.
+  bool isDebouncePending() const { return inputMgr.isDebouncePending(); }
   unsigned long getHeldTime() const;
   unsigned long getPowerButtonHeldTime() const;
   bool hasTouch() const;

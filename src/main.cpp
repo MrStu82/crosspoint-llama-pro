@@ -770,7 +770,8 @@ void loop() {
     if (millis() - lastActivityTime >= HalPowerManager::IDLE_POWER_SAVING_MS) {
       // If we've been inactive for a while, increase the delay to save power
       powerManager.setPowerSaving(true);  // Lower CPU frequency after extended inactivity
-      delay(50);
+      // Re-poll quickly while a press is debouncing so it commits on the next sample.
+      delay(gpio.isDebouncePending() ? 5 : 50);
     } else {
       // Short delay to prevent tight loop while still being responsive
       delay(10);

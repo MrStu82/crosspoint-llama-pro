@@ -37,6 +37,9 @@ class FontCacheManager {
     explicit PrewarmScope(FontCacheManager& manager);
     ~PrewarmScope();
     void endScanAndPrewarm();
+    // Keep the prewarmed glyphs after this scope ends; the next scope that scans the
+    // same codepoint set reuses them instead of decompressing again.
+    void retain() { retain_ = true; }
     PrewarmScope(PrewarmScope&& other) noexcept;
     PrewarmScope& operator=(PrewarmScope&&) = delete;
     PrewarmScope(const PrewarmScope&) = delete;
@@ -45,6 +48,7 @@ class FontCacheManager {
    private:
     FontCacheManager* manager_;
     bool active_ = true;
+    bool retain_ = false;
   };
   PrewarmScope createPrewarmScope();
 
@@ -72,4 +76,7 @@ class FontCacheManager {
   uint16_t scanCodepointCount_ = 0;
   uint8_t scanFontCount_ = 0;
   bool scanOverflowWarned_ = false;
+  // Hash of the scanned set whose glyphs are still cached by a retained scope; 0 = none.
+  uint32_t retainedScanKey_ = 0;
+  uint32_t lastScanKey_ = 0;
 };

@@ -186,3 +186,38 @@ TEST(FontCacheManagerTest, CacheReleaseAndScopeCleanupKeepTheirDistinctSemantics
   EXPECT_EQ(1, fallbackFont.releaseResidentCachesCount);
   EXPECT_EQ(1, readerFont.prewarmCallCount);
 }
+
+TEST(FontCacheManagerTest, RetainedScopeIsReusedOnlyForTheSameScan) {
+  SdCardFont font;
+  const std::map<int, EpdFontFamily> noBuiltinFonts;
+  const std::map<int, SdCardFont*> sdFonts{{7, &font}};
+  FontCacheManager manager(noBuiltinFonts, sdFonts);
+
+  {
+    auto scope = manager.createPrewarmScope();
+    manager.recordText("AB", 7, EpdFontFamily::REGULAR);
+    scope.endScanAndPrewarm();
+    scope.retain();
+  }
+  const int clearsAfterRetain = font.clearCacheCount;
+  {
+    auto scope = manager.createPrewarmScope();  // same set: no clear, no second prewarm
+    manager.recordText("BA", 7, EpdFontFamily::REGULAR);
+    scope.endScanAndPrewarm();
+    EXPECT_EQ(clearsAfterRetain, font.clearCacheCount);
+    EXPECT_EQ(1, font.prewarmCallCount);
+  }
+  EXPECT_EQ(clearsAfterRetain + 1, font.clearCacheCount);  // unretained scope frees as before
+  {
+    auto scope = manager.createPrewarmScope();
+    manager.recordText("AB", 7, EpdFontFamily::REGULAR);
+    scope.endScanAndPrewarm();
+    scope.retain();
+  }
+  {
+    auto scope = manager.createPrewarmScope();  // different set: clear, then prewarm
+    manager.recordText("AC", 7, EpdFontFamily::REGULAR);
+    scope.endScanAndPrewarm();
+    EXPECT_EQ(3, font.prewarmCallCount);
+  }
+}

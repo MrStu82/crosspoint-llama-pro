@@ -38,6 +38,7 @@ FontCacheManager::FontCacheManager(const std::map<int, EpdFontFamily>& fontMap,
 void FontCacheManager::setFontDecompressor(FontDecompressor* d) { fontDecompressor_ = d; }
 
 void FontCacheManager::clearCache() {
+  retainedScanKey_ = 0;
   if (fontDecompressor_) fontDecompressor_->clearCache();
   for (auto& [id, font] : sdCardFonts_) {
     font->clearCache();
@@ -45,6 +46,7 @@ void FontCacheManager::clearCache() {
 }
 
 void FontCacheManager::releaseSdFontCaches() {
+  retainedScanKey_ = 0;
   if (fontDecompressor_) fontDecompressor_->clearCache();
   for (auto& [id, font] : sdCardFonts_) {
     font->releaseResidentCaches();
@@ -160,7 +162,9 @@ void FontCacheManager::recordText(const char* text, int fontId, EpdFontFamily::S
 
 FontCacheManager::PrewarmScope::PrewarmScope(FontCacheManager& manager) : manager_(&manager) {
   manager_->scanMode_ = ScanMode::Scanning;
-  manager_->clearCache();
+  // A retained cache is cleared in endScanAndPrewarm() only if this scan differs.
+  if (manager_->retainedScanKey_ == 0) manager_->clearCache();
+  manager_->lastScanKey_ = 0;
   manager_->resetStats();
   manager_->scanCodepointCount_ = 0;
   manager_->scanFontCount_ = 0;
@@ -170,9 +174,31 @@ FontCacheManager::PrewarmScope::PrewarmScope(FontCacheManager& manager) : manage
 
 void FontCacheManager::PrewarmScope::endScanAndPrewarm() {
   manager_->scanMode_ = ScanMode::None;
-  if (manager_->scanCodepointCount_ == 0) return;
+  if (manager_->scanCodepointCount_ == 0) {
+    if (manager_->retainedScanKey_ != 0) manager_->clearCache();
+    return;
+  }
 
   std::sort(manager_->scanCodepoints_, manager_->scanCodepoints_ + manager_->scanCodepointCount_);
+
+  // FNV-1a over the packed set and the slot->font map identifies the glyph set.
+  uint32_t key = 2166136261u;
+  auto mix = [&key](const uint32_t v) {
+    for (int b = 0; b < 32; b += 8) key = (key ^ ((v >> b) & 0xFF)) * 16777619u;
+  };
+  for (uint16_t i = 0; i < manager_->scanCodepointCount_; i++) mix(manager_->scanCodepoints_[i]);
+  for (uint8_t i = 0; i < manager_->scanFontCount_; i++) mix(static_cast<uint32_t>(manager_->scanFontIds_[i]));
+  key |= 1;
+  const bool reuse = manager_->retainedScanKey_ == key;
+  if (!reuse && manager_->retainedScanKey_ != 0) manager_->clearCache();
+  manager_->retainedScanKey_ = 0;
+  manager_->lastScanKey_ = key;
+  if (reuse) {
+    manager_->scanCodepointCount_ = 0;
+    manager_->scanFontCount_ = 0;
+    memset(manager_->scanGroupCounts_, 0, sizeof(manager_->scanGroupCounts_));
+    return;
+  }
 
   uint16_t groupStarts[SCAN_GROUP_COUNT] = {};
   for (uint8_t group = 1; group < SCAN_GROUP_COUNT; group++) {
@@ -208,12 +234,16 @@ void FontCacheManager::PrewarmScope::endScanAndPrewarm() {
 FontCacheManager::PrewarmScope::~PrewarmScope() {
   if (active_) {
     endScanAndPrewarm();  // no-op if already called
-    manager_->clearCache();
+    if (retain_ && manager_->lastScanKey_ != 0) {
+      manager_->retainedScanKey_ = manager_->lastScanKey_;
+    } else {
+      manager_->clearCache();
+    }
   }
 }
 
 FontCacheManager::PrewarmScope::PrewarmScope(PrewarmScope&& other) noexcept
-    : manager_(other.manager_), active_(other.active_) {
+    : manager_(other.manager_), active_(other.active_), retain_(other.retain_) {
   other.active_ = false;
 }
 

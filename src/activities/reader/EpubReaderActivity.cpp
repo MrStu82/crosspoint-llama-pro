@@ -226,6 +226,8 @@ void EpubReaderActivity::onEnter() {
 void EpubReaderActivity::onExit() {
   dwellTracker.pause();
   Activity::onExit();
+  // Drop any glyphs retained by the idle prewarm.
+  if (auto* fcm = renderer.getFontCacheManager()) fcm->clearCache();
 
   if (epub) {
     uint32_t progress = currentSpineIndex >= epub->getSpineItemsCount() ? BookReadingRate::kQ24One : 0;
@@ -459,6 +461,9 @@ void EpubReaderActivity::loop() {
             auto scope = fcm->createPrewarmScope();
             p->render(renderer, SETTINGS.getReaderFontId(), 0, 0);  // scan only, no pixels
             scope.endScanAndPrewarm();
+            // Keep the glyphs for the turn render only while the heap stays above the
+            // render floor; otherwise free them as before.
+            if (ESP.getFreeHeap() > RENDER_MIN_FREE_HEAP) scope.retain();
             LOG_DBG("ERS", "Idle prewarm: page %d in %lums", nextPage, millis() - t0);
           }
         }

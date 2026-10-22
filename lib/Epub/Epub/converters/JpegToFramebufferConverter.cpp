@@ -433,7 +433,12 @@ bool JpegToFramebufferConverter::decodeToFramebuffer(const std::string& imagePat
 
   bool isProgressive = jpeg->getJPEGType() == JPEG_MODE_PROGRESSIVE;
   if (isProgressive) {
-    LOG_INF("JPG", "Progressive JPEG detected - decoding DC coefficients only (lower quality)");
+    // Interim (no progressive decoder yet): count and flag every affected decode so a
+    // book's soft images can be traced to source format from the log.
+    static uint32_t progressiveJpegCount = 0;
+    progressiveJpegCount++;
+    LOG_INF("JPG", "Progressive JPEG #%lu %dx%d decoded DC-only at 1/8 (lower quality): %s",
+            static_cast<unsigned long>(progressiveJpegCount), srcWidth, srcHeight, imagePath.c_str());
   }
 
   // Calculate overall target scale

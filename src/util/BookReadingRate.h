@@ -135,7 +135,7 @@ inline uint32_t renderSpecFingerprint(const Spec& spec, uint32_t orientation,
       spec.extraParagraphSpacing, spec.paragraphAlignment, spec.viewportWidth,
       spec.viewportHeight, spec.hyphenationEnabled, spec.embeddedStyle,
       spec.imageRendering, spec.focusReadingEnabled, spec.guideReadingEnabled,
-      spec.forceParagraphIndents, orientation, hashString(sdFontFamily), pointSize};
+      spec.forceParagraphIndents, spec.capWordGaps, orientation, hashString(sdFontFamily), pointSize};
   for (uint32_t value : values) hash = hashValue(hash, value);
   return hash == 0 ? 1 : hash;
 }

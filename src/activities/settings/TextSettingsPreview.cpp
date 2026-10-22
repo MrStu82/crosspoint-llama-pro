@@ -36,7 +36,7 @@ void relayout(PreviewLayout& layout, const GfxRenderer& renderer, int fontId, in
 
   ParsedText parsed(SETTINGS.extraParagraphSpacing != 0, SETTINGS.hyphenationEnabled != 0,
                     SETTINGS.focusReadingEnabled != 0, SETTINGS.guideReadingEnabled != 0,
-                    SETTINGS.forceParagraphIndents != 0, style);
+                    SETTINGS.forceParagraphIndents != 0, style, SETTINGS.capWordGaps != 0);
 
   // Feed one space-separated word at a time; addWord handles NFC/CJK/RTL/focus splitting
   const char* text = I18N.get(StrId::STR_FONT_PREVIEW_TEXT);

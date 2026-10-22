@@ -1315,8 +1315,17 @@ void ParsedText::extractLine(const size_t breakIndex, const int pageWidth, const
   // extraEndOffset reserves space for any ruby group at the right edge of the line.
   const int spareSpace = effectivePageWidth - extraStartOffset - extraEndOffset - lineWordWidthSum - totalNaturalGaps;
   int justifyRemainder = 0;
+  // Cap Word Gaps (opt-in): on an LTR line, a per-gap stretch over 2.5 spaces
+  // leaves the line ragged instead. RTL is excluded so its alignment is untouched.
+  const int maxJustifyExtra =
+      (capWordGaps && !blockStyle.isRtl) ? renderer.getSpaceWidth(fontId) * 5 / 2 : std::numeric_limits<int>::max();
+  const auto capJustifyExtra = [&](const int extra) {
+    if (extra <= maxJustifyExtra) return extra;
+    justifyRemainder = 0;
+    return 0;
+  };
   const int justifyExtra = (effectiveAlignment == CssTextAlign::Justify && !isLastLine)
-                               ? computeJustifyExtra(spareSpace, actualGapCount, &justifyRemainder)
+                               ? capJustifyExtra(computeJustifyExtra(spareSpace, actualGapCount, &justifyRemainder))
                                : 0;
   // Per-gap stretch: the first justifyRemainder justifiable gaps get one extra pixel.
   int justifiedGaps = 0;
@@ -1404,7 +1413,8 @@ void ParsedText::extractLine(const size_t breakIndex, const int pageWidth, const
     const int reorderedSpare =
         effectivePageWidth - extraStartOffset - extraEndOffset - reorderedWordWidthSum - reorderedNaturalGaps;
     const int reorderedJustifyExtra = (effectiveAlignment == CssTextAlign::Justify && !isLastLine)
-                                          ? computeJustifyExtra(reorderedSpare, reorderedGapCount, &justifyRemainder)
+                                          ? capJustifyExtra(computeJustifyExtra(reorderedSpare, reorderedGapCount,
+                                                                                &justifyRemainder))
                                           : 0;
 
     const int justifyContribution = (effectiveAlignment == CssTextAlign::Justify && !isLastLine)

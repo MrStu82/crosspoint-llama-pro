@@ -316,7 +316,7 @@ void TextSettingsActivity::render(RenderLock&&) {
     case Tab::Style: {
       constexpr int STYLE_ROWS = static_cast<int>(StyleRow::Count);
       static constexpr StrId ROW_NAME_IDS[STYLE_ROWS] = {
-          StrId::STR_FOCUS_READING, StrId::STR_GUIDE_DOTS, StrId::STR_FORCE_PARAGRAPH_INDENTS,
+          StrId::STR_FOCUS_READING, StrId::STR_GUIDE_DOTS, StrId::STR_FORCE_PARAGRAPH_INDENTS, StrId::STR_CAP_WORD_GAPS,
           StrId::STR_HYPHENATION, StrId::STR_EMBEDDED_STYLE, StrId::STR_TEXT_AA,
           StrId::STR_DARKER_TEXT};
       GUI.drawList(
@@ -493,6 +493,9 @@ void TextSettingsActivity::confirmStyleRow(int row) {
     case StyleRow::ForceIndents:
       SETTINGS.forceParagraphIndents = !SETTINGS.forceParagraphIndents;
       break;
+    case StyleRow::CapWordGaps:
+      SETTINGS.capWordGaps = !SETTINGS.capWordGaps;
+      break;
     case StyleRow::Hyphenation:
       SETTINGS.hyphenationEnabled = !SETTINGS.hyphenationEnabled;
       break;
@@ -521,6 +524,8 @@ std::string TextSettingsActivity::styleValueText(int row) const {
       return SETTINGS.guideReadingEnabled ? tr(STR_STATE_ON) : tr(STR_STATE_OFF);
     case StyleRow::ForceIndents:
       return SETTINGS.forceParagraphIndents ? tr(STR_STATE_ON) : tr(STR_STATE_OFF);
+    case StyleRow::CapWordGaps:
+      return SETTINGS.capWordGaps ? tr(STR_STATE_ON) : tr(STR_STATE_OFF);
     case StyleRow::Hyphenation:
       return SETTINGS.hyphenationEnabled ? tr(STR_STATE_ON) : tr(STR_STATE_OFF);
     case StyleRow::EmbeddedStyle:

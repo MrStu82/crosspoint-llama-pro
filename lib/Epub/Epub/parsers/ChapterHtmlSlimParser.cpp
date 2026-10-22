@@ -425,7 +425,7 @@ void ChapterHtmlSlimParser::startNewTextBlock(const BlockStyle& blockStyle) {
   // block is flushed so the chapter starts on a fresh page.
   flushPendingAnchor();
   currentTextBlock.reset(new ParsedText(extraParagraphSpacing, hyphenationEnabled, focusReadingEnabled, guideReadingEnabled,
-                                  forceParagraphIndents, blockStyle));
+                                  forceParagraphIndents, blockStyle, capWordGaps));
   wordsExtractedInBlock = 0;
   listItemBulletOnly = false;
 }
@@ -884,7 +884,7 @@ void XMLCALL ChapterHtmlSlimParser::startElement(void* userData, const XML_Char*
 
     self->currentTextBlock = makeUniqueNoThrow<ParsedText>(
         self->extraParagraphSpacing, self->hyphenationEnabled, self->focusReadingEnabled,
-        self->guideReadingEnabled, self->forceParagraphIndents, tableCellBlockStyle);
+        self->guideReadingEnabled, self->forceParagraphIndents, tableCellBlockStyle, self->capWordGaps);
     if (!self->currentTextBlock) {
       LOG_ERR("EHP", "OOM: table cell");
       self->skipUntilDepth = self->depth;
@@ -1586,7 +1586,7 @@ void XMLCALL ChapterHtmlSlimParser::characterData(void* userData, const XML_Char
         self->blockStyleStack.empty() ? BlockStyle() : self->blockStyleStack.back().withoutBottom();
     self->currentTextBlock = makeUniqueNoThrow<ParsedText>(
         self->extraParagraphSpacing, self->hyphenationEnabled, self->focusReadingEnabled,
-        self->guideReadingEnabled, self->forceParagraphIndents, flowStyle);
+        self->guideReadingEnabled, self->forceParagraphIndents, flowStyle, self->capWordGaps);
     if (!self->currentTextBlock) {
       LOG_ERR("EHP", "OOM: text block for character data");
       return;
@@ -1942,7 +1942,7 @@ void XMLCALL ChapterHtmlSlimParser::endElement(void* userData, const XML_Char* n
         self->blockStyleStack.empty() ? BlockStyle() : self->blockStyleStack.back().withoutBottom();
     self->currentTextBlock = makeUniqueNoThrow<ParsedText>(
         self->extraParagraphSpacing, self->hyphenationEnabled, self->focusReadingEnabled,
-        self->guideReadingEnabled, self->forceParagraphIndents, flowStyle);
+        self->guideReadingEnabled, self->forceParagraphIndents, flowStyle, self->capWordGaps);
     if (!self->currentTextBlock) {
       LOG_ERR("EHP", "OOM: text block after table");
     }

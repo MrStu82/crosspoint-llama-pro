@@ -55,6 +55,9 @@ class ParsedText {
   bool focusReadingEnabled;
   bool guideReadingEnabled;
   bool forceParagraphIndents;
+  // Opt-in: a justified line whose word gaps would stretch past 2.5 spaces is
+  // set ragged instead (Readability > Cap Word Gaps).
+  bool capWordGaps;
   bool isNaturalAlign;
   bool hasRtlWord;
   // Set once a line has been extracted; later soft-flush chunks of the same
@@ -96,13 +99,15 @@ class ParsedText {
  public:
   explicit ParsedText(const bool extraParagraphSpacing, const bool hyphenationEnabled = false,
                       const bool focusReadingEnabled = false, const bool guideReadingEnabled = false,
-                      const bool forceParagraphIndents = false, const BlockStyle& blockStyle = BlockStyle())
+                      const bool forceParagraphIndents = false, const BlockStyle& blockStyle = BlockStyle(),
+                      const bool capWordGaps = false)
       : blockStyle(blockStyle),
         extraParagraphSpacing(extraParagraphSpacing),
         hyphenationEnabled(hyphenationEnabled),
         focusReadingEnabled(focusReadingEnabled),
         guideReadingEnabled(guideReadingEnabled),
         forceParagraphIndents(forceParagraphIndents),
+        capWordGaps(capWordGaps),
         isNaturalAlign(false),
         hasRtlWord(false) {}
   ~ParsedText() = default;

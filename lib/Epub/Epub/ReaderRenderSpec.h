@@ -23,4 +23,5 @@ struct ReaderRenderSpec {
   bool focusReadingEnabled = false;
   bool guideReadingEnabled = false;
   bool forceParagraphIndents = false;
+  bool capWordGaps = false;
 };

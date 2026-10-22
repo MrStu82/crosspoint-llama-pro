@@ -274,6 +274,8 @@ bool Section::startBuild(const ReaderRenderSpec& spec, const std::function<void(
   }
   buildComplete_ = false;
   builtPageCount_ = 0;
+  keptPage_.reset();
+  keptPageIndex_ = -1;
   // Pages from a loaded partial stay readable (from filePath) while this build writes
   // to the tmp .bin, so availability never drops below the partial's watermark.
   pageCount = partial_ ? partialPageCount_ : 0;
@@ -790,6 +792,12 @@ std::unique_ptr<Page> Section::loadPage(const int page) {
   if (page < 0) {
     return nullptr;
   }
+  if (keptPage_ && !build_) {
+    const bool hit = keptPageIndex_ == page;
+    auto kept = std::move(keptPage_);
+    keptPageIndex_ = -1;
+    if (hit) return kept;
+  }
   if (build_ && page < static_cast<int>(build_->lut.size())) {
     return loadPageDuringBuild(page);
   }
@@ -800,6 +808,12 @@ std::unique_ptr<Page> Section::loadPage(const int page) {
     return nullptr;
   }
   return loadPageAt(page);
+}
+
+void Section::keepPage(const int page, std::unique_ptr<Page> p) {
+  if (build_ || !p) return;
+  keptPage_ = std::move(p);
+  keptPageIndex_ = page;
 }
 
 std::string Section::getTextFromSectionFile() {

@@ -65,6 +65,10 @@ class Section {
   // Parse watermark from the partial's trailer, for estimating the total page count.
   uint32_t partialBytesConsumed_ = 0;
   uint32_t partialTotalBytes_ = 0;
+  // One on-disk page kept from the idle prewarm so the next turn skips the SD reload.
+  // Only filled and served while no build is active; startBuild drops it.
+  std::unique_ptr<Page> keptPage_;
+  int keptPageIndex_ = -1;
   bool finalizeBuild();
   // Write the LUTs/anchor map (and, for a partial, the watermark trailer), patch the
   // header, stamp the version byte, and swap the tmp .bin over filePath.
@@ -117,6 +121,8 @@ class Section {
   // Unified page read: from the active build if it has reached the page, otherwise from
   // the on-disk file (finalized section, or a partial the rebuild hasn't caught up to).
   std::unique_ptr<Page> loadPage(int page);
+  // Hand back a page from loadPage so the next loadPage(page) reuses it (dropped while building).
+  void keepPage(int page, std::unique_ptr<Page> p);
 
   std::string getTextFromSectionFile();
 

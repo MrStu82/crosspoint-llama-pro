@@ -455,7 +455,7 @@ void EpubReaderActivity::loop() {
       idlePrewarmPage = section->currentPage;
       const int nextPage = section->currentPage + 1;
       if (nextPage < static_cast<int>(section->pageCount)) {
-        if (const auto p = section->loadPage(nextPage)) {
+        if (auto p = section->loadPage(nextPage)) {
           if (auto* fcm = renderer.getFontCacheManager()) {
             const auto t0 = millis();
             auto scope = fcm->createPrewarmScope();
@@ -466,6 +466,7 @@ void EpubReaderActivity::loop() {
             if (ESP.getFreeHeap() > RENDER_MIN_FREE_HEAP) scope.retain();
             LOG_DBG("ERS", "Idle prewarm: page %d in %lums", nextPage, millis() - t0);
           }
+          section->keepPage(nextPage, std::move(p));  // the turn render reuses it
         }
       }
     }

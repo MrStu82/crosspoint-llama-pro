@@ -1,5 +1,6 @@
 #include "HalClock.h"
 
+#include <BoardConfig.h>
 #include <Logging.h>
 #include <WiFi.h>
 #include <esp_sntp.h>
@@ -8,7 +9,14 @@
 HalClock halClock;  // Singleton instance
 
 void HalClock::begin() {
+  // Battery deep-sleep wakes skip main's 250 ms boot delay, so the BM8563 can
+  // still NAK right after the rails latch. Retry for up to ~250 ms instead.
+  // Boards without an RTC (rtcAddr 0) fail at once and are not retried.
   _available = _sdkRtc.begin();
+  for (int i = 0; i < 10 && !_available && BoardConfig::ACTIVE.sensors.rtcAddr != 0; ++i) {
+    delay(25);
+    _available = _sdkRtc.begin();
+  }
   LOG_INF("CLK", _available ? "SDK RTC found" : "RTC not found");
 }
 

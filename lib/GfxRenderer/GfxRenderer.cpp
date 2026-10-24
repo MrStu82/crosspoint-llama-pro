@@ -1,6 +1,7 @@
 #include "GfxRenderer.h"
 #include "../../src/util/ReaderDiagnostics.h"
 #include "LineGeometry.h"
+#include "BlockElementFallback.h"
 
 #include <BidiUtils.h>
 #include <BuildScratch.h>
@@ -476,6 +477,22 @@ static void renderCharImpl(const GfxRenderer& renderer, GfxRenderer::RenderMode 
     if (!renderer.glyphIntersectsStrip(gx0, gy0, gx0 + width - 1, gy0 + height - 1)) {
       return;
     }
+  }
+
+  // Missing block element: fill the replacement glyph's box (black, BW pass only) instead of
+  // drawing the U+FFFD diamond. Same box and advance, so layout is unchanged.
+  if (isBlockElement(cp) && !fontFamily.hasCodepoint(cp, style)) {
+    if (renderMode != GfxRenderer::BW) return;
+    for (int glyphY = 0; glyphY < height; glyphY++) {
+      for (int glyphX = 0; glyphX < width; glyphX++) {
+        if constexpr (rotation == TextRotation::Rotated90CW) {
+          renderer.drawPixel(cursorX + fontData->ascender - top + glyphY, cursorY - left - glyphX, pixelState);
+        } else {
+          renderer.drawPixel(cursorX + left + glyphX, cursorY - top + glyphY, pixelState);
+        }
+      }
+    }
+    return;
   }
 
   const uint8_t* bitmap = renderer.getGlyphBitmap(fontData, glyph);

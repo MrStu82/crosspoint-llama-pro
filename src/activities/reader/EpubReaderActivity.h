@@ -81,6 +81,8 @@ class EpubReaderActivity final : public Activity {
   // One-shot guard so reaching end-of-book only increments the finished-books
   // stat once per session, not on every re-render of the EOB screen.
   bool bookFinishedLogged = false;
+  // Set once the End-of-Book screen has written the 100% completion badge.
+  bool completionSaved = false;
 
   // Footnote support
   std::vector<FootnoteEntry> currentPageFootnotes;

@@ -6,6 +6,7 @@
 
 class GfxRenderer;
 class MappedInputManager;
+struct Rect;
 
 // Shared End-of-Book next-book menu for the EPUB and XTC readers. Collects up to
 // MAX_SUGGESTIONS sibling books once per reader session, handles the menu input, and
@@ -45,4 +46,6 @@ class EndOfBookOptions {
   std::atomic<bool> isLoaded{false};
 
   std::string fullPath(size_t index) const;
+  // Suggestion list area; shared by render() and the touch hit-test so they never drift.
+  static Rect listRect(const GfxRenderer& renderer);
 };

@@ -559,6 +559,16 @@ void EpubReaderActivity::loop() {
     pendingReadFolderMove = false;
   }
 
+  // Mark the book complete (home badge / stats read 100%). The end screen returns before
+  // render()'s saveProgress, so the last saved percent was the final page's (<100). Paging
+  // back off the end screen re-saves the real percent via saveProgress; re-arm then.
+  if (atEndOfBook && !completionSaved) {
+    BookProgressBadge::write(epub->getCachePath(), 100);
+    completionSaved = true;
+  } else if (!atEndOfBook) {
+    completionSaved = false;
+  }
+
   const auto touch = ReaderUtils::detectTouchPageTurn(renderer, mappedInput);
   if (ReaderUtils::shouldOpenReaderTools(touch) && section && currentSpineIndex < epub->getSpineItemsCount()) {
     openReaderTools();

@@ -65,14 +65,33 @@ EndOfBookOptions::Action EndOfBookOptions::handleMenuInput(const MappedInputMana
     return Action::LastPage;
   }
 
+  int tx = 0;
+  int ty = 0;
+  // List rows, same touch idiom as EpubReaderBookmarksActivity: touch-down moves the
+  // highlight, a tap on a row opens it (a book, or the Home entry).
+  const int itemCount = static_cast<int>(names.size()) + 1;  // + "Home" entry
+  const Rect list = listRect(input.getRenderer());
+  int tapped = 0;
+  if (input.wasScreenTouchDown(tx, ty) && tx >= list.x && tx < list.x + list.width &&
+      input.wasListItemTouchedDown(tapped, itemCount, selector, list.y, list.height, false)) {
+    if (selector != tapped) {
+      selector = tapped;
+      return Action::Redraw;
+    }
+    return Action::None;
+  }
+  if (input.wasScreenTapped(tx, ty) && tx >= list.x && tx < list.x + list.width &&
+      input.wasListItemTapped(tapped, itemCount, selector, list.y, list.height, false)) {
+    selector = tapped;
+    return openSelected();
+  }
+
   // Bottom button-hint strip, same touch idiom as IntervalSelectionActivity /
   // EpubReaderPercentSelectionActivity: right third mirrors the "Open" hint, giving the
   // Confirm-gated open/select action a touch-reachable equivalent. Left third is left
   // alone here (unlike those screens) since short-press Back above already has a home-key
   // touch path with a distinct meaning (last page, not cancel) that a tap-zone shouldn't
   // shadow.
-  int tx = 0;
-  int ty = 0;
   if (input.wasScreenTapped(tx, ty) && ty >= input.getRenderer().getScreenHeight() - 80 &&
       tx > input.getRenderer().getScreenWidth() * 2 / 3) {
     return openSelected();
@@ -88,7 +107,6 @@ EndOfBookOptions::Action EndOfBookOptions::handleMenuInput(const MappedInputMana
   const auto triggered = [&](const MappedInputManager::Button button) {
     return usePress ? input.wasPressed(button) : input.wasReleased(button);
   };
-  const int itemCount = static_cast<int>(names.size()) + 1;  // + "Home" entry
   if (triggered(MappedInputManager::Button::NavPrevious)) {
     selector = ButtonNavigator::previousIndex(selector, itemCount);  // wraps to the bottom
     return Action::Redraw;
@@ -98,6 +116,15 @@ EndOfBookOptions::Action EndOfBookOptions::handleMenuInput(const MappedInputMana
     return Action::Redraw;
   }
   return Action::None;
+}
+
+Rect EndOfBookOptions::listRect(const GfxRenderer& renderer) {
+  const auto& metrics = UITheme::getInstance().getMetrics();
+  const Rect safe = UITheme::getInstance().getScreenSafeArea(renderer, true, false);
+  const int titleY = safe.y + safe.height / 8;
+  const int subtitleY = titleY + renderer.getLineHeight(UI_12_FONT_ID) + metrics.verticalSpacing;
+  const int listTop = subtitleY + renderer.getLineHeight(UI_10_FONT_ID) + metrics.verticalSpacing * 2;
+  return Rect{safe.x, listTop, safe.width, safe.y + safe.height - listTop - metrics.verticalSpacing};
 }
 
 void EndOfBookOptions::render(GfxRenderer& renderer, const MappedInputManager& input) const {
@@ -119,13 +146,11 @@ void EndOfBookOptions::render(GfxRenderer& renderer, const MappedInputManager& i
   const Rect safe = UITheme::getInstance().getScreenSafeArea(renderer, true, false);
   const int titleY = safe.y + safe.height / 8;
   const int subtitleY = titleY + renderer.getLineHeight(UI_12_FONT_ID) + metrics.verticalSpacing;
-  const int listTop = subtitleY + renderer.getLineHeight(UI_10_FONT_ID) + metrics.verticalSpacing * 2;
 
   UITheme::drawCenteredText(renderer, safe, UI_12_FONT_ID, titleY, tr(STR_END_OF_BOOK), true, EpdFontFamily::BOLD);
   UITheme::drawCenteredText(renderer, safe, UI_10_FONT_ID, subtitleY, tr(STR_EOB_CONTINUE_WITH));
 
-  const int listHeight = safe.y + safe.height - listTop - metrics.verticalSpacing;
-  GUI.drawList(renderer, Rect{safe.x, listTop, safe.width, listHeight}, static_cast<int>(names.size()) + 1, selector,
+  GUI.drawList(renderer, listRect(renderer), static_cast<int>(names.size()) + 1, selector,
                [this](const int index) {
                  return index < static_cast<int>(names.size()) ? displayName(names[index])
                                                                : std::string(tr(STR_EOB_HOME));

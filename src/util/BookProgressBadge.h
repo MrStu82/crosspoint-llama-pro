@@ -21,4 +21,10 @@ void write(const std::string& cachePath, int percent);
 // cached yet (book never opened, or its extension isn't a recognised reader type).
 std::optional<int> read(const std::string& path);
 
+// True on the last page of the last spine item. That page's start-of-page percent is
+// below 100, so readers treat it as complete: a book reopened there shows finished.
+constexpr bool onFinalPage(int spineIndex, int spineCount, int page, int pageCount) {
+  return spineCount > 0 && spineIndex == spineCount - 1 && pageCount > 0 && page >= pageCount - 1;
+}
+
 }  // namespace BookProgressBadge

@@ -39,7 +39,10 @@ inline bool saveProgress(const Epub& epub, int spineIndex, int pageNumber, int p
 
   if (pageCount > 0) {
     const float chapterProgress = static_cast<float>(pageNumber) / static_cast<float>(pageCount);
-    const int percent = static_cast<int>(epub.calculateProgress(spineIndex, chapterProgress) * 100.0f + 0.5f);
+    const int percent =
+        BookProgressBadge::onFinalPage(spineIndex, epub.getSpineItemsCount(), pageNumber, pageCount)
+            ? 100
+            : static_cast<int>(epub.calculateProgress(spineIndex, chapterProgress) * 100.0f + 0.5f);
     BookProgressBadge::write(epub.getCachePath(), percent);
   }
 

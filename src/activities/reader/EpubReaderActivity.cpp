@@ -292,6 +292,9 @@ uint32_t EpubReaderActivity::fineProgressQ24(const int spineIndex, const int pag
   // The end-of-book screen has no laid-out page, so check it before pageCount.
   if (spineIndex >= epub->getSpineItemsCount()) return BookReadingRate::kQ24One;
   if (epub->getBookSize() == 0 || pageCount <= 0) return 0;
+  if (BookProgressBadge::onFinalPage(spineIndex, epub->getSpineItemsCount(), page, pageCount)) {
+    return BookReadingRate::kQ24One;
+  }
   const float chapterProgress = std::clamp(static_cast<float>(page) / static_cast<float>(pageCount), 0.0F, 1.0F);
   return BookReadingRate::progressQ24(epub->calculateProgress(spineIndex, chapterProgress));
 }

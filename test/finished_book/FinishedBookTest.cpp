@@ -95,6 +95,22 @@ int main() {
   assert(inPlace.chapter == "Finished" && inPlace.book == "Finished");
   assert(r.chapter == "Finished" && r.book == "Finished");
   std::printf("PASS finished rows\n");
+
+  // Carl: reopened on the final page (spine 7 of 8, page 9 of 10), never reaching the end screen.
+  // Mirrors saveProgress (badge) and onExit (fineProgressQ24) with the final-page rule.
+  static_assert(BookProgressBadge::onFinalPage(7, 8, 9, 10) && !BookProgressBadge::onFinalPage(7, 8, 8, 10) &&
+                !BookProgressBadge::onFinalPage(6, 8, 9, 10) && !BookProgressBadge::onFinalPage(0, 0, 0, 0));
+  const std::string carl = "/Books/carl.epub";
+  writeChapter(carl, 7, 9, 10);
+  BookProgressBadge::write(Epub(carl, "/.crosspoint").getCachePath(), BookProgressBadge::onFinalPage(7, 8, 9, 10) ? 100 : 97);
+  assert(BookReadingStats::updatePosition(carl, fp, ContentBasis::FineProgress, 0,
+                                          BookProgressBadge::onFinalPage(7, 8, 9, 10) ? kQ24One : kQ24One - 1));
+  assert(BookReadingStats::add(carl, 40, 0));
+  r = homeRows(carl);
+  std::printf("Carl reopened on last page: CHAPTER LEFT=%s BOOK LEFT=%s\n", r.chapter.c_str(), r.book.c_str());
+  assert(BookReadingStats::read(carl).finished && BookProgressBadge::read(carl).value_or(-1) == 100);
+  assert(r.chapter == "Finished" && r.book == "Finished");
+  std::printf("PASS final page counts as finished\n");
 #else
   std::printf("BASE (no finished state): in-place %s/%s, moved %s/%s\n", inPlace.chapter.c_str(), inPlace.book.c_str(),
               r.chapter.c_str(), r.book.c_str());

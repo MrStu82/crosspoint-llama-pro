@@ -800,14 +800,14 @@ void HomeActivity::renderInkPointHome() {
     const auto eta = InkPointHomeGeometry::estimateEtas(
         bookStats.pagesPerMinuteQ16, bookStats.remainingPagesQ16, bookStats.remainingAvailable,
         chapterProgress.pagesLeft(), chapterProgress.available);
-    if (eta.chapterMinutes) {
-      formatMinutes(chapterLeft, sizeof(chapterLeft), *eta.chapterMinutes);
-      valueAvailable[1] = true;
-    }
-    if (eta.bookMinutes) {
-      formatMinutes(bookLeft, sizeof(bookLeft), *eta.bookMinutes);
-      valueAvailable[2] = true;
-    }
+    const auto rows = InkPointHomeGeometry::statRows(bookStats.finished || book->progressPercent >= 100, eta);
+    const auto fill = [&](char* out, size_t len, InkPointHomeGeometry::StatValue state, uint32_t minutes) {
+      if (state == InkPointHomeGeometry::StatValue::Finished) std::snprintf(out, len, "%s", tr(STR_STATS_FINISHED));
+      else if (state == InkPointHomeGeometry::StatValue::Minutes) formatMinutes(out, len, minutes);
+      return state != InkPointHomeGeometry::StatValue::Calibrating;
+    };
+    valueAvailable[1] = fill(chapterLeft, sizeof(chapterLeft), rows.chapter, rows.chapterMinutes);
+    valueAvailable[2] = fill(bookLeft, sizeof(bookLeft), rows.book, rows.bookMinutes);
   }
   const char* values[3] = {timeRead, chapterLeft, bookLeft};
   const auto statsLayout = InkPointHomeGeometry::statsLayout(rightX, statStart, kInkStatsStep);

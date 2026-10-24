@@ -104,6 +104,34 @@ inline EtaState estimateEtas(const uint32_t pagesPerMinuteQ16, const uint32_t re
   return result;
 }
 
+enum class StatValue : uint8_t { Calibrating, Minutes, Finished };
+
+struct StatRows {
+  StatValue chapter = StatValue::Calibrating;
+  StatValue book = StatValue::Calibrating;
+  uint32_t chapterMinutes = 0;
+  uint32_t bookMinutes = 0;
+};
+
+// A finished book has nothing left to read: both rows say so rather than
+// showing a zero-page ETA as "<1m".
+inline StatRows statRows(const bool finished, const EtaState& eta) {
+  StatRows rows;
+  if (finished) {
+    rows.chapter = rows.book = StatValue::Finished;
+    return rows;
+  }
+  if (eta.chapterMinutes) {
+    rows.chapter = StatValue::Minutes;
+    rows.chapterMinutes = *eta.chapterMinutes;
+  }
+  if (eta.bookMinutes) {
+    rows.book = StatValue::Minutes;
+    rows.bookMinutes = *eta.bookMinutes;
+  }
+  return rows;
+}
+
 struct QuoteBlockLayout {
   int top;
   int height;

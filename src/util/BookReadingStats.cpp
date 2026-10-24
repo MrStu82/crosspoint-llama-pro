@@ -148,6 +148,7 @@ BookReadingStatsValue read(const std::string& bookPath) {
   result.remainingAvailable = stored.basis != ContentBasis::Unknown &&
                               (stored.basis != ContentBasis::FineProgress || result.remainingPagesQ16 != 0 ||
                                stored.progressQ24 == kQ24One);
+  result.finished = stored.basis == ContentBasis::FineProgress && stored.progressQ24 >= kQ24One;
 
   bool currentConfident = false;
   uint32_t current = currentRate(stored, result.qualifiedSeconds, currentConfident);

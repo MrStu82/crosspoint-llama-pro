@@ -14,6 +14,8 @@ struct BookReadingStatsValue {
   bool fallbackRate = false;
   bool legacyRate = false;
   bool rateConfident = false;
+  // Reader stored fine progress at the very end of the book.
+  bool finished = false;
   uint8_t qualifiedSamples = 0;
   uint32_t qualifiedSeconds = 0;
   uint32_t fingerprint = 0;

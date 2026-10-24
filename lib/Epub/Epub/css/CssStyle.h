@@ -101,6 +101,7 @@ struct CssPropertyFlags {
   uint32_t backgroundBlack : 1;
   uint32_t listStyleType : 1;
   uint32_t whiteSpace : 1;
+  uint32_t borderNone : 1;
 
   CssPropertyFlags()
       : textAlign(0),
@@ -123,13 +124,14 @@ struct CssPropertyFlags {
         verticalAlign(0),
         backgroundBlack(0),
         listStyleType(0),
-        whiteSpace(0) {}
+        whiteSpace(0),
+        borderNone(0) {}
 
   [[nodiscard]] bool anySet() const {
     return textAlign || fontStyle || fontWeight || textDecoration || textIndent || marginTop || marginBottom ||
            marginLeft || marginRight || paddingTop || paddingBottom || paddingLeft || paddingRight || imageHeight ||
            imageWidth || display || direction || verticalAlign || backgroundBlack || listStyleType ||
-           whiteSpace;
+           whiteSpace || borderNone;
   }
 
   void clearAll() {
@@ -137,6 +139,7 @@ struct CssPropertyFlags {
     marginTop = marginBottom = marginLeft = marginRight = 0;
     paddingTop = paddingBottom = paddingLeft = paddingRight = 0;
     imageHeight = imageWidth = display = direction = verticalAlign = backgroundBlack = listStyleType = whiteSpace = 0;
+    borderNone = 0;
   }
 };
 
@@ -172,6 +175,7 @@ struct CssStyle {
   bool backgroundBlack = false;
   CssListStyleType listStyleType = CssListStyleType::Disc;      // list-style-type (Disc or None)
   CssWhiteSpace whiteSpace = CssWhiteSpace::Normal;
+  bool borderNone = false;  // border/border-top style none|hidden (hr draws no rule)
 
   CssPropertyFlags defined;  // Tracks which properties were explicitly set
 
@@ -243,6 +247,7 @@ struct CssStyle {
       defined.display = 1;
     }
     if (base.hasBackgroundBlack()) { backgroundBlack = base.backgroundBlack; defined.backgroundBlack = 1; }
+    if (base.hasBorderNone()) { borderNone = base.borderNone; defined.borderNone = 1; }
     if (base.hasDirection()) {
       direction = base.direction;
       defined.direction = 1;
@@ -282,6 +287,7 @@ struct CssStyle {
   [[nodiscard]] bool hasVerticalAlign() const { return defined.verticalAlign; }
   [[nodiscard]] bool hasListStyleType() const { return defined.listStyleType; }
   [[nodiscard]] bool hasWhiteSpace() const { return defined.whiteSpace; }
+  [[nodiscard]] bool hasBorderNone() const { return defined.borderNone; }
 
   void reset() {
     textAlign = CssTextAlign::Left;
@@ -298,6 +304,7 @@ struct CssStyle {
     backgroundBlack = false;
     listStyleType = CssListStyleType::Disc;
     whiteSpace = CssWhiteSpace::Normal;
+    borderNone = false;
     defined.clearAll();
   }
 };

@@ -167,6 +167,34 @@ bool tryInterpretBackgroundBlack(std::string_view value, bool& out) {
   return false;
 }
 
+// True when any whitespace-separated token of a border shorthand/style value is none|hidden.
+bool borderValueIsNone(std::string_view value) {
+  value = stripTrailingImportant(value);
+  size_t i = 0;
+  while (i < value.size()) {
+    while (i < value.size() && isCssWhitespace(value[i])) i++;
+    size_t j = i;
+    while (j < value.size() && !isCssWhitespace(value[j])) j++;
+    const std::string_view token = value.substr(i, j - i);
+    if (iequalsAscii(token, "none") || iequalsAscii(token, "hidden")) return true;
+    i = j;
+  }
+  return false;
+}
+
+// True for opacity values that are exactly zero ("0", "0.0", ".0", "0%").
+bool opacityIsZero(std::string_view value) {
+  value = stripTrailingImportant(value);
+  while (!value.empty() && isCssWhitespace(value.front())) value.remove_prefix(1);
+  if (!value.empty() && value.back() == '%') value.remove_suffix(1);
+  bool digit = false;
+  for (char c : value) {
+    if (c == '0') digit = true;
+    else if (c != '.') return false;
+  }
+  return digit;
+}
+
 }  // anonymous namespace
 
 // Transparent case-insensitive hash/equal. Bodies live here (rather than
@@ -442,6 +470,15 @@ void CssParser::parseDeclarationIntoStyle(std::string_view decl, CssStyle& style
                        : iequalsAscii(ws, "pre-line") ? CssWhiteSpace::PreLine
                                                       : CssWhiteSpace::Normal;
     style.defined.whiteSpace = 1;
+  } else if (iequalsAscii(name, "border") || iequalsAscii(name, "border-top") || iequalsAscii(name, "border-style") ||
+             iequalsAscii(name, "border-top-style")) {
+    style.borderNone = borderValueIsNone(value);
+    style.defined.borderNone = 1;
+  } else if (iequalsAscii(name, "opacity")) {
+    if (opacityIsZero(value)) {
+      style.display = CssDisplay::None;
+      style.defined.display = 1;
+    }
   }
 }
 
@@ -825,6 +862,7 @@ bool CssParser::saveToCache() const {
     writeByte(static_cast<uint8_t>(style.backgroundBlack ? 1 : 0));
     writeByte(static_cast<uint8_t>(style.listStyleType));
     writeByte(static_cast<uint8_t>(style.whiteSpace));
+    writeByte(static_cast<uint8_t>(style.borderNone ? 1 : 0));
 
     // Write defined flags as uint32_t
     uint32_t definedBits = 0;
@@ -849,6 +887,7 @@ bool CssParser::saveToCache() const {
     if (style.defined.backgroundBlack) definedBits |= 1 << 18;
     if (style.defined.listStyleType) definedBits |= 1 << 19;
     if (style.defined.whiteSpace) definedBits |= 1 << 20;
+    if (style.defined.borderNone) definedBits |= 1 << 21;
     writeBytes(&definedBits, sizeof(definedBits));
     if (!writeOk) break;
   }
@@ -1062,6 +1101,13 @@ bool CssParser::loadFromCacheOnce(bool& lowMemory) {
     }
     style.whiteSpace = static_cast<CssWhiteSpace>(whiteSpaceVal);
 
+    uint8_t borderNoneVal;
+    if (file.read(&borderNoneVal, 1) != 1) {
+      rulesBySelector_.clear();
+      return false;
+    }
+    style.borderNone = borderNoneVal != 0;
+
     // Read defined flags
     uint32_t definedBits = 0;
     if (file.read(&definedBits, sizeof(definedBits)) != sizeof(definedBits)) {
@@ -1089,6 +1135,7 @@ bool CssParser::loadFromCacheOnce(bool& lowMemory) {
     style.defined.backgroundBlack = (definedBits & 1 << 18) != 0;
     style.defined.listStyleType = (definedBits & 1 << 19) != 0;
     style.defined.whiteSpace = (definedBits & 1 << 20) != 0;
+    style.defined.borderNone = (definedBits & 1 << 21) != 0;
 
     if (!cacheAllocationAllowed(sizeof(std::pair<const std::string, CssStyle>) + selectorLen + 1)) {
       lowMemory = true;

@@ -1408,7 +1408,10 @@ void XMLCALL ChapterHtmlSlimParser::startElement(void* userData, const XML_Char*
       hrBlockStyle.textIndentDefined = false;
       hrBlockStyle.textIndent = 0;
     }
-    self->emitHorizontalRule(hrBlockStyle);
+    // border:none/hidden hr (e.g. scene breaks followed by an ornament) draws no rule.
+    if (!(self->embeddedStyle && cssStyle.hasBorderNone() && cssStyle.borderNone)) {
+      self->emitHorizontalRule(hrBlockStyle);
+    }
     self->depth += 1;
     return;
   }

@@ -1,5 +1,7 @@
 #include "EpdFont.h"
 
+#include "GlyphSubstitute.h"
+
 #include <Utf8.h>
 
 #include <algorithm>
@@ -222,6 +224,7 @@ const EpdGlyph* EpdFont::getGlyph(const uint32_t cp) const {
     if (loaded) return loaded;
   }
 
+  if (const uint32_t sub = glyphSubstitute(cp)) return getGlyph(sub);
   if (cp != REPLACEMENT_GLYPH) {
     return getGlyph(REPLACEMENT_GLYPH);
   }

@@ -40,7 +40,7 @@ namespace {
 // it is the metadata gutter. The lane is the maximum the cover may occupy, not
 // a frame drawn around it -- see renderInkPointHome.
 constexpr int kInkCoverRight = 240;
-const Rect kInkCoverLane{20, InkPointShell::kContentTop, 220, 434};
+const Rect kInkCoverLane{20, InkPointShell::kContentTop, 220, InkPointShell::kHomeCoverHeight};
 // Stats block and its ">>>" chevron form a single target for the Stats screen.
 // Kept clear of the cover lane to its left and the footer tabs below.
 const Rect kInkStats{252, 300, 208, 250};

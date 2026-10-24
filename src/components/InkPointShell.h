@@ -16,6 +16,8 @@ constexpr int kStatusBottom = 18;
 // room below the page title global rather than per-screen.
 constexpr int kHeaderBottom = 94;
 constexpr int kContentTop = 114;
+// Height of the Home cover lane; Home caches its cover thumbnail at this height.
+constexpr int kHomeCoverHeight = 434;
 constexpr int kFooterTop = 728;
 constexpr int kFooterHeight = 60;
 

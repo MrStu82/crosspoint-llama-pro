@@ -165,7 +165,10 @@ void StatsActivity::render(RenderLock&&) {
   bool hasCover = false;
 
   if (!coverBmpPath.empty()) {
-    const std::string thumbPath = UITheme::getCoverThumbPath(coverBmpPath, metrics.homeCoverHeight);
+    // Thumbnails are cached per height; the InkPoint Home only generates its lane height.
+    const int thumbHeight =
+        InkPointShell::enabled(renderer) ? InkPointShell::kHomeCoverHeight : metrics.homeCoverHeight;
+    const std::string thumbPath = UITheme::getCoverThumbPath(coverBmpPath, thumbHeight);
     HalFile file;
     if (Storage.openFileForRead("STATS", thumbPath, file)) {
       Bitmap bitmap(file);

@@ -51,6 +51,11 @@ size_t wsLastProgressSent = 0;
 String wsLastCompleteName;
 size_t wsLastCompleteSize = 0;
 unsigned long wsLastCompleteAt = 0;
+// Last completed WS upload timing, reported by /api/status so upload speed can be
+// measured on release builds (LOG_DBG is compiled out there).
+unsigned long wsUploadWriteMs = 0;
+unsigned long wsLastCompleteMs = 0;
+unsigned long wsLastCompleteWriteMs = 0;
 
 String normalizeWebPath(const String& inputPath) {
   if (inputPath.isEmpty() || inputPath == "/") {
@@ -422,6 +427,13 @@ void CrossPointWebServer::handleStatus() const {
     doc["serial"] = snBuf;
   } else {
     doc["serial"] = "Not found";
+  }
+
+  if (wsLastCompleteSize > 0) {
+    JsonObject up = doc["lastUpload"].to<JsonObject>();
+    up["bytes"] = wsLastCompleteSize;
+    up["ms"] = wsLastCompleteMs;
+    up["sdWriteMs"] = wsLastCompleteWriteMs;
   }
 
   String response;
@@ -1651,6 +1663,7 @@ void CrossPointWebServer::onWebSocketEvent(uint8_t num, WStype_t type, uint8_t* 
           wsUploadReceived = 0;
           wsLastProgressSent = 0;
           wsUploadStartTime = millis();
+          wsUploadWriteMs = 0;
 
           String filePath = wsUploadPath;
           if (!filePath.endsWith("/")) filePath += "/";
@@ -1719,7 +1732,9 @@ void CrossPointWebServer::onWebSocketEvent(uint8_t num, WStype_t type, uint8_t* 
         return;
       }
       resetTaskWatchdogIfSubscribed();
+      const unsigned long writeStart = millis();
       size_t written = wsUploadFile.write(payload, length);
+      wsUploadWriteMs += millis() - writeStart;
       resetTaskWatchdogIfSubscribed();
 
       if (written != length) {
@@ -1749,6 +1764,8 @@ void CrossPointWebServer::onWebSocketEvent(uint8_t num, WStype_t type, uint8_t* 
         wsLastCompleteAt = millis();
 
         unsigned long elapsed = millis() - wsUploadStartTime;
+        wsLastCompleteMs = elapsed;
+        wsLastCompleteWriteMs = wsUploadWriteMs;
         float kbps = (elapsed > 0) ? (wsUploadSize / 1024.0) / (elapsed / 1000.0) : 0;
 
         LOG_DBG("WS", "Upload complete: %s (%d bytes in %lu ms, %.1f KB/s)", wsUploadFileName.c_str(), wsUploadSize,

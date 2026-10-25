@@ -6,6 +6,7 @@
 #include <gtest/gtest.h>
 
 #include <cstdlib>
+#include <cstring>
 #include <fstream>
 #include <iterator>
 #include <string>
@@ -72,7 +73,7 @@ struct Fixture : ::testing::Test {
     self->lastWritten = written;
     self->lastTotal = total;
   }
-  bool destHoldsApp() const { return std::equal(app.begin(), app.end(), destBytes.begin()); }
+  bool destHoldsApp() const { return std::memcmp(app.data(), destBytes.data(), app.size()) == 0; }
 };
 }  // namespace
 
@@ -80,7 +81,7 @@ TEST_F(Fixture, GzRoundTripIsByteIdenticalAndSwitchesOnce) {
   ASSERT_EQ(flashGz(gz), firmware_flash::Result::OK);
   EXPECT_TRUE(destHoldsApp());
   EXPECT_EQ(g_switches, 1);
-  EXPECT_EQ(lastWritten, gz.size());
+  EXPECT_EQ(lastWritten, gz.size() - 8);  // last report precedes the 8-byte CRC32/ISIZE trailer read
   EXPECT_EQ(lastTotal, gz.size());
 }
 

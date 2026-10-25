@@ -424,7 +424,7 @@ void EpubReaderActivity::openDictionaryWordSelect() {
   int orientedMarginTop, orientedMarginRight, orientedMarginBottom, orientedMarginLeft;
   renderer.getOrientedViewableTRBL(&orientedMarginTop, &orientedMarginRight, &orientedMarginBottom,
                                    &orientedMarginLeft);
-  orientedMarginTop += SETTINGS.screenMargin;
+  orientedMarginTop += SETTINGS.screenMargin + SETTINGS.readerTopBezelOffset();
   orientedMarginLeft += SETTINGS.screenMargin;
 
   startActivityForResult(std::make_unique<DictionaryWordSelectActivity>(renderer, mappedInput, std::move(page),
@@ -1324,6 +1324,7 @@ void EpubReaderActivity::render(RenderLock&& lock) {
   // Default: margin + bar, as before. Compact Top Margin mirrors the bottom's max().
   orientedMarginTop += SETTINGS.compactTopMargin ? std::max(SETTINGS.screenMargin, topStatusBarHeight)
                                                  : SETTINGS.screenMargin + topStatusBarHeight;
+  orientedMarginTop += SETTINGS.readerTopBezelOffset();
 
   const uint16_t viewportWidth = renderer.getScreenWidth() - orientedMarginLeft - orientedMarginRight;
   const uint16_t viewportHeight = renderer.getScreenHeight() - orientedMarginTop - orientedMarginBottom;
@@ -2106,7 +2107,7 @@ void EpubReaderActivity::renderStatusBar() const {
   }
 
   GUI.drawStatusBar(renderer, bookProgress, currentPage, pageCount, topTitle, 0, 0, true, currentPageBookmarked,
-                    section->isBuilding(), CrossPointSettings::Edge::TOP);
+                    section->isBuilding(), CrossPointSettings::Edge::TOP, SETTINGS.readerTopBezelOffset());
 }
 
 void EpubReaderActivity::navigateToHref(const std::string& hrefStr, const bool savePosition) {

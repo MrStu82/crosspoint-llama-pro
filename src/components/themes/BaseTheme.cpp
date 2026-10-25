@@ -855,7 +855,7 @@ void BaseTheme::fillPopupProgress(const GfxRenderer& renderer, const Rect& layou
 void BaseTheme::drawStatusBar(GfxRenderer& renderer, const float bookProgress, const int currentPage,
                               const int pageCount, std::string title, const int paddingBottom, const int textYOffset,
                               const bool fillMargin, const bool isPageBookmarked, const bool pageCountEstimated,
-                              const CrossPointSettings::Edge edge) const {
+                              const CrossPointSettings::Edge edge, const int topInset) const {
   auto metrics = UITheme::getInstance().getMetrics();
   int orientedMarginTop, orientedMarginRight, orientedMarginBottom, orientedMarginLeft;
   renderer.getOrientedViewableTRBL(&orientedMarginTop, &orientedMarginRight, &orientedMarginBottom,
@@ -871,8 +871,8 @@ void BaseTheme::drawStatusBar(GfxRenderer& renderer, const float bookProgress, c
   // Top bar mirrors this from the top edge: progress bar hugs the edge, text lane sits below it.
   auto textY = isTopEdge
                    ? (sb.showsProgressBar()
-                          ? readerTopProgressBarY + progressBarHeight + readerTopStatusGap
-                          : orientedMarginTop + paddingBottom + metrics.statusBarVerticalMargin - 4)
+                          ? topInset + readerTopProgressBarY + progressBarHeight + readerTopStatusGap
+                          : topInset + orientedMarginTop + paddingBottom + metrics.statusBarVerticalMargin - 4)
                    : screenHeight - UITheme::getInstance().getStatusBarHeight(edge) - orientedMarginBottom -
                          paddingBottom - 4;
 
@@ -916,7 +916,7 @@ void BaseTheme::drawStatusBar(GfxRenderer& renderer, const float bookProgress, c
     const int barMarginRight = fillMargin ? 0 : orientedMarginRight;
     const int progressBarMaxWidth = renderer.getScreenWidth() - barMarginLeft - barMarginRight;
     // Top bar starts at the physical first row; the bottom bar keeps its existing geometry.
-    const int progressBarY = isTopEdge ? readerTopProgressBarY
+    const int progressBarY = isTopEdge ? topInset + readerTopProgressBarY
                                         : renderer.getScreenHeight() - orientedMarginBottom - sb.progressBarHeightPx -
                                               paddingBottom + (fillMargin ? 1 : 0);
     size_t progress;

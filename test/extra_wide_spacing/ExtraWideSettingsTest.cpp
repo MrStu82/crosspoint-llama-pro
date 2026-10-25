@@ -101,3 +101,28 @@ TEST(ExtraWideSettings, SharedSettingsAndTouchLabelsStayInEnumOrder) {
 }
 
 }  // namespace
+
+TEST(TopBezelOffsetSettings, JsonRoundTripClampAndPortraitOnly) {
+  auto& value = settings();
+  EXPECT_EQ(CrossPointSettings().topBezelOffset, 0);  // default: layout unchanged
+  value.orientation = CrossPointSettings::PORTRAIT;
+  value.topBezelOffset = 0;
+  EXPECT_EQ(value.readerTopBezelOffset(), 0);
+  value.topBezelOffset = 12;
+  JsonDocument saved;
+  value.toJson(saved);
+  ASSERT_EQ(saved["topBezelOffset"].as<uint8_t>(), 12);
+  value.topBezelOffset = 0;
+  ASSERT_TRUE(value.fromJson(saved.as<JsonVariantConst>()));
+  EXPECT_EQ(value.topBezelOffset, 12);
+  EXPECT_EQ(value.readerTopBezelOffset(), 12);
+  for (uint8_t o : {CrossPointSettings::LANDSCAPE_CW, CrossPointSettings::INVERTED, CrossPointSettings::LANDSCAPE_CCW}) {
+    value.orientation = o;
+    EXPECT_EQ(value.readerTopBezelOffset(), 0);
+  }
+  value.orientation = CrossPointSettings::PORTRAIT;
+  saved["topBezelOffset"] = 40;
+  ASSERT_TRUE(value.fromJson(saved.as<JsonVariantConst>()));
+  EXPECT_EQ(value.topBezelOffset, CrossPointSettings::TOP_BEZEL_OFFSET_MAX);
+  value.topBezelOffset = 0;
+}

@@ -205,7 +205,7 @@ void TxtReaderActivity::initializeReader() {
   // Calculate viewport dimensions
   renderer.getOrientedViewableTRBL(&cachedOrientedMarginTop, &cachedOrientedMarginRight, &cachedOrientedMarginBottom,
                                    &cachedOrientedMarginLeft);
-  cachedOrientedMarginTop += cachedScreenMargin;
+  cachedOrientedMarginTop += cachedScreenMargin + SETTINGS.readerTopBezelOffset();
   cachedOrientedMarginLeft += cachedScreenMargin;
   cachedOrientedMarginRight += cachedScreenMargin;
   cachedOrientedMarginBottom +=
@@ -548,7 +548,7 @@ void TxtReaderActivity::renderStatusBar() const {
     topTitle = txt->getTitle();
   }
   GUI.drawStatusBar(renderer, progress, currentPage + 1, totalPages, topTitle, 0, 0, true, false, false,
-                    CrossPointSettings::Edge::TOP);
+                    CrossPointSettings::Edge::TOP, SETTINGS.readerTopBezelOffset());
 }
 
 void TxtReaderActivity::saveProgress() const {

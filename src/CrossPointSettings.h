@@ -306,6 +306,11 @@ class CrossPointSettings : public PersistableStore<CrossPointSettings> {
   // chapter; top margin = max(screen margin, top bar) like the bottom instead of the sum.
   uint8_t fullRefreshOnChapter = 0;
   uint8_t compactTopMargin = 0;
+  // Portrait reader only: shifts the top status bar and text down past the physical top bezel.
+  static constexpr uint8_t TOP_BEZEL_OFFSET_MAX = 24;
+  static constexpr uint8_t TOP_BEZEL_OFFSET_STEP = 4;
+  uint8_t topBezelOffset = 0;
+  uint8_t readerTopBezelOffset() const { return orientation == PORTRAIT ? topBezelOffset : 0; }
   // SD card font family name (empty = use built-in fontFamily)
   char sdFontFamilyName[32] = "";
   // Dictionary folder name under /dictionaries (empty = no dictionary)

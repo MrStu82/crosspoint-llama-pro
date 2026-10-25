@@ -31,6 +31,7 @@ enum class Result {
   ERASE_FAIL,
   WRITE_FAIL,
   OTADATA_FAIL,
+  BAD_GZIP,  // .bin.gz header/deflate/CRC32/ISIZE invalid, or inflates past the partition
 };
 
 // Progress callback: called after every chunk write. `written`/`total` are bytes.
@@ -47,6 +48,14 @@ using ProgressCb = void (*)(size_t written, size_t total, void* ctx);
 // to false so callers without prior validation (any future entry point) keep
 // the defense-in-depth check.
 Result flashFromSdPath(const char* sdPath, ProgressCb onProgress, void* ctx, bool alreadyValidated = false);
+
+// Same as flashFromSdPath for a gzip-compressed image (`gzip -9n app.bin`):
+// stream-inflates it straight into the next OTA partition (never buffering the
+// image), then re-reads the written partition through validateImageFile's
+// checks. otadata is switched only after the gzip CRC32/ISIZE and the full
+// image validation pass, so a corrupt or truncated .gz leaves the current
+// firmware booting. Progress is reported in compressed bytes read.
+Result flashGzFromSdPath(const char* sdPath, ProgressCb onProgress, void* ctx);
 
 // Full-image integrity check that mirrors the bootloader's verification:
 // header magic, segment table walk, XOR checksum, and SHA256 trailer (when

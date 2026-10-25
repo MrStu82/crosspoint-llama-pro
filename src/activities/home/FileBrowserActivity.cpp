@@ -49,8 +49,8 @@ void FileBrowserActivity::loadFiles() {
     } else {
       std::string_view filename{fileNameBuffer.get()};
       if (mode == Mode::PickFirmware) {
-        // Firmware picker: only show .bin files.
-        if (FsHelpers::checkFileExtension(filename, ".bin")) {
+        // Firmware picker: only show .bin and gzip-compressed .bin.gz files.
+        if (FsHelpers::checkFileExtension(filename, ".bin") || FsHelpers::checkFileExtension(filename, ".bin.gz")) {
           files.emplace_back(filename);
         }
       } else if (FsHelpers::hasEpubExtension(filename) || FsHelpers::hasXtcExtension(filename) ||

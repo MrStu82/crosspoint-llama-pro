@@ -95,3 +95,4 @@ add_subdirectory(phase5a_controls)
 
 find_package(Python3 REQUIRED COMPONENTS Interpreter)
 add_test(NAME progress_recovery_native COMMAND ${Python3_EXECUTABLE} ${CMAKE_CURRENT_SOURCE_DIR}/progress_recovery/run.py)
+add_subdirectory(gzip_firmware)

@@ -5,6 +5,7 @@
 #include <HalStorage.h>
 #include <I18n.h>
 #include <Logging.h>
+#include <FsHelpers.h>
 #include <esp_ota_ops.h>
 
 #include "MappedInputManager.h"
@@ -92,6 +93,31 @@ bool SdFirmwareUpdateActivity::validateFirmware() {
     return false;
   }
 
+  // A .bin.gz can only be fully checked once inflated, which flashGzFromSdPath does before it
+  // touches otadata. Here, reject non-gzip files and ones whose stated size cannot fit.
+  if (FsHelpers::checkFileExtension(firmwarePath, ".bin.gz")) {
+    uint8_t magic[2] = {};
+    uint8_t isize[4] = {};
+    const bool ok = Storage.openFileForRead("FW", firmwarePath.c_str(), file) && file && firmwareSize >= 18 &&
+                    file.read(magic, sizeof(magic)) == static_cast<int>(sizeof(magic)) &&
+                    file.seekSet(firmwareSize - sizeof(isize)) &&
+                    file.read(isize, sizeof(isize)) == static_cast<int>(sizeof(isize));
+    file.close();
+    if (!ok || magic[0] != 0x1F || magic[1] != 0x8B) {
+      LOG_ERR("FW", "not a gzip firmware: %s", firmwarePath.c_str());
+      errorMessage = tr(STR_INVALID_FIRMWARE);
+      return false;
+    }
+    const uint32_t imageSize = isize[0] | (isize[1] << 8) | (isize[2] << 16) | (static_cast<uint32_t>(isize[3]) << 24);
+    if (imageSize > partitionLimit) {
+      LOG_ERR("FW", "gz firmware inflates to %u > partition %u", static_cast<unsigned>(imageSize),
+              static_cast<unsigned>(partitionLimit));
+      errorMessage = tr(STR_FIRMWARE_TOO_LARGE);
+      return false;
+    }
+    return true;
+  }
+
   // Run the same end-to-end integrity check (header / segment table / XOR checksum / SHA256
   // trailer) that the shared firmware-flasher applies right before raw-writing otadata. This
   // catches truncated or corrupted .bin files at confirmation time, before the user ever sees
@@ -164,7 +190,9 @@ void SdFirmwareUpdateActivity::performUpdate() {
   // pre-confirmation pass. The alreadyValidated parameter on the API stays
   // for callers (e.g. an OTA staging path) where the same byte stream was
   // just hashed and there's no removable-media gap.
-  const auto result = firmware_flash::flashFromSdPath(firmwarePath.c_str(), progressCb, this);
+  const auto result = FsHelpers::checkFileExtension(firmwarePath, ".bin.gz")
+                          ? firmware_flash::flashGzFromSdPath(firmwarePath.c_str(), progressCb, this)
+                          : firmware_flash::flashFromSdPath(firmwarePath.c_str(), progressCb, this);
   if (result != firmware_flash::Result::OK) {
     LOG_ERR("FW", "flash failed: %s", firmware_flash::resultName(result));
     errorMessage = tr(STR_FIRMWARE_WRITE_FAILED);

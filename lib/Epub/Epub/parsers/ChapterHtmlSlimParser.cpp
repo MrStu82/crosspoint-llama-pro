@@ -173,6 +173,10 @@ void ChapterHtmlSlimParser::applyTextDecorationToEntry(StyleStackEntry& entry, c
     entry.hasBackgroundBlack = true;
     entry.backgroundBlack = css.backgroundBlack;
   }
+  if (css.hasSmallCaps()) {
+    entry.hasSmallCaps = true;
+    entry.smallCaps = css.smallCaps;
+  }
 }
 
 void ChapterHtmlSlimParser::applyVerticalAlignToEntry(StyleStackEntry& entry, const CssStyle& css) {
@@ -260,6 +264,7 @@ void ChapterHtmlSlimParser::updateEffectiveInlineStyle() {
   effectiveSup = false;
   effectiveSub = false;
   effectiveBackgroundBlack = currentCssStyle.hasBackgroundBlack() && currentCssStyle.backgroundBlack;
+  effectiveSmallCaps = currentCssStyle.hasSmallCaps() && currentCssStyle.smallCaps;
 
   // Apply inline style stack in order
   for (const auto& entry : inlineStyleStack) {
@@ -295,6 +300,7 @@ void ChapterHtmlSlimParser::updateEffectiveInlineStyle() {
       if (entry.sub) effectiveSup = false;
     }
     if (entry.hasBackgroundBlack) effectiveBackgroundBlack = entry.backgroundBlack;
+    if (entry.hasSmallCaps) effectiveSmallCaps = entry.smallCaps;
   }
 
   // Keep flow direction in the active empty text block. Inline direction remains
@@ -363,6 +369,19 @@ void ChapterHtmlSlimParser::flushPartWordBuffer() {
 
   // flush the buffer
   partWordBuffer[partWordBufferIndex] = '\0';
+  if (effectiveSmallCaps) {
+    // Small caps / uppercase render as capitals at body size: ASCII a-z and Latin-1 U+00E0..U+00FE (not U+00F7).
+    for (int i = 0; i < partWordBufferIndex; i++) {
+      const auto c = static_cast<unsigned char>(partWordBuffer[i]);
+      if (c >= 'a' && c <= 'z') {
+        partWordBuffer[i] = static_cast<char>(c - 0x20);
+      } else if (c == 0xC3 && i + 1 < partWordBufferIndex) {
+        const auto next = static_cast<unsigned char>(partWordBuffer[i + 1]);
+        if (next >= 0xA0 && next <= 0xBE && next != 0xB7) partWordBuffer[i + 1] = static_cast<char>(next - 0x20);
+        i++;
+      }
+    }
+  }
   const size_t wordBytes = static_cast<size_t>(partWordBufferIndex);
   if (insideTableCell && !tableRowStacked && tableCellTextBytes + wordBytes > MAX_GRID_TABLE_CELL_BYTES) {
     fallbackTableRowToStacked();
@@ -486,7 +505,7 @@ void ChapterHtmlSlimParser::startNewTextBlock(const BlockStyle& blockStyle) {
   listItemBulletOnly = false;
 }
 
-void ChapterHtmlSlimParser::emitHorizontalRule(const BlockStyle& blockStyle) {
+void ChapterHtmlSlimParser::emitHorizontalRule(const BlockStyle& blockStyle, const bool boxEdge) {
   if (partWordBufferIndex > 0) {
     flushPartWordBuffer();
   }
@@ -507,16 +526,19 @@ void ChapterHtmlSlimParser::emitHorizontalRule(const BlockStyle& blockStyle) {
 
   const int16_t lineHeight = static_cast<int16_t>(renderer.getLineHeight(fontId, lineCompression));
   const int16_t defaultVerticalSpacing = static_cast<int16_t>(lineHeight / 2);
+  const int16_t boxSpacing = static_cast<int16_t>(lineHeight / 4);
   const int16_t topSpacing =
-      static_cast<int16_t>((blockStyle.marginTop > 0 ? blockStyle.marginTop : defaultVerticalSpacing) +
-                           (blockStyle.paddingTop > 0 ? blockStyle.paddingTop : 0));
+      boxEdge ? boxSpacing
+              : static_cast<int16_t>((blockStyle.marginTop > 0 ? blockStyle.marginTop : defaultVerticalSpacing) +
+                                     (blockStyle.paddingTop > 0 ? blockStyle.paddingTop : 0));
   const int16_t bottomSpacing =
-      static_cast<int16_t>((blockStyle.marginBottom > 0 ? blockStyle.marginBottom : defaultVerticalSpacing) +
-                           (blockStyle.paddingBottom > 0 ? blockStyle.paddingBottom : 0));
-  constexpr uint8_t ruleThickness = 2;
+      boxEdge ? boxSpacing
+              : static_cast<int16_t>((blockStyle.marginBottom > 0 ? blockStyle.marginBottom : defaultVerticalSpacing) +
+                                     (blockStyle.paddingBottom > 0 ? blockStyle.paddingBottom : 0));
+  const uint8_t ruleThickness = boxEdge ? 1 : 2;
   const int16_t availableWidth =
       std::max<int16_t>(1, static_cast<int16_t>(viewportWidth - blockStyle.totalHorizontalInset()));
-  const int16_t width = std::max<int16_t>(1, static_cast<int16_t>(availableWidth / 4));
+  const int16_t width = boxEdge ? availableWidth : std::max<int16_t>(1, static_cast<int16_t>(availableWidth / 4));
   const int16_t xPos = static_cast<int16_t>(blockStyle.leftInset() + ((availableWidth - width) / 2));
   const int16_t totalHeight = static_cast<int16_t>(topSpacing + ruleThickness + bottomSpacing);
 
@@ -1436,7 +1458,15 @@ void XMLCALL ChapterHtmlSlimParser::startElement(void* userData, const XML_Char*
       self->currentCssStyle = cssStyle;
       const auto accumulated = self->blockStyleStack.back().getCombinedBlockStyle(userAlignmentBlockStyle,
                                                                                   BlockStyle::CombineAxis::Horizontal);
+      // Bordered or tinted blockquote/div/pre: thin rule above and below its content.
+      const bool boxed = self->embeddedStyle && cssStyle.hasBorderBox() && cssStyle.borderBox &&
+                         (strcmp(name, "blockquote") == 0 || strcmp(name, "div") == 0 || strcmp(name, "pre") == 0);
+      if (boxed) self->emitHorizontalRule(accumulated, true);
       self->blockStyleStack.push_back(accumulated);
+      if (self->blockStyleStack.size() < 32) {
+        const uint32_t bit = 1u << self->blockStyleStack.size();
+        self->boxedBlockLevels = boxed ? (self->boxedBlockLevels | bit) : (self->boxedBlockLevels & ~bit);
+      }
       self->startNewTextBlock(accumulated.withoutBottom());
       self->updateEffectiveInlineStyle();
 
@@ -1541,7 +1571,7 @@ void XMLCALL ChapterHtmlSlimParser::startElement(void* userData, const XML_Char*
     const bool inheritedTableTextAlign = self->tableDepth >= 1 && cssStyle.hasTextAlign();
     if (cssStyle.hasFontWeight() || cssStyle.hasFontStyle() || cssStyle.hasTextDecoration() ||
         cssStyle.hasDirection() || cssStyle.hasVerticalAlign() || cssStyle.hasBackgroundBlack() ||
-        inheritedTableTextAlign) {
+        cssStyle.hasSmallCaps() || inheritedTableTextAlign) {
       // Flush buffer before style change so preceding text gets current style
       if (self->partWordBufferIndex > 0) {
         self->flushPartWordBuffer();
@@ -2050,6 +2080,13 @@ void XMLCALL ChapterHtmlSlimParser::endElement(void* userData, const XML_Char* n
         const auto style = self->currentTextBlock->getBlockStyle();
         self->currentTextBlock->setBlockStyle(style.addBottom(self->blockStyleStack.back()));
       }
+      if (self->blockStyleStack.size() < 32) {
+        const uint32_t bit = 1u << self->blockStyleStack.size();
+        if (self->boxedBlockLevels & bit) {
+          self->boxedBlockLevels &= ~bit;
+          self->emitHorizontalRule(self->blockStyleStack.back(), true);
+        }
+      }
       self->blockStyleStack.pop_back();
       // Start a new text block with the parent style to prevent subsequent bare text
       // from inheriting the closed block style (e.g. alignment or margins).
@@ -2096,6 +2133,7 @@ bool ChapterHtmlSlimParser::beginParse() {
                                  ? CssTextAlign::Justify
                                  : static_cast<CssTextAlign>(this->paragraphAlignment);
   blockStyleStack.clear();
+  boxedBlockLevels = 0;
   blockStyleStack.reserve(8);
   blockStyleStack.push_back(rootBlockStyle);
 

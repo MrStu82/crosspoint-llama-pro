@@ -167,6 +167,39 @@ bool tryInterpretBackgroundBlack(std::string_view value, bool& out) {
   return false;
 }
 
+// True for a #rgb/#rrggbb background visibly darker than paper (mean channel < 240) but not black:
+// such tinted panels draw as a box. Near-white (cream) and named colours are left alone.
+bool backgroundIsTint(std::string_view value) {
+  value = stripTrailingImportant(value);
+  while (!value.empty() && isCssWhitespace(value.front())) value.remove_prefix(1);
+  const size_t end = value.find_first_of(" \t\r\n");
+  if (end != std::string_view::npos) value = value.substr(0, end);
+  if (value.size() != 4 && value.size() != 7) return false;
+  if (value[0] != '#') return false;
+  auto hex = [](char c) -> int {
+    if (c >= '0' && c <= '9') return c - '0';
+    if (c >= 'a' && c <= 'f') return c - 'a' + 10;
+    if (c >= 'A' && c <= 'F') return c - 'A' + 10;
+    return -1;
+  };
+  int sum = 0;
+  for (int ch = 0; ch < 3; ch++) {
+    int v;
+    if (value.size() == 4) {
+      const int d = hex(value[1 + ch]);
+      if (d < 0) return false;
+      v = d * 17;
+    } else {
+      const int hi = hex(value[1 + ch * 2]);
+      const int lo = hex(value[2 + ch * 2]);
+      if (hi < 0 || lo < 0) return false;
+      v = hi * 16 + lo;
+    }
+    sum += v;
+  }
+  return sum > 0 && sum < 240 * 3;
+}
+
 // True when any whitespace-separated token of a border shorthand/style value is none|hidden.
 bool borderValueIsNone(std::string_view value) {
   value = stripTrailingImportant(value);
@@ -177,6 +210,24 @@ bool borderValueIsNone(std::string_view value) {
     while (j < value.size() && !isCssWhitespace(value[j])) j++;
     const std::string_view token = value.substr(i, j - i);
     if (iequalsAscii(token, "none") || iequalsAscii(token, "hidden")) return true;
+    i = j;
+  }
+  return false;
+}
+
+// True when a border shorthand/style value names a drawn style (solid, dotted, ...) and no none|hidden token.
+bool borderValueIsVisible(std::string_view value) {
+  if (borderValueIsNone(value)) return false;
+  value = stripTrailingImportant(value);
+  size_t i = 0;
+  while (i < value.size()) {
+    while (i < value.size() && isCssWhitespace(value[i])) i++;
+    size_t j = i;
+    while (j < value.size() && !isCssWhitespace(value[j])) j++;
+    const std::string_view token = value.substr(i, j - i);
+    for (const char* style : {"solid", "dotted", "dashed", "double", "groove", "ridge", "inset", "outset"}) {
+      if (iequalsAscii(token, style)) return true;
+    }
     i = j;
   }
   return false;
@@ -443,6 +494,7 @@ void CssParser::parseDeclarationIntoStyle(std::string_view decl, CssStyle& style
   } else if (iequalsAscii(name, "background") || iequalsAscii(name, "background-color")) {
     bool black = false;
     if (tryInterpretBackgroundBlack(value, black)) { style.backgroundBlack = black; style.defined.backgroundBlack = 1; }
+    if (backgroundIsTint(value)) { style.borderBox = true; style.defined.borderBox = 1; }
   } else if (iequalsAscii(name, "direction")) {
     if (iequalsAscii(value, "rtl")) {
       style.direction = CssTextDirection::Rtl;
@@ -474,6 +526,21 @@ void CssParser::parseDeclarationIntoStyle(std::string_view decl, CssStyle& style
              iequalsAscii(name, "border-top-style")) {
     style.borderNone = borderValueIsNone(value);
     style.defined.borderNone = 1;
+    style.borderBox = borderValueIsVisible(value);
+    style.defined.borderBox = 1;
+  } else if (iequalsAscii(name, "border-left") || iequalsAscii(name, "border-left-style")) {
+    style.borderBox = borderValueIsVisible(value);
+    style.defined.borderBox = 1;
+  } else if (iequalsAscii(name, "font-variant") || iequalsAscii(name, "font-variant-caps") ||
+             iequalsAscii(name, "text-transform")) {
+    const std::string_view v = stripTrailingImportant(value);
+    if (iequalsAscii(v, "small-caps") || iequalsAscii(v, "all-small-caps") || iequalsAscii(v, "uppercase")) {
+      style.smallCaps = true;
+      style.defined.smallCaps = 1;
+    } else if (iequalsAscii(v, "normal") || iequalsAscii(v, "none")) {
+      style.smallCaps = false;
+      style.defined.smallCaps = 1;
+    }
   } else if (iequalsAscii(name, "opacity")) {
     if (opacityIsZero(value)) {
       style.display = CssDisplay::None;
@@ -863,6 +930,8 @@ bool CssParser::saveToCache() const {
     writeByte(static_cast<uint8_t>(style.listStyleType));
     writeByte(static_cast<uint8_t>(style.whiteSpace));
     writeByte(static_cast<uint8_t>(style.borderNone ? 1 : 0));
+    writeByte(static_cast<uint8_t>(style.smallCaps ? 1 : 0));
+    writeByte(static_cast<uint8_t>(style.borderBox ? 1 : 0));
 
     // Write defined flags as uint32_t
     uint32_t definedBits = 0;
@@ -888,6 +957,8 @@ bool CssParser::saveToCache() const {
     if (style.defined.listStyleType) definedBits |= 1 << 19;
     if (style.defined.whiteSpace) definedBits |= 1 << 20;
     if (style.defined.borderNone) definedBits |= 1 << 21;
+    if (style.defined.smallCaps) definedBits |= 1 << 22;
+    if (style.defined.borderBox) definedBits |= 1 << 23;
     writeBytes(&definedBits, sizeof(definedBits));
     if (!writeOk) break;
   }
@@ -1108,6 +1179,14 @@ bool CssParser::loadFromCacheOnce(bool& lowMemory) {
     }
     style.borderNone = borderNoneVal != 0;
 
+    uint8_t extras[2];
+    if (file.read(extras, 2) != 2) {
+      rulesBySelector_.clear();
+      return false;
+    }
+    style.smallCaps = extras[0] != 0;
+    style.borderBox = extras[1] != 0;
+
     // Read defined flags
     uint32_t definedBits = 0;
     if (file.read(&definedBits, sizeof(definedBits)) != sizeof(definedBits)) {
@@ -1136,6 +1215,8 @@ bool CssParser::loadFromCacheOnce(bool& lowMemory) {
     style.defined.listStyleType = (definedBits & 1 << 19) != 0;
     style.defined.whiteSpace = (definedBits & 1 << 20) != 0;
     style.defined.borderNone = (definedBits & 1 << 21) != 0;
+    style.defined.smallCaps = (definedBits & 1 << 22) != 0;
+    style.defined.borderBox = (definedBits & 1 << 23) != 0;
 
     if (!cacheAllocationAllowed(sizeof(std::pair<const std::string, CssStyle>) + selectorLen + 1)) {
       lowMemory = true;

@@ -89,6 +89,7 @@ class ChapterHtmlSlimParser {
     bool hasSup = false, sup = false;
     bool hasSub = false, sub = false;
     bool hasBackgroundBlack = false, backgroundBlack = false;
+    bool hasSmallCaps = false, smallCaps = false;
   };
   std::vector<StyleStackEntry> inlineStyleStack;
   std::vector<BlockStyle> blockStyleStack;  // accumulated block styles from open ancestor elements
@@ -103,6 +104,8 @@ class ChapterHtmlSlimParser {
   bool effectiveSup = false;
   bool effectiveSub = false;
   bool effectiveBackgroundBlack = false;
+  bool effectiveSmallCaps = false;
+  uint32_t boxedBlockLevels = 0;  // bit n set: blockStyleStack level n opened a box and owes a closing rule
   static constexpr size_t MAX_GRID_TABLE_COLUMNS = 4;
   static constexpr size_t MAX_GRID_TABLE_CELL_WORDS = 32;
   static constexpr size_t MAX_GRID_TABLE_CELL_BYTES = 512;
@@ -188,7 +191,8 @@ class ChapterHtmlSlimParser {
   static void applyVerticalAlignToEntry(StyleStackEntry& entry, const CssStyle& css);
   void pushTableTextStyleEntry(const CssStyle& cssStyle);
   void pushDecorationStyleEntry(CssTextDecoration defaultDecoration, const CssStyle& cssStyle);
-  void emitHorizontalRule(const BlockStyle& blockStyle);
+  // boxEdge: thin full-width rule closing off a bordered/tinted block (blockquote/div/pre) top or bottom.
+  void emitHorizontalRule(const BlockStyle& blockStyle, bool boxEdge = false);
   // XML callbacks
   static void XMLCALL startElement(void* userData, const XML_Char* name, const XML_Char** atts);
   static void XMLCALL characterData(void* userData, const XML_Char* s, int len);

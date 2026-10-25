@@ -102,6 +102,8 @@ struct CssPropertyFlags {
   uint32_t listStyleType : 1;
   uint32_t whiteSpace : 1;
   uint32_t borderNone : 1;
+  uint32_t smallCaps : 1;
+  uint32_t borderBox : 1;
 
   CssPropertyFlags()
       : textAlign(0),
@@ -125,13 +127,15 @@ struct CssPropertyFlags {
         backgroundBlack(0),
         listStyleType(0),
         whiteSpace(0),
-        borderNone(0) {}
+        borderNone(0),
+        smallCaps(0),
+        borderBox(0) {}
 
   [[nodiscard]] bool anySet() const {
     return textAlign || fontStyle || fontWeight || textDecoration || textIndent || marginTop || marginBottom ||
            marginLeft || marginRight || paddingTop || paddingBottom || paddingLeft || paddingRight || imageHeight ||
            imageWidth || display || direction || verticalAlign || backgroundBlack || listStyleType ||
-           whiteSpace || borderNone;
+           whiteSpace || borderNone || smallCaps || borderBox;
   }
 
   void clearAll() {
@@ -139,14 +143,14 @@ struct CssPropertyFlags {
     marginTop = marginBottom = marginLeft = marginRight = 0;
     paddingTop = paddingBottom = paddingLeft = paddingRight = 0;
     imageHeight = imageWidth = display = direction = verticalAlign = backgroundBlack = listStyleType = whiteSpace = 0;
-    borderNone = 0;
+    borderNone = smallCaps = borderBox = 0;
   }
 };
 
-// Cache serializes defined flags as uint32_t with bit indices 0..20.
+// Cache serializes defined flags as uint32_t with bit indices 0..23.
 static_assert(sizeof(CssPropertyFlags) <= sizeof(uint32_t),
               "CssPropertyFlags exceeds 32 bits; update cache read/write in CssParser.cpp");
-static_assert(sizeof(CssPropertyFlags) * 8 >= 21,
+static_assert(sizeof(CssPropertyFlags) * 8 >= 24,
               "CssPropertyFlags has fewer bits than properties; update bitfield widths");
 
 // Represents a collection of CSS style properties
@@ -176,6 +180,8 @@ struct CssStyle {
   CssListStyleType listStyleType = CssListStyleType::Disc;      // list-style-type (Disc or None)
   CssWhiteSpace whiteSpace = CssWhiteSpace::Normal;
   bool borderNone = false;  // border/border-top style none|hidden (hr draws no rule)
+  bool smallCaps = false;   // font-variant small-caps / text-transform uppercase (rendered uppercase)
+  bool borderBox = false;   // visible border on a block (drawn as rules above and below)
 
   CssPropertyFlags defined;  // Tracks which properties were explicitly set
 
@@ -248,6 +254,8 @@ struct CssStyle {
     }
     if (base.hasBackgroundBlack()) { backgroundBlack = base.backgroundBlack; defined.backgroundBlack = 1; }
     if (base.hasBorderNone()) { borderNone = base.borderNone; defined.borderNone = 1; }
+    if (base.hasSmallCaps()) { smallCaps = base.smallCaps; defined.smallCaps = 1; }
+    if (base.hasBorderBox()) { borderBox = base.borderBox; defined.borderBox = 1; }
     if (base.hasDirection()) {
       direction = base.direction;
       defined.direction = 1;
@@ -288,6 +296,8 @@ struct CssStyle {
   [[nodiscard]] bool hasListStyleType() const { return defined.listStyleType; }
   [[nodiscard]] bool hasWhiteSpace() const { return defined.whiteSpace; }
   [[nodiscard]] bool hasBorderNone() const { return defined.borderNone; }
+  [[nodiscard]] bool hasSmallCaps() const { return defined.smallCaps; }
+  [[nodiscard]] bool hasBorderBox() const { return defined.borderBox; }
 
   void reset() {
     textAlign = CssTextAlign::Left;
@@ -305,6 +315,8 @@ struct CssStyle {
     listStyleType = CssListStyleType::Disc;
     whiteSpace = CssWhiteSpace::Normal;
     borderNone = false;
+    smallCaps = false;
+    borderBox = false;
     defined.clearAll();
   }
 };

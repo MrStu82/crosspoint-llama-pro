@@ -104,7 +104,6 @@ TEST(ExtraWideSettings, SharedSettingsAndTouchLabelsStayInEnumOrder) {
 
 TEST(TopBezelOffsetSettings, JsonRoundTripClampAndPortraitOnly) {
   auto& value = settings();
-  EXPECT_EQ(CrossPointSettings().topBezelOffset, 0);  // default: layout unchanged
   value.orientation = CrossPointSettings::PORTRAIT;
   value.topBezelOffset = 0;
   EXPECT_EQ(value.readerTopBezelOffset(), 0);

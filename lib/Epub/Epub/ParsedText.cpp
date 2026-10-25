@@ -217,6 +217,9 @@ void stripSoftHyphensInPlace(std::string& word) {
 // don't inflate inter-word spacing.
 uint16_t measureWordWidth(const GfxRenderer& renderer, const int fontId, const std::string& word,
                           const EpdFontFamily::Style style, const bool appendHyphen = false) {
+  if (TextBlock::isInlineImageWord(word.c_str())) {
+    return static_cast<uint16_t>(strtoul(word.c_str() + 1, nullptr, 10));
+  }
   if (word.size() == 1 && word[0] == ' ' && !appendHyphen) {
     return renderer.getSpaceWidth(fontId, style);
   }
@@ -393,6 +396,17 @@ void ParsedText::eraseVisibleOffsetPrefix(const size_t count) {
 void ParsedText::addWord(std::string word, const EpdFontFamily::Style fontStyle, const bool underline,
                          const bool attachToPrevious, const uint32_t visibleTextOffset, const bool backgroundBlack) {
   if (word.empty()) return;
+  if (TextBlock::isInlineImageWord(word.c_str())) {
+    words.push_back(std::move(word));
+    wordStyles.push_back(fontStyle);
+    wordContinues.push_back(attachToPrevious);
+    wordNoSpaceBefore.push_back(false);
+    wordFocusBoundary.push_back(0);
+    wordBackgroundBlack.push_back(0);
+    pushVisibleOffset(visibleTextOffset);
+    if (!rubyTexts.empty()) rubyTexts.push_back("");
+    return;
+  }
 
   // The device fonts carry no combining-mark positioning, so EPUB text stored in NFD
   // (a base letter followed by separate combining accents -- common for Vietnamese,
@@ -667,9 +681,11 @@ int ParsedText::resolveFirstLineIndent(const bool isFirstLine, const GfxRenderer
   return 0;
 }
 // Consumes data to minimize memory usage
-void ParsedText::layoutAndExtractLines(const GfxRenderer& renderer, const int fontId, const uint16_t viewportWidth,
+void ParsedText::layoutAndExtractLines(const GfxRenderer& renderer, const int readerFontId,
+                                       const uint16_t viewportWidth,
                                        const std::function<void(std::shared_ptr<TextBlock>, uint32_t)>& processLine,
                                        const bool includeLastLine) {
+  const int fontId = fontIdOr(readerFontId);
   if (words.empty()) {
     return;
   }
@@ -1156,7 +1172,7 @@ bool ParsedText::hyphenateWordAtIndex(const size_t wordIndex, const int availabl
                                       const int fontId, std::vector<uint16_t>& wordWidths,
                                       const bool allowFallbackBreaks) {
   // Guard against invalid indices or zero available width before attempting to split.
-  if (availableWidth <= 0 || wordIndex >= words.size()) {
+  if (availableWidth <= 0 || wordIndex >= words.size() || TextBlock::isInlineImageWord(words[wordIndex].c_str())) {
     return false;
   }
 
@@ -1611,6 +1627,7 @@ void ParsedText::extractLine(const size_t breakIndex, const int pageWidth, const
       LOG_ERR("PTX", "Dropping line: TextBlock arena allocation failed");
       return;
     }
+    block->setFontId(fontIdOverride);
     processLine(std::move(block), lineVisibleOffset);
     return;
   }
@@ -1634,5 +1651,6 @@ void ParsedText::extractLine(const size_t breakIndex, const int pageWidth, const
     LOG_ERR("PTX", "Dropping line: TextBlock arena allocation failed");
     return;
   }
+  block->setFontId(fontIdOverride);
   processLine(std::move(block), lineVisibleOffset);
 }

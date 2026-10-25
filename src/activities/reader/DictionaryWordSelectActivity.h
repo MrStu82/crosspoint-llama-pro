@@ -36,6 +36,7 @@ class DictionaryWordSelectActivity final : public Activity {
     uint16_t row;
     const char* text;
     EpdFontFamily::Style style;
+    int fontId;  // the line's font (sized headings differ from the reader font)
   };
 
   enum class Popup : uint8_t { None, Busy, NotFound, Error };
@@ -52,7 +53,6 @@ class DictionaryWordSelectActivity final : public Activity {
   const int marginLeft;
   const int marginTop;
   int fontId = 0;
-  int lineHeight = 0;
 
   std::vector<WordBox> words;
   int selected = 0;

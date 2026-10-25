@@ -50,7 +50,7 @@ namespace {
 // v45: x4pro-all20 layout fixes (single bump): no re-indent across soft flushes or
 //      after <br>, justify remainder, word-gap cap, hyphenation DP, SD-font measuring,
 //      white-space/pre, compact top margin.
-constexpr uint8_t SECTION_FILE_VERSION = 47;
+constexpr uint8_t SECTION_FILE_VERSION = 48;
 // Written into the version field while a build is in progress; patched to
 // SECTION_FILE_VERSION only when the build is finalized. An abandoned /
 // crash-interrupted .bin therefore carries version 0, which loadSectionFile rejects
@@ -829,6 +829,7 @@ std::string Section::getTextFromSectionFile() {
         if (line.getBlock()) {
           const auto& block = *line.getBlock();
           for (uint16_t i = 0; i < block.wordCount(); i++) {
+            if (TextBlock::isInlineImageWord(block.wordText(i))) continue;
             if (!fullText.empty()) fullText += " ";
             fullText += block.wordText(i);
           }

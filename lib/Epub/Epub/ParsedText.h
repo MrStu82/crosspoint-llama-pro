@@ -50,6 +50,7 @@ class ParsedText {
   std::vector<VisibleOffsetRebase> visibleOffsetRebases;
   std::deque<std::string> rubyTexts;
   BlockStyle blockStyle;
+  int fontIdOverride = 0;  // sized heading font; 0 = the caller's reader font
   bool extraParagraphSpacing;
   bool hyphenationEnabled;
   bool focusReadingEnabled;
@@ -127,6 +128,8 @@ class ParsedText {
   void ensureRubyCapacity();
   void setBlockStyle(const BlockStyle& blockStyle) { this->blockStyle = blockStyle; }
   BlockStyle& getBlockStyle() { return blockStyle; }
+  void setFontId(const int id) { fontIdOverride = id; }
+  int fontIdOr(const int readerFontId) const { return fontIdOverride != 0 ? fontIdOverride : readerFontId; }
   size_t size() const { return words.size(); }
   bool isEmpty() const { return words.empty(); }
   void layoutAndExtractLines(const GfxRenderer& renderer, int fontId, uint16_t viewportWidth,

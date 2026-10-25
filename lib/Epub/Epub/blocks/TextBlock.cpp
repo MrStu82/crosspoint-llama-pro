@@ -210,6 +210,7 @@ void TextBlock::render(const GfxRenderer& renderer, const int fontId, const int 
 
   for (uint16_t i = 0; i < numWords; i++) {
     const char* word = wordText(i);
+    if (isInlineImageWord(word)) continue;
     const int wordX = xposArr[i] + x;
     const EpdFontFamily::Style currentStyle = wordStyle(i);
     const auto baseDir =
@@ -235,7 +236,7 @@ void TextBlock::render(const GfxRenderer& renderer, const int fontId, const int 
       if (backgroundWidth > 0) renderer.fillRect(drawX, wordY, backgroundWidth, ascender, true);
     }
 
-    if (guideDotsPresent && i > 0) {
+    if (guideDotsPresent && i > 0 && !isInlineImageWord(wordText(i - 1))) {
       const int previousEnd = xposArr[i - 1] + x +
                               renderer.getTextAdvanceX(fontId, wordText(i - 1), wordStyle(i - 1));
       const int gap = drawX - previousEnd;
@@ -362,6 +363,7 @@ bool TextBlock::serialize(HalFile& file) const {
   serialization::writePod(file, blockStyle.textIndentDefined);
   serialization::writePod(file, blockStyle.isRtl);
   serialization::writePod(file, blockStyle.directionDefined);
+  serialization::writePod(file, fontId);
 
   return true;
 }
@@ -463,6 +465,7 @@ std::unique_ptr<TextBlock> TextBlock::deserialize(HalFile& file) {
   serialization::readPod(file, blockStyle.textIndentDefined);
   serialization::readPod(file, blockStyle.isRtl);
   serialization::readPod(file, blockStyle.directionDefined);
+  serialization::readPod(file, block->fontId);
 
   return block;
 }

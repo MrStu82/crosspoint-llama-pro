@@ -531,6 +531,13 @@ void CssParser::parseDeclarationIntoStyle(std::string_view decl, CssStyle& style
   } else if (iequalsAscii(name, "border-left") || iequalsAscii(name, "border-left-style")) {
     style.borderBox = borderValueIsVisible(value);
     style.defined.borderBox = 1;
+  } else if (iequalsAscii(name, "font-size")) {
+    CssLength len;
+    if (tryInterpretLength(value, len) &&
+        (len.unit == CssUnit::Em || len.unit == CssUnit::Rem || len.unit == CssUnit::Percent)) {
+      style.fontSize = len;
+      style.defined.fontSize = 1;
+    }
   } else if (iequalsAscii(name, "font-variant") || iequalsAscii(name, "font-variant-caps") ||
              iequalsAscii(name, "text-transform")) {
     const std::string_view v = stripTrailingImportant(value);
@@ -924,6 +931,7 @@ bool CssParser::saveToCache() const {
     writeLength(style.paddingRight);
     writeLength(style.imageHeight);
     writeLength(style.imageWidth);
+    writeLength(style.fontSize);
     writeByte(static_cast<uint8_t>(style.display));
     writeByte(static_cast<uint8_t>(style.verticalAlign));
     writeByte(static_cast<uint8_t>(style.backgroundBlack ? 1 : 0));
@@ -959,6 +967,7 @@ bool CssParser::saveToCache() const {
     if (style.defined.borderNone) definedBits |= 1 << 21;
     if (style.defined.smallCaps) definedBits |= 1 << 22;
     if (style.defined.borderBox) definedBits |= 1 << 23;
+    if (style.defined.fontSize) definedBits |= 1 << 24;
     writeBytes(&definedBits, sizeof(definedBits));
     if (!writeOk) break;
   }
@@ -1133,7 +1142,7 @@ bool CssParser::loadFromCacheOnce(bool& lowMemory) {
     if (!readLength(style.textIndent) || !readLength(style.marginTop) || !readLength(style.marginBottom) ||
         !readLength(style.marginLeft) || !readLength(style.marginRight) || !readLength(style.paddingTop) ||
         !readLength(style.paddingBottom) || !readLength(style.paddingLeft) || !readLength(style.paddingRight) ||
-        !readLength(style.imageHeight) || !readLength(style.imageWidth)) {
+        !readLength(style.imageHeight) || !readLength(style.imageWidth) || !readLength(style.fontSize)) {
       rulesBySelector_.clear();
       return false;
     }
@@ -1217,6 +1226,7 @@ bool CssParser::loadFromCacheOnce(bool& lowMemory) {
     style.defined.borderNone = (definedBits & 1 << 21) != 0;
     style.defined.smallCaps = (definedBits & 1 << 22) != 0;
     style.defined.borderBox = (definedBits & 1 << 23) != 0;
+    style.defined.fontSize = (definedBits & 1 << 24) != 0;
 
     if (!cacheAllocationAllowed(sizeof(std::pair<const std::string, CssStyle>) + selectorLen + 1)) {
       lowMemory = true;

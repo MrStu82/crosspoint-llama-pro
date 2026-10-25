@@ -138,6 +138,35 @@ bool isInternalEpubLink(const char* href) {
   return true;
 }
 
+// Built-in reader families, sizes ascending. A heading's font-size em picks the nearest
+// registered size of the reader font's own family; SD fonts carry one size and stay as is.
+constexpr int SIZED_FONT_IDS[][4] = {
+    {NOTOSERIF_12_FONT_ID, NOTOSERIF_14_FONT_ID, NOTOSERIF_16_FONT_ID, NOTOSERIF_18_FONT_ID},
+    {NOTOSANS_12_FONT_ID, NOTOSANS_14_FONT_ID, NOTOSANS_16_FONT_ID, NOTOSANS_18_FONT_ID},
+    {LEXENDDECA_10_FONT_ID, LEXENDDECA_12_FONT_ID, LEXENDDECA_14_FONT_ID, LEXENDDECA_16_FONT_ID},
+    {BITTER_10_FONT_ID, BITTER_12_FONT_ID, BITTER_14_FONT_ID, BITTER_16_FONT_ID}};
+constexpr int SIZED_FONT_PT[][4] = {{12, 14, 16, 18}, {12, 14, 16, 18}, {10, 12, 14, 16}, {10, 12, 14, 16}};
+
+int sizedFontId(const GfxRenderer& renderer, const int fontId, const float em) {
+  for (size_t f = 0; f < std::size(SIZED_FONT_IDS); f++) {
+    for (size_t i = 0; i < 4; i++) {
+      if (SIZED_FONT_IDS[f][i] != fontId) continue;
+      const float target = SIZED_FONT_PT[f][i] * em;
+      int best = fontId;
+      float bestDiff = std::abs(SIZED_FONT_PT[f][i] - target);
+      for (size_t j = 0; j < 4; j++) {
+        const float diff = std::abs(SIZED_FONT_PT[f][j] - target);
+        if (diff < bestDiff && renderer.getFontMap().count(SIZED_FONT_IDS[f][j]) != 0) {
+          bestDiff = diff;
+          best = SIZED_FONT_IDS[f][j];
+        }
+      }
+      return best;
+    }
+  }
+  return fontId;
+}
+
 bool isHeaderOrBlock(const char* name) {
   return matches(name, HEADER_TAGS, std::size(HEADER_TAGS)) || matches(name, BLOCK_TAGS, std::size(BLOCK_TAGS));
 }
@@ -478,6 +507,7 @@ void ChapterHtmlSlimParser::startNewTextBlock(const BlockStyle& blockStyle) {
       }
 
       currentTextBlock->setBlockStyle(style.getCombinedBlockStyle(incoming, BlockStyle::CombineAxis::Vertical));
+      currentTextBlock->setFontId(0);
 
       flushPendingAnchor();
       return;
@@ -1191,6 +1221,25 @@ void XMLCALL ChapterHtmlSlimParser::startElement(void* userData, const XML_Char*
                   LOG_DBG("EHP", "Display size: %dx%d (scale %.2f)", displayWidth, displayHeight, scale);
                 }
 
+                // A CSS-sized image about one em tall (e.g. per-word title glyphs) flows as a word
+                // of its own width; addLineToPage places it with its line. Not inside tables.
+                if (hasCssHeight && self->tableDepth == 0 && self->currentTextBlock &&
+                    displayHeight <= emSize * 1.25f && displayWidth <= containerWidth) {
+                  if (self->partWordBufferIndex > 0) {
+                    self->flushPartWordBuffer();
+                    self->nextWordContinues = true;
+                  }
+                  self->inlineImages.push_back({cachedImagePath, resolvedPath, static_cast<int16_t>(displayWidth),
+                                                static_cast<int16_t>(displayHeight)});
+                  self->currentTextBlock->addWord("\x1B" + std::to_string(displayWidth) + ":" +
+                                                      std::to_string(self->inlineImages.size() - 1),
+                                                  EpdFontFamily::REGULAR, false, self->nextWordContinues,
+                                                  self->visibleTextOffset);
+                  self->nextWordContinues = true;
+                  self->depth += 1;
+                  return;
+                }
+
                 // Flush any pending text block so it appears before the image
                 if (self->partWordBufferIndex > 0) {
                   self->flushPartWordBuffer();
@@ -1449,6 +1498,12 @@ void XMLCALL ChapterHtmlSlimParser::startElement(void* userData, const XML_Char*
         self->blockStyleStack.back().getCombinedBlockStyle(headerBlockStyle, BlockStyle::CombineAxis::Horizontal);
     self->blockStyleStack.push_back(accumulated);
     self->startNewTextBlock(accumulated.withoutBottom());
+    if (self->embeddedStyle && cssStyle.hasFontSize()) {
+      const float em = cssStyle.fontSize.unit == CssUnit::Percent ? cssStyle.fontSize.value / 100.0f
+                                                                  : cssStyle.fontSize.value;
+      const int sized = sizedFontId(self->renderer, self->fontId, em);
+      self->currentTextBlock->setFontId(sized != self->fontId ? sized : 0);
+    }
     self->boldUntilDepth = std::min(self->boldUntilDepth, self->depth);
     self->updateEffectiveInlineStyle();
   } else if (matches(name, BLOCK_TAGS, std::size(BLOCK_TAGS))) {
@@ -2268,8 +2323,9 @@ bool ChapterHtmlSlimParser::parseAndBuildPages() {
 }
 
 void ChapterHtmlSlimParser::addLineToPage(std::shared_ptr<TextBlock> line, const uint32_t visibleOffset) {
+  const int lineFont = line->fontIdOr(fontId);
   const int lineHeight =
-      renderer.getLineHeight(fontId, lineCompression) + line->getRubyShift(renderer.getFontAscenderSize(fontId));
+      renderer.getLineHeight(lineFont, lineCompression) + line->getRubyShift(renderer.getFontAscenderSize(lineFont));
 
   if (!currentPage) {
     currentPage.reset(new Page());
@@ -2299,6 +2355,26 @@ void ChapterHtmlSlimParser::addLineToPage(std::shared_ptr<TextBlock> line, const
   // Apply horizontal left inset (margin + padding) as x position offset
   const int16_t xOffset = line->getBlockStyle().leftInset();
   currentPage->elements.push_back(std::make_shared<PageLine>(line, xOffset, currentPageNextY));
+
+  // Inline images ride their line: drawn at the word's x, centred vertically on the line.
+  for (uint16_t i = 0; i < line->wordCount(); i++) {
+    const char* word = line->wordText(i);
+    if (!TextBlock::isInlineImageWord(word)) continue;
+    const char* colon = strchr(word, ':');
+    const size_t idx = colon ? strtoul(colon + 1, nullptr, 10) : inlineImages.size();
+    if (idx >= inlineImages.size()) continue;
+    const auto& img = inlineImages[idx];
+    auto imageBlock = std::shared_ptr<ImageBlock>(
+        new (std::nothrow) ImageBlock(img.cachedPath, img.srcPath, img.width, img.height));
+    if (!imageBlock) {
+      LOG_ERR("EHP", "OOM: inline ImageBlock");
+      continue;
+    }
+    const int16_t y = static_cast<int16_t>(currentPageNextY + (lineHeight - img.height) / 2);
+    auto pageImage = std::shared_ptr<PageImage>(
+        new (std::nothrow) PageImage(imageBlock, static_cast<int16_t>(xOffset + line->wordXpos(i)), y));
+    if (pageImage) currentPage->elements.push_back(pageImage);
+  }
   currentPageNextY += lineHeight;
 }
 

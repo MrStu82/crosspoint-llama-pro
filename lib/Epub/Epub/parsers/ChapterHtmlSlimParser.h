@@ -106,6 +106,14 @@ class ChapterHtmlSlimParser {
   bool effectiveBackgroundBlack = false;
   bool effectiveSmallCaps = false;
   uint32_t boxedBlockLevels = 0;  // bit n set: blockStyleStack level n opened a box and owes a closing rule
+  // Line-height images laid out as words; placed on the page with their line (addLineToPage).
+  struct InlineImage {
+    std::string cachedPath;
+    std::string srcPath;
+    int16_t width;
+    int16_t height;
+  };
+  std::vector<InlineImage> inlineImages;
   static constexpr size_t MAX_GRID_TABLE_COLUMNS = 4;
   static constexpr size_t MAX_GRID_TABLE_CELL_WORDS = 32;
   static constexpr size_t MAX_GRID_TABLE_CELL_BYTES = 512;

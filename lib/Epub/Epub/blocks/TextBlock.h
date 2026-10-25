@@ -44,6 +44,7 @@ class TextBlock final : public Block {
   bool focusPresent = false;
   bool guideDotsPresent = false;
   bool isValid = true;
+  int32_t fontId = 0;  // per-block font (sized heading); 0 = the reader font
   // The ONLY allocation: makeUniqueNoThrow, so OOM yields an invalid block
   // instead of abort() (bare new is not nothrow with -fno-exceptions).
   std::unique_ptr<uint8_t[]> arena;
@@ -77,6 +78,8 @@ class TextBlock final : public Block {
 
   void setBlockStyle(const BlockStyle& blockStyle) { this->blockStyle = blockStyle; }
   const BlockStyle& getBlockStyle() const { return blockStyle; }
+  void setFontId(const int32_t id) { fontId = id; }
+  int fontIdOr(const int readerFontId) const { return fontId != 0 ? fontId : readerFontId; }
   bool isEmpty() override { return numWords == 0; }
   bool valid() const { return isValid; }
   uint16_t wordCount() const { return numWords; }
@@ -91,6 +94,9 @@ class TextBlock final : public Block {
   uint8_t focusBoundary(const uint16_t i) const { return focusPresent ? focusBoundaryArr[i] : 0; }
   uint16_t focusSuffixX(const uint16_t i) const { return focusPresent ? focusSuffixXArr[i] : 0; }
   bool hasRuby() const;
+  // Inline image placeholder word: "\x1B<width>:<index>". It takes <width> px in the line,
+  // draws no text, and the parser places the image itself (see addLineToPage).
+  static bool isInlineImageWord(const char* w) { return w[0] == '\x1B'; }
   int getRubyShift(int ascender) const { return hasRuby() ? (ascender / 2) : 0; }
   const std::vector<std::string>& getRubyTexts() const { return rubyTexts; }
 

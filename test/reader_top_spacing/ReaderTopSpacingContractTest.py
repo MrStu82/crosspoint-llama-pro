@@ -2,6 +2,7 @@
 """Exact source geometry contract for the reader's top status bar prototype."""
 
 from pathlib import Path
+import re
 
 
 root = Path(__file__).resolve().parents[2]
@@ -25,6 +26,10 @@ assert ": topInset + orientedMarginTop + paddingBottom" in theme
 settings = (root / "src/CrossPointSettings.h").read_text()
 assert "uint8_t topBezelOffset = 0;" in settings
 assert "return orientation == PORTRAIT ? topBezelOffset : 0;" in settings
+settings_list = re.sub(r"\s+", " ", (root / "src/SettingsList.h").read_text())
+assert ('SettingInfo::Value(StrId::STR_TOP_BEZEL_OFFSET, &CrossPointSettings::topBezelOffset, '
+        '{0, CrossPointSettings::TOP_BEZEL_OFFSET_MAX, CrossPointSettings::TOP_BEZEL_OFFSET_STEP}, '
+        '"topBezelOffset", StrId::STR_CAT_READER) .withTextSettings()') in settings_list
 epub = (root / "src/activities/reader/EpubReaderActivity.cpp").read_text()
 txt = (root / "src/activities/reader/TxtReaderActivity.cpp").read_text()
 assert epub.count("SETTINGS.readerTopBezelOffset()") == 3  # text top, dictionary geometry, top bar

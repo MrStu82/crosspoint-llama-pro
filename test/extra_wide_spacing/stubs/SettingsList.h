@@ -30,5 +30,11 @@ inline std::vector<SettingInfo> getSettingsList() {
   lineSpacing.valuePtr = &CrossPointSettings::lineSpacing;
   lineSpacing.type = SettingType::ENUM;
   lineSpacing.enumValues = {0, 1, 2, 3};
-  return {lineSpacing};
+  // Mirrors the real topBezelOffset entry (key and range pinned by ReaderTopSpacingContractTest).
+  SettingInfo topBezelOffset;
+  topBezelOffset.key = "topBezelOffset";
+  topBezelOffset.valuePtr = &CrossPointSettings::topBezelOffset;
+  topBezelOffset.type = SettingType::VALUE;
+  topBezelOffset.valueRange = {0, CrossPointSettings::TOP_BEZEL_OFFSET_MAX};
+  return {lineSpacing, topBezelOffset};
 }

@@ -29,6 +29,9 @@ struct RatingSnapshot {
   std::string sourceUrl;
   int64_t fetchedAt = 0;
   uint8_t schemaVersion = 1;
+  // Library card enrichment from the same search hit; empty/0 when absent.
+  std::string description;
+  uint32_t pages = 0;
 
   bool valid() const {
     return !canonicalBookKey.empty() && valueX100 > 0 && valueX100 <= 500 && ratingCount > 0 &&

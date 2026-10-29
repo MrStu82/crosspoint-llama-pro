@@ -18,6 +18,12 @@ class BookMetadataCache {
     std::string isbn;
     std::string coverItemHref;
     std::string textReferenceHref;
+    // Library card details. Filled by Epub::readOpfDetails() only and never
+    // serialized, so book.bin keeps its format.
+    std::string description;
+    std::string date;
+    std::string publisher;
+    std::string pageListHref;  // EPUB 3 nav, else NCX: where a print page list may live
   };
 
   struct SpineEntry {

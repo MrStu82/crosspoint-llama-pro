@@ -81,6 +81,10 @@ bool Epub::parseContentOpf(BookMetadataCache::BookMetadata& bookMetadata, const 
   bookMetadata.language = opfParser.language;
   bookMetadata.isbn = opfParser.isbn;
   bookMetadata.coverItemHref = opfParser.coverItemHref;
+  bookMetadata.description = opfParser.description;
+  bookMetadata.date = opfParser.date;
+  bookMetadata.publisher = opfParser.publisher;
+  bookMetadata.pageListHref = opfParser.tocNavPath.empty() ? opfParser.tocNcxPath : opfParser.tocNavPath;
 
   // Guide-based cover fallback: if no cover found via metadata/properties,
   // try extracting the image reference from the guide's cover page XHTML
@@ -518,6 +522,12 @@ bool Epub::load(const bool buildIfMissing, const bool skipLoadingCss) {
 
   LOG_DBG("EBP", "Loaded ePub: %s", filepath.c_str());
   return true;
+}
+
+bool Epub::readOpfDetails(BookMetadataCache::BookMetadata& details) {
+  if (!bookMetadataCache || !bookMetadataCache->isLoaded()) return false;
+  details = bookMetadataCache->coreMetadata;
+  return parseContentOpf(details, /*writeSpineEntries=*/false);
 }
 
 bool Epub::clearCache() const {

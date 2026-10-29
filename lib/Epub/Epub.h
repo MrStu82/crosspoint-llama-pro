@@ -45,6 +45,9 @@ class Epub {
   ~Epub() = default;
   std::string& getBasePath() { return contentBasePath; }
   bool load(bool buildIfMissing = true, bool skipLoadingCss = false);
+  // Re-reads content.opf for the Library card fields (description, date,
+  // publisher, page-list doc) without touching book.bin. Requires load().
+  bool readOpfDetails(BookMetadataCache::BookMetadata& details);
   bool clearCache() const;
   void setupCacheDir() const;
   const std::string& getCachePath() const;

@@ -132,6 +132,7 @@ void RecentBooksActivity::loop() {
       InkPointShell::navigate(*destination);
       return;
     }
+    if (!syncBusy() && InkPointShell::handleLibraryToggle(mappedInput, false)) return;
   }
   const auto& metrics = UITheme::getInstance().getMetrics();
   const bool inkPoint = InkPointShell::enabled(renderer);
@@ -296,7 +297,10 @@ void RecentBooksActivity::render(RenderLock&&) {
   const auto& metrics = UITheme::getInstance().getMetrics();
 
   const bool inkPoint = InkPointShell::enabled(renderer);
-  if (inkPoint) InkPointShell::drawHeader(renderer, "Library");
+  if (inkPoint) {
+    InkPointShell::drawHeader(renderer, "Library");
+    if (!syncBusy()) InkPointShell::drawLibraryToggle(renderer, false);
+  }
   else GUI.drawHeader(renderer, Rect{0, metrics.topPadding, pageWidth, metrics.headerHeight}, tr(STR_MENU_RECENT_BOOKS));
 
   const int contentTop = inkPoint ? InkPointShell::kContentTop

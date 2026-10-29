@@ -139,6 +139,22 @@ void XMLCALL ContentOpfParser::startElement(void* userData, const XML_Char* name
     return;
   }
 
+  if (self->state == IN_METADATA) {
+    // Only the first of each is kept.
+    if (xmlLocalNameEquals(name, "description") && self->description.empty()) {
+      self->state = IN_BOOK_DESCRIPTION;
+      return;
+    }
+    if (xmlLocalNameEquals(name, "date") && self->date.empty()) {
+      self->state = IN_BOOK_DATE;
+      return;
+    }
+    if (xmlLocalNameEquals(name, "publisher") && self->publisher.empty()) {
+      self->state = IN_BOOK_PUBLISHER;
+      return;
+    }
+  }
+
   if (self->state == IN_PACKAGE && xmlLocalNameEquals(name, "manifest")) {
     self->state = IN_MANIFEST;
     if (!Storage.openFileForWrite("COF", self->cachePath + itemCacheFile, self->tempItemStore)) {
@@ -360,6 +376,20 @@ void XMLCALL ContentOpfParser::characterData(void* userData, const XML_Char* s, 
     return;
   }
 
+  // Descriptions can be long; the card shows a few lines, so cap what is held.
+  if (self->state == IN_BOOK_DESCRIPTION) {
+    if (self->description.size() < 4096) self->description.append(s, len);
+    return;
+  }
+  if (self->state == IN_BOOK_DATE) {
+    self->date.append(s, len);
+    return;
+  }
+  if (self->state == IN_BOOK_PUBLISHER) {
+    self->publisher.append(s, len);
+    return;
+  }
+
   if (self->state == IN_BOOK_AUTHOR) {
     if (!self->author.empty()) {
       self->author.append(", ");  // Add separator for multiple authors
@@ -413,6 +443,13 @@ void XMLCALL ContentOpfParser::endElement(void* userData, const XML_Char* name) 
   }
 
   if (self->state == IN_BOOK_LANGUAGE && xmlLocalNameEquals(name, "language")) {
+    self->state = IN_METADATA;
+    return;
+  }
+
+  if ((self->state == IN_BOOK_DESCRIPTION && xmlLocalNameEquals(name, "description")) ||
+      (self->state == IN_BOOK_DATE && xmlLocalNameEquals(name, "date")) ||
+      (self->state == IN_BOOK_PUBLISHER && xmlLocalNameEquals(name, "publisher"))) {
     self->state = IN_METADATA;
     return;
   }

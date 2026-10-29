@@ -159,6 +159,9 @@ TEST(HardcoverRating, CapturedLiveDccKeepsTheValidCatalogCandidate) {
   EXPECT_EQ(candidates[0].snapshot.sourceId, "446681");
   EXPECT_EQ(candidates[0].title, "Dungeon Crawler Carl");
   EXPECT_EQ(candidates[0].author, "Matt Dinniman");
+  EXPECT_EQ(candidates[0].snapshot.pages, 465u);
+  EXPECT_EQ(candidates[0].snapshot.description.rfind("A man. His ex-girlfriend's cat.", 0), 0u);
+  EXPECT_LE(candidates[0].snapshot.description.size(), 1500u);
   EXPECT_EQ(stats.returned, 1);
   EXPECT_EQ(stats.invalid, 0);
 }

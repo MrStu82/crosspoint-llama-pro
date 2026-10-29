@@ -8,10 +8,12 @@
 #include <algorithm>
 
 #include "CrossPointSettings.h"
+#include "CrossPointState.h"
 #include "OpdsServerStore.h"
 #include "boot_sleep/BootActivity.h"
 #include "boot_sleep/SleepActivity.h"
 #include "browser/OpdsBookBrowserActivity.h"
+#include "components/InkPointShell.h"
 #include "game/GamesListActivity.h"
 #include "game/MinesweeperActivity.h"
 #include "game/SolitaireActivity.h"
@@ -20,6 +22,7 @@
 #include "home/CrashActivity.h"
 #include "home/FileBrowserActivity.h"
 #include "home/HomeActivity.h"
+#include "home/LibraryShelfActivity.h"
 #include "home/RecentBooksActivity.h"
 #include "home/StatsActivity.h"
 #include "network/CrossPointWebServerActivity.h"
@@ -266,6 +269,11 @@ void ActivityManager::goToFileBrowser(std::string path) {
 }
 
 void ActivityManager::goToRecentBooks() {
+  // Shelf is the touch (InkPoint) layout's opt-in view; List stays the default.
+  if (APP_STATE.libraryShelfView && InkPointShell::enabled(renderer)) {
+    replaceActivity(std::make_unique<LibraryShelfActivity>(renderer, mappedInput));
+    return;
+  }
   replaceActivity(std::make_unique<RecentBooksActivity>(renderer, mappedInput));
 }
 
@@ -306,7 +314,7 @@ void ActivityManager::goHome(HomeMenuItem initialMenuItem, bool cleanInitialRefr
     const auto& activityName = currentActivity->name;
     if (activityName == "FileBrowser") {
       initialMenuItem = HomeMenuItem::FILE_BROWSER;
-    } else if (activityName == "RecentBooks") {
+    } else if (activityName == "RecentBooks" || activityName == "LibraryShelf") {
       initialMenuItem = HomeMenuItem::RECENTS;
     } else if (activityName == "OpdsBookBrowser") {
       initialMenuItem = HomeMenuItem::OPDS_BROWSER;

@@ -39,6 +39,8 @@ std::optional<RatingSnapshot> snapshotFromJson(JsonVariantConst value) {
   result.sourceUrl = value["sourceUrl"] | "";
   result.fetchedAt = value["fetchedAt"] | 0LL;
   result.schemaVersion = value["schemaVersion"] | 0;
+  result.description = value["description"] | "";
+  result.pages = value["pages"] | 0U;
   return result.valid() ? std::optional<RatingSnapshot>(result) : std::nullopt;
 }
 
@@ -84,6 +86,8 @@ bool storeLastGood(const RatingSnapshot& snapshot) {
   root["sourceUrl"] = snapshot.sourceUrl;
   root["fetchedAt"] = snapshot.fetchedAt;
   root["schemaVersion"] = snapshot.schemaVersion;
+  if (!snapshot.description.empty()) root["description"] = snapshot.description;
+  if (snapshot.pages) root["pages"] = snapshot.pages;
   std::string json;
   serializeJson(root, json);
   return ProgressFile::writeAtomic(kCacheDir, reinterpret_cast<const uint8_t*>(json.data()), json.size(),

@@ -95,6 +95,15 @@ std::vector<HardcoverCandidate> parseSearchCandidates(const HardcoverBookIdentit
     candidate.snapshot = {book.canonicalKey, static_cast<int>(std::lround(average * 100.0f)), count,
                           doc["release_year"] | 0, id != "0" ? id : slug,
                           slug[0] ? std::string("https://hardcover.app/books/") + slug : "https://hardcover.app", fetchedAt};
+    candidate.snapshot.description = doc["description"] | "";
+    // The card shows a few lines; cap at a UTF-8 boundary to bound the SD cache.
+    constexpr size_t kMaxDescription = 1500;
+    if (candidate.snapshot.description.size() > kMaxDescription) {
+      size_t cut = kMaxDescription;
+      while (cut > 0 && (static_cast<unsigned char>(candidate.snapshot.description[cut]) & 0xC0) == 0x80) --cut;
+      candidate.snapshot.description.resize(cut);
+    }
+    candidate.snapshot.pages = doc["pages"] | 0U;
     if (!titleMatches(doc, book)) ++stats.titleRejected;
     if (!containsNormalized(doc["author_names"], book.author)) ++stats.authorRejected;
     candidates.push_back(std::move(candidate));

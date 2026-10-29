@@ -19,6 +19,9 @@ class ContentOpfParser final : public Print {
     IN_BOOK_AUTHOR,
     IN_BOOK_LANGUAGE,
     IN_BOOK_IDENTIFIER,
+    IN_BOOK_DESCRIPTION,
+    IN_BOOK_DATE,
+    IN_BOOK_PUBLISHER,
     IN_MANIFEST,
     IN_SPINE,
     IN_GUIDE,
@@ -63,6 +66,10 @@ class ContentOpfParser final : public Print {
   std::string language;
   std::string isbn;
   std::string currentIdentifier;
+  // Library card details: first of each, kept out of book.bin.
+  std::string description;
+  std::string date;
+  std::string publisher;
   std::string tocNcxPath;
   std::string tocNavPath;  // EPUB 3 nav document path
   std::string coverItemHref;

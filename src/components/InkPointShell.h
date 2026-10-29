@@ -21,10 +21,21 @@ constexpr int kHomeCoverHeight = 434;
 constexpr int kFooterTop = 728;
 constexpr int kFooterHeight = 60;
 
+// Header-right action slot (Library List|Shelf toggle, book card Back): below
+// the battery text and clear of the Caveat title.
+constexpr int kHeaderActionX = 330;
+constexpr int kHeaderActionY = 40;
+constexpr int kHeaderActionWidth = 130;
+constexpr int kHeaderActionHeight = 36;
+
 bool enabled(const GfxRenderer& renderer);
 void drawHeader(const GfxRenderer& renderer, const char* title);
 void drawFooter(const GfxRenderer& renderer, Destination active, int focus = -1);
 std::optional<Destination> tappedDestination(const MappedInputManager& input);
 void navigate(Destination destination);
+// Library List|Shelf toggle in the header action slot. A tap flips the view,
+// persists the choice and opens the other view; returns true when it did.
+void drawLibraryToggle(const GfxRenderer& renderer, bool shelf);
+bool handleLibraryToggle(const MappedInputManager& input, bool shelf);
 
 }  // namespace InkPointShell

@@ -44,6 +44,8 @@ class RecentBooksActivity final : public Activity {
   void runOneMetadataSync();
   int entryCount() const { return static_cast<int>(recentBooks.size()) + 1; };
   bool isSyncCommandSelected() const { return selectorIndex == 0; }
+  // A running sync or match choice owns the screen; the view toggle waits.
+  bool syncBusy() const { return syncState == SyncState::Running || syncState == SyncState::Choosing; }
 
   // Show an OK/Cancel prompt to remove the given book from the Recent Books list.
   void promptRemoveBook(const std::string& path, const std::string& title);

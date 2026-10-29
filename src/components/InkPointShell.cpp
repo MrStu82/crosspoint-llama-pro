@@ -6,6 +6,7 @@
 #include <cstdio>
 #include <array>
 
+#include "CrossPointState.h"
 #include "MappedInputManager.h"
 #include "activities/Activity.h"
 #include "activities/ActivityManager.h"
@@ -117,6 +118,24 @@ void navigate(const Destination destination) {
     case Destination::Transfer: activityManager.goToFileTransfer(); break;
     case Destination::Settings: activityManager.goToSettings(); break;
   }
+}
+
+void drawLibraryToggle(const GfxRenderer& renderer, const bool shelf) {
+  constexpr int half = kHeaderActionWidth / 2;
+  constexpr int baseline = kHeaderActionY + 24;
+  renderer.drawRoundedRect(kHeaderActionX, kHeaderActionY, kHeaderActionWidth, kHeaderActionHeight, 2, 7, true);
+  renderer.fillRoundedRect(kHeaderActionX + (shelf ? half : 0), kHeaderActionY, half, kHeaderActionHeight, 7,
+                           Color::Black);
+  drawCentered(renderer, SMALL_FONT_ID, kHeaderActionX + half / 2, baseline, "List", shelf);
+  drawCentered(renderer, SMALL_FONT_ID, kHeaderActionX + half + half / 2, baseline, "Shelf", !shelf);
+}
+
+bool handleLibraryToggle(const MappedInputManager& input, const bool shelf) {
+  if (!input.wasTapInRect(kHeaderActionX, kHeaderActionY, kHeaderActionWidth, kHeaderActionHeight)) return false;
+  APP_STATE.libraryShelfView = !shelf;
+  APP_STATE.saveToFile();
+  activityManager.goToRecentBooks();
+  return true;
 }
 
 }  // namespace InkPointShell

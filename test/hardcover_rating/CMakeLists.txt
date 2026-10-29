@@ -1,6 +1,8 @@
 add_executable(HardcoverRatingTest
   HardcoverRatingTest.cpp
+  AuthorBioTest.cpp
   ${REPO_ROOT}/src/network/HardcoverRatingParser.cpp
+  ${REPO_ROOT}/src/network/AuthorBioParser.cpp
 )
 
 target_include_directories(HardcoverRatingTest PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/stubs ${REPO_ROOT}/src/network ${REPO_ROOT}/src/util)

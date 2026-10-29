@@ -65,8 +65,22 @@ void BookCardActivity::loop() {
     finish();
     return;
   }
+  const auto swipe = mappedInput.wasSwipe();
+  const int pageCount = (details.description.empty() || details.bio.empty()) ? 1 : 2;
+  const int target = (mappedInput.wasReleased(MappedInputManager::Button::PageForward) ||
+                      swipe == MappedInputManager::SwipeDir::Left)
+                         ? 1
+                     : (mappedInput.wasReleased(MappedInputManager::Button::PageBack) ||
+                        swipe == MappedInputManager::SwipeDir::Right)
+                         ? 0
+                         : page;
+  if (target != page && target < pageCount) {
+    page = target;
+    requestUpdate();
+    return;
+  }
   if (mappedInput.wasReleased(MappedInputManager::Button::Confirm) ||
-      mappedInput.wasTapInRect(kMargin, kReadY, kTextW, kReadH))
+      (page == 0 && mappedInput.wasTapInRect(kMargin, kReadY, kTextW, kReadH)))
     onSelectBook(book.path);
 }
 
@@ -86,8 +100,37 @@ void BookCardActivity::render(RenderLock&&) {
                         (InkPointShell::kHeaderActionWidth - renderer.getTextWidth(UI_10_FONT_ID, back)) / 2,
                     InkPointShell::kHeaderActionY + 8, back);
 
-  // Cover and details column.
+  struct Section {
+    const char* label;
+    const std::string* text;
+    bool fromSync;
+  };
+  std::vector<Section> sections;
+  if (!details.description.empty()) sections.push_back({"ABOUT THIS BOOK", &details.description, blurbFromSync});
+  if (!details.bio.empty()) sections.push_back({"ABOUT THE AUTHOR", &details.bio, details.bioFromSync});
+  const int lineH = renderer.getLineHeight(UI_10_FONT_ID);
+  const auto drawSection = [&](int y, const Section& section, const int bottom) {
+    y = drawSectionLabel(renderer, y, section.label, section.fromSync);
+    if (sections.size() > 1) {
+      const char* indicator = page == 0 ? "1/2" : "2/2";
+      renderer.drawText(SMALL_FONT_ID, 480 - kMargin - renderer.getTextWidth(SMALL_FONT_ID, indicator),
+                        y - renderer.getLineHeight(SMALL_FONT_ID) - 4, indicator);
+    }
+    for (const auto& line :
+         renderer.wrappedText(UI_10_FONT_ID, section.text->c_str(), kTextW, std::max(1, (bottom - y) / lineH))) {
+      renderer.drawText(UI_10_FONT_ID, kMargin, y, line.c_str());
+      y += lineH;
+    }
+  };
   const int top = InkPointShell::kContentTop;
+  if (page == 1 && sections.size() > 1) {
+    drawSection(top, sections[1], InkPointShell::kFooterTop - 12);
+    InkPointShell::drawFooter(renderer, InkPointShell::Destination::Library);
+    renderer.displayBuffer();
+    return;
+  }
+
+  // Cover and details column.
   LibraryCover::draw(renderer, book, kMargin, top, kCoverW, kCoverH);
   int y = top;
   for (const auto& line : renderer.wrappedText(UI_12_FONT_ID, book.title.c_str(), kInfoW, 3, EpdFontFamily::BOLD)) {
@@ -111,34 +154,10 @@ void BookCardActivity::render(RenderLock&&) {
     y += factStep;
   }
 
-  // Blurb and bio share the space above the Read button; an absent one is hidden.
+  // The first available of blurb/bio fills the space above the Read button.
   y = std::max(y, top + kCoverH) + 18;
-  const int lineH = renderer.getLineHeight(UI_10_FONT_ID);
-  const int labelH = renderer.getLineHeight(SMALL_FONT_ID) + 4;
-  const bool hasBlurb = !details.description.empty();
-  const bool hasBio = !details.bio.empty();
-  const int sections = (hasBlurb ? 1 : 0) + (hasBio ? 1 : 0);
-  if (sections > 0) {
-    const int available = kReadY - 12 - y - sections * (labelH + 12);
-    int blurbLines = available / lineH;
-    int bioLines = 0;
-    if (hasBlurb && hasBio) {
-      bioLines = blurbLines * 2 / 5;
-      blurbLines -= bioLines;
-    } else if (hasBio) {
-      std::swap(blurbLines, bioLines);
-    }
-    const auto drawSection = [&](const char* label, const std::string& text, const int maxLines, const bool fromSync) {
-      y = drawSectionLabel(renderer, y, label, fromSync);
-      for (const auto& line : renderer.wrappedText(UI_10_FONT_ID, text.c_str(), kTextW, std::max(1, maxLines))) {
-        renderer.drawText(UI_10_FONT_ID, kMargin, y, line.c_str());
-        y += lineH;
-      }
-      y += 12;
-    };
-    if (hasBlurb) drawSection("ABOUT THIS BOOK", details.description, blurbLines, blurbFromSync);
-    if (hasBio) drawSection("ABOUT THE AUTHOR", details.bio, bioLines, false);
-  }
+  if (!sections.empty()) drawSection(y, sections[0], kReadY - 12);
+  else renderer.drawText(SMALL_FONT_ID, kMargin, y, "Sync on Wi-Fi to fetch blurb/bio");
 
   // Read: the same open-book path as Home's cover tap.
   renderer.fillRoundedRect(kMargin, kReadY, kTextW, kReadH, 10, Color::Black);

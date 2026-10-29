@@ -12,6 +12,7 @@ struct BookDetails {
   std::string description;
   std::string bio;
   uint32_t printPages = 0;
+  bool bioFromSync = false;  // bio came from the Library sync, not the EPUB
 };
 
 namespace BookDetailsStore {
@@ -19,4 +20,7 @@ namespace BookDetailsStore {
 std::optional<BookDetails> loadCached(const std::string& bookPath);
 // Cache first, else extract from the EPUB and cache the result.
 BookDetails load(const std::string& bookPath);
+// Library sync: when the book has no bio, fetch one for `author` (Wi-Fi) and
+// cache it. An EPUB bio is never replaced.
+void backfillBio(const std::string& bookPath, const std::string& author);
 }  // namespace BookDetailsStore

@@ -14,6 +14,7 @@
 #include "activities/network/WifiSelectionActivity.h"
 #include "network/HardcoverRating.h"
 #include "network/HardcoverSyncResult.h"
+#include "util/BookDetails.h"
 #include "components/UITheme.h"
 #include "components/InkPointShell.h"
 #include "fontIds.h"
@@ -80,6 +81,8 @@ void RecentBooksActivity::runOneMetadataSync() {
   }
   const auto& book = recentBooks[syncIndex];
   const auto now = static_cast<int64_t>(std::time(nullptr));
+  // The card's bio: the EPUB's own wins; otherwise Hardcover, then Open Library.
+  BookDetailsStore::backfillBio(book.path, book.author);
   const auto result = now > 0 ? HardcoverRating::refresh({book.path, book.isbn, book.title, book.author}, now)
                                : HardcoverRating::HardcoverRefreshResult{HardcoverRefreshStatus::NetworkFailure, std::nullopt};
   switch (result.status) {

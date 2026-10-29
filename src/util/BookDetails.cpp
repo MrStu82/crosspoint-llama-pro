@@ -11,6 +11,7 @@
 
 #include "BookDetailsText.h"
 #include "activities/reader/ProgressFile.h"
+#include "network/AuthorBio.h"
 
 namespace {
 constexpr char kFileName[] = "details.json";
@@ -39,6 +40,21 @@ std::string authorBio(const Epub& epub) {
   }
   return {};
 }
+
+void save(const std::string& bookPath, const BookDetails& details) {
+  JsonDocument root;
+  root["publisher"] = details.publisher;
+  root["date"] = details.date;
+  root["description"] = details.description;
+  root["bio"] = details.bio;
+  root["printPages"] = details.printPages;
+  if (details.bioFromSync) root["bioFromSync"] = true;
+  std::string json;
+  serializeJson(root, json);
+  if (!ProgressFile::writeAtomic(Epub(bookPath, "/.crosspoint").getCachePath(),
+                                 reinterpret_cast<const uint8_t*>(json.data()), json.size(), kFileName))
+    LOG_ERR("BDT", "Could not cache details for %s", bookPath.c_str());
+}
 }  // namespace
 
 namespace BookDetailsStore {
@@ -56,6 +72,7 @@ std::optional<BookDetails> loadCached(const std::string& bookPath) {
   details.description = root["description"] | "";
   details.bio = root["bio"] | "";
   details.printPages = root["printPages"] | 0U;
+  details.bioFromSync = root["bioFromSync"] | false;
   return details;
 }
 
@@ -75,19 +92,18 @@ BookDetails load(const std::string& bookPath) {
   details.description = BookDetailsText::plainParagraph(opf.description, kMaxBlurbBytes);
   details.bio = authorBio(epub);
   details.printPages = BookDetailsText::lastPrintPage(readItem(epub, opf.pageListHref));
-
-  JsonDocument root;
-  root["publisher"] = details.publisher;
-  root["date"] = details.date;
-  root["description"] = details.description;
-  root["bio"] = details.bio;
-  root["printPages"] = details.printPages;
-  std::string json;
-  serializeJson(root, json);
-  if (!ProgressFile::writeAtomic(epub.getCachePath(), reinterpret_cast<const uint8_t*>(json.data()), json.size(),
-                                 kFileName))
-    LOG_ERR("BDT", "Could not cache details for %s", bookPath.c_str());
+  save(bookPath, details);
   return details;
+}
+
+void backfillBio(const std::string& bookPath, const std::string& author) {
+  if (!FsHelpers::hasEpubExtension(bookPath)) return;
+  BookDetails details = load(bookPath);
+  if (!details.bio.empty()) return;
+  details.bio = BookDetailsText::plainParagraph(AuthorBio::fetch(author), kMaxBioBytes);
+  if (details.bio.empty()) return;
+  details.bioFromSync = true;
+  save(bookPath, details);
 }
 
 }  // namespace BookDetailsStore

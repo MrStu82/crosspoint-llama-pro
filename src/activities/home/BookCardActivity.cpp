@@ -23,18 +23,12 @@ constexpr int kReadY = 646;
 constexpr int kReadH = 66;
 constexpr int kTextW = 480 - 2 * kMargin;
 
-// Section label, with a small black "sync" pill when the text came from the
-// Library sync rather than the book itself. Returns the y below it.
-int drawSectionLabel(const GfxRenderer& r, const int y, const char* label, const bool fromSync) {
-  r.drawText(SMALL_FONT_ID, kMargin, y, label, true, EpdFontFamily::BOLD);
-  if (fromSync) {
-    const int x = kMargin + r.getTextWidth(SMALL_FONT_ID, label, EpdFontFamily::BOLD) + 8;
-    const int w = r.getTextWidth(SMALL_FONT_ID, "sync") + 12;
-    r.fillRoundedRect(x, y - 1, w, r.getLineHeight(SMALL_FONT_ID) + 2, 6, Color::Black);
-    r.drawText(SMALL_FONT_ID, x + 6, y, "sync", false);
-  }
-  return y + r.getLineHeight(SMALL_FONT_ID) + 4;
-}
+constexpr int kTabY = InkPointShell::kContentTop + kCoverH + 26;
+constexpr int kTabW = 96;
+constexpr int kTabGap = 8;
+constexpr int kTextBottom = kReadY - 12;
+
+int tabBarH(const GfxRenderer& r) { return r.getLineHeight(SMALL_FONT_ID) + 10; }
 }  // namespace
 
 void BookCardActivity::onEnter() {
@@ -51,7 +45,33 @@ void BookCardActivity::load() {
     details.description = rating->description;
     blurbFromSync = true;
   }
+  const int lineH = renderer.getLineHeight(UI_10_FONT_ID);
+  linesPerPage = std::max(1, (kTextBottom - (kTabY + tabBarH(renderer) + 10)) / lineH);
+  const auto addTab = [&](const char* label, const std::string& text, const bool fromSync) {
+    if (!text.empty()) tabs.push_back({label, renderer.wrappedText(UI_10_FONT_ID, text.c_str(), kTextW, 1000), fromSync});
+  };
+  addTab("Blurb", details.description, blurbFromSync);
+  addTab("Author", details.bio, details.bioFromSync);
   loaded = true;
+}
+
+int BookCardActivity::pageCount(const int index) const {
+  return std::max<int>(1, (tabs[index].lines.size() + linesPerPage - 1) / linesPerPage);
+}
+
+// Next/prev: page through the active tab, then on to the neighbouring tab
+// (wrapping); prev lands on that tab's last page.
+void BookCardActivity::step(const int delta) {
+  if (tabs.empty()) return;
+  textPage += delta;
+  if (textPage >= pageCount(tab)) {
+    tab = (tab + 1) % tabs.size();
+    textPage = 0;
+  } else if (textPage < 0) {
+    tab = (tab + tabs.size() - 1) % tabs.size();
+    textPage = pageCount(tab) - 1;
+  }
+  requestUpdate();
 }
 
 void BookCardActivity::loop() {
@@ -65,22 +85,26 @@ void BookCardActivity::loop() {
     finish();
     return;
   }
+  if (!loaded) return;
   const auto swipe = mappedInput.wasSwipe();
-  const int pageCount = (details.description.empty() || details.bio.empty()) ? 1 : 2;
-  const int target = (mappedInput.wasReleased(MappedInputManager::Button::PageForward) ||
-                      swipe == MappedInputManager::SwipeDir::Left)
-                         ? 1
-                     : (mappedInput.wasReleased(MappedInputManager::Button::PageBack) ||
-                        swipe == MappedInputManager::SwipeDir::Right)
-                         ? 0
-                         : page;
-  if (target != page && target < pageCount) {
-    page = target;
-    requestUpdate();
+  if (mappedInput.wasReleased(MappedInputManager::Button::PageForward) || swipe == MappedInputManager::SwipeDir::Left) {
+    step(1);
     return;
   }
+  if (mappedInput.wasReleased(MappedInputManager::Button::PageBack) || swipe == MappedInputManager::SwipeDir::Right) {
+    step(-1);
+    return;
+  }
+  for (int i = 0; i < static_cast<int>(tabs.size()); ++i) {
+    if (mappedInput.wasTapInRect(kMargin + i * (kTabW + kTabGap), kTabY, kTabW, tabBarH(renderer))) {
+      tab = i;
+      textPage = 0;
+      requestUpdate();
+      return;
+    }
+  }
   if (mappedInput.wasReleased(MappedInputManager::Button::Confirm) ||
-      (page == 0 && mappedInput.wasTapInRect(kMargin, kReadY, kTextW, kReadH)))
+      mappedInput.wasTapInRect(kMargin, kReadY, kTextW, kReadH))
     onSelectBook(book.path);
 }
 
@@ -99,36 +123,7 @@ void BookCardActivity::render(RenderLock&&) {
                     InkPointShell::kHeaderActionX +
                         (InkPointShell::kHeaderActionWidth - renderer.getTextWidth(UI_10_FONT_ID, back)) / 2,
                     InkPointShell::kHeaderActionY + 8, back);
-
-  struct Section {
-    const char* label;
-    const std::string* text;
-    bool fromSync;
-  };
-  std::vector<Section> sections;
-  if (!details.description.empty()) sections.push_back({"ABOUT THIS BOOK", &details.description, blurbFromSync});
-  if (!details.bio.empty()) sections.push_back({"ABOUT THE AUTHOR", &details.bio, details.bioFromSync});
-  const int lineH = renderer.getLineHeight(UI_10_FONT_ID);
-  const auto drawSection = [&](int y, const Section& section, const int bottom) {
-    y = drawSectionLabel(renderer, y, section.label, section.fromSync);
-    if (sections.size() > 1) {
-      const char* indicator = page == 0 ? "1/2" : "2/2";
-      renderer.drawText(SMALL_FONT_ID, 480 - kMargin - renderer.getTextWidth(SMALL_FONT_ID, indicator),
-                        y - renderer.getLineHeight(SMALL_FONT_ID) - 4, indicator);
-    }
-    for (const auto& line :
-         renderer.wrappedText(UI_10_FONT_ID, section.text->c_str(), kTextW, std::max(1, (bottom - y) / lineH))) {
-      renderer.drawText(UI_10_FONT_ID, kMargin, y, line.c_str());
-      y += lineH;
-    }
-  };
   const int top = InkPointShell::kContentTop;
-  if (page == 1 && sections.size() > 1) {
-    drawSection(top, sections[1], InkPointShell::kFooterTop - 12);
-    InkPointShell::drawFooter(renderer, InkPointShell::Destination::Library);
-    renderer.displayBuffer();
-    return;
-  }
 
   // Cover and details column.
   LibraryCover::draw(renderer, book, kMargin, top, kCoverW, kCoverH);
@@ -154,10 +149,40 @@ void BookCardActivity::render(RenderLock&&) {
     y += factStep;
   }
 
-  // The first available of blurb/bio fills the space above the Read button.
-  y = std::max(y, top + kCoverH) + 18;
-  if (!sections.empty()) drawSection(y, sections[0], kReadY - 12);
-  else renderer.drawText(SMALL_FONT_ID, kMargin, y, "Sync on Wi-Fi to fetch blurb/bio");
+  // [Blurb | Author] tabs, active inverted; a "sync" pill marks synced text.
+  const int barH = tabBarH(renderer);
+  const int labelY = kTabY + 5;
+  if (tabs.empty()) renderer.drawText(SMALL_FONT_ID, kMargin, labelY, "Sync on Wi-Fi to fetch blurb/bio");
+  for (int i = 0; i < static_cast<int>(tabs.size()); ++i) {
+    const int x = kMargin + i * (kTabW + kTabGap);
+    const bool active = i == tab;
+    if (active) renderer.fillRoundedRect(x, kTabY, kTabW, barH, 7, Color::Black);
+    else renderer.drawRoundedRect(x, kTabY, kTabW, barH, 2, 7, true);
+    const int labelW = renderer.getTextWidth(SMALL_FONT_ID, tabs[i].label, EpdFontFamily::BOLD);
+    renderer.drawText(SMALL_FONT_ID, x + (kTabW - labelW) / 2, labelY, tabs[i].label, !active, EpdFontFamily::BOLD);
+  }
+  if (!tabs.empty()) {
+    int right = 480 - kMargin;
+    if (pageCount(tab) > 1) {
+      const std::string indicator = std::to_string(textPage + 1) + "/" + std::to_string(pageCount(tab));
+      right -= renderer.getTextWidth(SMALL_FONT_ID, indicator.c_str());
+      renderer.drawText(SMALL_FONT_ID, right, labelY, indicator.c_str());
+      right -= 10;
+    }
+    if (tabs[tab].fromSync) {
+      const int w = renderer.getTextWidth(SMALL_FONT_ID, "sync") + 12;
+      renderer.fillRoundedRect(right - w, labelY - 1, w, renderer.getLineHeight(SMALL_FONT_ID) + 2, 6, Color::Black);
+      renderer.drawText(SMALL_FONT_ID, right - w + 6, labelY, "sync", false);
+    }
+    const int lineH = renderer.getLineHeight(UI_10_FONT_ID);
+    const auto& lines = tabs[tab].lines;
+    int ty = kTabY + barH + 10;
+    for (size_t i = textPage * linesPerPage; i < lines.size() && i < static_cast<size_t>((textPage + 1) * linesPerPage);
+         ++i) {
+      renderer.drawText(UI_10_FONT_ID, kMargin, ty, lines[i].c_str());
+      ty += lineH;
+    }
+  }
 
   // Read: the same open-book path as Home's cover tap.
   renderer.fillRoundedRect(kMargin, kReadY, kTextW, kReadH, 10, Color::Black);

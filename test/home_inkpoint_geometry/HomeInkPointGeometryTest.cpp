@@ -131,3 +131,9 @@ TEST(HomeInkPointGeometry, OverlongBlockStaysAnchoredToFreeBandTop) {
   const auto layout = InkPointHomeGeometry::centerQuoteBlock(546, 728, 8, 25, 16, 18, 20, 12);
   EXPECT_EQ(layout.top, 546);
 }
+
+TEST(HomeInkPointGeometry, BookLeftScalesTimeReadByUnreadShare) {
+  EXPECT_EQ(InkPointHomeGeometry::bookShareEtaMinutes(3 * 3600, 30), std::optional<uint32_t>(420));
+  EXPECT_FALSE(InkPointHomeGeometry::bookShareEtaMinutes(3 * 3600, 0));
+  EXPECT_FALSE(InkPointHomeGeometry::bookShareEtaMinutes(3 * 3600, 100));
+}

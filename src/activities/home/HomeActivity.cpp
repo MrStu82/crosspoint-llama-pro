@@ -797,9 +797,11 @@ void HomeActivity::renderInkPointHome() {
   if (book && bookStats.available) {
     formatMinutes(timeRead, sizeof(timeRead), bookStats.totalSeconds / 60);
     valueAvailable[0] = true;
-    const auto eta = InkPointHomeGeometry::estimateEtas(
+    auto eta = InkPointHomeGeometry::estimateEtas(
         bookStats.pagesPerMinuteQ16, bookStats.remainingPagesQ16, bookStats.remainingAvailable,
         chapterProgress.pagesLeft(), chapterProgress.available);
+    if (const auto share = InkPointHomeGeometry::bookShareEtaMinutes(bookStats.totalSeconds, book->progressPercent))
+      eta.bookMinutes = share;
     const auto rows = InkPointHomeGeometry::statRows(bookStats.finished || book->progressPercent >= 100, eta);
     const auto fill = [&](char* out, size_t len, InkPointHomeGeometry::StatValue state, uint32_t minutes) {
       if (state == InkPointHomeGeometry::StatValue::Finished) std::snprintf(out, len, "%s", tr(STR_STATS_FINISHED));

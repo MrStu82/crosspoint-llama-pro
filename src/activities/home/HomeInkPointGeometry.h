@@ -82,6 +82,13 @@ inline StatsLayout statsLayout(const int rightX, const int statStart, const int 
           statStart + 3 * statStep + kValueOffset + kStatsToChevronGap};
 }
 
+// BOOK LEFT from the book's own pace: time read so far scaled by the share
+// still unread. Only for a book in progress with recorded time.
+inline std::optional<uint32_t> bookShareEtaMinutes(const uint32_t totalSeconds, const int percent) {
+  if (totalSeconds == 0 || percent <= 0 || percent >= 100) return std::nullopt;
+  return static_cast<uint32_t>(static_cast<uint64_t>(totalSeconds / 60) * (100 - percent) / percent);
+}
+
 struct EtaState {
   std::optional<uint32_t> chapterMinutes;
   std::optional<uint32_t> bookMinutes;

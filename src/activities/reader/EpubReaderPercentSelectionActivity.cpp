@@ -8,6 +8,7 @@
 #include <cstdio>
 
 #include "MappedInputManager.h"
+#include "components/InkPointShell.h"
 #include "components/UITheme.h"
 #include "fontIds.h"
 
@@ -15,6 +16,15 @@ namespace {
 // Fine/coarse slider step sizes for percent adjustments.
 constexpr int kSmallStep = 1;
 constexpr int kLargeStep = 10;
+// InkPoint (X4 Pro, touch-only): tappable Go control below the step hints.
+constexpr int kGoX = 60;
+constexpr int kGoWidth = 360;
+constexpr int kGoHeight = 66;
+
+int contentTopFor(const GfxRenderer& renderer, const Rect& screen, const ThemeMetrics& metrics) {
+  if (InkPointShell::enabled(renderer)) return InkPointShell::kContentTop + 40;
+  return screen.y + metrics.topPadding + metrics.headerHeight + metrics.verticalSpacing * 4;
+}
 }  // namespace
 
 void EpubReaderPercentSelectionActivity::onEnter() {
@@ -41,7 +51,7 @@ void EpubReaderPercentSelectionActivity::loop() {
   auto& theme = UITheme::getInstance();
   auto metrics = theme.getMetrics();
   Rect screen = theme.getScreenSafeArea(renderer, true, false);
-  const int contentTop = screen.y + metrics.topPadding + metrics.headerHeight + metrics.verticalSpacing * 4;
+  const int contentTop = contentTopFor(renderer, screen, metrics);
   constexpr int barWidth = 360;
   constexpr int barHeight = 16;
   const int barX = screen.x + (screen.width - barWidth) / 2;
@@ -84,6 +94,23 @@ void EpubReaderPercentSelectionActivity::loop() {
       percent = std::clamp((tx - barX) * 100 / barWidth, 0, 100);
       requestUpdate();
       return;
+    }
+
+    if (InkPointShell::enabled(renderer)) {
+      if (tx >= InkPointShell::kHeaderActionX && tx < InkPointShell::kHeaderActionX + InkPointShell::kHeaderActionWidth &&
+          ty >= InkPointShell::kHeaderActionY && ty < InkPointShell::kHeaderActionY + InkPointShell::kHeaderActionHeight) {
+        ActivityResult result;
+        result.isCancelled = true;
+        setResult(std::move(result));
+        finish();
+        return;
+      }
+      const int goY = barY + 90;
+      if (tx >= kGoX && tx < kGoX + kGoWidth && ty >= goY && ty < goY + kGoHeight) {
+        setResult(PercentResult{percent});
+        finish();
+        return;
+      }
     }
 
     // Bottom button-hint strip: left third mirrors the Back hint (cancel), right third
@@ -139,10 +166,22 @@ void EpubReaderPercentSelectionActivity::render(RenderLock&&) {
   auto metrics = theme.getMetrics();
   Rect screen = theme.getScreenSafeArea(renderer, true, false);
 
-  GUI.drawHeader(renderer, Rect{screen.x, screen.y + metrics.topPadding, screen.width, metrics.headerHeight},
-                 tr(STR_GO_TO_PERCENT));
+  const bool inkPoint = InkPointShell::enabled(renderer);
+  if (inkPoint) {
+    InkPointShell::drawHeader(renderer, tr(STR_GO_TO_PERCENT));
+    renderer.drawRoundedRect(InkPointShell::kHeaderActionX, InkPointShell::kHeaderActionY,
+                             InkPointShell::kHeaderActionWidth, InkPointShell::kHeaderActionHeight, 2, 7, true);
+    const char* back = "\xE2\x80\xB9 Back";
+    renderer.drawText(UI_10_FONT_ID,
+                      InkPointShell::kHeaderActionX +
+                          (InkPointShell::kHeaderActionWidth - renderer.getTextWidth(UI_10_FONT_ID, back)) / 2,
+                      InkPointShell::kHeaderActionY + 8, back);
+  } else {
+    GUI.drawHeader(renderer, Rect{screen.x, screen.y + metrics.topPadding, screen.width, metrics.headerHeight},
+                   tr(STR_GO_TO_PERCENT));
+  }
 
-  const int contentTop = screen.y + metrics.topPadding + metrics.headerHeight + metrics.verticalSpacing * 4;
+  const int contentTop = contentTopFor(renderer, screen, metrics);
 
   const std::string percentText = std::to_string(percent) + "%";
   UITheme::drawCenteredText(renderer, screen, UI_12_FONT_ID, contentTop, percentText.c_str(), true,
@@ -173,6 +212,16 @@ void EpubReaderPercentSelectionActivity::render(RenderLock&&) {
   UITheme::drawCenteredText(renderer, screen, SMALL_FONT_ID, barY + 30, line, true);
   snprintf(line, sizeof(line), "%s %d%%", I18N.get(StrId::STR_STEP_HINT_SIDE), kLargeStep);
   UITheme::drawCenteredText(renderer, screen, SMALL_FONT_ID, barY + 52, line, true);
+
+  if (inkPoint) {
+    const int goY = barY + 90;
+    renderer.fillRoundedRect(kGoX, goY, kGoWidth, kGoHeight, 10, Color::Black);
+    const std::string go = "Go to " + percentText;
+    const int goW = renderer.getTextWidth(UI_12_FONT_ID, go.c_str(), EpdFontFamily::BOLD);
+    renderer.drawText(UI_12_FONT_ID, kGoX + (kGoWidth - goW) / 2,
+                      goY + (kGoHeight - renderer.getLineHeight(UI_12_FONT_ID)) / 2, go.c_str(), false,
+                      EpdFontFamily::BOLD);
+  }
 
   // Button hints follow the current front button layout.
   const auto labels = mappedInput.mapLabels(tr(STR_BACK), tr(STR_SELECT), "-", "+");

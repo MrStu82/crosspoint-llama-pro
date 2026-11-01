@@ -60,6 +60,7 @@ class Epub {
   bool generateCoverBmp(bool cropped = false) const;
   std::string getThumbBmpPath() const;
   std::string getThumbBmpPath(int height) const;
+  static bool isEmptyThumbMarker(const std::string& thumbPath);
   bool generateThumbBmp(int height) const;
   uint8_t* readItemContentsToBytes(const std::string& itemHref, size_t* size = nullptr,
                                    bool trailingNullByte = false) const;

@@ -687,10 +687,24 @@ bool Epub::generateCoverBmp(bool cropped) const {
 std::string Epub::getThumbBmpPath() const { return cachePath + "/thumb_[HEIGHT].bmp"; }
 std::string Epub::getThumbBmpPath(int height) const { return cachePath + "/thumb_" + std::to_string(height) + ".bmp"; }
 
+bool Epub::isEmptyThumbMarker(const std::string& thumbPath) {
+  HalFile file;
+  if (!Storage.openFileForRead("EBP", thumbPath, file)) return false;
+  const bool empty = file.size() == 0;
+  file.close();
+  return empty;
+}
+
 bool Epub::generateThumbBmp(int height) const {
-  // Already generated, return true
+  // Already generated, return true. An empty "no cover" marker left by an older
+  // cache is retried once the current metadata knows a cover image.
   if (Storage.exists(getThumbBmpPath(height).c_str())) {
-    return true;
+    if (!isEmptyThumbMarker(getThumbBmpPath(height))) return true;
+    if (!bookMetadataCache || !bookMetadataCache->isLoaded() || bookMetadataCache->coreMetadata.coverItemHref.empty()) {
+      return false;
+    }
+    LOG_DBG("EBP", "Retrying thumb BMP over empty marker");
+    Storage.remove(getThumbBmpPath(height).c_str());
   }
 
   if (!bookMetadataCache || !bookMetadataCache->isLoaded()) {

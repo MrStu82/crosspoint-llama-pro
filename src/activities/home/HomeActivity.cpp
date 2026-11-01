@@ -274,7 +274,8 @@ void HomeActivity::loadRecentCovers(int coverHeight) {
   for (RecentBook& book : recentBooks) {
     if (!book.coverBmpPath.empty()) {
       std::string coverPath = UITheme::getCoverThumbPath(book.coverBmpPath, coverHeight);
-      if (!Storage.exists(coverPath.c_str())) {
+      if (!Storage.exists(coverPath.c_str()) ||
+          (FsHelpers::hasEpubExtension(book.path) && Epub::isEmptyThumbMarker(coverPath))) {
         // If epub, try to load the metadata for title/author and cover
         if (FsHelpers::hasEpubExtension(book.path)) {
           Epub epub(book.path, "/.crosspoint");

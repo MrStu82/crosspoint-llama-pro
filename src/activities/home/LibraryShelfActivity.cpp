@@ -40,7 +40,9 @@ namespace LibraryCover {
 
 bool ensureThumb(RecentBook& book) {
   if (book.coverBmpPath.empty()) return false;
-  if (Storage.exists(UITheme::getCoverThumbPath(book.coverBmpPath, InkPointShell::kHomeCoverHeight).c_str()))
+  const std::string thumbPath = UITheme::getCoverThumbPath(book.coverBmpPath, InkPointShell::kHomeCoverHeight);
+  if (Storage.exists(thumbPath.c_str()) &&
+      !(FsHelpers::hasEpubExtension(book.path) && Epub::isEmptyThumbMarker(thumbPath)))
     return true;
   bool ok = false;
   if (FsHelpers::hasEpubExtension(book.path)) {

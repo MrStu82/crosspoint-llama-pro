@@ -27,7 +27,7 @@ constexpr int kCentreH = 360;
 constexpr int kSideW = 96;
 constexpr int kSideH = 144;
 constexpr int kLeftX = 8;
-constexpr int kRightX = 480 - 8 - kSideW;
+constexpr int kRightX = InkPointShell::kScreenWidth - 8 - kSideW;
 
 void drawCentred(const GfxRenderer& r, const int fontId, const int y, const std::string& text,
                  const EpdFontFamily::Style style = EpdFontFamily::REGULAR) {
@@ -165,7 +165,7 @@ void LibraryShelfActivity::loop() {
   if (count > 1 && mappedInput.wasTapInRect(0, InkPointShell::kContentTop, kCentreX, kShelfY - InkPointShell::kContentTop))
     return previous();
   if (count > 1 &&
-      mappedInput.wasTapInRect(kCentreX + kCentreW, InkPointShell::kContentTop, 480 - kCentreX - kCentreW,
+      mappedInput.wasTapInRect(kCentreX + kCentreW, InkPointShell::kContentTop, InkPointShell::kScreenWidth - kCentreX - kCentreW,
                                kShelfY - InkPointShell::kContentTop))
     return next();
   if (mappedInput.wasReleased(MappedInputManager::Button::Confirm)) return openCard();
@@ -189,8 +189,8 @@ void LibraryShelfActivity::render(RenderLock&&) {
         LibraryCover::draw(renderer, books[(index + 1) % count], kRightX, kShelfY - kSideH, kSideW, kSideH);
     }
     LibraryCover::draw(renderer, books[index], kCentreX, kShelfY - kCentreH, kCentreW, kCentreH);
-    renderer.fillRect(0, kShelfY, 480, 3, true);
-    renderer.fillRectDither(0, kShelfY + 3, 480, 8, Color::LightGray);
+    renderer.fillRect(0, kShelfY, InkPointShell::kScreenWidth, 3, true);
+    renderer.fillRectDither(0, kShelfY + 3, InkPointShell::kScreenWidth, 8, Color::LightGray);
 
     const auto& book = books[index];
     drawCentred(renderer, UI_12_FONT_ID, kShelfY + 26, book.title, EpdFontFamily::BOLD);

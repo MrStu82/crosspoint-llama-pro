@@ -614,7 +614,7 @@ void HomeActivity::onStatsOpen() { activityManager.goToStats(); }
 void HomeActivity::onGamesOpen() { activityManager.goToGames(); }
 
 bool HomeActivity::usesInkPointHome() const {
-  return renderer.getScreenWidth() == 480 && renderer.getScreenHeight() == 800;
+  return InkPointShell::enabled(renderer);
 }
 
 void HomeActivity::loopInkPointHome() {

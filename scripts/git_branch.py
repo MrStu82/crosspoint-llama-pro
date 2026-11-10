@@ -3,7 +3,8 @@ PlatformIO pre-build script: inject git branch and short SHA into
 CROSSPOINT_VERSION for the default (dev) environment.
 
 Results in a version string like:  1.1.0-dev-feat-kosync-xpath-05c6cf8
-The x4pro env gets the exact build id instead (version.txt, else git describe).
+Envs with custom_exact_build_id = yes (x4pro) get the exact build id instead
+(version.txt, else git describe).
 Other release environments are unaffected; they set CROSSPOINT_VERSION in the ini.
 """
 
@@ -102,7 +103,7 @@ def inject_version(env):
     # X4 Pro: the exact build id (version.txt, else git describe), so the boot
     # splash and Settings show which firmware booted. stamp_app_desc.py stamps
     # the same string into the app descriptor.
-    if env['PIOENV'] == 'x4pro':
+    if env.GetProjectOption('custom_exact_build_id', 'no') == 'yes':
         version_string = get_build_id(project_dir)
         env.Append(CPPDEFINES=[('CROSSPOINT_VERSION', f'\\"{version_string}\\"')])
         print(f'CrossPoint build version: {version_string}')

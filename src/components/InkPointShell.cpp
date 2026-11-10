@@ -70,7 +70,7 @@ void drawIcon(const GfxRenderer& r, const int index, const int cx, const int cy,
 namespace InkPointShell {
 
 bool enabled(const GfxRenderer& renderer) {
-  return renderer.getScreenWidth() == 480 && renderer.getScreenHeight() == 800;
+  return renderer.getScreenWidth() == kScreenWidth && renderer.getScreenHeight() == kScreenHeight;
 }
 
 void drawHeader(const GfxRenderer& renderer, const char* title) {

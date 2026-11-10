@@ -9,6 +9,11 @@ namespace InkPointShell {
 
 enum class Destination : int { Home = 0, Library, Files, Games, Transfer, Settings };
 
+// The InkPoint layout is drawn for this logical (portrait) screen only; other
+// resolutions keep the theme UI. Every absolute coordinate below assumes it.
+constexpr int kScreenWidth = 480;
+constexpr int kScreenHeight = 800;
+
 constexpr int kStatusBottom = 18;
 // The Caveat heading's ink reaches y=94 on panel once descenders are counted,
 // so the previous 88px content top sat inside the title. Every InkPoint screen

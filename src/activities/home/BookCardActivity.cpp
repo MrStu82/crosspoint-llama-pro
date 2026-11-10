@@ -18,10 +18,10 @@ constexpr int kMargin = 20;
 constexpr int kCoverW = 120;
 constexpr int kCoverH = 180;
 constexpr int kInfoX = kMargin + kCoverW + 16;
-constexpr int kInfoW = 480 - kMargin - kInfoX;
+constexpr int kInfoW = InkPointShell::kScreenWidth - kMargin - kInfoX;
 constexpr int kReadY = 646;
 constexpr int kReadH = 66;
-constexpr int kTextW = 480 - 2 * kMargin;
+constexpr int kTextW = InkPointShell::kScreenWidth - 2 * kMargin;
 
 constexpr int kTabY = InkPointShell::kContentTop + kCoverH + 26;
 constexpr int kTabW = 96;
@@ -162,7 +162,7 @@ void BookCardActivity::render(RenderLock&&) {
     renderer.drawText(SMALL_FONT_ID, x + (kTabW - labelW) / 2, labelY, tabs[i].label, !active, EpdFontFamily::BOLD);
   }
   if (!tabs.empty()) {
-    int right = 480 - kMargin;
+    int right = InkPointShell::kScreenWidth - kMargin;
     if (pageCount(tab) > 1) {
       const std::string indicator = std::to_string(textPage + 1) + "/" + std::to_string(pageCount(tab));
       right -= renderer.getTextWidth(SMALL_FONT_ID, indicator.c_str());

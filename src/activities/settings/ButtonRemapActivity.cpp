@@ -5,6 +5,7 @@
 
 #include "CrossPointSettings.h"
 #include "MappedInputManager.h"
+#include "components/InkPointList.h"
 #include "components/UITheme.h"
 #include "fontIds.h"
 
@@ -56,6 +57,12 @@ void ButtonRemapActivity::loop() {
     return;
   }
 
+  if (InkPointList::active(renderer)) {
+    // Only the circled Home reacts to touch; roles are still assigned by button press.
+    int ignored = currentStep;
+    if (InkPointList::touch(mappedInput, ignored, 0) == InkPointList::Touch::Consumed) return;
+  }
+
   if (mappedInput.wasPressed(MappedInputManager::Button::Down)) {
     // Exit without changing settings.
     finish();
@@ -104,11 +111,33 @@ void ButtonRemapActivity::render(RenderLock&&) {
     return "-";
   };
 
+  renderer.clearScreen();
+
+  if (InkPointList::active(renderer)) {
+    InkPointList::Rows rows;
+    rows.count = kRoleCount;
+    rows.selected = currentStep;
+    rows.label = [&](int index) { return std::string(getRoleName(static_cast<uint8_t>(index))); };
+    rows.value = [&](int index) -> std::string {
+      const uint8_t assignedButton = tempMapping[static_cast<uint8_t>(index)];
+      return (assignedButton == kUnassigned) ? tr(STR_UNASSIGNED) : getHardwareName(assignedButton);
+    };
+    InkPointList::draw(renderer, tr(STR_REMAP_FRONT_BUTTONS), rows);
+    // Prompt, duplicate warning and side-button hints in the note band under the four rows.
+    const int lh = renderer.getLineHeight(SMALL_FONT_ID);
+    int y = InkPointList::noteTop(kRoleCount) + 12;
+    for (const char* line : {tr(STR_REMAP_PROMPT), errorMessage.c_str(), tr(STR_REMAP_RESET_HINT),
+                             tr(STR_REMAP_CANCEL_HINT)}) {
+      if (line[0] != '\0') renderer.drawText(SMALL_FONT_ID, 20, y, line);
+      y += lh + 6;
+    }
+    renderer.displayBuffer();
+    return;
+  }
+
   const auto& metrics = UITheme::getInstance().getMetrics();
   const auto pageWidth = renderer.getScreenWidth();
   const auto pageHeight = renderer.getScreenHeight();
-
-  renderer.clearScreen();
 
   GUI.drawHeader(renderer, Rect{0, metrics.topPadding, pageWidth, metrics.headerHeight}, tr(STR_REMAP_FRONT_BUTTONS));
   GUI.drawSubHeader(renderer, Rect{0, metrics.topPadding + metrics.headerHeight, pageWidth, metrics.tabBarHeight},

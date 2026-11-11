@@ -7,8 +7,11 @@
 #include "FontCacheManager.h"
 #include "FontDecompressor.h"
 #include "SdCardFont.h"
+#include "TtfEpdFont.h"
 
 namespace {
+// TTF fonts are PSRAM-gated and stubbed out on the host (see stubs/TtfEpdFont.h).
+const std::map<int, TtfEpdFont*> kNoTtfFonts;
 
 bool countHeapAllocations = false;
 size_t heapAllocationCount = 0;
@@ -37,7 +40,7 @@ TEST(FontCacheManagerTest, PrewarmScopeBatchesEachFontAndResolvedStyleSeparately
   SdCardFont fallbackFont;
   const std::map<int, EpdFontFamily> noBuiltinFonts;
   const std::map<int, SdCardFont*> sdFonts{{-17, &readerFont}, {23, &fallbackFont}};
-  FontCacheManager manager(noBuiltinFonts, sdFonts);
+  FontCacheManager manager(noBuiltinFonts, sdFonts, kNoTtfFonts);
 
   auto scope = manager.createPrewarmScope();
   manager.recordText("A", -17, EpdFontFamily::REGULAR);
@@ -63,7 +66,7 @@ TEST(FontCacheManagerTest, PrewarmScopeMergesStylesThatResolveToTheSameSdFontDat
   font.resolvedStyles[EpdFontFamily::BOLD] = EpdFontFamily::REGULAR;
   const std::map<int, EpdFontFamily> noBuiltinFonts;
   const std::map<int, SdCardFont*> sdFonts{{7, &font}};
-  FontCacheManager manager(noBuiltinFonts, sdFonts);
+  FontCacheManager manager(noBuiltinFonts, sdFonts, kNoTtfFonts);
 
   auto scope = manager.createPrewarmScope();
   manager.recordText("A", 7, EpdFontFamily::REGULAR);
@@ -82,7 +85,7 @@ TEST(FontCacheManagerTest, PrewarmScopeMergesBuiltInStylesThatShareFontData) {
   const std::map<int, EpdFontFamily> builtinFonts{{5, family}};
   const std::map<int, SdCardFont*> noSdFonts;
   FontDecompressor decompressor;
-  FontCacheManager manager(builtinFonts, noSdFonts);
+  FontCacheManager manager(builtinFonts, noSdFonts, kNoTtfFonts);
   manager.setFontDecompressor(&decompressor);
 
   auto scope = manager.createPrewarmScope();
@@ -107,7 +110,7 @@ TEST(FontCacheManagerTest, MissingBuiltInStyleKeepsFamilyFallbackSemantics) {
   const std::map<int, EpdFontFamily> builtinFonts{{5, family}};
   const std::map<int, SdCardFont*> noSdFonts;
   FontDecompressor decompressor;
-  FontCacheManager manager(builtinFonts, noSdFonts);
+  FontCacheManager manager(builtinFonts, noSdFonts, kNoTtfFonts);
   manager.setFontDecompressor(&decompressor);
 
   auto scope = manager.createPrewarmScope();
@@ -128,7 +131,7 @@ TEST(FontCacheManagerTest, PrewarmScopePreservesUniqueMultibyteCodepoints) {
   SdCardFont font;
   const std::map<int, EpdFontFamily> noBuiltinFonts;
   const std::map<int, SdCardFont*> sdFonts{{7, &font}};
-  FontCacheManager manager(noBuiltinFonts, sdFonts);
+  FontCacheManager manager(noBuiltinFonts, sdFonts, kNoTtfFonts);
 
   auto scope = manager.createPrewarmScope();
   manager.recordText("\xC3\xA9\xE4\xB8\xAD\xF0\x9F\x98\x80\xC3\xA9", 7, EpdFontFamily::REGULAR);
@@ -142,7 +145,7 @@ TEST(FontCacheManagerTest, PrewarmScanDoesNotAllocateHeapMemory) {
   SdCardFont font;
   const std::map<int, EpdFontFamily> noBuiltinFonts;
   const std::map<int, SdCardFont*> sdFonts{{7, &font}};
-  FontCacheManager manager(noBuiltinFonts, sdFonts);
+  FontCacheManager manager(noBuiltinFonts, sdFonts, kNoTtfFonts);
 
   heapAllocationCount = 0;
   countHeapAllocations = true;
@@ -161,7 +164,7 @@ TEST(FontCacheManagerTest, CacheReleaseAndScopeCleanupKeepTheirDistinctSemantics
   const std::map<int, EpdFontFamily> noBuiltinFonts;
   const std::map<int, SdCardFont*> sdFonts{{-17, &readerFont}, {23, &fallbackFont}};
   FontDecompressor decompressor;
-  FontCacheManager manager(noBuiltinFonts, sdFonts);
+  FontCacheManager manager(noBuiltinFonts, sdFonts, kNoTtfFonts);
   manager.setFontDecompressor(&decompressor);
 
   manager.releaseSdFontCaches();
@@ -191,7 +194,7 @@ TEST(FontCacheManagerTest, RetainedScopeIsReusedOnlyForTheSameScan) {
   SdCardFont font;
   const std::map<int, EpdFontFamily> noBuiltinFonts;
   const std::map<int, SdCardFont*> sdFonts{{7, &font}};
-  FontCacheManager manager(noBuiltinFonts, sdFonts);
+  FontCacheManager manager(noBuiltinFonts, sdFonts, kNoTtfFonts);
 
   {
     auto scope = manager.createPrewarmScope();

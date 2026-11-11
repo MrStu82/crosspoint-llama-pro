@@ -1460,6 +1460,19 @@ void EpubReaderActivity::render(RenderLock&& lock) {
           // first image probe; buildPopupPending gates it to this blocking phase
           // so a background build in loop() can never draw over a displayed page.
           buildPopupPending = !showPopup;
+          // Section (re)builds are the heap-hungriest path (per-word
+          // allocations for the whole section). Under TTF heap pressure, shed
+          // every rebuildable font cache first — dropped glyphs re-fault on
+          // demand after the build. Skipped for cpfont/builtin reading: the
+          // release drops the persistent advance table and mini tables, which
+          // would force SD metric re-reads on every fresh chapter for no gain.
+          if (!renderer.getTtfFonts().empty()) {
+            if (auto* fcm = renderer.getFontCacheManager()) {
+              fcm->releaseSdFontCaches();
+            }
+          }
+          LOG_DBG("ERS", "Heap before section build: %u (max block %u)", (unsigned)ESP.getFreeHeap(),
+                  (unsigned)ESP.getMaxAllocHeap());
           const unsigned long buildStartMs = millis();
           bool started;
           {

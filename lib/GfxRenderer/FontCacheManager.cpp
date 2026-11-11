@@ -3,6 +3,7 @@
 #include <FontDecompressor.h>
 #include <Logging.h>
 #include <SdCardFont.h>
+#include <TtfEpdFont.h>
 #include <Utf8.h>
 
 #include <algorithm>
@@ -32,8 +33,9 @@ char* appendUtf8Codepoint(char* output, const uint32_t codepoint) {
 }  // namespace
 
 FontCacheManager::FontCacheManager(const std::map<int, EpdFontFamily>& fontMap,
-                                   const std::map<int, SdCardFont*>& sdCardFonts)
-    : fontMap_(fontMap), sdCardFonts_(sdCardFonts) {}
+                                   const std::map<int, SdCardFont*>& sdCardFonts,
+                                   const std::map<int, TtfEpdFont*>& ttfFonts)
+    : fontMap_(fontMap), sdCardFonts_(sdCardFonts), ttfFonts_(ttfFonts) {}
 
 void FontCacheManager::setFontDecompressor(FontDecompressor* d) { fontDecompressor_ = d; }
 
@@ -43,6 +45,11 @@ void FontCacheManager::clearCache() {
   for (auto& [id, font] : sdCardFonts_) {
     font->clearCache();
   }
+#if CROSSPOINT_VECTOR_FONTS
+  for (auto& [id, font] : ttfFonts_) {
+    if (font) font->clearCache();
+  }
+#endif
 }
 
 void FontCacheManager::releaseSdFontCaches() {
@@ -51,9 +58,24 @@ void FontCacheManager::releaseSdFontCaches() {
   for (auto& [id, font] : sdCardFonts_) {
     font->releaseResidentCaches();
   }
+#if CROSSPOINT_VECTOR_FONTS
+  for (auto& [id, font] : ttfFonts_) {
+    if (font) font->releaseResidentCaches();
+  }
+#endif
 }
 
 void FontCacheManager::prewarmCache(int fontId, const char* utf8Text, uint8_t styleMask) {
+  // TTF (vector) fonts: add the text's glyphs to the per-page set (the scan
+  // already cleared it). styleMask is ignored; all styles share one file.
+#if CROSSPOINT_VECTOR_FONTS
+  auto tit = ttfFonts_.find(fontId);
+  if (tit != ttfFonts_.end() && tit->second) {
+    tit->second->addCoverage(utf8Text);
+    return;
+  }
+#endif
+
   // SD card font prewarm path: prewarm all requested styles in one call
   auto it = sdCardFonts_.find(fontId);
   if (it != sdCardFonts_.end()) {

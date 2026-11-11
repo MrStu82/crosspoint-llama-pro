@@ -17,6 +17,8 @@ inline constexpr uint8_t NOTO_READER_POINT_SIZES[] = {12, 14, 16, 18};
 inline constexpr uint8_t CROSSINK_READER_POINT_SIZES[] = {10, 12, 14, 16};
 // Default built-in set used by legacy callers and SD-font fallback.
 inline constexpr uint8_t BUILTIN_READER_POINT_SIZES[] = {10, 12, 14, 16};
+// Vector (.ttf/.otf) fonts offer every whole point size from 8 through 22.
+inline constexpr uint8_t VECTOR_READER_POINT_SIZES[] = {8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22};
 
 // Point sizes selectable for the active reader font, ascending: the SD family's
 // installed sizes when `sdFamilyName` names one the registry knows, otherwise

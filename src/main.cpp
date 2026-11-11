@@ -24,6 +24,7 @@
 #include <I18n.h>
 #include <Logging.h>
 #include <SPI.h>
+#include <VectorFontSupport.h>
 #include <WiFi.h>
 #include <builtinFonts/all.h>
 
@@ -47,12 +48,19 @@
 #include "util/ButtonNavigator.h"
 #include "util/ScreenshotUtil.h"
 
+#if CROSSPOINT_VECTOR_FONTS
+// FreeType TTF rasterization can run on the Arduino loop task; the default 8 KB
+// stack overflows inside FT_Open_Face / variable-font parsing. The runtime
+// override applies even with the prebuilt core's baked-in loop stack size.
+SET_LOOP_TASK_STACK_SIZE(24 * 1024)
+#endif
+
 GfxRenderer renderer(display);
 MappedInputManager mappedInputManager(gpio, renderer);
 ActivityManager activityManager(renderer, mappedInputManager);
 FontDecompressor fontDecompressor;
 SdCardFontSystem sdFontSystem;
-FontCacheManager fontCacheManager(renderer.getFontMap(), renderer.getSdCardFonts());
+FontCacheManager fontCacheManager(renderer.getFontMap(), renderer.getSdCardFonts(), renderer.getTtfFonts());
 FrontlightManager frontlightManager;
 static unsigned long allowSleepAt = 0;
 static gpio_policy::WakePowerInputGate wakePowerInputGate;

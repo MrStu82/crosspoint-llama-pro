@@ -227,4 +227,15 @@ typedef struct {
   const uint16_t* kernRowOffsets;        ///< nullptr when this font uses the dense matrix
   const uint8_t* kernSparseCols;         ///< 0-based right class of each stored entry
   const int8_t* kernSparseValues;        ///< 4.4 fixed-point value of each stored entry
+
+  /// Vector-font bitmap accessor (FreeInkFont / TtfEpdFont). When non-null,
+  /// GfxRenderer::getGlyphBitmap() returns vectorBitmapHandler(glyphMissCtx, glyph)
+  /// instead of indexing ->bitmap or going through the SdCardFont overflow path.
+  /// nullptr for every other font (all fonts zero-init this).
+  const uint8_t* (*vectorBitmapHandler)(void* ctx, const EpdGlyph* glyph);
+
+  /// Dynamic kerning for handler-backed fonts (TTF via FreeInkFont): returns
+  /// the 4.4 fixed-point pixel adjustment for the pair, 0 when none. Checked
+  /// by getKerning() before the static class tables. Shares glyphMissCtx.
+  int8_t (*kernHandler)(void* ctx, uint32_t leftCp, uint32_t rightCp);
 } EpdFontData;

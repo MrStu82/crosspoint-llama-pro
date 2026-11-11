@@ -13,6 +13,7 @@ enum class BidiBaseDir : signed char { AUTO = -1, LTR = 0, RTL = 1 };
 
 class FontCacheManager;
 class SdCardFont;
+class TtfEpdFont;
 
 #include <cstring>
 #include <deque>
@@ -60,6 +61,9 @@ class GfxRenderer {
   // fontCacheManager_ below.
   mutable std::map<int, SdCardFont*> sdCardFonts_;
   mutable std::map<int, uint16_t> sdCardFontScales_;  // fontId -> 8.8 fixed point scale (256=1.0x)
+  // TTF (vector) fonts, owned by SdCardFontSystem. Mutable for the same reason
+  // as sdCardFonts_.
+  mutable std::map<int, TtfEpdFont*> ttfFonts_;
 
   // Mutable because drawText() is const but needs to delegate scan-mode
   // recording to the (non-const) FontCacheManager. Same pragmatic compromise
@@ -177,6 +181,12 @@ class GfxRenderer {
   }
   const std::map<int, SdCardFont*>& getSdCardFonts() const { return sdCardFonts_; }
   bool isSdCardFont(int fontId) const { return sdCardFonts_.count(fontId) > 0; }
+  // TTF (vector) fonts rendered via TtfEpdFont/FreeInkFont. Registered like an
+  // ordinary EpdFontFamily (insertFont) and also tracked here so cache owners can
+  // release their glyph arenas. The TtfEpdFont is owned by the caller.
+  void registerTtfFont(int fontId, TtfEpdFont* font) { ttfFonts_[fontId] = font; }
+  void unregisterTtfFont(int fontId) { ttfFonts_.erase(fontId); }
+  const std::map<int, TtfEpdFont*>& getTtfFonts() const { return ttfFonts_; }
   const SdCardFont* sdCardFontSource(int fontId) const {
     const auto it = sdCardFonts_.find(fontId);
     return it == sdCardFonts_.end() ? nullptr : it->second;

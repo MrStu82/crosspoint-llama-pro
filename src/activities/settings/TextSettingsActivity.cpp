@@ -79,6 +79,8 @@ void TextSettingsActivity::onEnter() {
   fonts_.push_back({I18N.get(StrId::STR_NOTO_SANS), true, static_cast<uint8_t>(CrossPointSettings::NOTOSANS)});
   fonts_.push_back({"Lexend Deca", true, static_cast<uint8_t>(CrossPointSettings::LEXEND_DECA)});
   fonts_.push_back({"Bitter Compact", true, static_cast<uint8_t>(CrossPointSettings::BITTER)});
+  fonts_.push_back(
+      {I18N.get(StrId::STR_NOTO_SERIF_SEMIBOLD), true, static_cast<uint8_t>(CrossPointSettings::NOTOSERIF_SEMIBOLD)});
   if (registry_) {
     const auto& families = registry_->getFamilies();
     for (int i = 0; i < static_cast<int>(families.size()); i++) {

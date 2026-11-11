@@ -134,6 +134,19 @@ EpdFont notoserif18ItalicFont(&notoserif_18_italic);
 EpdFont notoserif18BoldItalicFont(&notoserif_18_bolditalic);
 EpdFontFamily notoserif18FontFamily(&notoserif18RegularFont, &notoserif18BoldFont, &notoserif18ItalicFont,
                                     &notoserif18BoldItalicFont);
+// Noto Serif SemiBold: a real heavier upright; bold/italic/bold-italic reuse the Noto Serif faces.
+EpdFont notoserifSemiBold12RegularFont(&notoserifsemibold_12_regular);
+EpdFontFamily notoserifSemiBold12FontFamily(&notoserifSemiBold12RegularFont, &notoserif12BoldFont,
+                                           &notoserif12ItalicFont, &notoserif12BoldItalicFont);
+EpdFont notoserifSemiBold14RegularFont(&notoserifsemibold_14_regular);
+EpdFontFamily notoserifSemiBold14FontFamily(&notoserifSemiBold14RegularFont, &notoserif14BoldFont,
+                                           &notoserif14ItalicFont, &notoserif14BoldItalicFont);
+EpdFont notoserifSemiBold16RegularFont(&notoserifsemibold_16_regular);
+EpdFontFamily notoserifSemiBold16FontFamily(&notoserifSemiBold16RegularFont, &notoserif16BoldFont,
+                                           &notoserif16ItalicFont, &notoserif16BoldItalicFont);
+EpdFont notoserifSemiBold18RegularFont(&notoserifsemibold_18_regular);
+EpdFontFamily notoserifSemiBold18FontFamily(&notoserifSemiBold18RegularFont, &notoserif18BoldFont,
+                                           &notoserif18ItalicFont, &notoserif18BoldItalicFont);
 
 EpdFont notosans12RegularFont(&notosans_12_regular);
 EpdFont notosans12BoldFont(&notosans_12_bold);
@@ -359,6 +372,10 @@ void setupDisplayAndFonts(bool seamless = false) {
   renderer.insertFont(BITTER_16_FONT_ID, bitter16FontFamily);
   renderer.insertFont(NOTOSERIF_16_FONT_ID, notoserif16FontFamily);
   renderer.insertFont(NOTOSERIF_18_FONT_ID, notoserif18FontFamily);
+  renderer.insertFont(NOTOSERIFSEMIBOLD_12_FONT_ID, notoserifSemiBold12FontFamily);
+  renderer.insertFont(NOTOSERIFSEMIBOLD_14_FONT_ID, notoserifSemiBold14FontFamily);
+  renderer.insertFont(NOTOSERIFSEMIBOLD_16_FONT_ID, notoserifSemiBold16FontFamily);
+  renderer.insertFont(NOTOSERIFSEMIBOLD_18_FONT_ID, notoserifSemiBold18FontFamily);
 
   renderer.insertFont(NOTOSANS_12_FONT_ID, notosans12FontFamily);
   renderer.insertFont(NOTOSANS_14_FONT_ID, notosans14FontFamily);

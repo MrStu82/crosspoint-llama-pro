@@ -534,6 +534,7 @@ STR_FRONTLIGHT_DIAG_DONE_HINT: "Frontlight restored to your saved settings."
 
 STR_LEXEND_DECA: "Lexend Deca"
 STR_BITTER: "Bitter"
+STR_NOTO_SERIF_SEMIBOLD: "Noto Serif SemiBold"
 
 STR_GUIDE_DOTS: "Guide Dots"
 STR_FORCE_PARAGRAPH_INDENTS: "Force Paragraph Indents"

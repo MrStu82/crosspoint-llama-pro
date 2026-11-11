@@ -16,3 +16,7 @@ inline constexpr int BITTER_10_FONT_ID = 410;
 inline constexpr int BITTER_12_FONT_ID = 412;
 inline constexpr int BITTER_14_FONT_ID = 414;
 inline constexpr int BITTER_16_FONT_ID = 416;
+inline constexpr int NOTOSERIFSEMIBOLD_12_FONT_ID = 512;
+inline constexpr int NOTOSERIFSEMIBOLD_14_FONT_ID = 514;
+inline constexpr int NOTOSERIFSEMIBOLD_16_FONT_ID = 516;
+inline constexpr int NOTOSERIFSEMIBOLD_18_FONT_ID = 518;

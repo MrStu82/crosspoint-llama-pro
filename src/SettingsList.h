@@ -28,7 +28,7 @@ static_assert(ReaderLineSpacing::LABEL_IDS.size() == CrossPointSettings::LINE_CO
 inline SettingInfo buildFontFamilySetting(const SdCardFontRegistry* registry) {
   // Built-in font labels (StrId)
   std::vector<StrId> enumValues = {StrId::STR_NOTO_SERIF, StrId::STR_NOTO_SANS, StrId::STR_LEXEND_DECA,
-                                    StrId::STR_BITTER};
+                                    StrId::STR_BITTER, StrId::STR_NOTO_SERIF_SEMIBOLD};
   // Runtime string labels for SD card fonts
   std::vector<std::string> enumStringValues;
 
@@ -53,6 +53,7 @@ inline SettingInfo buildFontFamilySetting(const SdCardFontRegistry* registry) {
     allStringValues.push_back(I18N.get(StrId::STR_NOTO_SANS));
     allStringValues.push_back(I18N.get(StrId::STR_LEXEND_DECA));
     allStringValues.push_back(I18N.get(StrId::STR_BITTER));
+    allStringValues.push_back(I18N.get(StrId::STR_NOTO_SERIF_SEMIBOLD));
     allStringValues.insert(allStringValues.end(), enumStringValues.begin(), enumStringValues.end());
   }
 
@@ -246,7 +247,8 @@ inline std::vector<SettingInfo> getSettingsList(const SdCardFontRegistry* regist
         // Built-in font-family entry. Replaced per-call with a registry-aware
         // version when SD fonts are installed.
         SettingInfo::Enum(StrId::STR_FONT_FAMILY, &CrossPointSettings::fontFamily,
-                          {StrId::STR_NOTO_SERIF, StrId::STR_NOTO_SANS, StrId::STR_LEXEND_DECA, StrId::STR_BITTER}, "fontFamily", StrId::STR_CAT_READER)
+                          {StrId::STR_NOTO_SERIF, StrId::STR_NOTO_SANS, StrId::STR_LEXEND_DECA, StrId::STR_BITTER,
+                           StrId::STR_NOTO_SERIF_SEMIBOLD}, "fontFamily", StrId::STR_CAT_READER)
             .withTextSettings(),
         // Placeholder: the selectable sizes depend on the active font family, so
         // this entry is always replaced by buildFontSizeSetting() below. It only

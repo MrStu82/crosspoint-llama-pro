@@ -379,6 +379,10 @@ int CrossPointSettings::getReaderFontId() const {
     switch (pt) { case 10: return BITTER_10_FONT_ID; case 12: return BITTER_12_FONT_ID;
       case 16: return BITTER_16_FONT_ID; default: return BITTER_14_FONT_ID; }
   }
+  if (fontFamily == NOTOSERIF_SEMIBOLD) {
+    switch (pt) { case 12: return NOTOSERIFSEMIBOLD_12_FONT_ID; case 16: return NOTOSERIFSEMIBOLD_16_FONT_ID;
+      case 18: return NOTOSERIFSEMIBOLD_18_FONT_ID; default: return NOTOSERIFSEMIBOLD_14_FONT_ID; }
+  }
   const bool sans = fontFamily == NOTOSANS;
   switch (pt) { case 12: return sans ? NOTOSANS_12_FONT_ID : NOTOSERIF_12_FONT_ID;
     case 16: return sans ? NOTOSANS_16_FONT_ID : NOTOSERIF_16_FONT_ID;

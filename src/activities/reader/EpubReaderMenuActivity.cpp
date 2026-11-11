@@ -120,7 +120,10 @@ void EpubReaderMenuActivity::loop() {
   const int contentTop =
       screen.y + metrics.topPadding + metrics.headerHeight + metrics.tabBarHeight + metrics.verticalSpacing;
   const int contentHeight = screen.height - contentTop - metrics.verticalSpacing;
-  switch (handleListTouch(selectedIndex, static_cast<int>(menuItems.size()), contentTop, contentHeight, false)) {
+  const int itemCount = static_cast<int>(menuItems.size());
+  switch (InkPointList::active(renderer)
+              ? handleInkPointListTouch(selectedIndex, itemCount)
+              : handleListTouch(selectedIndex, itemCount, contentTop, contentHeight, false)) {
     case ListTouchResult::Activated:
       activateSelected();
       return;
@@ -164,12 +167,6 @@ void EpubReaderMenuActivity::render(RenderLock&&) {
 
   renderer.clearScreen();
 
-  auto metrics = UITheme::getInstance().getMetrics();
-  Rect screen = UITheme::getInstance().getScreenSafeArea(renderer, true, false);
-
-  GUI.drawHeader(renderer, Rect{screen.x, screen.y + metrics.topPadding, screen.width, metrics.headerHeight},
-                 title.c_str());
-
   // Progress summary
   std::string progressLine;
   if (totalPages > 0) {
@@ -177,6 +174,37 @@ void EpubReaderMenuActivity::render(RenderLock&&) {
                    std::to_string(totalPages) + std::string(tr(STR_PAGES_SEPARATOR));
   }
   progressLine += std::string(tr(STR_BOOK_PREFIX)) + std::to_string(bookProgressPercent) + "%";
+  const auto labelAt = [this](int index) { return I18N.get(menuItems[index].labelId); };
+  const auto valueAt = [this](int index) {
+    const auto value = menuItems[index].action;
+    if (value == MenuAction::ROTATE_SCREEN) {
+      // Render current orientation value on the right edge of the content area.
+      return I18N.get(orientationLabels[pendingOrientation]);
+    } else if (value == MenuAction::AUTO_PAGE_TURN) {
+      // Render current page turn value on the right edge of the content area.
+      return pageTurnLabels[selectedPageTurnOption];
+    } else {
+      return "";
+    }
+  };
+
+  if (InkPointList::active(renderer)) {
+    InkPointList::Rows rows;
+    rows.count = static_cast<int>(menuItems.size());
+    rows.selected = selectedIndex;
+    rows.label = labelAt;
+    rows.value = valueAt;
+    InkPointList::draw(renderer, title.c_str(), rows, progressLine.c_str());
+    renderer.displayBuffer();
+    return;
+  }
+
+  auto metrics = UITheme::getInstance().getMetrics();
+  Rect screen = UITheme::getInstance().getScreenSafeArea(renderer, true, false);
+
+  GUI.drawHeader(renderer, Rect{screen.x, screen.y + metrics.topPadding, screen.width, metrics.headerHeight},
+                 title.c_str());
+
   GUI.drawSubHeader(
       renderer,
       Rect{screen.x, screen.y + metrics.topPadding + metrics.headerHeight, screen.width, metrics.tabBarHeight},
@@ -186,22 +214,8 @@ void EpubReaderMenuActivity::render(RenderLock&&) {
       screen.y + metrics.topPadding + metrics.headerHeight + metrics.tabBarHeight + metrics.verticalSpacing;
   const int contentHeight = screen.height - contentTop - metrics.verticalSpacing;
 
-  GUI.drawList(
-      renderer, Rect{screen.x, contentTop, screen.width, contentHeight}, menuItems.size(), selectedIndex,
-      [this](int index) { return I18N.get(menuItems[index].labelId); }, nullptr, nullptr,
-      [this](int index) {
-        const auto value = menuItems[index].action;
-        if (value == MenuAction::ROTATE_SCREEN) {
-          // Render current orientation value on the right edge of the content area.
-          return I18N.get(orientationLabels[pendingOrientation]);
-        } else if (value == MenuAction::AUTO_PAGE_TURN) {
-          // Render current page turn value on the right edge of the content area.
-          return pageTurnLabels[selectedPageTurnOption];
-        } else {
-          return "";
-        }
-      },
-      true);
+  GUI.drawList(renderer, Rect{screen.x, contentTop, screen.width, contentHeight}, menuItems.size(), selectedIndex,
+               labelAt, nullptr, nullptr, valueAt, true);
 
   // Footer / Hints
   const auto labels = mappedInput.mapLabels(tr(STR_BACK), tr(STR_SELECT), tr(STR_DIR_UP), tr(STR_DIR_DOWN));

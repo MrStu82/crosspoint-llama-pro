@@ -98,6 +98,10 @@ void drawFooter(const GfxRenderer& renderer, const Destination active, const int
   }
 }
 
+void drawDestinationIcon(const GfxRenderer& renderer, const Destination icon, const int cx, const int cy) {
+  drawIcon(renderer, static_cast<int>(icon), cx, cy, true);
+}
+
 std::optional<Destination> tappedDestination(const MappedInputManager& input) {
   int x = 0;
   int y = 0;

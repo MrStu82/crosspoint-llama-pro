@@ -97,10 +97,24 @@ void EpubReaderBookmarksActivity::loop() {
   const int contentY = isPortraitInverted ? 50 : 0;
   const int listY = contentY + LINE_HEIGHT;
   const int listHeight = getListHeight(renderer);
+  const bool inkPoint = InkPointList::active(renderer);
+  const int pageItems =
+      InkPointList::pageItemsOr(renderer, GUI.getListPageItems(listHeight, true), InkPointList::kNotePageItems);
+  if (inkPoint) {
+    switch (handleInkPointListTouch(selectorIndex, static_cast<int>(bookmarks.size()), InkPointList::kNotePageItems)) {
+      case ListTouchResult::Activated:
+        openBookmark();
+        return;
+      case ListTouchResult::Consumed:
+        return;
+      case ListTouchResult::None:
+        break;
+    }
+  }
   int tapped = 0;
   int tx = 0;
   int ty = 0;
-  if (mappedInput.wasScreenTouchDown(tx, ty) && tx >= contentX && tx < contentX + contentWidth &&
+  if (!inkPoint && mappedInput.wasScreenTouchDown(tx, ty) && tx >= contentX && tx < contentX + contentWidth &&
       mappedInput.wasListItemTouchedDown(tapped, static_cast<int>(bookmarks.size()), selectorIndex, listY, listHeight,
                                          true)) {
     if (selectorIndex != tapped) {
@@ -109,7 +123,7 @@ void EpubReaderBookmarksActivity::loop() {
     }
     return;
   }
-  if (mappedInput.wasScreenTapped(tx, ty) && tx >= contentX && tx < contentX + contentWidth &&
+  if (!inkPoint && mappedInput.wasScreenTapped(tx, ty) && tx >= contentX && tx < contentX + contentWidth &&
       mappedInput.wasListItemTapped(tapped, static_cast<int>(bookmarks.size()), selectorIndex, listY, listHeight,
                                     true)) {
     selectorIndex = tapped;
@@ -119,14 +133,12 @@ void EpubReaderBookmarksActivity::loop() {
 
   const auto swipe = mappedInput.wasSwipe();
   if (swipe == MappedInputManager::SwipeDir::Up && !bookmarks.empty()) {
-    selectorIndex =
-        ButtonNavigator::nextPageIndex(selectorIndex, bookmarks.size(), GUI.getListPageItems(listHeight, true));
+    selectorIndex = ButtonNavigator::nextPageIndex(selectorIndex, bookmarks.size(), pageItems);
     requestUpdate();
     return;
   }
   if (swipe == MappedInputManager::SwipeDir::Down && !bookmarks.empty()) {
-    selectorIndex =
-        ButtonNavigator::previousPageIndex(selectorIndex, bookmarks.size(), GUI.getListPageItems(listHeight, true));
+    selectorIndex = ButtonNavigator::previousPageIndex(selectorIndex, bookmarks.size(), pageItems);
     requestUpdate();
     return;
   }
@@ -162,15 +174,13 @@ void EpubReaderBookmarksActivity::loop() {
     requestUpdate();
   });
 
-  buttonNavigator.onNextContinuous([this] {
-    selectorIndex = ButtonNavigator::nextPageIndex(selectorIndex, bookmarks.size(),
-                                                   GUI.getListPageItems(getListHeight(renderer), true));
+  buttonNavigator.onNextContinuous([this, pageItems] {
+    selectorIndex = ButtonNavigator::nextPageIndex(selectorIndex, bookmarks.size(), pageItems);
     requestUpdate();
   });
 
-  buttonNavigator.onPreviousContinuous([this] {
-    selectorIndex = ButtonNavigator::previousPageIndex(selectorIndex, bookmarks.size(),
-                                                       GUI.getListPageItems(getListHeight(renderer), true));
+  buttonNavigator.onPreviousContinuous([this, pageItems] {
+    selectorIndex = ButtonNavigator::previousPageIndex(selectorIndex, bookmarks.size(), pageItems);
     requestUpdate();
   });
 }
@@ -240,6 +250,25 @@ void EpubReaderBookmarksActivity::render(RenderLock&&) {
     // only enabled icon in portrait mode due to limitation with rotating icons for other orientations
     return isPortrait ? UIIcon::Bookmark : UIIcon::None;
   };
+
+  if (InkPointList::active(renderer)) {
+    InkPointList::Rows rows;
+    // While confirming a delete, show just the selected bookmark (as the legacy list does).
+    rows.count = confirmingDelete ? std::min(numBookmarks, 1) : numBookmarks;
+    rows.selected = confirmingDelete ? 0 : selectorIndex;
+    rows.pageItems = InkPointList::kNotePageItems;
+    rows.label = getBookmarkTitle;
+    rows.subtitle = getBookmarkSubtitle;
+    InkPointList::draw(renderer, tr(STR_BOOKMARKS), rows);
+    if (numBookmarks > 0 && !confirmingDelete) {
+      GUI.drawHelpText(renderer,
+                       Rect{0, InkPointList::noteTop(InkPointList::kNotePageItems) + 12, pageWidth, LINE_HEIGHT},
+                       tr(STR_HOLD_OPEN_TO_DELETE));
+    }
+    if (confirmPopup.processRender(renderer, mappedInput)) return;
+    renderer.displayBuffer();
+    return;
+  }
 
   if (numBookmarks > 0) {
     if (confirmingDelete) {

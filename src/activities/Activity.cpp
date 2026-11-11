@@ -53,3 +53,17 @@ Activity::ListTouchResult Activity::handleListTouch(int& selectedIndex, const in
   }
   return ListTouchResult::None;
 }
+
+Activity::ListTouchResult Activity::handleInkPointListTouch(int& selectedIndex, const int itemCount,
+                                                            const int pageItems) {
+  switch (InkPointList::touch(mappedInput, selectedIndex, itemCount, pageItems)) {
+    case InkPointList::Touch::Activated:
+      return ListTouchResult::Activated;
+    case InkPointList::Touch::Consumed:
+      requestUpdate();
+      return ListTouchResult::Consumed;
+    case InkPointList::Touch::None:
+      break;
+  }
+  return ListTouchResult::None;
+}

@@ -14,6 +14,7 @@
 #include "WifiCredentialStore.h"
 #include "activities/util/KeyboardEntryActivity.h"
 #include "components/UITheme.h"
+#include "components/InkPointList.h"
 #include "components/InkPointShell.h"
 #include "fontIds.h"
 
@@ -757,14 +758,17 @@ void WifiSelectionActivity::loop() {
       const int contentHeight = screen.height - contentTop - metrics.verticalSpacing * 2;
       int touchSel = static_cast<int>(selectedNetworkIndex);
       const auto listTouch =
-          handleListTouch(touchSel, static_cast<int>(networks.size()), contentTop, contentHeight, false);
+          InkPointList::active(renderer)
+              ? handleInkPointListTouch(touchSel, static_cast<int>(networks.size()), InkPointList::kNotePageItems)
+              : handleListTouch(touchSel, static_cast<int>(networks.size()), contentTop, contentHeight, false);
       if (listTouch != ListTouchResult::None) {
         selectedNetworkIndex = static_cast<size_t>(touchSel);
         if (listTouch == ListTouchResult::Activated) selectNetwork(selectedNetworkIndex);
         return;
       }
 
-      const int pageItems = GUI.getListPageItems(contentHeight, false);
+      const int pageItems =
+          InkPointList::pageItemsOr(renderer, GUI.getListPageItems(contentHeight, false), InkPointList::kNotePageItems);
       const auto swipe = mappedInput.wasSwipe();
       if (swipe == MappedInputManager::SwipeDir::Up) {
         selectedNetworkIndex = ButtonNavigator::nextPageIndex(selectedNetworkIndex, networks.size(), pageItems);
@@ -824,6 +828,22 @@ void WifiSelectionActivity::render(RenderLock&&) {
   // so 32 truncated it. See ClockSyncActivity for the same class of bug.
   char countStr[64];
   snprintf(countStr, sizeof(countStr), tr(STR_NETWORKS_FOUND), realNetworkCount);
+  if (inkPoint && state == WifiSelectionState::NETWORK_LIST && !networks.empty()) {
+    InkPointList::Rows rows;
+    rows.count = static_cast<int>(networks.size());
+    rows.selected = static_cast<int>(selectedNetworkIndex);
+    rows.pageItems = InkPointList::kNotePageItems;
+    rows.label = [this](int index) { return networkLabel(index); };
+    rows.value = [this](int index) { return networkValue(index); };
+    InkPointList::draw(renderer, "Wi-Fi", rows);
+    renderer.drawText(SMALL_FONT_ID, 20, 96, countStr);
+    renderer.drawText(SMALL_FONT_ID, screen.width - 20 - renderer.getTextWidth(SMALL_FONT_ID, cachedMacAddress.c_str()),
+                      96, cachedMacAddress.c_str());
+    GUI.drawHelpText(renderer, Rect{0, InkPointList::noteTop(InkPointList::kNotePageItems) + 12, screen.width, 20},
+                     tr(STR_NETWORK_LEGEND));
+    renderer.displayBuffer();
+    return;
+  }
   if (inkPoint) {
     InkPointShell::drawHeader(renderer, "Wi-Fi");
     renderer.drawText(SMALL_FONT_ID, 20, 96, countStr);
@@ -871,6 +891,20 @@ void WifiSelectionActivity::render(RenderLock&&) {
   renderer.displayBuffer();
 }
 
+std::string WifiSelectionActivity::networkLabel(const int index) const {
+  const auto& network = networks[index];
+  return network.isHiddenPlaceholder ? std::string(tr(STR_ADD_HIDDEN_NETWORK)) : network.ssid;
+}
+
+std::string WifiSelectionActivity::networkValue(const int index) const {
+  const auto& network = networks[index];
+  if (network.isHiddenPlaceholder) {
+    return std::string();
+  }
+  return std::string(network.hasSavedPassword ? "+ " : "") + (network.isEncrypted ? "* " : "") +
+         getSignalStrengthIndicator(network.rssi);
+}
+
 void WifiSelectionActivity::renderNetworkList(const Rect* screen, const ThemeMetrics* metrics) const {
   if (networks.empty()) {
     // No networks found or scan failed
@@ -884,20 +918,8 @@ void WifiSelectionActivity::renderNetworkList(const Rect* screen, const ThemeMet
     int contentHeight = screen->height - contentTop - metrics->verticalSpacing * 2;
     GUI.drawList(
         renderer, Rect{screen->x, contentTop, screen->width, contentHeight}, static_cast<int>(networks.size()),
-        selectedNetworkIndex,
-        [this](int index) {
-          const auto& network = networks[index];
-          return network.isHiddenPlaceholder ? std::string(tr(STR_ADD_HIDDEN_NETWORK)) : network.ssid;
-        },
-        nullptr, nullptr,
-        [this](int index) {
-          const auto& network = networks[index];
-          if (network.isHiddenPlaceholder) {
-            return std::string();
-          }
-          return std::string(network.hasSavedPassword ? "+ " : "") + (network.isEncrypted ? "* " : "") +
-                 getSignalStrengthIndicator(network.rssi);
-        });
+        selectedNetworkIndex, [this](int index) { return networkLabel(index); }, nullptr, nullptr,
+        [this](int index) { return networkValue(index); });
   }
 
   GUI.drawHelpText(renderer,

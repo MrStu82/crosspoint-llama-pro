@@ -28,7 +28,8 @@ void EpubReaderChapterSelectionActivity::onEnter() {
 void EpubReaderChapterSelectionActivity::onExit() { Activity::onExit(); }
 
 void EpubReaderChapterSelectionActivity::loop() {
-  const int pageItems = UITheme::getInstance().getNumberOfItemsPerPage(renderer, true, false, true, false);
+  const int pageItems = InkPointList::pageItemsOr(
+      renderer, UITheme::getInstance().getNumberOfItemsPerPage(renderer, true, false, true, false));
   const int totalItems = getTotalItems();
 
   if (mappedInput.wasReleased(MappedInputManager::Button::Back)) {
@@ -56,7 +57,9 @@ void EpubReaderChapterSelectionActivity::loop() {
   Rect screen = UITheme::getInstance().getScreenSafeArea(renderer, true, false);
   const int contentTop = screen.y + metrics.topPadding + metrics.headerHeight + metrics.verticalSpacing;
   const int contentHeight = screen.height - contentTop - metrics.verticalSpacing;
-  switch (handleListTouch(selectorIndex, totalItems, contentTop, contentHeight, false)) {
+  switch (InkPointList::active(renderer)
+              ? handleInkPointListTouch(selectorIndex, totalItems)
+              : handleListTouch(selectorIndex, totalItems, contentTop, contentHeight, false)) {
     case ListTouchResult::Activated:
       selectChapter();
       return;
@@ -106,6 +109,23 @@ void EpubReaderChapterSelectionActivity::loop() {
 void EpubReaderChapterSelectionActivity::render(RenderLock&&) {
   renderer.clearScreen();
 
+  const int totalItems = getTotalItems();
+  const auto labelAt = [this](int index) {
+    auto item = epub->getTocItem(index);
+    std::string indent((item.level - 1) * 2, ' ');
+    return indent + item.title;
+  };
+
+  if (InkPointList::active(renderer)) {
+    InkPointList::Rows rows;
+    rows.count = totalItems;
+    rows.selected = selectorIndex;
+    rows.label = labelAt;
+    InkPointList::draw(renderer, tr(STR_SELECT_CHAPTER), rows);
+    renderer.displayBuffer();
+    return;
+  }
+
   auto metrics = UITheme::getInstance().getMetrics();
   Rect screen = UITheme::getInstance().getScreenSafeArea(renderer, true, false);
 
@@ -115,13 +135,8 @@ void EpubReaderChapterSelectionActivity::render(RenderLock&&) {
   const int contentTop = screen.y + metrics.topPadding + metrics.headerHeight + metrics.verticalSpacing;
   const int contentHeight = screen.height - contentTop - metrics.verticalSpacing;
 
-  const int totalItems = getTotalItems();
   GUI.drawList(renderer, Rect{screen.x, contentTop, screen.width, contentHeight}, totalItems, selectorIndex,
-               [this](int index) {
-                 auto item = epub->getTocItem(index);
-                 std::string indent((item.level - 1) * 2, ' ');
-                 return indent + item.title;
-               });
+               labelAt);
 
   const auto labels = mappedInput.mapLabels(tr(STR_BACK), tr(STR_SELECT), tr(STR_DIR_UP), tr(STR_DIR_DOWN));
   GUI.drawButtonHints(renderer, labels.btn1, labels.btn2, labels.btn3, labels.btn4);

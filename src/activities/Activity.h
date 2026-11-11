@@ -11,6 +11,7 @@
 #include "GfxRenderer.h"
 #include "MappedInputManager.h"
 #include "RenderLock.h"
+#include "components/InkPointList.h"
 #include "util/ScreenshotInfo.h"
 
 class Activity {
@@ -96,4 +97,8 @@ class Activity {
   // touched row, a tap selects and reports Activated. The caller supplies the
   // list band and runs its own activate action on Activated.
   ListTouchResult handleListTouch(int& selectedIndex, int itemCount, int listTop, int listHeight, bool hasSubtitle);
+  // The same contract for screens drawn with InkPointList: rows, pager and the
+  // circled Home (which goes home and reports Consumed).
+  ListTouchResult handleInkPointListTouch(int& selectedIndex, int itemCount,
+                                          int pageItems = InkPointList::kPageItems);
 };

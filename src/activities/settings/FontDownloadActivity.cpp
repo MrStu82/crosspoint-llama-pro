@@ -460,14 +460,17 @@ void FontDownloadActivity::loop() {
     }
 
     const int listSize = listItemCount();
-    const int pageItems = UITheme::getNumberOfItemsPerPage(renderer, true, false, true, false);
+    const int pageItems =
+        InkPointList::pageItemsOr(renderer, UITheme::getNumberOfItemsPerPage(renderer, true, false, true, false));
 
     if (!families_.empty()) {
       const auto& metrics = UITheme::getInstance().getMetrics();
       const int contentTop = metrics.topPadding + metrics.headerHeight + metrics.verticalSpacing;
       const int contentHeight =
           renderer.getScreenHeight() - contentTop - metrics.buttonHintsHeight - metrics.verticalSpacing;
-      switch (handleListTouch(selectedIndex_, listSize, contentTop, contentHeight, true)) {
+      switch (InkPointList::active(renderer)
+                  ? handleInkPointListTouch(selectedIndex_, listSize)
+                  : handleListTouch(selectedIndex_, listSize, contentTop, contentHeight, true)) {
         case ListTouchResult::Activated:
           activateSelected();
           return;
@@ -584,6 +587,39 @@ void FontDownloadActivity::render(RenderLock&&) {
 
   renderer.clearScreen();
 
+  const auto labelAt = [this](int index) -> std::string {
+    if (isDownloadAllRow(index)) {
+      return std::string(tr(STR_DOWNLOAD_ALL)) + " (" + formatSize(totalDownloadSize()) + ")";
+    }
+    if (isUpdateAllRow(index)) {
+      return std::string(tr(STR_UPDATE_ALL)) + " (" + formatSize(totalUpdateSize()) + ")";
+    }
+    return families_[familyIndexFromList(index)].name;
+  };
+  const auto subtitleAt = [this](int index) -> std::string {
+    if (isDownloadAllRow(index) || isUpdateAllRow(index)) return "";
+    return families_[familyIndexFromList(index)].description;
+  };
+  const auto valueAt = [this](int index) -> std::string {
+    if (isDownloadAllRow(index) || isUpdateAllRow(index)) return "";
+    const auto& f = families_[familyIndexFromList(index)];
+    if (f.hasUpdate) return tr(STR_UPDATE_AVAILABLE);
+    if (f.installed) return tr(STR_INSTALLED);
+    return "";
+  };
+
+  if (state_ == FAMILY_LIST && !families_.empty() && InkPointList::active(renderer)) {
+    InkPointList::Rows rows;
+    rows.count = listItemCount();
+    rows.selected = selectedIndex_;
+    rows.label = labelAt;
+    rows.subtitle = subtitleAt;
+    rows.value = valueAt;
+    InkPointList::draw(renderer, tr(STR_FONT_BROWSER), rows);
+    renderer.displayBuffer();
+    return;
+  }
+
   GUI.drawHeader(renderer, Rect{0, metrics.topPadding, pageWidth, metrics.headerHeight}, tr(STR_FONT_BROWSER));
 
   const auto lineHeight = renderer.getLineHeight(UI_10_FONT_ID);
@@ -601,28 +637,7 @@ void FontDownloadActivity::render(RenderLock&&) {
       GUI.drawList(
           renderer,
           Rect{0, contentTop, pageWidth, pageHeight - contentTop - metrics.buttonHintsHeight - metrics.verticalSpacing},
-          listItemCount(), selectedIndex_,
-          [this](int index) -> std::string {
-            if (isDownloadAllRow(index)) {
-              return std::string(tr(STR_DOWNLOAD_ALL)) + " (" + formatSize(totalDownloadSize()) + ")";
-            }
-            if (isUpdateAllRow(index)) {
-              return std::string(tr(STR_UPDATE_ALL)) + " (" + formatSize(totalUpdateSize()) + ")";
-            }
-            return families_[familyIndexFromList(index)].name;
-          },
-          [this](int index) -> std::string {
-            if (isDownloadAllRow(index) || isUpdateAllRow(index)) return "";
-            return families_[familyIndexFromList(index)].description;
-          },
-          nullptr,
-          [this](int index) -> std::string {
-            if (isDownloadAllRow(index) || isUpdateAllRow(index)) return "";
-            const auto& f = families_[familyIndexFromList(index)];
-            if (f.hasUpdate) return tr(STR_UPDATE_AVAILABLE);
-            if (f.installed) return tr(STR_INSTALLED);
-            return "";
-          },
+          listItemCount(), selectedIndex_, labelAt, subtitleAt, nullptr, valueAt,
           true,
           [this](int index) -> bool {
             if (isDownloadAllRow(index) || isUpdateAllRow(index)) return false;

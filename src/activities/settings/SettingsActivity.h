@@ -164,6 +164,7 @@ class SettingsActivity final : public Activity {
   int selectedCategoryIndex = 0;  // Currently selected category
   int selectedSettingIndex = 0;
   int settingsCount = 0;
+  bool inCategory = false;  // InkPoint only: category list vs. its settings
 
   // Per-category settings derived from shared list + device-only actions
   std::vector<SettingInfo> displaySettings;
@@ -185,6 +186,9 @@ class SettingsActivity final : public Activity {
   static const StrId categoryNames[categoryCount];
 
   void enterCategory(int categoryIndex);
+  void applyCategorySelection();
+  void loopInkPointCategories();
+  void renderInkPoint();
   void toggleCurrentSetting();
   void openSleepTimeoutPicker();
   void rebuildSettingsLists();

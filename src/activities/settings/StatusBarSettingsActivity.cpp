@@ -143,7 +143,9 @@ void StatusBarSettingsActivity::loop() {
   const int contentTop = metrics.topPadding + metrics.headerHeight + metrics.verticalSpacing;
   const int contentHeight =
       renderer.getScreenHeight() - contentTop - metrics.buttonHintsHeight - metrics.verticalSpacing * 2;
-  switch (handleListTouch(selectedIndex, visibleItemCount, contentTop, contentHeight, false)) {
+  switch (InkPointList::active(renderer)
+              ? handleInkPointListTouch(selectedIndex, visibleItemCount, InkPointList::kNotePageItems)
+              : handleListTouch(selectedIndex, visibleItemCount, contentTop, contentHeight, false)) {
     case ListTouchResult::Activated:
       handleSelection();
       requestUpdate();
@@ -263,59 +265,42 @@ void StatusBarSettingsActivity::render(RenderLock&&) {
 
   renderer.clearScreen();
 
-  auto metrics = UITheme::getInstance().getMetrics();
-  const auto pageWidth = renderer.getScreenWidth();
-  const auto pageHeight = renderer.getScreenHeight();
-
-  GUI.drawHeader(renderer, Rect{0, metrics.topPadding, pageWidth, metrics.headerHeight},
-                I18N.get(isTop() ? StrId::STR_CUSTOMISE_TOP_STATUS_BAR : StrId::STR_CUSTOMISE_STATUS_BAR));
-
-  const int contentTop = metrics.topPadding + metrics.headerHeight + metrics.verticalSpacing;
-  const int contentHeight = pageHeight - contentTop - metrics.buttonHintsHeight - metrics.verticalSpacing * 2;
   const bool top = isTop();
-  GUI.drawList(
-      renderer, Rect{0, contentTop, pageWidth, contentHeight}, visibleItemCount, static_cast<int>(selectedIndex),
-      [](int index) { return std::string(I18N.get(menuNames[index])); }, nullptr, nullptr,
-      [top](int index) -> std::string {
-        switch (index) {
-          case ITEM_CHAPTER_PAGE_COUNT:
-            return (top ? SETTINGS.topBarChapterPageCount : SETTINGS.statusBarChapterPageCount) ? tr(STR_SHOW)
-                                                                                                 : tr(STR_HIDE);
-          case ITEM_BOOK_PROGRESS_PERCENTAGE:
-            return (top ? SETTINGS.topBarBookProgressPercentage : SETTINGS.statusBarBookProgressPercentage)
-                       ? tr(STR_SHOW)
-                       : tr(STR_HIDE);
-          case ITEM_PROGRESS_BAR:
-            return I18N.get(progressBarNames[top ? SETTINGS.topBarProgressBar : SETTINGS.statusBarProgressBar]);
-          case ITEM_PROGRESS_BAR_THICKNESS:
-            return I18N.get(progressBarThicknessNames[top ? SETTINGS.topBarProgressBarThickness
-                                                            : SETTINGS.statusBarProgressBarThickness]);
-          case ITEM_TITLE:
-            return I18N.get(titleNames[top ? SETTINGS.topBarTitle : SETTINGS.statusBarTitle]);
-          case ITEM_BATTERY:
-            return (top ? SETTINGS.topBarBattery : SETTINGS.statusBarBattery) ? tr(STR_SHOW) : tr(STR_HIDE);
-          case ITEM_XTC_STATUS_BAR:
-            return I18N.get(xtcStatusBarNames[SETTINGS.xtcStatusBarMode]);
-          case ITEM_CLOCK:
-            return I18N.get(statusBarClockNames[SETTINGS.statusBarClock]);
-          case ITEM_CLOCK_FORMAT: {
-            const uint8_t fmt = SETTINGS.clockFormat < CLOCK_FORMAT_ITEMS ? SETTINGS.clockFormat : 0;
-            return std::string(I18N.get(clockFormatNames[fmt]));
-          }
-          case ITEM_CLOCK_UTC_OFFSET:
-            return formatUtcOffset(SETTINGS.clockUtcOffsetQ);
-          case ITEM_CLOCK_SYNC:
-            return SETTINGS.clockHasBeenSynced ? tr(STR_CLOCK_SYNCED) : tr(STR_NOT_SET);
-          default:
-            return tr(STR_HIDE);
-        }
-      },
-      true);
-
-  // Draw button hints
-  const auto labels = mappedInput.mapLabels(tr(STR_BACK), tr(STR_TOGGLE), tr(STR_DIR_UP), tr(STR_DIR_DOWN));
-  GUI.drawButtonHints(renderer, labels.btn1, labels.btn2, labels.btn3, labels.btn4);
-
+  const auto labelAt = [](int index) { return std::string(I18N.get(menuNames[index])); };
+  const auto valueAt = [top](int index) -> std::string {
+    switch (index) {
+      case ITEM_CHAPTER_PAGE_COUNT:
+        return (top ? SETTINGS.topBarChapterPageCount : SETTINGS.statusBarChapterPageCount) ? tr(STR_SHOW)
+                                                                                             : tr(STR_HIDE);
+      case ITEM_BOOK_PROGRESS_PERCENTAGE:
+        return (top ? SETTINGS.topBarBookProgressPercentage : SETTINGS.statusBarBookProgressPercentage)
+                   ? tr(STR_SHOW)
+                   : tr(STR_HIDE);
+      case ITEM_PROGRESS_BAR:
+        return I18N.get(progressBarNames[top ? SETTINGS.topBarProgressBar : SETTINGS.statusBarProgressBar]);
+      case ITEM_PROGRESS_BAR_THICKNESS:
+        return I18N.get(progressBarThicknessNames[top ? SETTINGS.topBarProgressBarThickness
+                                                        : SETTINGS.statusBarProgressBarThickness]);
+      case ITEM_TITLE:
+        return I18N.get(titleNames[top ? SETTINGS.topBarTitle : SETTINGS.statusBarTitle]);
+      case ITEM_BATTERY:
+        return (top ? SETTINGS.topBarBattery : SETTINGS.statusBarBattery) ? tr(STR_SHOW) : tr(STR_HIDE);
+      case ITEM_XTC_STATUS_BAR:
+        return I18N.get(xtcStatusBarNames[SETTINGS.xtcStatusBarMode]);
+      case ITEM_CLOCK:
+        return I18N.get(statusBarClockNames[SETTINGS.statusBarClock]);
+      case ITEM_CLOCK_FORMAT: {
+        const uint8_t fmt = SETTINGS.clockFormat < CLOCK_FORMAT_ITEMS ? SETTINGS.clockFormat : 0;
+        return std::string(I18N.get(clockFormatNames[fmt]));
+      }
+      case ITEM_CLOCK_UTC_OFFSET:
+        return formatUtcOffset(SETTINGS.clockUtcOffsetQ);
+      case ITEM_CLOCK_SYNC:
+        return SETTINGS.clockHasBeenSynced ? tr(STR_CLOCK_SYNCED) : tr(STR_NOT_SET);
+      default:
+        return tr(STR_HIDE);
+    }
+  };
   const uint8_t previewTitleMode = top ? SETTINGS.topBarTitle : SETTINGS.statusBarTitle;
   std::string title;
   if (previewTitleMode == CrossPointSettings::STATUS_BAR_TITLE::BOOK_TITLE) {
@@ -323,6 +308,39 @@ void StatusBarSettingsActivity::render(RenderLock&&) {
   } else if (previewTitleMode == CrossPointSettings::STATUS_BAR_TITLE::CHAPTER_TITLE) {
     title = tr(STR_EXAMPLE_CHAPTER);
   }
+  const char* header = I18N.get(top ? StrId::STR_CUSTOMISE_TOP_STATUS_BAR : StrId::STR_CUSTOMISE_STATUS_BAR);
+
+  if (InkPointList::active(renderer)) {
+    InkPointList::Rows rows;
+    rows.count = visibleItemCount;
+    rows.selected = static_cast<int>(selectedIndex);
+    rows.pageItems = InkPointList::kNotePageItems;
+    rows.label = labelAt;
+    rows.value = valueAt;
+    InkPointList::draw(renderer, header, rows);
+    // Preview in the note band above the pager.
+    constexpr int kNoteTop = InkPointList::noteTop(InkPointList::kNotePageItems);
+    const int previewBottomPadding = renderer.getScreenHeight() - InkPointShell::kFooterTop + 6;
+    GUI.drawStatusBar(renderer, 75, 8, 32, title, top ? 0 : previewBottomPadding, 0, false, false, false,
+                      top ? CrossPointSettings::Edge::TOP : CrossPointSettings::Edge::BOTTOM, top ? kNoteTop + 6 : 0);
+    renderer.displayBuffer();
+    return;
+  }
+
+  auto metrics = UITheme::getInstance().getMetrics();
+  const auto pageWidth = renderer.getScreenWidth();
+  const auto pageHeight = renderer.getScreenHeight();
+
+  GUI.drawHeader(renderer, Rect{0, metrics.topPadding, pageWidth, metrics.headerHeight}, header);
+
+  const int contentTop = metrics.topPadding + metrics.headerHeight + metrics.verticalSpacing;
+  const int contentHeight = pageHeight - contentTop - metrics.buttonHintsHeight - metrics.verticalSpacing * 2;
+  GUI.drawList(renderer, Rect{0, contentTop, pageWidth, contentHeight}, visibleItemCount,
+               static_cast<int>(selectedIndex), labelAt, nullptr, nullptr, valueAt, true);
+
+  // Draw button hints
+  const auto labels = mappedInput.mapLabels(tr(STR_BACK), tr(STR_TOGGLE), tr(STR_DIR_UP), tr(STR_DIR_DOWN));
+  GUI.drawButtonHints(renderer, labels.btn1, labels.btn2, labels.btn3, labels.btn4);
 
   GUI.drawStatusBar(renderer, 75, 8, 32, title, verticalPreviewPadding, 0, false, false, false,
                     top ? CrossPointSettings::Edge::TOP : CrossPointSettings::Edge::BOTTOM);

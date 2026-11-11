@@ -55,7 +55,9 @@ void OpdsSettingsActivity::loop() {
   const int menuItems = getMenuItemCount();
 
   int touchSel = static_cast<int>(selectedIndex);
-  const auto listTouch = handleListTouch(touchSel, menuItems, contentTop, contentHeight, false);
+  const auto listTouch = InkPointList::active(renderer)
+                             ? handleInkPointListTouch(touchSel, menuItems, InkPointList::kNotePageItems)
+                             : handleListTouch(touchSel, menuItems, contentTop, contentHeight, false);
   if (listTouch != ListTouchResult::None) {
     selectedIndex = static_cast<size_t>(touchSel);
     if (listTouch == ListTouchResult::Activated) handleSelection();
@@ -184,12 +186,51 @@ void OpdsSettingsActivity::handleSelection() {
 void OpdsSettingsActivity::render(RenderLock&&) {
   renderer.clearScreen();
 
-  const auto& metrics = UITheme::getInstance().getMetrics();
-  const auto pageWidth = renderer.getScreenWidth();
-  const auto pageHeight = renderer.getScreenHeight();
+  const StrId fieldNames[] = {StrId::STR_SERVER_NAME, StrId::STR_OPDS_SERVER_URL, StrId::STR_USERNAME,
+                              StrId::STR_PASSWORD};
+  const auto labelAt = [&fieldNames](int index) {
+    if (index < BASE_ITEMS) {
+      return std::string(I18N.get(fieldNames[index]));
+    }
+    return std::string(tr(STR_DELETE_SERVER));
+  };
+  const auto valueAt = [this](int index) {
+    if (index == 0) {
+      return editServer.name.empty() ? std::string(tr(STR_NOT_SET)) : editServer.name;
+    } else if (index == 1) {
+      return editServer.url.empty() ? std::string(tr(STR_NOT_SET)) : editServer.url;
+    } else if (index == 2) {
+      return editServer.username.empty() ? std::string(tr(STR_NOT_SET)) : editServer.username;
+    } else if (index == 3) {
+      return editServer.password.empty() ? std::string(tr(STR_NOT_SET)) : std::string("******");
+    }
+    return std::string("");
+  };
   // Reuse STR_OPDS_BROWSER as the "edit existing server" title.
   // New server creation uses STR_ADD_SERVER.
   const char* header = isNewServer ? tr(STR_ADD_SERVER) : tr(STR_OPDS_BROWSER);
+
+  if (InkPointList::active(renderer)) {
+    InkPointList::Rows rows;
+    rows.count = getMenuItemCount();
+    rows.selected = static_cast<int>(selectedIndex);
+    rows.pageItems = InkPointList::kNotePageItems;
+    rows.label = labelAt;
+    rows.value = valueAt;
+    InkPointList::draw(renderer, header, rows);
+    const int noteY = InkPointList::noteTop(InkPointList::kNotePageItems) + 12;
+    const std::string hint = renderer.truncatedText(SMALL_FONT_ID, tr(STR_CALIBRE_URL_HINT), 440);
+    renderer.drawText(SMALL_FONT_ID, 240 - renderer.getTextWidth(SMALL_FONT_ID, hint.c_str()) / 2, noteY, hint.c_str());
+    if (showSaveError) {
+      GUI.drawPopup(renderer, tr(STR_ERROR_GENERAL_FAILURE));
+    }
+    renderer.displayBuffer();
+    return;
+  }
+
+  const auto& metrics = UITheme::getInstance().getMetrics();
+  const auto pageWidth = renderer.getScreenWidth();
+  const auto pageHeight = renderer.getScreenHeight();
   GUI.drawHeader(renderer, Rect{0, metrics.topPadding, pageWidth, metrics.headerHeight}, header);
   GUI.drawSubHeader(renderer, Rect{0, metrics.topPadding + metrics.headerHeight, pageWidth, metrics.tabBarHeight},
                     tr(STR_CALIBRE_URL_HINT));
@@ -198,31 +239,8 @@ void OpdsSettingsActivity::render(RenderLock&&) {
   const int contentHeight = pageHeight - contentTop - metrics.buttonHintsHeight - metrics.verticalSpacing * 2;
   const int menuItems = getMenuItemCount();
 
-  const StrId fieldNames[] = {StrId::STR_SERVER_NAME, StrId::STR_OPDS_SERVER_URL, StrId::STR_USERNAME,
-                              StrId::STR_PASSWORD};
-
-  GUI.drawList(
-      renderer, Rect{0, contentTop, pageWidth, contentHeight}, menuItems, static_cast<int>(selectedIndex),
-      [this, &fieldNames](int index) {
-        if (index < BASE_ITEMS) {
-          return std::string(I18N.get(fieldNames[index]));
-        }
-        return std::string(tr(STR_DELETE_SERVER));
-      },
-      nullptr, nullptr,
-      [this](int index) {
-        if (index == 0) {
-          return editServer.name.empty() ? std::string(tr(STR_NOT_SET)) : editServer.name;
-        } else if (index == 1) {
-          return editServer.url.empty() ? std::string(tr(STR_NOT_SET)) : editServer.url;
-        } else if (index == 2) {
-          return editServer.username.empty() ? std::string(tr(STR_NOT_SET)) : editServer.username;
-        } else if (index == 3) {
-          return editServer.password.empty() ? std::string(tr(STR_NOT_SET)) : std::string("******");
-        }
-        return std::string("");
-      },
-      true);
+  GUI.drawList(renderer, Rect{0, contentTop, pageWidth, contentHeight}, menuItems, static_cast<int>(selectedIndex),
+               labelAt, nullptr, nullptr, valueAt, true);
 
   const auto labels = mappedInput.mapLabels(tr(STR_BACK), tr(STR_SELECT), tr(STR_DIR_UP), tr(STR_DIR_DOWN));
   GUI.drawButtonHints(renderer, labels.btn1, labels.btn2, labels.btn3, labels.btn4);

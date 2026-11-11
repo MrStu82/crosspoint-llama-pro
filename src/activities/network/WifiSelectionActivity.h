@@ -95,6 +95,8 @@ class WifiSelectionActivity final : public Activity {
   unsigned long connectionStartTime = 0;
 
   void renderNetworkList(const Rect* screen, const ThemeMetrics* metrics) const;
+  std::string networkLabel(int index) const;
+  std::string networkValue(int index) const;
   void renderPasswordEntry(const Rect* screen, const ThemeMetrics* metrics) const;
   void renderConnecting(const Rect* screen, const ThemeMetrics* metrics) const;
   void renderConnected(const Rect* screen, const ThemeMetrics* metrics) const;

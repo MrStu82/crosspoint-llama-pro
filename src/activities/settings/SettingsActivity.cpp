@@ -34,7 +34,7 @@
 #include "activities/network/WifiSelectionActivity.h"
 #include "activities/util/IntervalSelectionActivity.h"
 #include "components/UITheme.h"
-#include "components/InkPointShell.h"
+#include "components/InkPointList.h"
 #include "fontIds.h"
 
 const StrId SettingsActivity::categoryNames[categoryCount] = {StrId::STR_CAT_DISPLAY, StrId::STR_CAT_READER,
@@ -59,27 +59,36 @@ StrId hardcoverImportStatusString(const HardcoverTokenImport::Status status) {
   return StrId::STR_HARDCOVER_IMPORT_NO_FILE;
 }
 
-// The InkPoint shell draws the category strip as equal-width cells, but
-// BaseTheme::tabIndexFromPoint hit-tests a text-width-packed strip anchored at
-// contentSidePadding. The two geometries disagree, which is why the headers read
-// as fiddly: the touchable band for a tab sits nowhere near the label drawn for
-// it. One function owns the cell now, and both the renderer and the hit test ask
-// it.
-constexpr int kInkPointTabWidth(const int pageWidth, const int categoryCount) {
-  return pageWidth / categoryCount;
-}
-
-bool inkPointTabIndexFromPoint(const int pageWidth, const int categoryCount, const Rect strip, const int x,
-                               const int y, int& index) {
-  if (categoryCount <= 0 || y < strip.y || y >= strip.y + strip.height) return false;
-  if (x < 0 || x >= pageWidth) return false;
-  const int tabWidth = kInkPointTabWidth(pageWidth, categoryCount);
-  if (tabWidth <= 0) return false;
-  const int hit = x / tabWidth;
-  // The trailing remainder of an inexact division belongs to the last cell,
-  // which is what the renderer's final label occupies.
-  index = hit >= categoryCount ? categoryCount - 1 : hit;
-  return true;
+std::string settingValueText(const SettingInfo& setting) {
+  std::string valueText;
+  if (setting.type == SettingType::TOGGLE && setting.valuePtr != nullptr) {
+    const bool value = SETTINGS.*(setting.valuePtr);
+    valueText = value ? tr(STR_STATE_ON) : tr(STR_STATE_OFF);
+  } else if (setting.type == SettingType::ENUM && setting.valuePtr != nullptr) {
+    const uint8_t value = SETTINGS.*(setting.valuePtr);
+    valueText = I18N.get(setting.enumValues[value]);
+  } else if (setting.type == SettingType::ENUM && setting.valueGetter) {
+    const uint8_t value = setting.valueGetter();
+    if (!setting.enumStringValues.empty() && value < setting.enumStringValues.size()) {
+      valueText = setting.enumStringValues[value];
+    } else if (value < setting.enumValues.size()) {
+      valueText = I18N.get(setting.enumValues[value]);
+    }
+  } else if (setting.type == SettingType::VALUE && setting.valuePtr != nullptr) {
+    if (setting.nameId == StrId::STR_TIME_TO_SLEEP) {
+      char valueBuffer[32];
+      if (SETTINGS.sleepTimeoutMinutes >= CrossPointSettings::SLEEP_TIMEOUT_NEVER_MINUTES) {
+        valueText = tr(STR_SLEEP_NEVER);
+      } else {
+        snprintf(valueBuffer, sizeof(valueBuffer), tr(STR_SLEEP_TIMER_VALUE_FORMAT),
+                 static_cast<unsigned int>(SETTINGS.*(setting.valuePtr)));
+        valueText = valueBuffer;
+      }
+    } else {
+      valueText = std::to_string(SETTINGS.*(setting.valuePtr));
+    }
+  }
+  return valueText;
 }
 }  // namespace
 
@@ -157,7 +166,10 @@ void SettingsActivity::rebuildSettingsLists() {
   readerSettings.push_back(
       SettingInfo::Action(StrId::STR_CUSTOMISE_TOP_STATUS_BAR, SettingAction::CustomiseTopStatusBar));
 
-  // Update currentSettings pointer and count for the active category
+  applyCategorySelection();
+}
+
+void SettingsActivity::applyCategorySelection() {
   switch (selectedCategoryIndex) {
     case 0:
       currentSettings = &displaySettings;
@@ -181,6 +193,7 @@ void SettingsActivity::onEnter() {
   // Reset selection to first category
   selectedCategoryIndex = 0;
   selectedSettingIndex = 0;
+  inCategory = false;
   preserveQuickResumeTimeoutOn =
       SETTINGS.quickResumeSleepScreen == CrossPointSettings::QUICK_RESUME_SLEEP_SCREEN::QUICK_RESUME_AFTER_TIMEOUT;
   quickResumeTimeoutAutoEnabled = false;
@@ -203,33 +216,13 @@ void SettingsActivity::onExit() {
 void SettingsActivity::loop() {
   if (optionPopup.handleInput(mappedInput, [this] { requestUpdate(); })) return;
 
-  const bool inkPoint = InkPointShell::enabled(renderer);
-  if (inkPoint) {
-    if (const auto destination = InkPointShell::tappedDestination(mappedInput)) {
-      InkPointShell::navigate(*destination);
-      return;
-    }
+  const bool inkPoint = InkPointList::active(renderer);
+  if (inkPoint && !inCategory) {
+    loopInkPointCategories();
+    return;
   }
 
   bool hasChangedCategory = false;
-
-  auto applyCategorySelection = [this] {
-    switch (selectedCategoryIndex) {
-      case 0:
-        currentSettings = &displaySettings;
-        break;
-      case 1:
-        currentSettings = &readerSettings;
-        break;
-      case 2:
-        currentSettings = &controlsSettings;
-        break;
-      case 3:
-        currentSettings = &systemSettings;
-        break;
-    }
-    settingsCount = static_cast<int>(currentSettings->size());
-  };
 
   // Handle actions with early return
   if (mappedInput.wasPressed(MappedInputManager::Button::Confirm)) {
@@ -245,7 +238,12 @@ void SettingsActivity::loop() {
   }
 
   if (mappedInput.wasPressed(MappedInputManager::Button::Back)) {
-    if (selectedSettingIndex > 0) {
+    if (inkPoint) {
+      // InkPoint categories are a second list level; Back returns to the first.
+      inCategory = false;
+      selectedSettingIndex = 0;
+      requestUpdate();
+    } else if (selectedSettingIndex > 0) {
       selectedSettingIndex = 0;
       requestUpdate();
     } else {
@@ -255,102 +253,123 @@ void SettingsActivity::loop() {
     return;
   }
 
-  const auto& metrics = UITheme::getInstance().getMetrics();
-  int tx = 0;
-  int ty = 0;
-  const int tabTop = inkPoint ? InkPointShell::kContentTop : metrics.topPadding + metrics.headerHeight;
-  const int tabHeight = inkPoint ? 44 : metrics.tabBarHeight;
-  const int listTop = inkPoint ? tabTop + tabHeight + 8
-                               : metrics.topPadding + metrics.headerHeight + metrics.tabBarHeight +
-                                     metrics.verticalSpacing;
-  const int listHeight = inkPoint ? InkPointShell::kFooterTop - listTop - 8
-                                  : renderer.getScreenHeight() -
-                                        (metrics.topPadding + metrics.headerHeight + metrics.tabBarHeight +
-                                         metrics.buttonHintsHeight + metrics.verticalSpacing * 2);
-  auto buildTabs = [&]() {
-    std::vector<TabInfo> tabs;
-    tabs.reserve(categoryCount);
-    for (int i = 0; i < categoryCount; i++) {
-      tabs.push_back({I18N.get(categoryNames[i]), selectedCategoryIndex == i});
+  const int inkPointPageItems = hardcoverStatus.empty() ? InkPointList::kPageItems : InkPointList::kNotePageItems;
+  if (inkPoint) {
+    int row = selectedSettingIndex - 1;
+    switch (InkPointList::touch(mappedInput, row, settingsCount, inkPointPageItems)) {
+      case InkPointList::Touch::Activated:
+        // Focus stays on the tapped row so its page does not jump back.
+        selectedSettingIndex = row + 1;
+        toggleCurrentSetting();
+        requestUpdate();
+        return;
+      case InkPointList::Touch::Consumed:
+        selectedSettingIndex = row + 1;
+        requestUpdate();
+        return;
+      case InkPointList::Touch::None:
+        break;
     }
-    return tabs;
-  };
-  auto settingIndexFromPoint = [&](const int x, const int y, int& settingIndex) {
-    (void)x;
-    if (settingsCount <= 0 || y < listTop || y >= listTop + listHeight) return false;
-    const int rowStep = GUI.getListRowStep(false);
-    if (rowStep <= 0) return false;
-    const int pageItems = GUI.getListPageItems(listHeight, false);
-    const int selectedRow = std::max(0, selectedSettingIndex - 1);
-    const int pageStart = selectedRow / pageItems * pageItems;
-    const int row = (y - listTop) / rowStep;
-    const int touched = pageStart + row;
-    if (row < 0 || row >= pageItems || touched < 0 || touched >= settingsCount) return false;
-    settingIndex = touched + 1;
-    return true;
-  };
+  } else {
+    const auto& metrics = UITheme::getInstance().getMetrics();
+    int tx = 0;
+    int ty = 0;
+    const int tabTop = metrics.topPadding + metrics.headerHeight;
+    const int tabHeight = metrics.tabBarHeight;
+    const int listTop = metrics.topPadding + metrics.headerHeight + metrics.tabBarHeight + metrics.verticalSpacing;
+    const int listHeight = renderer.getScreenHeight() -
+                           (metrics.topPadding + metrics.headerHeight + metrics.tabBarHeight +
+                            metrics.buttonHintsHeight + metrics.verticalSpacing * 2);
+    auto buildTabs = [&]() {
+      std::vector<TabInfo> tabs;
+      tabs.reserve(categoryCount);
+      for (int i = 0; i < categoryCount; i++) {
+        tabs.push_back({I18N.get(categoryNames[i]), selectedCategoryIndex == i});
+      }
+      return tabs;
+    };
+    auto settingIndexFromPoint = [&](const int x, const int y, int& settingIndex) {
+      (void)x;
+      if (settingsCount <= 0 || y < listTop || y >= listTop + listHeight) return false;
+      const int rowStep = GUI.getListRowStep(false);
+      if (rowStep <= 0) return false;
+      const int pageItems = GUI.getListPageItems(listHeight, false);
+      const int selectedRow = std::max(0, selectedSettingIndex - 1);
+      const int pageStart = selectedRow / pageItems * pageItems;
+      const int row = (y - listTop) / rowStep;
+      const int touched = pageStart + row;
+      if (row < 0 || row >= pageItems || touched < 0 || touched >= settingsCount) return false;
+      settingIndex = touched + 1;
+      return true;
+    };
 
-  if (mappedInput.wasScreenTouchDown(tx, ty)) {
-    int touchedCategory = -1;
-    const auto tabs = buildTabs();
-    const Rect tabStrip{0, tabTop, renderer.getScreenWidth(), tabHeight};
-    if (inkPoint ? inkPointTabIndexFromPoint(renderer.getScreenWidth(), categoryCount, tabStrip, tx, ty,
-                                             touchedCategory)
-                 : GUI.tabIndexFromPoint(renderer, tabStrip, tabs, tx, ty, touchedCategory)) {
-      if (selectedCategoryIndex != touchedCategory || selectedSettingIndex != 0) {
-        selectedCategoryIndex = touchedCategory;
+    if (mappedInput.wasScreenTouchDown(tx, ty)) {
+      int touchedCategory = -1;
+      const auto tabs = buildTabs();
+      const Rect tabStrip{0, tabTop, renderer.getScreenWidth(), tabHeight};
+      if (GUI.tabIndexFromPoint(renderer, tabStrip, tabs, tx, ty, touchedCategory)) {
+        if (selectedCategoryIndex != touchedCategory || selectedSettingIndex != 0) {
+          selectedCategoryIndex = touchedCategory;
+          selectedSettingIndex = 0;
+          applyCategorySelection();
+          requestUpdate();
+        }
+        return;
+      }
+
+      int touchedSetting = -1;
+      if (settingIndexFromPoint(tx, ty, touchedSetting)) {
+        if (selectedSettingIndex != touchedSetting) {
+          selectedSettingIndex = touchedSetting;
+          requestUpdate();
+        }
+        return;
+      }
+    }
+
+    if (mappedInput.wasScreenTapped(tx, ty)) {
+      int tappedCategory = -1;
+      const auto tabs = buildTabs();
+      const Rect tabStrip{0, tabTop, renderer.getScreenWidth(), tabHeight};
+      if (GUI.tabIndexFromPoint(renderer, tabStrip, tabs, tx, ty, tappedCategory)) {
+        selectedCategoryIndex = tappedCategory;
         selectedSettingIndex = 0;
         applyCategorySelection();
         requestUpdate();
+        return;
       }
-      return;
-    }
 
-    int touchedSetting = -1;
-    if (settingIndexFromPoint(tx, ty, touchedSetting)) {
-      if (selectedSettingIndex != touchedSetting) {
-        selectedSettingIndex = touchedSetting;
+      int tappedSetting = -1;
+      if (settingIndexFromPoint(tx, ty, tappedSetting)) {
+        selectedSettingIndex = tappedSetting;
+        toggleCurrentSetting();
+        // Touch activation is not persistent cursor focus. Return focus to the
+        // category strip so Back never needs an extra press to clear a row.
+        selectedSettingIndex = 0;
         requestUpdate();
+        return;
       }
-      return;
-    }
-  }
-
-  if (mappedInput.wasScreenTapped(tx, ty)) {
-    int tappedCategory = -1;
-    const auto tabs = buildTabs();
-    const Rect tabStrip{0, tabTop, renderer.getScreenWidth(), tabHeight};
-    if (inkPoint ? inkPointTabIndexFromPoint(renderer.getScreenWidth(), categoryCount, tabStrip, tx, ty,
-                                             tappedCategory)
-                 : GUI.tabIndexFromPoint(renderer, tabStrip, tabs, tx, ty, tappedCategory)) {
-      selectedCategoryIndex = tappedCategory;
-      selectedSettingIndex = 0;
-      applyCategorySelection();
-      requestUpdate();
-      return;
-    }
-
-    int tappedSetting = -1;
-    if (settingIndexFromPoint(tx, ty, tappedSetting)) {
-      selectedSettingIndex = tappedSetting;
-      toggleCurrentSetting();
-      // Touch activation is not persistent cursor focus. Return focus to the
-      // category strip so Back never needs an extra press to clear a row.
-      selectedSettingIndex = 0;
-      requestUpdate();
-      return;
     }
   }
 
   // Handle navigation
   const auto& navMetrics = UITheme::getInstance().getMetrics();
-  const int settingsListHeight = inkPoint
-                                     ? InkPointShell::kFooterTop - (InkPointShell::kContentTop + 44 + 8) - 8
-                                     : renderer.getScreenHeight() -
-                                           (navMetrics.topPadding + navMetrics.headerHeight + navMetrics.tabBarHeight +
-                                            navMetrics.buttonHintsHeight + navMetrics.verticalSpacing * 2);
+  const int settingsListHeight = renderer.getScreenHeight() -
+                                 (navMetrics.topPadding + navMetrics.headerHeight + navMetrics.tabBarHeight +
+                                  navMetrics.buttonHintsHeight + navMetrics.verticalSpacing * 2);
   const int settingsPageItems = GUI.getListPageItems(settingsListHeight, false);
   const auto swipe = mappedInput.wasSwipe();
+  if (inkPoint && settingsCount > 0 &&
+      (swipe == MappedInputManager::SwipeDir::Up || swipe == MappedInputManager::SwipeDir::Down)) {
+    // Page by list row: the InkPoint list has no tab-strip slot at index 0.
+    const int row = std::max(0, selectedSettingIndex - 1);
+    selectedSettingIndex =
+        1 + (swipe == MappedInputManager::SwipeDir::Up
+                 ? ButtonNavigator::nextPageIndex(row, settingsCount, inkPointPageItems)
+                 : ButtonNavigator::previousPageIndex(row, settingsCount, inkPointPageItems));
+    requestUpdate();
+    return;
+  }
   if (swipe == MappedInputManager::SwipeDir::Up) {
     selectedSettingIndex = selectedSettingIndex == 0 ? 1
                                                      : ButtonNavigator::nextPageIndex(
@@ -391,6 +410,51 @@ void SettingsActivity::loop() {
     selectedSettingIndex = (selectedSettingIndex == 0) ? 0 : 1;
     applyCategorySelection();
   }
+}
+
+void SettingsActivity::enterCategory(const int categoryIndex) {
+  selectedCategoryIndex = categoryIndex;
+  selectedSettingIndex = 1;
+  inCategory = true;
+  applyCategorySelection();
+  requestUpdate();
+}
+
+void SettingsActivity::loopInkPointCategories() {
+  if (mappedInput.wasPressed(MappedInputManager::Button::Confirm)) {
+    enterCategory(selectedCategoryIndex);
+    return;
+  }
+  if (mappedInput.wasPressed(MappedInputManager::Button::Back)) {
+    SETTINGS.saveToFile();
+    onGoHome();
+    return;
+  }
+
+  int row = selectedCategoryIndex;
+  switch (InkPointList::touch(mappedInput, row, categoryCount)) {
+    case InkPointList::Touch::Activated:
+      enterCategory(row);
+      return;
+    case InkPointList::Touch::Consumed:
+      selectedCategoryIndex = row;
+      applyCategorySelection();
+      requestUpdate();
+      return;
+    case InkPointList::Touch::None:
+      break;
+  }
+
+  buttonNavigator.onNextRelease([this] {
+    selectedCategoryIndex = ButtonNavigator::nextIndex(selectedCategoryIndex, categoryCount);
+    applyCategorySelection();
+    requestUpdate();
+  });
+  buttonNavigator.onPreviousRelease([this] {
+    selectedCategoryIndex = ButtonNavigator::previousIndex(selectedCategoryIndex, categoryCount);
+    applyCategorySelection();
+    requestUpdate();
+  });
 }
 
 void SettingsActivity::toggleCurrentSetting() {
@@ -622,45 +686,27 @@ void SettingsActivity::render(RenderLock&&) {
 
   const auto& metrics = UITheme::getInstance().getMetrics();
 
-  const bool inkPoint = InkPointShell::enabled(renderer);
-  if (inkPoint) {
-    InkPointShell::drawHeader(renderer, "Settings");
-#if FREEINK_DEVICE_X4PRO
-    renderer.drawText(SMALL_FONT_ID, 20, 5, CROSSPOINT_VERSION);
-#endif
+  if (InkPointList::active(renderer)) {
+    renderInkPoint();
+    return;
   }
-  else GUI.drawHeader(renderer, Rect{0, metrics.topPadding, pageWidth, metrics.headerHeight}, tr(STR_SETTINGS_TITLE),
-                      CROSSPOINT_VERSION);
+
+  GUI.drawHeader(renderer, Rect{0, metrics.topPadding, pageWidth, metrics.headerHeight}, tr(STR_SETTINGS_TITLE),
+                 CROSSPOINT_VERSION);
 
   std::vector<TabInfo> tabs;
   tabs.reserve(categoryCount);
   for (int i = 0; i < categoryCount; i++) {
     tabs.push_back({I18N.get(categoryNames[i]), selectedCategoryIndex == i});
   }
-  const int tabTop = inkPoint ? InkPointShell::kContentTop : metrics.topPadding + metrics.headerHeight;
-  const int tabHeight = inkPoint ? 44 : metrics.tabBarHeight;
-  if (inkPoint) {
-    const int tabWidth = kInkPointTabWidth(pageWidth, categoryCount);
-    for (int i = 0; i < categoryCount; ++i) {
-      const bool selected = i == selectedCategoryIndex;
-      if (selected) renderer.fillRoundedRect(i * tabWidth + 4, tabTop + 4, tabWidth - 8, tabHeight - 8, 5,
-                                             Color::Black);
-      const char* label = I18N.get(categoryNames[i]);
-      const int x = i * tabWidth + (tabWidth - renderer.getTextWidth(UI_12_FONT_ID, label)) / 2;
-      renderer.drawText(UI_12_FONT_ID, x, tabTop + 12, label, !selected);
-    }
-  } else {
-    GUI.drawTabBar(renderer, Rect{0, tabTop, pageWidth, tabHeight}, tabs, selectedSettingIndex == 0);
-  }
+  GUI.drawTabBar(renderer, Rect{0, metrics.topPadding + metrics.headerHeight, pageWidth, metrics.tabBarHeight}, tabs,
+                 selectedSettingIndex == 0);
 
   // The Hardcover import result is the only feedback the user gets that a token
   // was accepted or why it wasn't, so it takes a band out of the list rather
   // than overdrawing the last row.
   const int statusHeight = hardcoverStatus.empty() ? 0 : 22;
-  const Rect listRect =
-      inkPoint ? Rect{8, tabTop + tabHeight + 8, pageWidth - 16,
-                      InkPointShell::kFooterTop - (tabTop + tabHeight + 8) - 8 - statusHeight}
-               : Rect{0, metrics.topPadding + metrics.headerHeight + metrics.tabBarHeight + metrics.verticalSpacing,
+  const Rect listRect{0, metrics.topPadding + metrics.headerHeight + metrics.tabBarHeight + metrics.verticalSpacing,
                       pageWidth,
                       pageHeight - (metrics.topPadding + metrics.headerHeight + metrics.tabBarHeight +
                                     metrics.buttonHintsHeight + metrics.verticalSpacing * 2) -
@@ -671,38 +717,7 @@ void SettingsActivity::render(RenderLock&&) {
       renderer, listRect,
       settingsCount, selectedSettingIndex - 1,
       [&settings](int index) { return std::string(I18N.get(settings[index].nameId)); }, nullptr, nullptr,
-      [&settings](int i) {
-        const auto& setting = settings[i];
-        std::string valueText = "";
-        if (setting.type == SettingType::TOGGLE && setting.valuePtr != nullptr) {
-          const bool value = SETTINGS.*(setting.valuePtr);
-          valueText = value ? tr(STR_STATE_ON) : tr(STR_STATE_OFF);
-        } else if (setting.type == SettingType::ENUM && setting.valuePtr != nullptr) {
-          const uint8_t value = SETTINGS.*(setting.valuePtr);
-          valueText = I18N.get(setting.enumValues[value]);
-        } else if (setting.type == SettingType::ENUM && setting.valueGetter) {
-          const uint8_t value = setting.valueGetter();
-          if (!setting.enumStringValues.empty() && value < setting.enumStringValues.size()) {
-            valueText = setting.enumStringValues[value];
-          } else if (value < setting.enumValues.size()) {
-            valueText = I18N.get(setting.enumValues[value]);
-          }
-        } else if (setting.type == SettingType::VALUE && setting.valuePtr != nullptr) {
-          if (setting.nameId == StrId::STR_TIME_TO_SLEEP) {
-            char valueBuffer[32];
-            if (SETTINGS.sleepTimeoutMinutes >= CrossPointSettings::SLEEP_TIMEOUT_NEVER_MINUTES) {
-              valueText = tr(STR_SLEEP_NEVER);
-            } else {
-              snprintf(valueBuffer, sizeof(valueBuffer), tr(STR_SLEEP_TIMER_VALUE_FORMAT),
-                       static_cast<unsigned int>(SETTINGS.*(setting.valuePtr)));
-              valueText = valueBuffer;
-            }
-          } else {
-            valueText = std::to_string(SETTINGS.*(setting.valuePtr));
-          }
-        }
-        return valueText;
-      },
+      [&settings](int i) { return settingValueText(settings[i]); },
       true);
 
   if (statusHeight > 0) {
@@ -719,13 +734,43 @@ void SettingsActivity::render(RenderLock&&) {
                  ? tr(STR_SELECT)
                  : tr(STR_TOGGLE));
 
-  if (inkPoint) {
-    InkPointShell::drawFooter(renderer, InkPointShell::Destination::Settings);
-  } else {
-    const auto labels = mappedInput.mapLabels(tr(STR_BACK), confirmLabel, tr(STR_DIR_UP), tr(STR_DIR_DOWN));
-    GUI.drawButtonHints(renderer, labels.btn1, labels.btn2, labels.btn3, labels.btn4);
-  }
+  const auto labels = mappedInput.mapLabels(tr(STR_BACK), confirmLabel, tr(STR_DIR_UP), tr(STR_DIR_DOWN));
+  GUI.drawButtonHints(renderer, labels.btn1, labels.btn2, labels.btn3, labels.btn4);
 
   // Always use standard refresh for settings screen
+  renderer.displayBuffer();
+}
+
+void SettingsActivity::renderInkPoint() {
+  const char* status = nullptr;
+#if FREEINK_DEVICE_X4PRO
+  status = CROSSPOINT_VERSION;
+#endif
+  InkPointList::Rows rows;
+  if (!inCategory) {
+    rows.count = categoryCount;
+    rows.selected = selectedCategoryIndex;
+    rows.label = [](const int i) { return std::string(I18N.get(categoryNames[i])); };
+    rows.icon = [](const int i) { return static_cast<InkPointList::Icon>(i + 1); };
+    InkPointList::draw(renderer, tr(STR_SETTINGS_TITLE), rows, status);
+    renderer.displayBuffer();
+    return;
+  }
+
+  const auto& settings = *currentSettings;
+  rows.count = settingsCount;
+  rows.selected = selectedSettingIndex - 1;
+  rows.pageItems = hardcoverStatus.empty() ? InkPointList::kPageItems : InkPointList::kNotePageItems;
+  rows.label = [&settings](const int i) { return std::string(I18N.get(settings[i].nameId)); };
+  rows.value = [&settings](const int i) { return settingValueText(settings[i]); };
+  InkPointList::draw(renderer, I18N.get(categoryNames[selectedCategoryIndex]), rows, status);
+
+  if (!hardcoverStatus.empty()) {
+    const std::string note = renderer.truncatedText(UI_12_FONT_ID, hardcoverStatus.c_str(), 440);
+    const int noteY = InkPointList::noteTop(InkPointList::kNotePageItems) +
+                      (InkPointList::kRowHeight - renderer.getLineHeight(UI_12_FONT_ID)) / 2;
+    renderer.drawText(UI_12_FONT_ID, (renderer.getScreenWidth() - renderer.getTextWidth(UI_12_FONT_ID, note.c_str())) / 2,
+                      noteY, note.c_str());
+  }
   renderer.displayBuffer();
 }

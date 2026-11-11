@@ -31,6 +31,8 @@ constexpr int kHeaderActionHeight = 36;
 bool enabled(const GfxRenderer& renderer);
 void drawHeader(const GfxRenderer& renderer, const char* title);
 void drawFooter(const GfxRenderer& renderer, Destination active, int focus = -1);
+// Footer destination glyph (Home house, Settings cog, ...) centred on cx, cy.
+void drawDestinationIcon(const GfxRenderer& renderer, Destination icon, int cx, int cy);
 std::optional<Destination> tappedDestination(const MappedInputManager& input);
 void navigate(Destination destination);
 // Library List|Shelf toggle in the header action slot. A tap flips the view,

@@ -46,7 +46,9 @@ void KOReaderSettingsActivity::loop() {
   const int contentHeight =
       renderer.getScreenHeight() - contentTop - metrics.buttonHintsHeight - metrics.verticalSpacing * 2;
   int touchSel = static_cast<int>(selectedIndex);
-  const auto listTouch = handleListTouch(touchSel, MENU_ITEMS, contentTop, contentHeight, false);
+  const auto listTouch = InkPointList::active(renderer)
+                             ? handleInkPointListTouch(touchSel, MENU_ITEMS)
+                             : handleListTouch(touchSel, MENU_ITEMS, contentTop, contentHeight, false);
   if (listTouch != ListTouchResult::None) {
     selectedIndex = static_cast<size_t>(touchSel);
     if (listTouch == ListTouchResult::Activated) activateSelected();
@@ -146,6 +148,50 @@ void KOReaderSettingsActivity::handleSelection() {
 void KOReaderSettingsActivity::render(RenderLock&&) {
   renderer.clearScreen();
 
+  const auto valueAt = [](int index) {
+    // Draw status for each setting
+    if (index == 0) {
+      auto username = KOREADER_STORE.getUsername();
+      return username.empty() ? std::string(tr(STR_NOT_SET)) : username;
+    } else if (index == 1) {
+      return KOREADER_STORE.getPassword().empty() ? std::string(tr(STR_NOT_SET)) : std::string("******");
+    } else if (index == 2) {
+      auto serverUrl = KOREADER_STORE.getServerUrl();
+      if (!serverUrl.empty()) {
+        return serverUrl;
+      }
+      // Show which server the default actually is, scheme stripped for space
+      std::string defaultUrl = KOREADER_STORE.getBaseUrl();
+      const auto schemeEnd = defaultUrl.find("://");
+      if (schemeEnd != std::string::npos) {
+        defaultUrl.erase(0, schemeEnd + 3);
+      }
+      return std::string(tr(STR_DEFAULT_VALUE)) + ": " + defaultUrl;
+    } else if (index == 3) {
+      return KOREADER_STORE.getMatchMethod() == DocumentMatchMethod::FILENAME ? std::string(tr(STR_FILENAME))
+                                                                              : std::string(tr(STR_BINARY));
+    } else if (index == 4) {
+      return KOREADER_STORE.getSendMetadata() ? std::string(tr(STR_STATE_ON)) : std::string(tr(STR_STATE_OFF));
+    } else if (index == 5) {
+      return KOREADER_STORE.getSyncBehavior() == KOReaderSyncBehavior::SMART ? std::string(tr(STR_SMART_SYNC))
+                                                                             : std::string(tr(STR_ASK_EVERY_TIME));
+    } else if (index == 6 || index == 7) {
+      return KOREADER_STORE.hasCredentials() ? "" : std::string("[") + tr(STR_SET_CREDENTIALS_FIRST) + "]";
+    }
+    return std::string(tr(STR_NOT_SET));
+  };
+
+  if (InkPointList::active(renderer)) {
+    InkPointList::Rows rows;
+    rows.count = static_cast<int>(MENU_ITEMS);
+    rows.selected = static_cast<int>(selectedIndex);
+    rows.label = [](const int i) { return std::string(I18N.get(menuNames[i])); };
+    rows.value = valueAt;
+    InkPointList::draw(renderer, tr(STR_KOREADER_SYNC), rows);
+    renderer.displayBuffer();
+    return;
+  }
+
   const auto& metrics = UITheme::getInstance().getMetrics();
   const auto pageWidth = renderer.getScreenWidth();
   const auto pageHeight = renderer.getScreenHeight();
@@ -158,38 +204,7 @@ void KOReaderSettingsActivity::render(RenderLock&&) {
       renderer, Rect{0, contentTop, pageWidth, contentHeight}, static_cast<int>(MENU_ITEMS),
       static_cast<int>(selectedIndex), [](int index) { return std::string(I18N.get(menuNames[index])); }, nullptr,
       nullptr,
-      [this](int index) {
-        // Draw status for each setting
-        if (index == 0) {
-          auto username = KOREADER_STORE.getUsername();
-          return username.empty() ? std::string(tr(STR_NOT_SET)) : username;
-        } else if (index == 1) {
-          return KOREADER_STORE.getPassword().empty() ? std::string(tr(STR_NOT_SET)) : std::string("******");
-        } else if (index == 2) {
-          auto serverUrl = KOREADER_STORE.getServerUrl();
-          if (!serverUrl.empty()) {
-            return serverUrl;
-          }
-          // Show which server the default actually is, scheme stripped for space
-          std::string defaultUrl = KOREADER_STORE.getBaseUrl();
-          const auto schemeEnd = defaultUrl.find("://");
-          if (schemeEnd != std::string::npos) {
-            defaultUrl.erase(0, schemeEnd + 3);
-          }
-          return std::string(tr(STR_DEFAULT_VALUE)) + ": " + defaultUrl;
-        } else if (index == 3) {
-          return KOREADER_STORE.getMatchMethod() == DocumentMatchMethod::FILENAME ? std::string(tr(STR_FILENAME))
-                                                                                  : std::string(tr(STR_BINARY));
-        } else if (index == 4) {
-          return KOREADER_STORE.getSendMetadata() ? std::string(tr(STR_STATE_ON)) : std::string(tr(STR_STATE_OFF));
-        } else if (index == 5) {
-          return KOREADER_STORE.getSyncBehavior() == KOReaderSyncBehavior::SMART ? std::string(tr(STR_SMART_SYNC))
-                                                                                 : std::string(tr(STR_ASK_EVERY_TIME));
-        } else if (index == 6 || index == 7) {
-          return KOREADER_STORE.hasCredentials() ? "" : std::string("[") + tr(STR_SET_CREDENTIALS_FIRST) + "]";
-        }
-        return std::string(tr(STR_NOT_SET));
-      },
+      valueAt,
       true);
 
   // Draw help text at bottom

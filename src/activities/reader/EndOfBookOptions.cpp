@@ -70,6 +70,16 @@ EndOfBookOptions::Action EndOfBookOptions::handleMenuInput(const MappedInputMana
   // List rows, same touch idiom as EpubReaderBookmarksActivity: touch-down moves the
   // highlight, a tap on a row opens it (a book, or the Home entry).
   const int itemCount = static_cast<int>(names.size()) + 1;  // + "Home" entry
+  if (InkPointList::active(input.getRenderer())) {
+    switch (InkPointList::touch(input, selector, itemCount)) {
+      case InkPointList::Touch::Activated:
+        return openSelected();
+      case InkPointList::Touch::Consumed:
+        return Action::Redraw;
+      case InkPointList::Touch::None:
+        break;
+    }
+  }
   const Rect list = listRect(input.getRenderer());
   int tapped = 0;
   if (input.wasScreenTouchDown(tx, ty) && tx >= list.x && tx < list.x + list.width &&
@@ -92,7 +102,8 @@ EndOfBookOptions::Action EndOfBookOptions::handleMenuInput(const MappedInputMana
   // alone here (unlike those screens) since short-press Back above already has a home-key
   // touch path with a distinct meaning (last page, not cancel) that a tap-zone shouldn't
   // shadow.
-  if (input.wasScreenTapped(tx, ty) && ty >= input.getRenderer().getScreenHeight() - 80 &&
+  if (!InkPointList::active(input.getRenderer()) && input.wasScreenTapped(tx, ty) &&
+      ty >= input.getRenderer().getScreenHeight() - 80 &&
       tx > input.getRenderer().getScreenWidth() * 2 / 3) {
     return openSelected();
   }
@@ -143,6 +154,19 @@ void EndOfBookOptions::render(GfxRenderer& renderer, const MappedInputManager& i
   // orientations — lay out inside the safe area so nothing hides behind them. Vertical
   // positions derive from the safe-area height and font line heights so other panel
   // resolutions scale (review request on #2532).
+  const auto labelAt = [this](const int index) {
+    return index < static_cast<int>(names.size()) ? displayName(names[index]) : std::string(tr(STR_EOB_HOME));
+  };
+
+  if (InkPointList::active(renderer)) {
+    InkPointList::Rows rows;
+    rows.count = static_cast<int>(names.size()) + 1;
+    rows.selected = selector;
+    rows.label = labelAt;
+    InkPointList::draw(renderer, tr(STR_END_OF_BOOK), rows, tr(STR_EOB_CONTINUE_WITH));
+    return;
+  }
+
   const Rect safe = UITheme::getInstance().getScreenSafeArea(renderer, true, false);
   const int titleY = safe.y + safe.height / 8;
   const int subtitleY = titleY + renderer.getLineHeight(UI_12_FONT_ID) + metrics.verticalSpacing;
@@ -150,11 +174,7 @@ void EndOfBookOptions::render(GfxRenderer& renderer, const MappedInputManager& i
   UITheme::drawCenteredText(renderer, safe, UI_12_FONT_ID, titleY, tr(STR_END_OF_BOOK), true, EpdFontFamily::BOLD);
   UITheme::drawCenteredText(renderer, safe, UI_10_FONT_ID, subtitleY, tr(STR_EOB_CONTINUE_WITH));
 
-  GUI.drawList(renderer, listRect(renderer), static_cast<int>(names.size()) + 1, selector,
-               [this](const int index) {
-                 return index < static_cast<int>(names.size()) ? displayName(names[index])
-                                                               : std::string(tr(STR_EOB_HOME));
-               });
+  GUI.drawList(renderer, listRect(renderer), static_cast<int>(names.size()) + 1, selector, labelAt);
 
   const auto labels = input.mapLabels(tr(STR_BACK), tr(STR_OPEN), tr(STR_DIR_UP), tr(STR_DIR_DOWN));
   GUI.drawButtonHints(renderer, labels.btn1, labels.btn2, labels.btn3, labels.btn4);

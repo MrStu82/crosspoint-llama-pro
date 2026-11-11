@@ -86,7 +86,9 @@ void OpdsServerListActivity::loop() {
     const int contentTop = metrics.topPadding + metrics.headerHeight + metrics.verticalSpacing;
     const int contentHeight =
         renderer.getScreenHeight() - contentTop - metrics.buttonHintsHeight - metrics.verticalSpacing * 2;
-    switch (handleListTouch(selectedIndex, itemCount, contentTop, contentHeight, true)) {
+    const bool inkPoint = InkPointList::active(renderer);
+    switch (inkPoint ? handleInkPointListTouch(selectedIndex, itemCount)
+                     : handleListTouch(selectedIndex, itemCount, contentTop, contentHeight, true)) {
       case ListTouchResult::Activated:
         activateSelected();
         return;
@@ -96,7 +98,7 @@ void OpdsServerListActivity::loop() {
         break;
     }
 
-    const int pageItems = GUI.getListPageItems(contentHeight, true);
+    const int pageItems = InkPointList::pageItemsOr(renderer, GUI.getListPageItems(contentHeight, true));
     const auto swipe = mappedInput.wasSwipe();
     if (swipe == MappedInputManager::SwipeDir::Up) {
       selectedIndex = ButtonNavigator::nextPageIndex(selectedIndex, itemCount, pageItems);
@@ -180,6 +182,49 @@ void OpdsServerListActivity::handleSelection() {
 void OpdsServerListActivity::render(RenderLock&&) {
   renderer.clearScreen();
 
+  const auto& servers = OPDS_STORE.getServers();
+  const auto serverCount = static_cast<int>(servers.size());
+  // Primary label: server name (falling back to URL if unnamed).
+  // Secondary label: server URL (shown as subtitle when name is set).
+  const auto labelAt = [&servers, serverCount](int index) -> std::string {
+    if (index < serverCount) {
+      const auto& server = servers[index];
+      return server.name.empty() ? server.url : server.name;
+    }
+    if (index == serverCount) {
+      return std::string(I18n::getInstance().get(StrId::STR_ADD_SERVER));
+    }
+    if (index == serverCount + 1) {
+      return std::string(I18n::getInstance().get(StrId::STR_OPDS_DOWNLOAD_FOLDER));
+    }
+    return std::string(I18n::getInstance().get(StrId::STR_OPDS_FILENAME_FORMAT));
+  };
+  const auto subtitleAt = [&servers, serverCount](int index) -> std::string {
+    if (index < serverCount && !servers[index].name.empty()) {
+      return servers[index].url;
+    }
+    if (index == serverCount + 1) {
+      const char* f = SETTINGS.opdsDownloadFolder;
+      return f[0] ? std::string(f) : std::string(I18n::getInstance().get(StrId::STR_OPDS_SD_ROOT));
+    }
+    if (index == serverCount + 2) {
+      return std::string(I18n::getInstance().get(opdsFormatLabel(SETTINGS.opdsFilenameFormat)));
+    }
+    return std::string("");
+  };
+
+  if (InkPointList::active(renderer)) {
+    InkPointList::Rows rows;
+    rows.count = getItemCount();
+    rows.selected = selectedIndex;
+    rows.label = labelAt;
+    rows.subtitle = subtitleAt;
+    InkPointList::draw(renderer, tr(STR_OPDS_SERVERS), rows);
+    if (rows.count == 0) renderer.drawCenteredText(UI_10_FONT_ID, renderer.getScreenHeight() / 2, tr(STR_NO_SERVERS));
+    renderer.displayBuffer();
+    return;
+  }
+
   const auto& metrics = UITheme::getInstance().getMetrics();
   const auto pageWidth = renderer.getScreenWidth();
   const auto pageHeight = renderer.getScreenHeight();
@@ -193,39 +238,8 @@ void OpdsServerListActivity::render(RenderLock&&) {
   if (itemCount == 0) {
     renderer.drawCenteredText(UI_10_FONT_ID, pageHeight / 2, tr(STR_NO_SERVERS));
   } else {
-    const auto& servers = OPDS_STORE.getServers();
-    const auto serverCount = static_cast<int>(servers.size());
-
-    // Primary label: server name (falling back to URL if unnamed).
-    // Secondary label: server URL (shown as subtitle when name is set).
-    GUI.drawList(
-        renderer, Rect{0, contentTop, pageWidth, contentHeight}, itemCount, selectedIndex,
-        [&servers, serverCount](int index) -> std::string {
-          if (index < serverCount) {
-            const auto& server = servers[index];
-            return server.name.empty() ? server.url : server.name;
-          }
-          if (index == serverCount) {
-            return std::string(I18n::getInstance().get(StrId::STR_ADD_SERVER));
-          }
-          if (index == serverCount + 1) {
-            return std::string(I18n::getInstance().get(StrId::STR_OPDS_DOWNLOAD_FOLDER));
-          }
-          return std::string(I18n::getInstance().get(StrId::STR_OPDS_FILENAME_FORMAT));
-        },
-        [&servers, serverCount](int index) -> std::string {
-          if (index < serverCount && !servers[index].name.empty()) {
-            return servers[index].url;
-          }
-          if (index == serverCount + 1) {
-            const char* f = SETTINGS.opdsDownloadFolder;
-            return f[0] ? std::string(f) : std::string(I18n::getInstance().get(StrId::STR_OPDS_SD_ROOT));
-          }
-          if (index == serverCount + 2) {
-            return std::string(I18n::getInstance().get(opdsFormatLabel(SETTINGS.opdsFilenameFormat)));
-          }
-          return std::string("");
-        });
+    GUI.drawList(renderer, Rect{0, contentTop, pageWidth, contentHeight}, itemCount, selectedIndex, labelAt,
+                 subtitleAt);
   }
 
   const auto labels = mappedInput.mapLabels(tr(STR_BACK), tr(STR_SELECT), tr(STR_DIR_UP), tr(STR_DIR_DOWN));

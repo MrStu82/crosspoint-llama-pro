@@ -76,7 +76,9 @@ void FrontlightActivity::loop() {
   const int contentTop = metrics.topPadding + metrics.headerHeight + metrics.verticalSpacing;
   const int contentHeight =
       renderer.getScreenHeight() - contentTop - metrics.buttonHintsHeight - metrics.verticalSpacing * 2;
-  switch (handleListTouch(selectedIndex, visibleItemCount, contentTop, contentHeight, false)) {
+  switch (InkPointList::active(renderer)
+              ? handleInkPointListTouch(selectedIndex, visibleItemCount)
+              : handleListTouch(selectedIndex, visibleItemCount, contentTop, contentHeight, false)) {
     case ListTouchResult::Activated:
       handleSelection();
       requestUpdate();
@@ -186,6 +188,33 @@ void FrontlightActivity::render(RenderLock&&) {
 
   renderer.clearScreen();
 
+  const auto labelAt = [](int index) { return std::string(I18N.get(menuNames[index])); };
+  const auto valueAt = [](int index) -> std::string {
+    switch (index) {
+      case ITEM_BRIGHTNESS:
+        return formatPercent(SETTINGS.frontlightOn ? SETTINGS.frontlightBrightness : 0);
+      case ITEM_TURN_OFF:
+        return "";
+      case ITEM_WARM_COOL:
+        return formatWarmCool(SETTINGS.frontlightWarmPercent);
+      case ITEM_PIN_DIAGNOSTIC:
+        return "";
+      default:
+        return "";
+    }
+  };
+
+  if (InkPointList::active(renderer)) {
+    InkPointList::Rows rows;
+    rows.count = visibleItemCount;
+    rows.selected = static_cast<int>(selectedIndex);
+    rows.label = labelAt;
+    rows.value = valueAt;
+    InkPointList::draw(renderer, tr(STR_FRONTLIGHT), rows);
+    renderer.displayBuffer();
+    return;
+  }
+
   auto metrics = UITheme::getInstance().getMetrics();
   const auto pageWidth = renderer.getScreenWidth();
   const auto pageHeight = renderer.getScreenHeight();
@@ -194,24 +223,8 @@ void FrontlightActivity::render(RenderLock&&) {
 
   const int contentTop = metrics.topPadding + metrics.headerHeight + metrics.verticalSpacing;
   const int contentHeight = pageHeight - contentTop - metrics.buttonHintsHeight - metrics.verticalSpacing * 2;
-  GUI.drawList(
-      renderer, Rect{0, contentTop, pageWidth, contentHeight}, visibleItemCount, static_cast<int>(selectedIndex),
-      [](int index) { return std::string(I18N.get(menuNames[index])); }, nullptr, nullptr,
-      [](int index) -> std::string {
-        switch (index) {
-          case ITEM_BRIGHTNESS:
-            return formatPercent(SETTINGS.frontlightOn ? SETTINGS.frontlightBrightness : 0);
-          case ITEM_TURN_OFF:
-            return "";
-          case ITEM_WARM_COOL:
-            return formatWarmCool(SETTINGS.frontlightWarmPercent);
-          case ITEM_PIN_DIAGNOSTIC:
-            return "";
-          default:
-            return "";
-        }
-      },
-      true);
+  GUI.drawList(renderer, Rect{0, contentTop, pageWidth, contentHeight}, visibleItemCount,
+               static_cast<int>(selectedIndex), labelAt, nullptr, nullptr, valueAt, true);
 
   const auto labels = mappedInput.mapLabels(tr(STR_BACK), tr(STR_SELECT), tr(STR_DIR_UP), tr(STR_DIR_DOWN));
   GUI.drawButtonHints(renderer, labels.btn1, labels.btn2, labels.btn3, labels.btn4);

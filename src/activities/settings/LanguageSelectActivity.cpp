@@ -43,7 +43,9 @@ void LanguageSelectActivity::loop() {
   const int contentTop = metrics.topPadding + metrics.headerHeight + metrics.verticalSpacing;
   const int contentHeight =
       renderer.getScreenHeight() - contentTop - metrics.buttonHintsHeight - metrics.verticalSpacing;
-  switch (handleListTouch(selectedIndex, totalItems, contentTop, contentHeight, false)) {
+  const bool inkPoint = InkPointList::active(renderer);
+  switch (inkPoint ? handleInkPointListTouch(selectedIndex, totalItems)
+                   : handleListTouch(selectedIndex, totalItems, contentTop, contentHeight, false)) {
     case ListTouchResult::Activated:
       activateSelected();
       return;
@@ -53,7 +55,8 @@ void LanguageSelectActivity::loop() {
       break;
   }
 
-  const int pageItems = UITheme::getNumberOfItemsPerPage(renderer, true, false, true, false);
+  const int pageItems =
+      InkPointList::pageItemsOr(renderer, UITheme::getNumberOfItemsPerPage(renderer, true, false, true, false));
   const auto swipe = mappedInput.wasSwipe();
   if (swipe == MappedInputManager::SwipeDir::Up) {
     selectedIndex = ButtonNavigator::nextPageIndex(static_cast<int>(selectedIndex), totalItems, pageItems);
@@ -105,6 +108,22 @@ void LanguageSelectActivity::handleSelection() {
 
 void LanguageSelectActivity::render(RenderLock&&) {
   renderer.clearScreen();
+
+  if (InkPointList::active(renderer)) {
+    const auto currentLanguage = static_cast<uint8_t>(I18N.getLanguage());
+    InkPointList::Rows rows;
+    rows.count = totalItems;
+    rows.selected = selectedIndex;
+    rows.label = [](const int i) {
+      return std::string(I18N.getLanguageName(static_cast<Language>(SORTED_LANGUAGE_INDICES[i])));
+    };
+    rows.value = [currentLanguage](const int i) {
+      return std::string(SORTED_LANGUAGE_INDICES[i] == currentLanguage ? tr(STR_SELECTED) : "");
+    };
+    InkPointList::draw(renderer, tr(STR_LANGUAGE), rows);
+    renderer.displayBuffer();
+    return;
+  }
 
   const auto pageWidth = renderer.getScreenWidth();
   const auto pageHeight = renderer.getScreenHeight();

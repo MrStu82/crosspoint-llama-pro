@@ -35,5 +35,8 @@ namespace LibraryCover {
 bool ensureThumb(RecentBook& book);
 // Fits the cover inside the box, bottom-centred; draws a typographic cover
 // (title, rule, author) when there is no image. Returns the drawn width.
-int draw(const GfxRenderer& renderer, const RecentBook& book, int x, int y, int maxW, int maxH);
+// *grey is set when the cover is a 2-bit thumb; in a grey render mode only
+// such covers are drawn, so callers can redraw them for the grey pass.
+int draw(const GfxRenderer& renderer, const RecentBook& book, int x, int y, int maxW, int maxH,
+         bool* grey = nullptr);
 }  // namespace LibraryCover

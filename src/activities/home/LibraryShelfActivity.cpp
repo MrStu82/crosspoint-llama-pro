@@ -12,6 +12,7 @@
 
 #include "BookCardActivity.h"
 #include "MappedInputManager.h"
+#include "activities/reader/ReaderUtils.h"
 #include "components/InkPointShell.h"
 #include "components/UITheme.h"
 #include "fontIds.h"
@@ -42,12 +43,14 @@ bool ensureThumb(RecentBook& book) {
   if (book.coverBmpPath.empty()) return false;
   const std::string thumbPath = UITheme::getCoverThumbPath(book.coverBmpPath, InkPointShell::kHomeCoverHeight);
   if (Storage.exists(thumbPath.c_str()) &&
-      !(FsHelpers::hasEpubExtension(book.path) && Epub::isEmptyThumbMarker(thumbPath)))
+      !(FsHelpers::hasEpubExtension(book.path) &&
+        (Epub::isEmptyThumbMarker(thumbPath) || Epub::isOneBitThumb(thumbPath))))
     return true;
   bool ok = false;
   if (FsHelpers::hasEpubExtension(book.path)) {
     Epub epub(book.path, "/.crosspoint");
-    ok = epub.load(false, true) && epub.generateThumbBmp(InkPointShell::kHomeCoverHeight);
+    ok = epub.load(false, true) &&
+         epub.generateThumbBmp(InkPointShell::kHomeCoverHeight, InkPointShell::kHomeCoverWidth);
   } else if (FsHelpers::hasXtcExtension(book.path)) {
     Xtc xtc(book.path, "/.crosspoint");
     ok = xtc.load() && xtc.generateThumbBmp(InkPointShell::kHomeCoverHeight);
@@ -60,7 +63,8 @@ bool ensureThumb(RecentBook& book) {
 }
 
 int draw(const GfxRenderer& renderer, const RecentBook& book, const int x, const int y, const int maxW,
-         const int maxH) {
+         const int maxH, bool* grey) {
+  const bool bwPass = renderer.getRenderMode() == GfxRenderer::BW;
   if (!book.coverBmpPath.empty()) {
     HalFile file;
     if (Storage.openFileForRead("SHELF", UITheme::getCoverThumbPath(book.coverBmpPath, InkPointShell::kHomeCoverHeight),
@@ -71,11 +75,13 @@ int draw(const GfxRenderer& renderer, const RecentBook& book, const int x, const
       if (bw > 0 && bh > 0) {
         const int w = std::min(bw, std::min(maxW, (maxH * bw) / bh));
         const int h = std::min(bh, std::min(maxH, (w * bh) / bw));
-        renderer.drawBitmap(bitmap, x + (maxW - w) / 2, y + maxH - h, w, h);
+        if (grey && bitmap.hasGreyscale()) *grey = true;
+        if (bwPass || bitmap.hasGreyscale()) renderer.drawBitmap(bitmap, x + (maxW - w) / 2, y + maxH - h, w, h);
         return w;
       }
     }
   }
+  if (!bwPass) return 0;
   // Typographic cover: the font scales with the box so side covers stay legible.
   const bool large = maxW >= 160;
   const int titleFont = large ? UI_12_FONT_ID : SMALL_FONT_ID;
@@ -174,6 +180,17 @@ void LibraryShelfActivity::loop() {
 }
 
 void LibraryShelfActivity::render(RenderLock&&) {
+  const auto drawCovers = [this](bool* grey) {
+    const size_t count = books.size();
+    // Neighbours only when they are distinct books.
+    if (count > 1) {
+      LibraryCover::draw(renderer, books[(index + count - 1) % count], kLeftX, kShelfY - kSideH, kSideW, kSideH, grey);
+      if (count > 2)
+        LibraryCover::draw(renderer, books[(index + 1) % count], kRightX, kShelfY - kSideH, kSideW, kSideH, grey);
+    }
+    LibraryCover::draw(renderer, books[index], kCentreX, kShelfY - kCentreH, kCentreW, kCentreH, grey);
+  };
+  bool grey = false;
   renderer.clearScreen();
   InkPointShell::drawHeader(renderer, "Library");
   InkPointShell::drawLibraryToggle(renderer, true);
@@ -181,14 +198,7 @@ void LibraryShelfActivity::render(RenderLock&&) {
   if (books.empty()) {
     drawCentred(renderer, UI_12_FONT_ID, 300, "No books yet");
   } else {
-    const size_t count = books.size();
-    // Neighbours only when they are distinct books.
-    if (count > 1) {
-      LibraryCover::draw(renderer, books[(index + count - 1) % count], kLeftX, kShelfY - kSideH, kSideW, kSideH);
-      if (count > 2)
-        LibraryCover::draw(renderer, books[(index + 1) % count], kRightX, kShelfY - kSideH, kSideW, kSideH);
-    }
-    LibraryCover::draw(renderer, books[index], kCentreX, kShelfY - kCentreH, kCentreW, kCentreH);
+    drawCovers(&grey);
     renderer.fillRect(0, kShelfY, 480, 3, true);
     renderer.fillRectDither(0, kShelfY + 3, 480, 8, Color::LightGray);
 
@@ -196,10 +206,13 @@ void LibraryShelfActivity::render(RenderLock&&) {
     drawCentred(renderer, UI_12_FONT_ID, kShelfY + 26, book.title, EpdFontFamily::BOLD);
     drawCentred(renderer, UI_10_FONT_ID, kShelfY + 56, book.author);
     drawCentred(renderer, SMALL_FONT_ID, kShelfY + 84, metaLine);
-    drawCentred(renderer, SMALL_FONT_ID, kShelfY + 124, std::to_string(index + 1) + " of " + std::to_string(count));
+    drawCentred(renderer, SMALL_FONT_ID, kShelfY + 124,
+                std::to_string(index + 1) + " of " + std::to_string(books.size()));
   }
   InkPointShell::drawFooter(renderer, InkPointShell::Destination::Library);
   renderer.displayBuffer();
+  // The BW frame shows 2-bit covers' greys as black; redraw them in the grey planes.
+  if (grey) ReaderUtils::renderAntiAliased(renderer, [&] { drawCovers(nullptr); });
 
   // Generate missing thumbnails for the visible covers after the first paint
   // (as Home does), then repaint once with them.
@@ -208,9 +221,9 @@ void LibraryShelfActivity::render(RenderLock&&) {
   bool generated = false;
   for (const size_t i : {index, (index + 1) % count, (index + count - 1) % count}) {
     auto& book = books[i];
-    if (book.coverBmpPath.empty() ||
-        Storage.exists(UITheme::getCoverThumbPath(book.coverBmpPath, InkPointShell::kHomeCoverHeight).c_str()))
-      continue;
+    if (book.coverBmpPath.empty()) continue;
+    const std::string thumbPath = UITheme::getCoverThumbPath(book.coverBmpPath, InkPointShell::kHomeCoverHeight);
+    if (Storage.exists(thumbPath.c_str()) && !Epub::isOneBitThumb(thumbPath)) continue;
     LibraryCover::ensureThumb(book);
     generated = true;
   }

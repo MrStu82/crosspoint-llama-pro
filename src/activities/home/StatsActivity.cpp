@@ -15,6 +15,7 @@
 #include "MappedInputManager.h"
 #include "RecentBooksStore.h"
 #include "StatsManager.h"
+#include "activities/reader/ReaderUtils.h"
 #include "util/BookProgressBadge.h"
 #include "util/ChapterProgress.h"
 #include "components/InkPointShell.h"
@@ -163,6 +164,7 @@ void StatsActivity::render(RenderLock&&) {
   int coverW = 140;
   int coverH = 186;
   bool hasCover = false;
+  std::string greyPath;  // 2-bit InkPoint thumb, redrawn in the grey planes
 
   if (!coverBmpPath.empty()) {
     // Thumbnails are cached per height; the InkPoint Home only generates its lane height.
@@ -177,6 +179,7 @@ void StatsActivity::render(RenderLock&&) {
         coverW = (coverH * bitmap.getWidth()) / bitmap.getHeight();
         if (coverW > 140) coverW = 140;
         renderer.drawBitmap(bitmap, kCoverX, kCoverY, coverW, coverH);
+        if (bitmap.hasGreyscale()) greyPath = thumbPath;
       }
     }
   }
@@ -404,4 +407,12 @@ void StatsActivity::render(RenderLock&&) {
   GUI.drawButtonHints(renderer, labels.btn1, labels.btn2, labels.btn3, labels.btn4);
 
   renderer.displayBufferGhostGuard(ghostGuardCounter_, SETTINGS.getRefreshFrequency());
+  if (!greyPath.empty()) {
+    ReaderUtils::renderAntiAliased(renderer, [&] {
+      HalFile file;
+      if (!Storage.openFileForRead("STATS", greyPath, file)) return;
+      Bitmap bitmap(file);
+      if (bitmap.parseHeaders() == BmpReaderError::Ok) renderer.drawBitmap(bitmap, kCoverX, kCoverY, coverW, coverH);
+    });
+  }
 }

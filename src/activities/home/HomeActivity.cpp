@@ -28,6 +28,7 @@
 #include "StatsManager.h"
 #include "components/UITheme.h"
 #include "components/InkPointShell.h"
+#include "activities/reader/ReaderUtils.h"
 #include "fontIds.h"
 #include "network/HardcoverRating.h"
 #include "util/BookProgressBadge.h"
@@ -40,7 +41,8 @@ namespace {
 // it is the metadata gutter. The lane is the maximum the cover may occupy, not
 // a frame drawn around it -- see renderInkPointHome.
 constexpr int kInkCoverRight = 240;
-const Rect kInkCoverLane{20, InkPointShell::kContentTop, 220, InkPointShell::kHomeCoverHeight};
+const Rect kInkCoverLane{20, InkPointShell::kContentTop, InkPointShell::kHomeCoverWidth,
+                          InkPointShell::kHomeCoverHeight};
 // Stats block and its ">>>" chevron form a single target for the Stats screen.
 // Kept clear of the cover lane to its left and the footer tabs below.
 const Rect kInkStats{252, 300, 208, 250};
@@ -270,12 +272,14 @@ void HomeActivity::loadRecentCovers(int coverHeight) {
   bool showingLoading = false;
   Rect popupRect;
 
+  const int laneWidth = usesInkPointHome() ? InkPointShell::kHomeCoverWidth : 0;
   int progress = 0;
   for (RecentBook& book : recentBooks) {
     if (!book.coverBmpPath.empty()) {
       std::string coverPath = UITheme::getCoverThumbPath(book.coverBmpPath, coverHeight);
       if (!Storage.exists(coverPath.c_str()) ||
-          (FsHelpers::hasEpubExtension(book.path) && Epub::isEmptyThumbMarker(coverPath))) {
+          (FsHelpers::hasEpubExtension(book.path) &&
+           (Epub::isEmptyThumbMarker(coverPath) || (laneWidth > 0 && Epub::isOneBitThumb(coverPath))))) {
         // If epub, try to load the metadata for title/author and cover
         if (FsHelpers::hasEpubExtension(book.path)) {
           Epub epub(book.path, "/.crosspoint");
@@ -288,7 +292,7 @@ void HomeActivity::loadRecentCovers(int coverHeight) {
             popupRect = GUI.drawPopup(renderer, tr(STR_LOADING_POPUP));
           }
           GUI.fillPopupProgress(renderer, popupRect, 10 + progress * (90 / recentBooks.size()));
-          bool success = epub.generateThumbBmp(coverHeight);
+          bool success = epub.generateThumbBmp(coverHeight, laneWidth);
           if (!success) {
             RECENT_BOOKS.updateBook(book.path, book.title, book.author, "");
             book.coverBmpPath = "";
@@ -668,6 +672,7 @@ void HomeActivity::renderInkPointHome() {
   int coverH = kInkCoverLane.height;
   int coverX = kInkCoverRight - coverW;
   int coverY = kInkCoverLane.y + 2;
+  std::string greyPath;  // set when the drawn cover is a 2-bit thumb
   if (book && !book->coverBmpPath.empty()) {
     // Thumbnails are cached per requested height, so ask for the lane height:
     // a smaller thumb cannot be enlarged (drawBitmap only ever scales down) and
@@ -688,6 +693,7 @@ void HomeActivity::renderInkPointHome() {
         coverY = kInkCoverLane.y + 2;
         renderer.drawBitmap(bitmap, coverX, coverY, coverW, coverH);
         coverDrawn = true;
+        if (bitmap.hasGreyscale()) greyPath = thumbPath;
       }
     }
   }
@@ -859,6 +865,18 @@ void HomeActivity::renderInkPointHome() {
     renderer.drawRect(kInkStats.x, kInkStats.y, kInkStats.width, kInkStats.height, 2, true);
 
   renderer.displayBuffer(cleanInitialRefresh && !firstRenderDone ? HalDisplay::HALF_REFRESH : HalDisplay::FAST_REFRESH);
+
+  // The BW frame shows a 2-bit cover's greys as black; redraw just the cover
+  // into the grey planes. Once per cover, so focus moves stay one FAST refresh.
+  if (!greyPath.empty() && greyPath != greyCoverPath) {
+    greyCoverPath = greyPath;
+    ReaderUtils::renderAntiAliased(renderer, [&] {
+      HalFile file;
+      if (!Storage.openFileForRead("HOME", greyPath, file)) return;
+      Bitmap bitmap(file);
+      if (bitmap.parseHeaders() == BmpReaderError::Ok) renderer.drawBitmap(bitmap, coverX, coverY, coverW, coverH);
+    });
+  }
 
   // Thumbnails are cached per requested height, and this layout asks for a
   // height the classic Home never requests, so the first InkPoint render has to

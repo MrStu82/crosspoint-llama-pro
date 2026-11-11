@@ -18,6 +18,8 @@ constexpr int kHeaderBottom = 94;
 constexpr int kContentTop = 114;
 // Height of the Home cover lane; Home caches its cover thumbnail at this height.
 constexpr int kHomeCoverHeight = 434;
+// Its width: InkPoint thumbs are 2-bit at most this wide, so they draw 1:1.
+constexpr int kHomeCoverWidth = 220;
 constexpr int kFooterTop = 728;
 constexpr int kFooterHeight = 60;
 

@@ -21,6 +21,7 @@ class HomeActivity final : public Activity {
   bool firstRenderDone = false;
   bool hasOpdsServers = false;
   bool coverRendered = false;      // Track if cover has been rendered once
+  std::string greyCoverPath;       // InkPoint cover thumb last given its grey pass
   int inkPointFocus = 0;  // 0=cover, 1..6=persistent footer destinations
   std::optional<RatingSnapshot> rating;
   BookReadingStatsValue bookStats;

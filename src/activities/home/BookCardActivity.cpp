@@ -8,6 +8,7 @@
 
 #include "LibraryShelfActivity.h"
 #include "MappedInputManager.h"
+#include "activities/reader/ReaderUtils.h"
 #include "components/InkPointShell.h"
 #include "components/UITheme.h"
 #include "fontIds.h"
@@ -126,7 +127,8 @@ void BookCardActivity::render(RenderLock&&) {
   const int top = InkPointShell::kContentTop;
 
   // Cover and details column.
-  LibraryCover::draw(renderer, book, kMargin, top, kCoverW, kCoverH);
+  bool grey = false;
+  LibraryCover::draw(renderer, book, kMargin, top, kCoverW, kCoverH, &grey);
   int y = top;
   for (const auto& line : renderer.wrappedText(UI_12_FONT_ID, book.title.c_str(), kInfoW, 3, EpdFontFamily::BOLD)) {
     renderer.drawText(UI_12_FONT_ID, kInfoX, y, line.c_str(), true, EpdFontFamily::BOLD);
@@ -196,4 +198,9 @@ void BookCardActivity::render(RenderLock&&) {
 
   InkPointShell::drawFooter(renderer, InkPointShell::Destination::Library);
   renderer.displayBuffer();
+  // The BW frame shows a 2-bit cover's greys as black; redraw it in the grey planes.
+  if (grey) {
+    ReaderUtils::renderAntiAliased(renderer,
+                                   [&] { LibraryCover::draw(renderer, book, kMargin, top, kCoverW, kCoverH); });
+  }
 }

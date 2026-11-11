@@ -61,7 +61,10 @@ class Epub {
   std::string getThumbBmpPath() const;
   std::string getThumbBmpPath(int height) const;
   static bool isEmptyThumbMarker(const std::string& thumbPath);
-  bool generateThumbBmp(int height) const;
+  // True for a 1-bit (dithered) thumb, which a laneWidth caller regenerates as 2-bit.
+  static bool isOneBitThumb(const std::string& thumbPath);
+  // laneWidth > 0: 2-bit thumb at most laneWidth wide, so it draws 1:1 with a grey pass.
+  bool generateThumbBmp(int height, int laneWidth = 0) const;
   uint8_t* readItemContentsToBytes(const std::string& itemHref, size_t* size = nullptr,
                                    bool trailingNullByte = false) const;
   bool readItemContentsToStream(const std::string& itemHref, Print& out, size_t chunkSize,

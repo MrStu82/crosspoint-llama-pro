@@ -695,10 +695,25 @@ bool Epub::isEmptyThumbMarker(const std::string& thumbPath) {
   return empty;
 }
 
-bool Epub::generateThumbBmp(int height) const {
+bool Epub::isOneBitThumb(const std::string& thumbPath) {
+  HalFile file;
+  if (!Storage.openFileForRead("EBP", thumbPath, file)) return false;
+  uint8_t header[30];
+  // biBitCount is the little-endian uint16 at offset 28 of the BMP header.
+  return file.read(header, sizeof(header)) == sizeof(header) && header[0] == 'B' && header[1] == 'M' &&
+         (header[28] | header[29] << 8) == 1;
+}
+
+bool Epub::generateThumbBmp(int height, const int laneWidth) const {
   // Already generated, return true. An empty "no cover" marker left by an older
-  // cache is retried once the current metadata knows a cover image.
+  // cache is retried once the current metadata knows a cover image; a 1-bit
+  // thumb is regenerated when a 2-bit lane thumb is wanted.
   if (Storage.exists(getThumbBmpPath(height).c_str())) {
+    if (laneWidth > 0 && isOneBitThumb(getThumbBmpPath(height))) {
+      LOG_DBG("EBP", "Regenerating 1-bit thumb BMP as 2-bit");
+      Storage.remove(getThumbBmpPath(height).c_str());
+      return generateThumbBmp(height, laneWidth);
+    }
     if (!isEmptyThumbMarker(getThumbBmpPath(height))) return true;
     if (!bookMetadataCache || !bookMetadataCache->isLoaded() || bookMetadataCache->coreMetadata.coverItemHref.empty()) {
       return false;
@@ -736,11 +751,15 @@ bool Epub::generateThumbBmp(int height) const {
       return false;
     }
     // Use smaller target size for Continue Reading card (half of screen: 240x400)
-    // Generate 1-bit BMP for fast home screen rendering (no gray passes needed)
-    int THUMB_TARGET_WIDTH = height * 0.6;
+    // Generate 1-bit BMP for fast home screen rendering (no gray passes needed),
+    // or a lane-sized 2-bit BMP for callers that run a grey pass.
+    int THUMB_TARGET_WIDTH = laneWidth > 0 ? laneWidth : height * 0.6;
     int THUMB_TARGET_HEIGHT = height;
-    const bool success = JpegToBmpConverter::jpegFileTo1BitBmpStreamWithSize(coverJpg, thumbBmp, THUMB_TARGET_WIDTH,
-                                                                             THUMB_TARGET_HEIGHT);
+    const bool success =
+        laneWidth > 0 ? JpegToBmpConverter::jpegFileToBmpStreamWithSize(coverJpg, thumbBmp, THUMB_TARGET_WIDTH,
+                                                                       THUMB_TARGET_HEIGHT)
+                      : JpegToBmpConverter::jpegFileTo1BitBmpStreamWithSize(coverJpg, thumbBmp, THUMB_TARGET_WIDTH,
+                                                                            THUMB_TARGET_HEIGHT);
     // Explicitly close() files before calling Storage.remove()
     coverJpg.close();
     thumbBmp.close();
@@ -772,10 +791,13 @@ bool Epub::generateThumbBmp(int height) const {
     if (!Storage.openFileForWrite("EBP", getThumbBmpPath(height), thumbBmp)) {
       return false;
     }
-    int THUMB_TARGET_WIDTH = height * 0.6;
+    int THUMB_TARGET_WIDTH = laneWidth > 0 ? laneWidth : height * 0.6;
     int THUMB_TARGET_HEIGHT = height;
     const bool success =
-        PngToBmpConverter::pngFileTo1BitBmpStreamWithSize(coverPng, thumbBmp, THUMB_TARGET_WIDTH, THUMB_TARGET_HEIGHT);
+        laneWidth > 0
+            ? PngToBmpConverter::pngFileToBmpStreamWithSize(coverPng, thumbBmp, THUMB_TARGET_WIDTH, THUMB_TARGET_HEIGHT)
+            : PngToBmpConverter::pngFileTo1BitBmpStreamWithSize(coverPng, thumbBmp, THUMB_TARGET_WIDTH,
+                                                                THUMB_TARGET_HEIGHT);
     // Explicitly close() files before calling Storage.remove()
     coverPng.close();
     thumbBmp.close();

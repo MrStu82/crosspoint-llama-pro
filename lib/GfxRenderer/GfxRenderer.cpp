@@ -510,9 +510,13 @@ static void renderCharImpl(const GfxRenderer& renderer, GfxRenderer::RenderMode 
     }
 
     if (is2Bit) {
+      // Bold strokes: each ink pixel also paints its neighbour in the advance direction, and that
+      // added pixel stays black in the grey passes. Advances and layout are unchanged.
+      const bool bold = renderer.isBoldStrokes();
       int pixelPosition = 0;
       for (int glyphY = 0; glyphY < height; glyphY++) {
         const int outerCoord = outerBase + glyphY;
+        bool prevInk = false;
         for (int glyphX = 0; glyphX < width; glyphX++, pixelPosition++) {
           int screenX, screenY;
           if constexpr (rotation == TextRotation::Rotated90CW) {
@@ -530,9 +534,21 @@ static void renderCharImpl(const GfxRenderer& renderer, GfxRenderer::RenderMode 
           // 0 -> black, 1 -> dark grey, 2 -> light grey, 3 -> white
           const uint8_t bmpVal = 3 - ((byte >> bit_index) & 0x3);
 
+          const bool boldCover = bold && prevInk;
+          prevInk = bmpVal < 3;
+
           if (renderMode == GfxRenderer::BW && bmpVal < 3) {
             // Black (also paints over the grays in BW mode)
             renderer.drawPixel(screenX, screenY, pixelState);
+            if (bold) {
+              if constexpr (rotation == TextRotation::Rotated90CW) {
+                renderer.drawPixel(screenX, screenY - 1, pixelState);
+              } else {
+                renderer.drawPixel(screenX + 1, screenY, pixelState);
+              }
+            }
+          } else if (boldCover) {
+            // Bold strokes: covered by the previous ink pixel's extension, stays black from the BW pass
           } else if (bmpVal == 1 && renderer.isDarkerText()) {
             // Darker text: dark-grey edge stays black from the BW pass
           } else if (renderMode == GfxRenderer::GRAYSCALE_MSB && (bmpVal == 1 || bmpVal == 2)) {

@@ -226,7 +226,7 @@ class CrossPointSettings : public PersistableStore<CrossPointSettings> {
   uint8_t extraParagraphSpacing = 1;
   uint8_t textAntiAliasing = 1;
   // Darker anti-aliased text: dark-grey glyph edges stay black (0 = Normal)
-  uint8_t darkerText = 0;
+  uint8_t darkerText = 0;  // 0 normal, 1 darker, 2 bold strokes (darker + 1px embolden in the reader)
   // Short power button click behaviour
   uint8_t shortPwrBtn = IGNORE;
   // EPUB reading orientation settings

@@ -521,7 +521,7 @@ void TextSettingsActivity::confirmStyleRow(int row) {
       SETTINGS.textAntiAliasing = !SETTINGS.textAntiAliasing;
       break;
     case StyleRow::DarkerText:
-      SETTINGS.darkerText = !SETTINGS.darkerText;
+      SETTINGS.darkerText = (SETTINGS.darkerText + 1) % 3;
       break;
 
     default:
@@ -548,7 +548,8 @@ std::string TextSettingsActivity::styleValueText(int row) const {
     case StyleRow::AntiAliasing:
       return SETTINGS.textAntiAliasing ? tr(STR_STATE_ON) : tr(STR_STATE_OFF);
     case StyleRow::DarkerText:
-      return SETTINGS.darkerText ? tr(STR_STATE_ON) : tr(STR_STATE_OFF);
+      if (SETTINGS.darkerText == 2) return tr(STR_BOLD_STROKES);
+      return SETTINGS.darkerText ? tr(STR_DARKER) : tr(STR_NORMAL);
 
     default:
       return "";

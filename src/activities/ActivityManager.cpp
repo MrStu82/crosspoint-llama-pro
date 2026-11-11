@@ -79,6 +79,7 @@ void ActivityManager::renderTaskLoop() {
     if (currentActivity) {
       HalPowerManager::Lock powerLock;  // Ensure we don't go into low-power mode while rendering
       display.setInverted(SETTINGS.screenInverted != 0);
+      renderer.setBoldStrokes(SETTINGS.darkerText == 2 && currentActivity->isReaderActivity());
       currentActivity->render(std::move(lock));
     }
 

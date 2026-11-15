@@ -79,7 +79,12 @@ bool SdFirmwareUpdateActivity::validateFirmware() {
   // probed via Update.begin(firmwareSize)/Update.abort() to learn the partition
   // size, which had the side effect of erasing partition state and was wasted
   // work since we only need the size bound for validation here.
+#if FREEINK_DEVICE_PICCO
+  // Single ota_0 slot on Picco (see FirmwareFlasher): refuse before validating.
+  const esp_partition_t* dest = nullptr;
+#else
   const esp_partition_t* dest = esp_ota_get_next_update_partition(nullptr);
+#endif
   if (!dest) {
     LOG_ERR("FW", "no next-update partition available");
     errorMessage = tr(STR_INVALID_FIRMWARE);

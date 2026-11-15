@@ -143,7 +143,10 @@ void SettingsActivity::rebuildSettingsLists() {
   if (!BoardConfig::hasTouch()) {
     systemSettings.push_back(SettingInfo::Action(StrId::STR_CHECK_UPDATES, SettingAction::CheckForUpdates));
   }
+#if !FREEINK_DEVICE_PICCO
+  // Picco has one app slot (stock partitions_picco.csv); SD flashing refuses.
   systemSettings.push_back(SettingInfo::Action(StrId::STR_SD_FIRMWARE_UPDATE, SettingAction::SdFirmwareUpdate));
+#endif
   #ifndef SIMULATOR
   if (BoardConfig::hasUsbMassStorage()) {
     systemSettings.push_back(SettingInfo::Action(StrId::STR_USB_TRANSFER, SettingAction::UsbTransfer));

@@ -13,6 +13,11 @@ uint32_t computeSeqCrc(uint32_t seq) {
 
 bool switchTo(const esp_partition_t* dest) {
   if (!dest) return false;
+#if FREEINK_DEVICE_PICCO
+  // Stock Picco otadata/bootloader are vendor-owned and never written.
+  LOG_ERR("BOOT", "single-slot board: boot switch refused");
+  return false;
+#endif
 
   const esp_partition_t* otadata =
       esp_partition_find_first(ESP_PARTITION_TYPE_DATA, ESP_PARTITION_SUBTYPE_DATA_OTA, nullptr);

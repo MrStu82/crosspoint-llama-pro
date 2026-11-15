@@ -244,6 +244,12 @@ Result validateImageFile(const char* sdPath, size_t partitionSize) {
 }
 
 Result flashFromSdPath(const char* sdPath, ProgressCb onProgress, void* ctx, bool alreadyValidated) {
+#if FREEINK_DEVICE_PICCO
+  // Picco runs from the stock table's single ota_0 slot: there is no second slot
+  // to write, and the running app must never be overwritten in place.
+  LOG_ERR("FLASH", "single-slot board: SD flash refused");
+  return Result::NO_PARTITION;
+#endif
   // Resolve destination first so we can size-check during validation. The full image-integrity
   // pass below verifies header, segment table, XOR checksum and SHA256 trailer end-to-end before
   // we touch otadata, so a truncated/corrupted .bin can never become the next boot target.
@@ -366,6 +372,12 @@ struct PartitionCursor {
 }  // namespace
 
 Result flashGzFromSdPath(const char* sdPath, ProgressCb onProgress, void* ctx) {
+#if FREEINK_DEVICE_PICCO
+  // Picco runs from the stock table's single ota_0 slot: there is no second slot
+  // to write, and the running app must never be overwritten in place.
+  LOG_ERR("FLASH", "single-slot board: SD flash refused");
+  return Result::NO_PARTITION;
+#endif
   const esp_partition_t* dest = esp_ota_get_next_update_partition(nullptr);
   if (!dest) {
     LOG_ERR("FLASH", "no next-update partition");

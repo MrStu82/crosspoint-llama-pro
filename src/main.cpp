@@ -285,6 +285,10 @@ void enterDeepSleep(bool fromTimeout = false) {
   LOG_INF("SLP", "stage=prepare version=" CROSSPOINT_VERSION);
   frontlightManager.off();
 #endif
+#if FREEINK_DEVICE_PICCO
+  // The I2C LED driver keeps its state through deep sleep.
+  frontlightManager.off();
+#endif
   HalPowerManager::Lock powerLock;  // Ensure we are at normal CPU frequency for sleep preparation
   APP_STATE.lastSleepFromReader = activityManager.isReaderActivity();
 
@@ -473,8 +477,14 @@ void setup() {
   // This reads only the physical side-button path and leaves GT911/Home events
   // untouched for normal MappedInputManager gesture dispatch.
   const uint8_t recoveryButton = BoardConfig::isX4Pro() ? HalGPIO::BTN_DOWN : HalGPIO::BTN_UP;
+#if FREEINK_DEVICE_PICCO
+  // The Picco has no second app slot to flash into (partitions_picco.csv).
+  (void)recoveryButton;
+  const bool recoveryFirmwareMode = false;
+#else
   const bool recoveryFirmwareMode =
       wakeupReason == HalGPIO::WakeupReason::PowerButton && gpio.isPressed(recoveryButton);
+#endif
 
   halTiltSensor.begin();
   halClock.begin();
@@ -534,7 +544,11 @@ void setup() {
     case HalGPIO::WakeupReason::AfterUSBPower:
       // If USB power caused a cold boot, go back to sleep
       LOG_INF("MAIN", "Wakeup reason: After USB Power");
+#if FREEINK_DEVICE_PICCO
+      // Picco stays awake so native USB is available after a USB-powered boot.
+#else
       powerManager.startDeepSleep(gpio);
+#endif
       break;
     case HalGPIO::WakeupReason::AfterFlash:
       // After flashing, just proceed to boot

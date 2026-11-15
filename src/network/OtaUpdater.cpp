@@ -1,7 +1,7 @@
 #include "OtaUpdater.h"
 #include "OtaVersion.h"
 
-#if !defined(FREEINK_DEVICE_X4PRO)
+#if !defined(FREEINK_DEVICE_X4PRO) && !FREEINK_DEVICE_PICCO
 // clang-format off
 // HttpDownloader.h pulls Arduino/SdFat, whose macros collide with lwip's
 // ip4_addr.h unless seen first. Pin this order; clang-format would otherwise sort
@@ -17,7 +17,7 @@
 #include <string>
 
 namespace {
-#if defined(FREEINK_DEVICE_X4PRO)
+#if defined(FREEINK_DEVICE_X4PRO) || FREEINK_DEVICE_PICCO
 // Audited 2026-09-06: MrStu82/crosspoint-llama-pro has no published release
 // assets. Neither a .bin name nor the shared project descriptor distinguishes
 // X4 Pro from Deck. Do not invent an allowlist or offer an upstream fallback.
@@ -32,7 +32,7 @@ OtaUpdater::OtaUpdaterError OtaUpdater::checkForUpdate() {
   latestVersion.clear();
   otaUrl.clear();
   otaSize = processedSize = totalSize = 0;
-#if defined(FREEINK_DEVICE_X4PRO)
+#if defined(FREEINK_DEVICE_X4PRO) || FREEINK_DEVICE_PICCO
   static_assert(!publishedX4ProDistribution, "Define and test a real fork/target release contract before enabling OTA");
   return NO_UPDATE;
 #else
@@ -89,7 +89,7 @@ bool OtaUpdater::isUpdateNewer() const {
 const std::string& OtaUpdater::getLatestVersion() const { return latestVersion; }
 
 OtaUpdater::OtaUpdaterError OtaUpdater::installUpdate(ProgressCallback onProgress, void* ctx) {
-#if defined(FREEINK_DEVICE_X4PRO)
+#if defined(FREEINK_DEVICE_X4PRO) || FREEINK_DEVICE_PICCO
   // Independent install-time guard: even stale state cannot touch a partition.
   (void)onProgress;
   (void)ctx;

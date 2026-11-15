@@ -10,6 +10,9 @@
 #include <HalGPIO.h>
 #include <HalPowerManager.h>
 #include <X4ProSleep.h>
+#if FREEINK_DEVICE_PICCO
+#include <BatteryMonitor.h>
+#endif
 #if FREEINK_DEVICE_X4PRO && !defined(SIMULATOR)
 #include <esp_sleep.h>
 #include <esp_system.h>
@@ -421,6 +424,27 @@ static bool serialNeedsEnumerationStall() {
 }
 #endif
 
+#if FREEINK_DEVICE_PICCO
+// Upstream crosspoint 2.0.0 handleSlideSwitch(), frontlight binding only: the
+// switch position (not the edge) drives the light, so the boot position applies.
+static void handleSlideSwitch() {
+  static bool applied = false;
+  static bool appliedOn = false;
+  if (!gpio.hasToggleSwitch() || !frontlightManager.present()) return;
+  const bool on = gpio.isToggleSwitchOn();
+  if (applied && on == appliedOn) return;
+  applied = true;
+  appliedOn = on;
+  frontlightManager.setBrightness(on ? SETTINGS.frontlightBrightness : 0);
+  if (SETTINGS.frontlightOn != on) {
+    SETTINGS.frontlightOn = on ? 1 : 0;
+    SETTINGS.saveToFile();
+  }
+  activityManager.requestUpdate();
+  LOG_INF("SWITCH", "Slide switch %s", on ? "on" : "off");
+}
+#endif
+
 void setup() {
   BoardConfig::holdPowerRails();
 
@@ -521,6 +545,10 @@ void setup() {
   frontlightManager.setColorTemperature(SETTINGS.frontlightWarmPercent);
   frontlightManager.setBrightness(SETTINGS.frontlightOn ? SETTINGS.frontlightBrightness : 0);
   display.setInverted(SETTINGS.screenInverted != 0);
+#if FREEINK_DEVICE_PICCO
+  if (!BatteryMonitor::configureCharger()) LOG_INF("MAIN", "Picco charger init skipped");
+  handleSlideSwitch();
+#endif
   APP_STATE.loadFromFile();
   // A persisted retained-frame flag is valid only after a verified sleep wake.
   // A stale flag from an interrupted sleep transition must not suppress a cold
@@ -676,6 +704,9 @@ void loop() {
 
   gpio.setSharedConfirmPowerShortPressEmitsPower(SETTINGS.shortPwrBtn == CrossPointSettings::SHORT_PWRBTN::SLEEP);
   gpio.update();
+#if FREEINK_DEVICE_PICCO
+  handleSlideSwitch();
+#endif
   halTiltSensor.update(SETTINGS.tiltPageTurn, SETTINGS.orientation, activityManager.isReaderActivity());
 
   renderer.setFadingFix(SETTINGS.fadingFix);

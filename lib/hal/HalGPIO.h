@@ -74,6 +74,11 @@ class HalGPIO {
   bool isDebouncePending() const { return inputMgr.isDebouncePending(); }
   unsigned long getHeldTime() const;
   unsigned long getPowerButtonHeldTime() const;
+#if FREEINK_DEVICE_PICCO
+  // Picco slide switch (BoardConfig::Picco::toggleSwitch), debounced position.
+  bool hasToggleSwitch() const { return inputMgr.hasToggleSwitch(); }
+  bool isToggleSwitchOn() const { return inputMgr.isToggleSwitchOn(); }
+#endif
   bool hasTouch() const;
   bool wasTouchTap(float& nx, float& ny) const;
   bool wasTouchDown(float& nx, float& ny) const;

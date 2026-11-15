@@ -1,5 +1,12 @@
 # State — Upstream Safety/Reader Convergence
 
+## Shipped state (2026-11-15)
+
+- `main` = latest delivered X4 Pro source `6ca8b92a3` (`v1.5.0-299-g6ca8b92a3`, SDK `6fcc90a4`), fast-forwarded
+  from `0ce4ab53f` (kept as tag `backup/main-pre-reconcile-20261115`). Not bench-verified on hardware by the build lane.
+- Frontlight GPIO8=cool / GPIO9=warm remains a BENCH-UNVALIDATED hypothesis.
+- Sections below are historical (August convergence work).
+
 ## Active prototype — Reader top spacing (2026-08-31)
 
 - Base: `06c974e551ffd68f8ce6c56753377957c3d98630`; branch: `ui/reader-top-spacing-20260831`.

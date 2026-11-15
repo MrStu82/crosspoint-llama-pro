@@ -5,19 +5,23 @@
 ## This fork: `crosspoint-llama-pro` status
 
 This fork targets the **Xteink X4 Pro**, an ESP32-S3 device distinct from the
-ESP32-C3 X3 and X4 supported by upstream CrossPoint. The active
-[`feature/reader-convergence-20260825`](https://github.com/MrStu82/crosspoint-llama-pro/tree/feature/reader-convergence-20260825)
-branch selectively adopts reviewed CrossPoint 1.6 work; it is **not** a wholesale
-1.6 rebase and does not claim full 1.6 feature parity. The selection and conflict
-rules are recorded in the [upstream PR audit](./.planning/UPSTREAM_PR_AUDIT.md).
+ESP32-C3 X3 and X4 supported by upstream CrossPoint. It selectively adopts
+reviewed upstream CrossPoint work; it is **not** a wholesale rebase and does not
+claim full upstream feature parity. The selection and conflict rules are recorded
+in the [upstream PR audit](./.planning/UPSTREAM_PR_AUDIT.md).
 
-The integrated source is
-[`b2036ff9`](https://github.com/MrStu82/crosspoint-llama-pro/commit/b2036ff973ab0cc718bf8b47e9fdeb0a1b7b4af6).
-Its final production image identifies itself as `crosspoint-llama-pro` /
-`v1.5.0-212-gb2036ff`. That source passed the complete 274-test host suite, a
-clean X4 Pro simulator build, and deterministic touch and framebuffer gates.
-Those results validate source and simulated behaviour; **they do not claim that
-the exact v212 image has been tested on a real X4 Pro**.
+`main` points at the latest delivered X4 Pro firmware source,
+[`6ca8b92a3`](https://github.com/MrStu82/crosspoint-llama-pro/commit/6ca8b92a38d52178f490ed6075f50a4d44c9a5ce)
+(from `fix/x4pro-covers-1111`, SDK gitlink `freeink-sdk` `6fcc90a4`). Its app
+image identifies itself as `crosspoint-llama-pro` / `v1.5.0-299-g6ca8b92a3`.
+Since the August v212 integration it adds: SD `.bin.gz` firmware updates with
+upload timing in `/api/status`, display RST/CS hold in deep sleep, a List/Shelf
+library with book cards (blurb and author tabs), a share-based BOOK LEFT ETA and
+touch Go-to-% page, Darker Text "Bold strokes", a heavier reader font, the list
+settings menu, the upstream TTF font port, and 2-bit grey cover thumbnails.
+Those builds passed targeted host tests and image/partition checks; **the v299
+image has not been bench-verified on a real X4 Pro by the build lane**.
+The pre-reconcile `main` is preserved as tag `backup/main-pre-reconcile-20261115`.
 
 ### Selected integration
 
@@ -27,6 +31,9 @@ the exact v212 image has been tested on a real X4 Pro**.
 - **Power and performance:** KOReader Wi-Fi lifetime locking, lossless built-in
   font compression, style-aware prewarming, one bounded low-memory CSS retry,
   and the lower X4 Pro frontlight range with separate cool/warm calibration.
+  The GPIO8 = cool / GPIO9 = warm channel mapping is a **BENCH-UNVALIDATED
+  hypothesis**: it has not been confirmed on hardware (the frontlight pin
+  diagnostic exists to check it).
 - **Reader and UI:** StarDict synonyms and styled definitions, first-page and
   heading fixes, bounded EPUB table columns, Extra Wide spacing, transparent
   sleep overlays and retained-frame wake, a touch control centre, and transient

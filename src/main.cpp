@@ -496,7 +496,11 @@ void setup() {
             frontlightManager.coolChannelAttachOk(), frontlightManager.warmChannelAttachOk());
   }
 
+#if FREEINK_DEVICE_PICCO
+  LOG_INF("MAIN", "Device: %s", BoardConfig::ACTIVE.name);
+#else
   LOG_INF("MAIN", "Hardware detect: %s", gpio.deviceIsX3() ? "X3" : "X4");
+#endif
 
   // SD Card Initialization
   // We need 6 open files concurrently when parsing a new chapter

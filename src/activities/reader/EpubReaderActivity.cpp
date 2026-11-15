@@ -575,6 +575,10 @@ void EpubReaderActivity::loop() {
   }
 
   const auto touch = ReaderUtils::detectTouchPageTurn(renderer, mappedInput);
+  if (ReaderUtils::isPiccoMenuHold(touch)) {
+    openReaderMenu();
+    return;
+  }
   if (ReaderUtils::shouldOpenReaderTools(touch) && section && currentSpineIndex < epub->getSpineItemsCount()) {
     openReaderTools();
     return;

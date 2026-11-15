@@ -135,6 +135,10 @@ void XtcReaderActivity::loop() {
   }
 
   const auto touch = ReaderUtils::detectTouchPageTurn(renderer, mappedInput);
+  if (ReaderUtils::isPiccoMenuHold(touch)) {
+    openChapterSelection();
+    return;
+  }
   if (ReaderUtils::shouldOpenReaderTools(touch) && currentPage < xtc->getPageCount()) {
     openReaderTools();
     return;

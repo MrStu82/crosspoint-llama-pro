@@ -79,6 +79,16 @@ inline bool shouldOpenReaderTools(const TouchPageTurn& touch) {
          (touch.prev || touch.next) && touch.heldMs > SKIP_HOLD_MS;
 }
 
+// Picco has no Confirm key: a page hold (> SKIP_HOLD_MS) is its touch way into the reader menu.
+inline bool isPiccoMenuHold(const TouchPageTurn& touch) {
+#if FREEINK_DEVICE_PICCO
+  return (touch.prev || touch.next) && touch.heldMs > SKIP_HOLD_MS;
+#else
+  (void)touch;
+  return false;
+#endif
+}
+
 inline TouchPageTurn detectTouchPageTurn(GfxRenderer& renderer, const MappedInputManager& input) {
   TouchPageTurn result{false, false, 0};
   if (!SETTINGS.touchReaderControls || !input.hasTouch()) {

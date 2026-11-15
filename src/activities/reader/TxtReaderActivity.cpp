@@ -146,7 +146,7 @@ void TxtReaderActivity::loop() {
   }
 
   const auto touch = ReaderUtils::detectTouchPageTurn(renderer, mappedInput);
-  if (ReaderUtils::shouldOpenReaderTools(touch) && initialized && totalPages > 0) {
+  if ((ReaderUtils::isPiccoMenuHold(touch) || ReaderUtils::shouldOpenReaderTools(touch)) && initialized && totalPages > 0) {
     openReaderTools();
     return;
   }

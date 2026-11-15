@@ -119,6 +119,10 @@ namespace {
 constexpr float LEFT_EDGE_BRIGHTNESS_GESTURE_FRAC_X = 0.25f;
 constexpr float TOP_EDGE_MENU_GESTURE_FRAC_Y = 0.14f;
 constexpr float BOTTOM_EDGE_BRIGHTNESS_SHEET_GESTURE_FRAC_Y = 0.14f;
+#if FREEINK_DEVICE_PICCO
+// Picco has no Back/Home keys: side-edge inward swipe = Back, bottom-edge upward swipe = Home.
+constexpr int PICCO_SIDE_EDGE_PX = 40;
+#endif
 constexpr unsigned long TOUCH_DOWN_SELECT_DELAY_MS = 90;
 constexpr unsigned long TOUCH_HELD_OVERRIDE_WINDOW_MS = 250;
 }  // namespace
@@ -240,7 +244,37 @@ MappedInputManager::RowTouch MappedInputManager::colTouch(int& col, const int le
   return RowTouch::None;
 }
 
+#if FREEINK_DEVICE_PICCO
+MappedInputManager::EdgeSwipe MappedInputManager::piccoEdgeSwipe() const {
+  int sx = 0;
+  int sy = 0;
+  int ex = 0;
+  int ey = 0;
+  float nxs = 0.0f;
+  float nys = 0.0f;
+  float nxe = 0.0f;
+  float nye = 0.0f;
+  if (!gpio.wasSwipe(nxs, nys, nxe, nye)) return EdgeSwipe::None;
+  renderer.tapToLogical(nxs, nys, sx, sy);
+  renderer.tapToLogical(nxe, nye, ex, ey);
+  const int dx = ex - sx;
+  const int dy = ey - sy;
+  const int w = renderer.getScreenWidth();
+  const int h = renderer.getScreenHeight();
+  if (std::abs(dy) > std::abs(dx)) {
+    const int bottomEdgeTop = static_cast<int>(h * (1.0f - BOTTOM_EDGE_BRIGHTNESS_SHEET_GESTURE_FRAC_Y));
+    return (dy < 0 && sy >= bottomEdgeTop) ? EdgeSwipe::Home : EdgeSwipe::None;
+  }
+  if ((sx <= PICCO_SIDE_EDGE_PX && dx > 0) || (sx >= w - PICCO_SIDE_EDGE_PX && dx < 0)) return EdgeSwipe::Back;
+  return EdgeSwipe::None;
+}
+#endif
+
 bool MappedInputManager::decodeSwipe(int& sx, int& sy, int& ex, int& ey) const {
+#if FREEINK_DEVICE_PICCO
+  // Edge swipes are system navigation on Picco; no screen-level consumer sees them.
+  if (piccoEdgeSwipe() != EdgeSwipe::None) return false;
+#endif
   float nxs = 0.0f;
   float nys = 0.0f;
   float nxe = 0.0f;
@@ -279,7 +313,11 @@ bool MappedInputManager::wasMenuGesture() const {
 }
 
 bool MappedInputManager::wasHomeKeyBackGesture() const {
+#if FREEINK_DEVICE_PICCO
+  if (!gpio.wasHomeKeyTapped() && piccoEdgeSwipe() != EdgeSwipe::Back) return false;
+#else
   if (!gpio.wasHomeKeyTapped()) return false;
+#endif
   // Tap = zero-duration Back edge by definition. Force getHeldTime() to 0 via
   // the override so it can never cross GO_BACK_OR_HOME_MS-style thresholds
   // (isPressed(Back) is also never true for this synthetic edge, since it
@@ -297,6 +335,9 @@ bool MappedInputManager::wasHomeGesture() const {
   // trigger the app-wide "go home" action. Bottom-edge swipe-to-home was
   // removed per Stuart's explicit call: he has a home button and doesn't want
   // a swipe alias for it on any screen.
+#if FREEINK_DEVICE_PICCO
+  if (piccoEdgeSwipe() == EdgeSwipe::Home) return true;
+#endif
   return gpio.wasHomeKeyLongPressed();
 }
 

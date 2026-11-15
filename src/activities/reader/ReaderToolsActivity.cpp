@@ -35,6 +35,9 @@ void ReaderToolsActivity::closeCancelled() {
 }
 
 bool ReaderToolsActivity::handleHomeGesture() {
+#if FREEINK_DEVICE_PICCO
+  return false;  // Picco bottom-edge Home goes Home from reader menus too
+#endif
   closeCancelled();
   return true;
 }

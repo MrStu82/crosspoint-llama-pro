@@ -60,6 +60,9 @@ void EpubReaderMenuActivity::closeCancelled() {
 }
 
 bool EpubReaderMenuActivity::handleHomeGesture() {
+#if FREEINK_DEVICE_PICCO
+  return false;  // Picco bottom-edge Home goes Home from reader menus too
+#endif
   closeCancelled();
   return true;
 }

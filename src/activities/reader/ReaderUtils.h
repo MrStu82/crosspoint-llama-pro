@@ -113,6 +113,10 @@ inline TouchPageTurn detectTouchPageTurn(GfxRenderer& renderer, const MappedInpu
 // Text settings opens on an upward swipe starting at the bottom edge. The
 // top-edge downward gesture belongs exclusively to global Quick Settings.
 inline bool isTouchMenuGesture(const MappedInputManager& input) {
+#if FREEINK_DEVICE_PICCO
+  (void)input;
+  return false;  // bottom-edge up swipe is Home on Picco
+#endif
   return SETTINGS.touchReaderControls && input.hasTouch() && input.wasBrightnessSheetGesture();
 }
 

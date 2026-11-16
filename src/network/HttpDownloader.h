@@ -38,6 +38,12 @@ class HttpDownloader {
   static bool fetchUrl(const std::string& url, const DataCallback& onData, const std::string& username = "",
                        const std::string& password = "");
 
+#if FREEINK_DEVICE_PICCO
+  // https only through esp_http_client verified against the IDF CA bundle,
+  // never the wolfSSL client. Used for Picco firmware pulls.
+  static bool fetchUrlVerified(const std::string& url, const DataCallback& onData);
+#endif
+
   // POST a JSON document with a bearer token. The token and payload are never
   // logged; intended for scoped metadata APIs, not user-content uploads.
   static bool postJson(const std::string& url, const std::string& payload, const std::string& bearerToken,

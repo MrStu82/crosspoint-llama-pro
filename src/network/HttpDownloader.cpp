@@ -9,17 +9,24 @@
 #include <functional>
 #include <string>
 
+// Picco firmware pulls use esp_http_client + the IDF CA bundle even when wolfSSL
+// is the stack for everything else (its client here runs setInsecure()).
+#if !defined(FREEINK_NET_WOLFSSL) || FREEINK_DEVICE_PICCO
+#define HTTP_ESP_CLIENT 1
+#endif
+
 #if defined(FREEINK_NET_WOLFSSL)
 #include <SecureHttpClient.h>
 
 extern "C" void wolfSSL_Arduino_Serial_Print(const char* const msg) { LOG_DBG("WOLFSSL", "%s", msg); }
-#else
+#endif
+#if HTTP_ESP_CLIENT
 #include <esp_crt_bundle.h>
 #include <esp_http_client.h>
 #endif
 
 namespace {
-#if !defined(FREEINK_NET_WOLFSSL)
+#if HTTP_ESP_CLIENT
 // RX holds the response headers. Smaller buffers leave enough contiguous heap
 // for mbedTLS on redirect-heavy OPDS feeds while still preserving the headers
 // we read directly (Location, Content-Length).
@@ -128,7 +135,7 @@ HttpDownloader::DownloadError runGetWolf(const std::string& startUrl, const std:
 }
 #endif
 
-#if !defined(FREEINK_NET_WOLFSSL)
+#if HTTP_ESP_CLIENT
 // Streams a GET body through sink.write in READ_CHUNK pieces. Uses the manual
 // open/fetch_headers/read path rather than esp_http_client_perform(): perform()
 // pushes the whole body through an event callback and reports a chunked body
@@ -234,7 +241,7 @@ HttpDownloader::DownloadError runGet(const std::string& url, const std::string& 
   }
   return HttpDownloader::OK;
 }
-#endif  // !FREEINK_NET_WOLFSSL
+#endif  // HTTP_ESP_CLIENT
 
 // All HTTP(S) fetches go through wolfSSL when it is the active TLS stack: it
 // speaks TLS 1.3 and reads large bodies from servers where the esp_http_client/
@@ -328,6 +335,15 @@ bool HttpDownloader::fetchUrl(const std::string& url, const DataCallback& onData
   sink.write = onData;
   return runGetSecure(url, username, password, sink) == OK;
 }
+
+#if FREEINK_DEVICE_PICCO
+bool HttpDownloader::fetchUrlVerified(const std::string& url, const DataCallback& onData) {
+  LOG_DBG("HTTP", "Fetching (CA bundle): %s", url.c_str());
+  Sink sink;
+  sink.write = onData;
+  return runGet(url, "", "", sink) == OK;
+}
+#endif
 
 bool HttpDownloader::postJson(const std::string& url, const std::string& payload, const std::string& bearerToken,
                               std::string& outContent) {

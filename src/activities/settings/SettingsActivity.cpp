@@ -60,12 +60,12 @@ StrId hardcoverImportStatusString(const HardcoverTokenImport::Status status) {
   return StrId::STR_HARDCOVER_IMPORT_NO_FILE;
 }
 
-std::string settingName(const SettingInfo& setting) {
 #if FREEINK_DEVICE_PICCO
+std::string settingName(const SettingInfo& setting) {
   if (setting.action == SettingAction::TouchZone) return "Touch Zone";
-#endif
   return std::string(I18N.get(setting.nameId));
 }
+#endif
 
 std::string settingValueText(const SettingInfo& setting) {
   std::string valueText;
@@ -736,7 +736,11 @@ void SettingsActivity::render(RenderLock&&) {
   GUI.drawList(
       renderer, listRect,
       settingsCount, selectedSettingIndex - 1,
+#if FREEINK_DEVICE_PICCO
       [&settings](int index) { return settingName(settings[index]); }, nullptr, nullptr,
+#else
+      [&settings](int index) { return std::string(I18N.get(settings[index].nameId)); }, nullptr, nullptr,
+#endif
       [&settings](int i) { return settingValueText(settings[i]); },
       true);
 
@@ -781,7 +785,11 @@ void SettingsActivity::renderInkPoint() {
   rows.count = settingsCount;
   rows.selected = selectedSettingIndex - 1;
   rows.pageItems = hardcoverStatus.empty() ? InkPointList::kPageItems : InkPointList::kNotePageItems;
+#if FREEINK_DEVICE_PICCO
   rows.label = [&settings](const int i) { return settingName(settings[i]); };
+#else
+  rows.label = [&settings](const int i) { return std::string(I18N.get(settings[i].nameId)); };
+#endif
   rows.value = [&settings](const int i) { return settingValueText(settings[i]); };
   InkPointList::draw(renderer, I18N.get(categoryNames[selectedCategoryIndex]), rows, status);
 

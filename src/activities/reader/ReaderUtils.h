@@ -1,7 +1,6 @@
 #pragma once
 
 #include <CrossPointSettings.h>
-#include <algorithm>
 #include <GfxRenderer.h>
 #include <HalGPIO.h>
 #include <HalTiltSensor.h>
@@ -94,9 +93,7 @@ inline bool isPiccoMenuHold(const TouchPageTurn& touch) {
 #endif
 }
 
-// zoneGrid: on Picco, map the tap through SETTINGS.touchZoneActions (3x3) instead of prev/next thirds.
-inline TouchPageTurn detectTouchPageTurn(GfxRenderer& renderer, const MappedInputManager& input,
-                                         bool zoneGrid = false) {
+inline TouchPageTurn detectTouchPageTurn(GfxRenderer& renderer, const MappedInputManager& input) {
   TouchPageTurn result{false, false, 0};
   if (!SETTINGS.touchReaderControls || !input.hasTouch()) {
     return result;
@@ -110,21 +107,6 @@ inline TouchPageTurn detectTouchPageTurn(GfxRenderer& renderer, const MappedInpu
 
   const int16_t width = static_cast<int16_t>(renderer.getScreenWidth());
   const int16_t height = static_cast<int16_t>(renderer.getScreenHeight());
-#if FREEINK_DEVICE_PICCO
-  if (zoneGrid) {
-    const int col = std::min(2, std::max(0, x * 3 / width));
-    const int row = std::min(2, std::max(0, y * 3 / height));
-    const uint8_t action = SETTINGS.touchZoneActions[row * 3 + col];
-    result.prev = action == CrossPointSettings::TOUCH_ZONE_PREV_PAGE;
-    result.next = action == CrossPointSettings::TOUCH_ZONE_NEXT_PAGE;
-    result.textSettings = action == CrossPointSettings::TOUCH_ZONE_TEXT_SETTINGS;
-    result.readerMenu = action == CrossPointSettings::TOUCH_ZONE_READER_MENU;
-    result.heldMs = gpio.lastTouchHeldMs();
-    return result;
-  }
-#else
-  (void)zoneGrid;
-#endif
   const int16_t previousZoneWidth = width / 3;
   const freeink::ui::TapZone zones[] = {
       {freeink::ui::Rect{0, 0, previousZoneWidth, height}, READER_TOUCH_PREV},
@@ -141,6 +123,27 @@ inline TouchPageTurn detectTouchPageTurn(GfxRenderer& renderer, const MappedInpu
   result.heldMs = gpio.lastTouchHeldMs();
   return result;
 }
+
+#if FREEINK_DEVICE_PICCO
+// EPUB reader on Picco: map a tap through the 3x3 SETTINGS.touchZoneActions grid (Touch Zone).
+inline TouchPageTurn detectTouchZone(GfxRenderer& renderer, const MappedInputManager& input) {
+  TouchPageTurn result{false, false, 0};
+  int x = 0;
+  int y = 0;
+  if (!SETTINGS.touchReaderControls || !input.hasTouch() || !input.wasScreenTapped(x, y)) {
+    return result;
+  }
+  const int col = std::min(2, std::max(0, x * 3 / renderer.getScreenWidth()));
+  const int row = std::min(2, std::max(0, y * 3 / renderer.getScreenHeight()));
+  const uint8_t action = SETTINGS.touchZoneActions[row * 3 + col];
+  result.prev = action == CrossPointSettings::TOUCH_ZONE_PREV_PAGE;
+  result.next = action == CrossPointSettings::TOUCH_ZONE_NEXT_PAGE;
+  result.textSettings = action == CrossPointSettings::TOUCH_ZONE_TEXT_SETTINGS;
+  result.readerMenu = action == CrossPointSettings::TOUCH_ZONE_READER_MENU;
+  result.heldMs = gpio.lastTouchHeldMs();
+  return result;
+}
+#endif
 
 // Text settings opens on an upward swipe starting at the bottom edge. The
 // top-edge downward gesture belongs exclusively to global Quick Settings.

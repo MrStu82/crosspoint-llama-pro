@@ -574,7 +574,11 @@ void EpubReaderActivity::loop() {
     completionSaved = false;
   }
 
-  const auto touch = ReaderUtils::detectTouchPageTurn(renderer, mappedInput, /*zoneGrid=*/true);
+#if FREEINK_DEVICE_PICCO
+  const auto touch = ReaderUtils::detectTouchZone(renderer, mappedInput);
+#else
+  const auto touch = ReaderUtils::detectTouchPageTurn(renderer, mappedInput);
+#endif
   if (ReaderUtils::isPiccoMenuHold(touch)) {
     openReaderMenu();
     return;

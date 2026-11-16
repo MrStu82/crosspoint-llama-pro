@@ -55,3 +55,5 @@ Parent gate: approve Phase 2 power/performance implementation. No firmware build
 ## X4 Pro gate hold — feat/picco-fw-1115 (parent10476, 2026-11-15)
 - Picco 305 (7888394a6, app f2b2935d) shipped with the X4 Pro section gate at raw FAIL. The cause is a short-sha tail-merge pointer swap (research/picco-home-1115/gate-explain-305.txt). Parent accepted this for the Picco-only image.
 - No X4 Pro build leaves this branch until the X4 Pro gate is a clean raw PASS.
+
+## #picco-ftfont-1116 — Phase 1 GATE sent 2026-11-16; Phase 2 waits for parent go.

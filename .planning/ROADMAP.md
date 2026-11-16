@@ -80,3 +80,7 @@ settings:
    honestly suppressing when pace/progress is insufficient.
 3. The current-book progress bar is twice its present thickness and directly below the cover outline.
 4. The cover outline hugs the rendered cover bounds with zero padding.
+
+## #picco-ftfont-1116 (parent10484, 2026-11-16)
+- Phase 1 GATE (read-only): research/picco-ftfont-1116/GATE.md — DONE, awaiting go.
+- Phase 2 implement (Picco-only embedded TTF + Font Weight, one build): on parent go.

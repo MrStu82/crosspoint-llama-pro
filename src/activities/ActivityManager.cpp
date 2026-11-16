@@ -216,7 +216,9 @@ void ActivityManager::trackPiccoEdgeCue() {
   }
   drawPiccoEdgeCue(renderer, edge, left, c);
   // Same full-frame fast refresh as the one-shot cue; synchronous, so moves made meanwhile are dropped.
+  const unsigned long t0 = millis();
   renderer.displayBuffer(HalDisplay::FAST_REFRESH);
+  LOG_INF("ACT", "Picco edge cue at %d: fast refresh %lu ms", c, millis() - t0);
   edgeCueAlong = c;
 }
 #endif

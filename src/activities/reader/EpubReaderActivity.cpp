@@ -50,10 +50,9 @@ constexpr int PAGE_TURN_RATES[] = {1, 1, 3, 6, 12};
 constexpr size_t initialBookmarkCacheCapacity = 16;
 constexpr float bookmarkProgressEpsilon = 0.0001f;
 #if FREEINK_DEVICE_PICCO
-// Photo case (top "44%" lane + footer, 14pt): first ink 62->42, last descender
-// 771->751, footer ink 774->768, footer bar 794..799->787..790; 16px each side.
-constexpr int PICCO_TEXT_SHIFT_PX = 20;
-constexpr int PICCO_FOOTER_LIFT_PX = 6;
+// Both progress bars sit 1px off their panel edge (4px bars: rows 1..4 and
+// 795..798), mirror-symmetric about the panel centre.
+constexpr int PICCO_BAR_EDGE_PX = 1;
 #endif
 
 int clampPercent(int percent) {
@@ -1345,11 +1344,11 @@ void EpubReaderActivity::render(RenderLock&& lock) {
   orientedMarginTop += SETTINGS.readerTopBezelOffset();
 #if FREEINK_DEVICE_PICCO
   // Picco: the top stacks screenMargin on the bar (plus a 9px viewable margin)
-  // while the bottom takes max(margin, bar) over 3px, so text sat low and the last
-  // line met the footer. Move the text block up (viewport height and pagination
-  // unchanged) to even the gaps either side of it.
+  // while the bottom takes max(margin, bar) over 3px, so text sat low. The bars
+  // are the same distance from their edges, so equal margins give equal text
+  // gaps to each bar; move the block up (viewport height and pagination unchanged).
   if (statusBarHeight > 0) {
-    const int piccoShift = std::min<int>(PICCO_TEXT_SHIFT_PX, SETTINGS.screenMargin);
+    const int piccoShift = std::max(0, (orientedMarginTop - orientedMarginBottom) / 2);
     orientedMarginTop -= piccoShift;
     orientedMarginBottom += piccoShift;
   }
@@ -2132,8 +2131,9 @@ void EpubReaderActivity::renderStatusBar() const {
   }
 
 #if FREEINK_DEVICE_PICCO
-  // Lift the footer off the panel edge instead of filling the 3px viewable margin.
-  GUI.drawStatusBar(renderer, bookProgress, currentPage, pageCount, title, PICCO_FOOTER_LIFT_PX, textYOffset, false,
+  // Bar PICCO_BAR_EDGE_PX off the panel edge instead of filling the 3px viewable margin.
+  GUI.drawStatusBar(renderer, bookProgress, currentPage, pageCount, title,
+                    PICCO_BAR_EDGE_PX - GfxRenderer::VIEWABLE_MARGIN_BOTTOM, textYOffset, false,
                     currentPageBookmarked, section->isBuilding(), CrossPointSettings::Edge::BOTTOM);
 #else
   GUI.drawStatusBar(renderer, bookProgress, currentPage, pageCount, title, 0, textYOffset, true, currentPageBookmarked,
@@ -2154,8 +2154,14 @@ void EpubReaderActivity::renderStatusBar() const {
     topTitle = epub->getTitle();
   }
 
+#if FREEINK_DEVICE_PICCO
+  GUI.drawStatusBar(renderer, bookProgress, currentPage, pageCount, topTitle, 0, 0, false, currentPageBookmarked,
+                    section->isBuilding(), CrossPointSettings::Edge::TOP,
+                    SETTINGS.readerTopBezelOffset() + PICCO_BAR_EDGE_PX);
+#else
   GUI.drawStatusBar(renderer, bookProgress, currentPage, pageCount, topTitle, 0, 0, true, currentPageBookmarked,
                     section->isBuilding(), CrossPointSettings::Edge::TOP, SETTINGS.readerTopBezelOffset());
+#endif
 }
 
 void EpubReaderActivity::navigateToHref(const std::string& hrefStr, const bool savePosition) {

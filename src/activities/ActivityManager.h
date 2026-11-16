@@ -51,7 +51,7 @@ class ActivityManager {
   // Held-swipe tracking: the cue follows the finger by windowed refresh of a
   // 48px edge band, whose pixels under the cue are saved in edgeCueBand.
   bool edgeCueTracked = false;
-  bool edgeCueFailed = false;  // window path failed this gesture: release uses the one-shot cue
+  bool edgeCueFailed = false;  // band save failed this gesture: release uses the one-shot cue
   int edgeCueAlong = 0;
   int edgeCueRect[4] = {};
   const Activity* edgeCueActivity = nullptr;

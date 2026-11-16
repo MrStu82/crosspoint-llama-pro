@@ -95,10 +95,6 @@ class HalDisplay {
   // Debug-only: no production call site drives this today, see
   // SettingsActivity's header-long-press panel-proof trigger.
   void displayWindow(uint16_t x, uint16_t y, uint16_t w, uint16_t h, bool turnOffScreen = false);
-#if FREEINK_DEVICE_PICCO
-  // Picco edge cue only: fast refresh of one physical rect; false = fall back to full.
-  bool displayPiccoWindow(uint16_t x, uint16_t y, uint16_t w, uint16_t h);
-#endif
 
   // Tiled grayscale: stream one band of a plane (lsbPlane selects LSB/MSB RAM)
   // straight to the controller; supportsStripGrayscale() gates the path. See

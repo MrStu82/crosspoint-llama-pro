@@ -215,14 +215,8 @@ void ActivityManager::trackPiccoEdgeCue() {
     renderer.writeFramebufferRegion(b[0], b[1], b[2], b[3], edgeCueBand.data());
   }
   drawPiccoEdgeCue(renderer, edge, left, c);
-  if (!renderer.displayPiccoWindow(b[0], b[1], b[2], b[3])) {
-    // Window path failed: drop tracking; the release draws the one-shot cue full-frame.
-    renderer.writeFramebufferRegion(b[0], b[1], b[2], b[3], edgeCueBand.data());
-    edgeCueTracked = false;
-    edgeCueFailed = true;
-    LOG_ERR("ACT", "Picco edge cue window refresh failed");
-    return;
-  }
+  // Same full-frame fast refresh as the one-shot cue; synchronous, so moves made meanwhile are dropped.
+  renderer.displayBuffer(HalDisplay::FAST_REFRESH);
   edgeCueAlong = c;
 }
 #endif
@@ -244,7 +238,7 @@ void ActivityManager::loop() {
     int edgeX = 0;
     const auto edge = mappedInput.piccoEdgeSwipe(&edgeX);
     if (edge != MappedInputManager::EdgeSwipe::None) {
-      if (!edgeCueTracked) {  // flick, or the window path failed: one-shot centred cue
+      if (!edgeCueTracked) {  // flick, or the band save failed: one-shot centred cue
         RenderLock lock;
         const bool home = edge == MappedInputManager::EdgeSwipe::Home;
         drawPiccoEdgeCue(renderer, edge, edgeX < renderer.getScreenWidth() / 2,
@@ -368,17 +362,17 @@ void ActivityManager::loop() {
   // cue never stays on glass (e.g. a Back the screen ignores).
   if (edgeCueShown && pendingAction == PendingAction::None) {
     edgeCueShown = false;
-    // Same screen and nothing else to draw: put the saved band back in the window.
-    bool restored = false;
+    // Same screen and nothing else to draw: put the saved band back and fast-refresh.
     if (edgeCueTracked && currentActivity.get() == edgeCueActivity && !requestedUpdate) {
       RenderLock lock;
       const int* b = edgeCueRect;
       renderer.writeFramebufferRegion(b[0], b[1], b[2], b[3], edgeCueBand.data());
-      restored = renderer.displayPiccoWindow(b[0], b[1], b[2], b[3]);
+      renderer.displayBuffer(HalDisplay::FAST_REFRESH);
+    } else {
+      requestedUpdate = true;
     }
     edgeCueTracked = false;
     edgeCueFailed = false;
-    if (!restored) requestedUpdate = true;
   }
 #endif
   if (requestedUpdate.exchange(false)) {

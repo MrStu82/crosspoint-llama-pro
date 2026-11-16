@@ -321,10 +321,22 @@ void TextSettingsActivity::render(RenderLock&&) {
       static constexpr StrId ROW_NAME_IDS[STYLE_ROWS] = {
           StrId::STR_FOCUS_READING, StrId::STR_GUIDE_DOTS, StrId::STR_FORCE_PARAGRAPH_INDENTS, StrId::STR_CAP_WORD_GAPS,
           StrId::STR_HYPHENATION, StrId::STR_EMBEDDED_STYLE, StrId::STR_TEXT_AA,
-          StrId::STR_DARKER_TEXT};
+          StrId::STR_DARKER_TEXT,
+#if FREEINK_DEVICE_PICCO
+          StrId::STR_DARKER_TEXT,  // FontWeight: labelled below
+#endif
+      };
       GUI.drawList(
           renderer, listRect, STYLE_ROWS, selectedItem,
+#if FREEINK_DEVICE_PICCO
+          [](int index) {
+            if (index == static_cast<int>(StyleRow::FontWeight)) return std::string("Font Weight");
+            return std::string(I18N.get(ROW_NAME_IDS[index]));
+          },
+          nullptr, nullptr,
+#else
           [](int index) { return std::string(I18N.get(ROW_NAME_IDS[index])); }, nullptr, nullptr,
+#endif
           [this](int index) { return styleValueText(index); }, true);
       confirmLabel = onTabBar ? tr(STR_FONT) : tr(STR_TOGGLE);
       break;
@@ -525,6 +537,14 @@ void TextSettingsActivity::confirmStyleRow(int row) {
     case StyleRow::DarkerText:
       SETTINGS.darkerText = (SETTINGS.darkerText + 1) % 3;
       break;
+#if FREEINK_DEVICE_PICCO
+    case StyleRow::FontWeight: {
+      RenderLock lock;  // reloads the TTF reader face (see applyFamily)
+      SETTINGS.fontWeight = (SETTINGS.fontWeight + 1) % CrossPointSettings::FONT_WEIGHT_STEPS;
+      sdFontSystem.ensureLoaded(renderer);
+      break;
+    }
+#endif
 
     default:
       return;
@@ -552,6 +572,10 @@ std::string TextSettingsActivity::styleValueText(int row) const {
     case StyleRow::DarkerText:
       if (SETTINGS.darkerText == 2) return tr(STR_BOLD_STROKES);
       return SETTINGS.darkerText ? tr(STR_DARKER) : tr(STR_NORMAL);
+#if FREEINK_DEVICE_PICCO
+    case StyleRow::FontWeight:
+      return std::to_string(SETTINGS.fontWeight);
+#endif
 
     default:
       return "";

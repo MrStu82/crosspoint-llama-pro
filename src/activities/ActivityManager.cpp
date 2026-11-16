@@ -116,6 +116,38 @@ void ActivityManager::renderTaskLoop() {
   }
 }
 
+#if FREEINK_DEVICE_PICCO
+namespace {
+// Picco system edge swipes get a small cue at the edge (stock Boox ships
+// side_edge_* assets; this is our own drawing): a tab with a home glyph at the
+// bottom, a back chevron at the side, centred on the touch along the edge.
+void drawPiccoEdgeCue(const GfxRenderer& r, MappedInputManager::EdgeSwipe edge, int x, int y) {
+  constexpr int kLong = 96;
+  constexpr int kDeep = 28;
+  constexpr int kRadius = 14;
+  const int w = r.getScreenWidth();
+  const int h = r.getScreenHeight();
+  if (edge == MappedInputManager::EdgeSwipe::Home) {
+    const int cx = std::clamp(x, kLong / 2, w - kLong / 2);
+    const int top = h - kDeep;
+    r.fillRoundedRect(cx - kLong / 2, top, kLong, kDeep, kRadius, true, true, false, false, Color::Black);
+    const int roofX[] = {cx - 11, cx, cx + 11};
+    const int roofY[] = {top + 15, top + 5, top + 15};
+    r.fillPolygon(roofX, roofY, 3, false);
+    r.fillRect(cx - 7, top + 15, 14, 8, false);
+  } else {
+    const bool left = x < w / 2;
+    const int cy = std::clamp(y, kLong / 2, h - kLong / 2);
+    const int x0 = left ? 0 : w - kDeep;
+    r.fillRoundedRect(x0, cy - kLong / 2, kDeep, kLong, kRadius, !left, left, !left, left, Color::Black);
+    r.drawLine(x0 + 18, cy - 10, x0 + 10, cy, 3, false);
+    r.drawLine(x0 + 10, cy, x0 + 18, cy + 10, 3, false);
+  }
+  r.displayBuffer(HalDisplay::FAST_REFRESH);
+}
+}  // namespace
+#endif
+
 void ActivityManager::loop() {
   // The brightness sheet is a global overlay, not an Activity — while it's open it
   // must get first refusal on every input frame (mirroring how an Activity's own
@@ -128,6 +160,17 @@ void ActivityManager::loop() {
   }
 
   if (currentActivity) {
+#if FREEINK_DEVICE_PICCO
+    int edgeX = 0;
+    int edgeY = 0;
+    const auto edge = mappedInput.piccoEdgeSwipe(&edgeX, &edgeY);
+    if (edge == MappedInputManager::EdgeSwipe::Back ||
+        (edge == MappedInputManager::EdgeSwipe::Home && !currentActivity->isHomeActivity())) {
+      RenderLock lock;
+      drawPiccoEdgeCue(renderer, edge, edgeX, edgeY);
+      edgeCueShown = true;
+    }
+#endif
     if (!currentActivity->isHomeActivity() && mappedInput.wasHomeGesture()) {
       if (currentActivity->handleHomeGesture()) {
         return;
@@ -237,6 +280,14 @@ void ActivityManager::loop() {
     }
   }
 
+#if FREEINK_DEVICE_PICCO
+  // Repaint whatever is current once the edge gesture's action has run, so the
+  // cue never stays on glass (e.g. a Back the screen ignores).
+  if (edgeCueShown && pendingAction == PendingAction::None) {
+    edgeCueShown = false;
+    requestedUpdate = true;
+  }
+#endif
   if (requestedUpdate.exchange(false)) {
     // Using direct notification to signal the render task to update
     // Increment counter so multiple rapid calls won't be lost

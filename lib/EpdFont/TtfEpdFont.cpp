@@ -162,6 +162,9 @@ void TtfEpdFont::initFace(Face& f) {
     freeink::font::FtFont::RenderOptions ro;
     ro.hinting = freeink::font::FtFont::HintingMode::Auto;
     ro.stemDarkening = true;
+#if FREEINK_DEVICE_PICCO
+    ro.embolden26_6 = embolden26_6_;
+#endif
     if (!f.ft.setRenderOptions(ro)) {
       LOG_ERR("TTF", "Auto hinting unavailable (FREEINK_FONT_ENABLE_AUTOHINT not compiled)");
     }

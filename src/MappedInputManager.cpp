@@ -245,7 +245,7 @@ MappedInputManager::RowTouch MappedInputManager::colTouch(int& col, const int le
 }
 
 #if FREEINK_DEVICE_PICCO
-MappedInputManager::EdgeSwipe MappedInputManager::piccoEdgeSwipe() const {
+MappedInputManager::EdgeSwipe MappedInputManager::piccoEdgeSwipe(int* startX, int* startY) const {
   int sx = 0;
   int sy = 0;
   int ex = 0;
@@ -257,6 +257,8 @@ MappedInputManager::EdgeSwipe MappedInputManager::piccoEdgeSwipe() const {
   if (!gpio.wasSwipe(nxs, nys, nxe, nye)) return EdgeSwipe::None;
   renderer.tapToLogical(nxs, nys, sx, sy);
   renderer.tapToLogical(nxe, nye, ex, ey);
+  if (startX) *startX = sx;
+  if (startY) *startY = sy;
   const int dx = ex - sx;
   const int dy = ey - sy;
   const int w = renderer.getScreenWidth();

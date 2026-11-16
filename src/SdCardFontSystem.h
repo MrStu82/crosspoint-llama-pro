@@ -107,6 +107,9 @@ class SdCardFontSystem {
     bool streamed = false;
     unsigned long size = 0;
     bool present = false;
+#if FREEINK_DEVICE_PICCO
+    const uint8_t* flash = nullptr;  // embedded TTF bytes (resident, never freed)
+#endif
   };
 
   // Active TTF font (at most one reader-size vector family loaded at a time).
@@ -116,6 +119,9 @@ class SdCardFontSystem {
   std::string ttfFamily_;     // loaded vector family name ("" = none)
   int ttfFontId_ = 0;         // renderer font id for ttf_ (0 = none)
   uint8_t ttfPointSize_ = 0;  // size ttf_ was built at
+#if FREEINK_DEVICE_PICCO
+  uint8_t ttfWeight_ = 0;  // SETTINGS.fontWeight ttf_ was built at
+#endif
   // UI-size TTF fallbacks (share ttfSources_); parallel to their renderer font ids.
   std::vector<std::unique_ptr<TtfEpdFont>> ttfUi_;
   std::vector<int> ttfUiIds_;

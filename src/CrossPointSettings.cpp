@@ -100,6 +100,7 @@ void CrossPointSettings::toJson(JsonDocument& doc) const {
   // Touch Zone grid — managed by TouchZoneActivity, not in SettingsList.
   JsonArray zones = doc["touchZoneActions"].to<JsonArray>();
   for (const uint8_t action : touchZoneActions) zones.add(action);
+  doc["fontWeight"] = fontWeight;
 #endif
   // Dictionary folder name — uses dynamic getter/setter in SettingsList, save manually
   if (dictionaryName[0] != '\0') {
@@ -224,6 +225,14 @@ bool CrossPointSettings::fromJson(JsonVariantConst doc) {
   strncpy(sdFontFamilyName, sfn, sizeof(sdFontFamilyName) - 1);
   sdFontFamilyName[sizeof(sdFontFamilyName) - 1] = '\0';
 #if FREEINK_DEVICE_PICCO
+  // First load since the embedded TTF shipped (no fontWeight key yet): switch to it once.
+  if (doc["fontWeight"].isNull()) {
+    strncpy(sdFontFamilyName, CROSSPOINT_EMBEDDED_TTF_FAMILY, sizeof(sdFontFamilyName) - 1);
+    fontWeight = 0;
+  } else {
+    const uint8_t w = doc["fontWeight"] | 0;
+    fontWeight = w < FONT_WEIGHT_STEPS ? w : 0;
+  }
   // Touch Zone grid: anything but 9 valid actions falls back to the default map.
   {
     JsonArrayConst zones = doc["touchZoneActions"].as<JsonArrayConst>();

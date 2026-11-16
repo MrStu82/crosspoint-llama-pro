@@ -6,6 +6,11 @@ class GfxRenderer;
 
 class MappedInputManager {
  public:
+#if FREEINK_DEVICE_PICCO
+  enum class EdgeSwipe { None, Home, Back };
+  // Edge swipe recognised this frame; optional out = swipe start (logical coords).
+  EdgeSwipe piccoEdgeSwipe(int* startX = nullptr, int* startY = nullptr) const;
+#endif
   enum class Button {
     Back,
     Confirm,
@@ -109,10 +114,6 @@ class MappedInputManager {
   bool wasHomeKeyBackGesture() const;
   // Fetch the pending swipe (if any) and map both endpoints to logical screen coords
   bool decodeSwipe(int& sx, int& sy, int& ex, int& ey) const;
-#if FREEINK_DEVICE_PICCO
-  enum class EdgeSwipe { None, Home, Back };
-  EdgeSwipe piccoEdgeSwipe() const;
-#endif
   bool listItemFromPoint(int x, int y, int& index, int itemCount, int selectedIndex, int listTop, int listHeight,
                          bool hasSubtitle) const;
   void rememberTouchHeldTime() const;

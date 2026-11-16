@@ -5,6 +5,10 @@
 
 #include <cstdint>
 
+#if FREEINK_DEVICE_PICCO
+#include <SdCardFontRegistry.h>  // CROSSPOINT_EMBEDDED_TTF_FAMILY
+#endif
+
 class CrossPointSettings : public PersistableStore<CrossPointSettings> {
  private:
   // Private constructor for singleton
@@ -312,7 +316,13 @@ class CrossPointSettings : public PersistableStore<CrossPointSettings> {
   uint8_t topBezelOffset = 0;
   uint8_t readerTopBezelOffset() const { return orientation == PORTRAIT ? topBezelOffset : 0; }
   // SD card font family name (empty = use built-in fontFamily)
+#if FREEINK_DEVICE_PICCO
+  char sdFontFamilyName[32] = CROSSPOINT_EMBEDDED_TTF_FAMILY;  // Picco default reader font: embedded TTF
+  uint8_t fontWeight = 0;                                       // 0..4, TTF reader faces only
+  static constexpr uint8_t FONT_WEIGHT_STEPS = 5;
+#else
   char sdFontFamilyName[32] = "";
+#endif
   // Dictionary folder name under /dictionaries (empty = no dictionary)
   char dictionaryName[32] = "";
   // Show hidden files/directories (starting with '.') in the file browser (0 = hidden, 1 = show)

@@ -45,6 +45,10 @@ class ActivityManager {
   // Global bottom-edge brightness quick-sheet, owned here (not per-Activity like
   // OptionPopup) since it must be reachable over any activity, including the reader.
   BrightnessSheet brightnessSheet;
+#if FREEINK_DEVICE_PICCO
+  // An edge cue is on glass; repaint once the gesture's action has settled.
+  bool edgeCueShown = false;
+#endif
 
   void exitActivity(const RenderLock& lock);
 

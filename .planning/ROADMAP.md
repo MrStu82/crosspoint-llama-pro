@@ -84,3 +84,14 @@ settings:
 ## #picco-ftfont-1116 (parent10484, 2026-11-16)
 - Phase 1 GATE (read-only): research/picco-ftfont-1116/GATE.md — DONE, awaiting go.
 - Phase 2 implement (Picco-only embedded TTF + Font Weight, one build): on parent go.
+
+## #picco-build-1116 (parent10490 + addenda 10492/10494, 2026-11-16) — one Picco build
+- Phase A fonts: embedded NotoSerif R/B/I/BI TTF default family + Font Weight 0..4 (embolden26_6 = 16*step), OFL.txt shipped.
+- Phase B tap zones: 3x3 reassignable grid, Touch Zone screen, persisted with default fallback (d3b1ff012).
+- Phase C margins: Picco text block up 20px (zero-sum viewport), footer lifted 6px off the edge.
+- Phase D edge cues: Home/Back edge-swipe cue, one FAST_REFRESH, repaint after the action.
+- Gate: X4 Pro objects identical for touched TUs, Picco compile, contract test; ONE release build on Trantor.
+
+## #picco-ota-1116 (parent10496) — Picco wireless update via stock safeboot
+- Phase 1 GATE (read-only dump analysis): research/picco-ota-1116/GATE.md.
+- Phase 2 implement: only after parent has seen the gate.

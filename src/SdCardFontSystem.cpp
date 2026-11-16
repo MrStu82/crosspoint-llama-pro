@@ -248,6 +248,9 @@ void SdCardFontSystem::freeTtfSources() {
     s.streamed = false;
     s.size = 0;
     s.present = false;
+#if FREEINK_DEVICE_PICCO
+    s.flash = nullptr;
+#endif
   }
 }
 
@@ -274,6 +277,32 @@ void SdCardFontSystem::unloadTtf(GfxRenderer& renderer) {
 
 bool SdCardFontSystem::openTtfSource(const uint8_t style, const std::string& path) {
   if (style >= 4) return false;
+#if FREEINK_DEVICE_PICCO
+  if (path.rfind(CROSSPOINT_EMBEDDED_TTF_PREFIX, 0) == 0) {
+    extern const uint8_t _binary_lib_EpdFont_builtinFonts_source_NotoSerif_NotoSerif_Regular_ttf_start[];
+    extern const uint8_t _binary_lib_EpdFont_builtinFonts_source_NotoSerif_NotoSerif_Regular_ttf_end[];
+    extern const uint8_t _binary_lib_EpdFont_builtinFonts_source_NotoSerif_NotoSerif_Bold_ttf_start[];
+    extern const uint8_t _binary_lib_EpdFont_builtinFonts_source_NotoSerif_NotoSerif_Bold_ttf_end[];
+    extern const uint8_t _binary_lib_EpdFont_builtinFonts_source_NotoSerif_NotoSerif_Italic_ttf_start[];
+    extern const uint8_t _binary_lib_EpdFont_builtinFonts_source_NotoSerif_NotoSerif_Italic_ttf_end[];
+    extern const uint8_t _binary_lib_EpdFont_builtinFonts_source_NotoSerif_NotoSerif_BoldItalic_ttf_start[];
+    extern const uint8_t _binary_lib_EpdFont_builtinFonts_source_NotoSerif_NotoSerif_BoldItalic_ttf_end[];
+    static const uint8_t* const kStart[4] = {_binary_lib_EpdFont_builtinFonts_source_NotoSerif_NotoSerif_Regular_ttf_start,
+                                             _binary_lib_EpdFont_builtinFonts_source_NotoSerif_NotoSerif_Bold_ttf_start,
+                                             _binary_lib_EpdFont_builtinFonts_source_NotoSerif_NotoSerif_Italic_ttf_start,
+                                             _binary_lib_EpdFont_builtinFonts_source_NotoSerif_NotoSerif_BoldItalic_ttf_start};
+    static const uint8_t* const kEnd[4] = {_binary_lib_EpdFont_builtinFonts_source_NotoSerif_NotoSerif_Regular_ttf_end,
+                                           _binary_lib_EpdFont_builtinFonts_source_NotoSerif_NotoSerif_Bold_ttf_end,
+                                           _binary_lib_EpdFont_builtinFonts_source_NotoSerif_NotoSerif_Italic_ttf_end,
+                                           _binary_lib_EpdFont_builtinFonts_source_NotoSerif_NotoSerif_BoldItalic_ttf_end};
+    TtfSource& s = ttfSources_[style];
+    s.flash = kStart[style];
+    s.size = static_cast<unsigned long>(kEnd[style] - kStart[style]);
+    s.streamed = false;
+    s.present = true;
+    return true;
+  }
+#endif
   // Small fonts are read fully into RAM (fastest, fewest SD reads; PSRAM when
   // present). Large fonts (e.g. multi-MB variable/CJK) STREAM from SD so the
   // whole file never sits in RAM — the handle is kept open for the font's life.
@@ -370,6 +399,10 @@ void SdCardFontSystem::addTtfSources(TtfEpdFont& font) {
     if (!s.present) continue;
     if (s.streamed) {
       font.addStreamSource(st, &SdCardFontSystem::prefixRead, &s, s.size);
+#if FREEINK_DEVICE_PICCO
+    } else if (s.flash) {
+      font.addResidentSource(st, s.flash, static_cast<uint32_t>(s.size));
+#endif
     } else {
       font.addResidentSource(st, s.bytes.data(), static_cast<uint32_t>(s.bytes.size()));
     }
@@ -425,7 +458,13 @@ void SdCardFontSystem::loadTtfFamily(const SdCardFontFamilyInfo& family, GfxRend
   const uint8_t size = SETTINGS.fontPointSize;
 
   // Already loaded, same family + size, and disk unchanged → nothing to do.
+#if FREEINK_DEVICE_PICCO
+  // Font Weight 0..4 → outline embolden 0/16/32/48/64 (26.6 px), reader face only.
+  const uint8_t weight = SETTINGS.fontWeight;
+  if (!registryWasDirty && ttf_ && ttfFamily_ == family.name && ttfPointSize_ == size && ttfWeight_ == weight) return;
+#else
   if (!registryWasDirty && ttf_ && ttfFamily_ == family.name && ttfPointSize_ == size) return;
+#endif
 
   // Reader-face glyph-cache budget (used by both the resize fast path and the
   // full load below): the default 32 KB holds ~90 CJK glyphs, but a CJK page
@@ -446,6 +485,10 @@ void SdCardFontSystem::loadTtfFamily(const SdCardFontFamilyInfo& family, GfxRend
   if (!registryWasDirty && ttf_ && ttfFamily_ == family.name) {
     renderer.unregisterTtfFont(ttfFontId_);
     renderer.removeFont(ttfFontId_);
+#if FREEINK_DEVICE_PICCO
+    ttf_->setEmbolden26_6(weight * 16);
+    ttfWeight_ = weight;
+#endif
     if (ttf_->load(size, /*twoBit=*/true, cacheBytes, maxGlyphs)) {
       ttf_->build(" ");
       ttfFontId_ = computeTtfFontId(family.name.c_str(), size);
@@ -491,6 +534,10 @@ void SdCardFontSystem::loadTtfFamily(const SdCardFontFamilyInfo& family, GfxRend
     return;
   }
   addTtfSources(*ttf_);
+#if FREEINK_DEVICE_PICCO
+  ttf_->setEmbolden26_6(weight * 16);
+  ttfWeight_ = weight;
+#endif
   const bool ok = ttf_->load(size, /*twoBit=*/true, cacheBytes, maxGlyphs);
   if (!ok) {
     // init failure is ambiguous (corrupt font vs. transient OOM inside

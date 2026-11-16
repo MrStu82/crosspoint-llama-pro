@@ -84,6 +84,11 @@ class TtfEpdFont {
   // transitions (WiFi + web server, image decode, dictionary, sleep).
   void releaseResidentCaches();
 
+#if FREEINK_DEVICE_PICCO
+  // Extra outline embolden (26.6 px) for every face; takes effect on the next load().
+  void setEmbolden26_6(int32_t strength) { embolden26_6_ = strength; }
+#endif
+
   // Optional batch pre-warm of the REGULAR face (other styles fault lazily).
   bool build(const char* utf8);
   bool addCoverage(const char* utf8);
@@ -156,6 +161,9 @@ class TtfEpdFont {
   // sink calls releaseResidentCaches() on every TTF font, and tearing down
   // the very faces mid-fault would be use-after-free.
   bool evictionLocked_ = false;
+#if FREEINK_DEVICE_PICCO
+  int32_t embolden26_6_ = 0;
+#endif
 };
 
 #endif  // CROSSPOINT_VECTOR_FONTS

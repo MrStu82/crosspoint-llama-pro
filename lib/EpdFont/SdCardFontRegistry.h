@@ -34,6 +34,13 @@ struct SdCardFontFamilyInfo {
   std::vector<uint8_t> availableSizes() const;
 };
 
+#if FREEINK_DEVICE_PICCO
+// NotoSerif R/B/I/BI TTFs linked into the Picco image (board_build.embed_files);
+// registered as a vector family whose file paths are "embedded:<style>".
+#define CROSSPOINT_EMBEDDED_TTF_FAMILY "Noto Serif TTF"
+#define CROSSPOINT_EMBEDDED_TTF_PREFIX "embedded:"
+#endif
+
 class SdCardFontRegistry {
  public:
   static constexpr int MAX_SD_FAMILIES = 128;

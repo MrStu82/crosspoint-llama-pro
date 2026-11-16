@@ -1,5 +1,10 @@
 # State — Upstream Safety/Reader Convergence
 
+## Active (2026-11-16)
+
+- #picco-build-1116 on feat/picco-fw-1115: B committed d3b1ff012; A/C/D coded, gating then one Picco release build.
+- #picco-ota-1116: phase 1 gate (read-only) in progress; no code.
+
 ## Shipped state (2026-11-15)
 
 - `main` = latest delivered X4 Pro source `6ca8b92a3` (`v1.5.0-299-g6ca8b92a3`, SDK `6fcc90a4`), fast-forwarded

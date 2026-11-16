@@ -275,29 +275,49 @@ void SdCardFontSystem::unloadTtf(GfxRenderer& renderer) {
   ttfPointSize_ = 0;
 }
 
+#if FREEINK_DEVICE_PICCO
+extern "C" {
+  extern const uint8_t _binary_lib_EpdFont_builtinFonts_source_NotoSerif_NotoSerif_Regular_ttf_start[];
+  extern const uint8_t _binary_lib_EpdFont_builtinFonts_source_NotoSerif_NotoSerif_Regular_ttf_end[];
+  extern const uint8_t _binary_lib_EpdFont_builtinFonts_source_NotoSerif_NotoSerif_Bold_ttf_start[];
+  extern const uint8_t _binary_lib_EpdFont_builtinFonts_source_NotoSerif_NotoSerif_Bold_ttf_end[];
+  extern const uint8_t _binary_lib_EpdFont_builtinFonts_source_NotoSerif_NotoSerif_Italic_ttf_start[];
+  extern const uint8_t _binary_lib_EpdFont_builtinFonts_source_NotoSerif_NotoSerif_Italic_ttf_end[];
+  extern const uint8_t _binary_lib_EpdFont_builtinFonts_source_NotoSerif_NotoSerif_BoldItalic_ttf_start[];
+  extern const uint8_t _binary_lib_EpdFont_builtinFonts_source_NotoSerif_NotoSerif_BoldItalic_ttf_end[];
+  extern const uint8_t _binary_lib_EpdFont_builtinFonts_source_NotoSans_NotoSans_Regular_ttf_start[];
+  extern const uint8_t _binary_lib_EpdFont_builtinFonts_source_NotoSans_NotoSans_Regular_ttf_end[];
+  extern const uint8_t _binary_lib_EpdFont_builtinFonts_source_NotoSans_NotoSans_Bold_ttf_start[];
+  extern const uint8_t _binary_lib_EpdFont_builtinFonts_source_NotoSans_NotoSans_Bold_ttf_end[];
+  extern const uint8_t _binary_lib_EpdFont_builtinFonts_source_NotoSans_NotoSans_Italic_ttf_start[];
+  extern const uint8_t _binary_lib_EpdFont_builtinFonts_source_NotoSans_NotoSans_Italic_ttf_end[];
+  extern const uint8_t _binary_lib_EpdFont_builtinFonts_source_NotoSans_NotoSans_BoldItalic_ttf_start[];
+  extern const uint8_t _binary_lib_EpdFont_builtinFonts_source_NotoSans_NotoSans_BoldItalic_ttf_end[];
+  extern const uint8_t _binary_lib_EpdFont_builtinFonts_source_Ubuntu_Ubuntu_Regular_ttf_start[];
+  extern const uint8_t _binary_lib_EpdFont_builtinFonts_source_Ubuntu_Ubuntu_Regular_ttf_end[];
+  extern const uint8_t _binary_lib_EpdFont_builtinFonts_source_Ubuntu_Ubuntu_Bold_ttf_start[];
+  extern const uint8_t _binary_lib_EpdFont_builtinFonts_source_Ubuntu_Ubuntu_Bold_ttf_end[];
+}
+#endif
+
 bool SdCardFontSystem::openTtfSource(const uint8_t style, const std::string& path) {
   if (style >= 4) return false;
 #if FREEINK_DEVICE_PICCO
   if (path.rfind(CROSSPOINT_EMBEDDED_TTF_PREFIX, 0) == 0) {
-    extern const uint8_t _binary_lib_EpdFont_builtinFonts_source_NotoSerif_NotoSerif_Regular_ttf_start[];
-    extern const uint8_t _binary_lib_EpdFont_builtinFonts_source_NotoSerif_NotoSerif_Regular_ttf_end[];
-    extern const uint8_t _binary_lib_EpdFont_builtinFonts_source_NotoSerif_NotoSerif_Bold_ttf_start[];
-    extern const uint8_t _binary_lib_EpdFont_builtinFonts_source_NotoSerif_NotoSerif_Bold_ttf_end[];
-    extern const uint8_t _binary_lib_EpdFont_builtinFonts_source_NotoSerif_NotoSerif_Italic_ttf_start[];
-    extern const uint8_t _binary_lib_EpdFont_builtinFonts_source_NotoSerif_NotoSerif_Italic_ttf_end[];
-    extern const uint8_t _binary_lib_EpdFont_builtinFonts_source_NotoSerif_NotoSerif_BoldItalic_ttf_start[];
-    extern const uint8_t _binary_lib_EpdFont_builtinFonts_source_NotoSerif_NotoSerif_BoldItalic_ttf_end[];
-    static const uint8_t* const kStart[4] = {_binary_lib_EpdFont_builtinFonts_source_NotoSerif_NotoSerif_Regular_ttf_start,
-                                             _binary_lib_EpdFont_builtinFonts_source_NotoSerif_NotoSerif_Bold_ttf_start,
-                                             _binary_lib_EpdFont_builtinFonts_source_NotoSerif_NotoSerif_Italic_ttf_start,
-                                             _binary_lib_EpdFont_builtinFonts_source_NotoSerif_NotoSerif_BoldItalic_ttf_start};
-    static const uint8_t* const kEnd[4] = {_binary_lib_EpdFont_builtinFonts_source_NotoSerif_NotoSerif_Regular_ttf_end,
-                                           _binary_lib_EpdFont_builtinFonts_source_NotoSerif_NotoSerif_Bold_ttf_end,
-                                           _binary_lib_EpdFont_builtinFonts_source_NotoSerif_NotoSerif_Italic_ttf_end,
-                                           _binary_lib_EpdFont_builtinFonts_source_NotoSerif_NotoSerif_BoldItalic_ttf_end};
+    static const uint8_t* const kStart[3][4] = {
+      {_binary_lib_EpdFont_builtinFonts_source_NotoSerif_NotoSerif_Regular_ttf_start, _binary_lib_EpdFont_builtinFonts_source_NotoSerif_NotoSerif_Bold_ttf_start, _binary_lib_EpdFont_builtinFonts_source_NotoSerif_NotoSerif_Italic_ttf_start, _binary_lib_EpdFont_builtinFonts_source_NotoSerif_NotoSerif_BoldItalic_ttf_start},
+      {_binary_lib_EpdFont_builtinFonts_source_NotoSans_NotoSans_Regular_ttf_start, _binary_lib_EpdFont_builtinFonts_source_NotoSans_NotoSans_Bold_ttf_start, _binary_lib_EpdFont_builtinFonts_source_NotoSans_NotoSans_Italic_ttf_start, _binary_lib_EpdFont_builtinFonts_source_NotoSans_NotoSans_BoldItalic_ttf_start},
+      {_binary_lib_EpdFont_builtinFonts_source_Ubuntu_Ubuntu_Regular_ttf_start, _binary_lib_EpdFont_builtinFonts_source_Ubuntu_Ubuntu_Bold_ttf_start, nullptr, nullptr}};
+    static const uint8_t* const kEnd[3][4] = {
+      {_binary_lib_EpdFont_builtinFonts_source_NotoSerif_NotoSerif_Regular_ttf_end, _binary_lib_EpdFont_builtinFonts_source_NotoSerif_NotoSerif_Bold_ttf_end, _binary_lib_EpdFont_builtinFonts_source_NotoSerif_NotoSerif_Italic_ttf_end, _binary_lib_EpdFont_builtinFonts_source_NotoSerif_NotoSerif_BoldItalic_ttf_end},
+      {_binary_lib_EpdFont_builtinFonts_source_NotoSans_NotoSans_Regular_ttf_end, _binary_lib_EpdFont_builtinFonts_source_NotoSans_NotoSans_Bold_ttf_end, _binary_lib_EpdFont_builtinFonts_source_NotoSans_NotoSans_Italic_ttf_end, _binary_lib_EpdFont_builtinFonts_source_NotoSans_NotoSans_BoldItalic_ttf_end},
+      {_binary_lib_EpdFont_builtinFonts_source_Ubuntu_Ubuntu_Regular_ttf_end, _binary_lib_EpdFont_builtinFonts_source_Ubuntu_Ubuntu_Bold_ttf_end, nullptr, nullptr}};
+    const size_t prefixLen = sizeof(CROSSPOINT_EMBEDDED_TTF_PREFIX) - 1;
+    const unsigned fam = path.size() > prefixLen ? static_cast<unsigned>(path[prefixLen] - '0') : 3u;
+    if (fam >= 3 || !kStart[fam][style]) return false;
     TtfSource& s = ttfSources_[style];
-    s.flash = kStart[style];
-    s.size = static_cast<unsigned long>(kEnd[style] - kStart[style]);
+    s.flash = kStart[fam][style];
+    s.size = static_cast<unsigned long>(kEnd[fam][style] - kStart[fam][style]);
     s.streamed = false;
     s.present = true;
     return true;

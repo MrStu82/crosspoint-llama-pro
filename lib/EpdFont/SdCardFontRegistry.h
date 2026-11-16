@@ -35,10 +35,17 @@ struct SdCardFontFamilyInfo {
 };
 
 #if FREEINK_DEVICE_PICCO
-// NotoSerif R/B/I/BI TTFs linked into the Picco image (board_build.embed_files);
-// registered as a vector family whose file paths are "embedded:<style>".
+// Licensed TTFs linked into the Picco image (board_build.embed_files), each
+// registered as a vector family whose file paths are "embedded:<family><style>".
+// Family 0 NotoSerif R/B/I/BI, 1 NotoSans R/B/I/BI (OFL), 2 Ubuntu R/B (UFL).
 #define CROSSPOINT_EMBEDDED_TTF_FAMILY "Noto Serif TTF"
 #define CROSSPOINT_EMBEDDED_TTF_PREFIX "embedded:"
+struct CrossPointEmbeddedTtfFamily {
+  const char* name;
+  uint8_t styles;  // style roles 0..styles-1 are embedded
+};
+constexpr CrossPointEmbeddedTtfFamily CROSSPOINT_EMBEDDED_TTF_FAMILIES[] = {
+    {CROSSPOINT_EMBEDDED_TTF_FAMILY, 4}, {"Noto Sans TTF", 4}, {"Ubuntu TTF", 2}};
 #endif
 
 class SdCardFontRegistry {

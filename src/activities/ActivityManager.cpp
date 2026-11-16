@@ -7,6 +7,7 @@
 #include <VectorFontSupport.h>
 
 #include <algorithm>
+#include <cmath>
 
 #include "CrossPointSettings.h"
 #include "CrossPointState.h"
@@ -118,30 +119,65 @@ void ActivityManager::renderTaskLoop() {
 
 #if FREEINK_DEVICE_PICCO
 namespace {
-// Picco system edge swipes get a small cue at the edge (stock Boox ships
-// side_edge_* assets; this is our own drawing): a tab with a home glyph at the
-// bottom, a back chevron at the side, centred on the touch along the edge.
-void drawPiccoEdgeCue(const GfxRenderer& r, MappedInputManager::EdgeSwipe edge, int x, int y) {
-  constexpr int kLong = 96;
-  constexpr int kDeep = 28;
-  constexpr int kRadius = 14;
+// Picco system edge swipes get a cue matching the stock Boox side_edge_* asset
+// geometry (144x48 / 48x144, light-grey dome flush on the edge, outlined glyph),
+// drawn by our own code and centred on its edge. kDomeRows rows run tip -> edge.
+constexpr int kDomeRows = 48;
+
+// Dome half-width at row r (0 = tip, 47 = on the edge): a sqrt bell with a
+// radius-22 fillet flaring into the edge (tip ~9px wide, base 135px; within
+// 2px of the stock outline on every row).
+int piccoDomeHalf(int r) {
+  float half = 4.0f + 6.0f * std::sqrt(static_cast<float>(r));
+  if (r > 25) {
+    const float t = static_cast<float>(r - 25);
+    half += 22.0f - std::sqrt(484.0f - t * t);
+  }
+  return static_cast<int>(half + 0.5f);
+}
+
+// Light grey: one black pixel per 8 (every other row, every 4th column, staggered).
+bool piccoDomeDither(int u, int v) { return (v & 1) && ((u + 2 * ((v >> 1) & 1)) & 3) == 2; }
+
+// u runs along the edge, d is the distance from the edge (0 = on it).
+void piccoDomePixel(const GfxRenderer& r, MappedInputManager::EdgeSwipe edge, bool left, int u, int d, bool black) {
   const int w = r.getScreenWidth();
   const int h = r.getScreenHeight();
   if (edge == MappedInputManager::EdgeSwipe::Home) {
-    const int cx = std::clamp(x, kLong / 2, w - kLong / 2);
-    const int top = h - kDeep;
-    r.fillRoundedRect(cx - kLong / 2, top, kLong, kDeep, kRadius, true, true, false, false, Color::Black);
-    const int roofX[] = {cx - 11, cx, cx + 11};
-    const int roofY[] = {top + 15, top + 5, top + 15};
-    r.fillPolygon(roofX, roofY, 3, false);
-    r.fillRect(cx - 7, top + 15, 14, 8, false);
+    r.drawPixel(u, h - 1 - d, black);
   } else {
-    const bool left = x < w / 2;
-    const int cy = std::clamp(y, kLong / 2, h - kLong / 2);
-    const int x0 = left ? 0 : w - kDeep;
-    r.fillRoundedRect(x0, cy - kLong / 2, kDeep, kLong, kRadius, !left, left, !left, left, Color::Black);
-    r.drawLine(x0 + 18, cy - 10, x0 + 10, cy, 3, false);
-    r.drawLine(x0 + 10, cy, x0 + 18, cy + 10, 3, false);
+    r.drawPixel(left ? d : w - 1 - d, u, black);
+  }
+}
+
+void drawPiccoEdgeCue(const GfxRenderer& r, MappedInputManager::EdgeSwipe edge, int x) {
+  const int w = r.getScreenWidth();
+  const int h = r.getScreenHeight();
+  const bool home = edge == MappedInputManager::EdgeSwipe::Home;
+  const bool left = x < w / 2;
+  const int c = home ? w / 2 : h / 2;
+  for (int row = 0; row < kDomeRows; ++row) {
+    const int d = kDomeRows - 1 - row;
+    const int half = piccoDomeHalf(row);
+    for (int u = c - half; u <= c + half; ++u) {
+      piccoDomePixel(r, edge, left, u, d, piccoDomeDither(u, row));
+    }
+  }
+  if (home) {
+    // Outlined house, 2px strokes: apex 35px off the edge, floor 14px off it.
+    const int top = h - 35;
+    r.drawLine(c - 11, top + 9, c, top, 2, true);
+    r.drawLine(c, top, c + 11, top + 9, 2, true);
+    r.drawLine(c - 8, top + 9, c - 8, top + 20, 2, true);
+    r.drawLine(c + 8, top + 9, c + 8, top + 20, 2, true);
+    r.drawLine(c - 8, top + 20, c + 8, top + 20, 2, true);
+    r.drawLine(c, top + 13, c, top + 16, 2, true);
+  } else {
+    // Back chevron pointing off the edge: apex 18px in, arms 9px deeper, 20px tall.
+    const int tip = left ? 18 : w - 1 - 18;
+    const int arm = left ? tip + 9 : tip - 9;
+    r.drawLine(arm, c - 10, tip, c, 2, true);
+    r.drawLine(tip, c, arm, c + 10, 2, true);
   }
   r.displayBuffer(HalDisplay::FAST_REFRESH);
 }
@@ -162,12 +198,10 @@ void ActivityManager::loop() {
   if (currentActivity) {
 #if FREEINK_DEVICE_PICCO
     int edgeX = 0;
-    int edgeY = 0;
-    const auto edge = mappedInput.piccoEdgeSwipe(&edgeX, &edgeY);
-    if (edge == MappedInputManager::EdgeSwipe::Back ||
-        (edge == MappedInputManager::EdgeSwipe::Home && !currentActivity->isHomeActivity())) {
+    const auto edge = mappedInput.piccoEdgeSwipe(&edgeX);
+    if (edge != MappedInputManager::EdgeSwipe::None) {
       RenderLock lock;
-      drawPiccoEdgeCue(renderer, edge, edgeX, edgeY);
+      drawPiccoEdgeCue(renderer, edge, edgeX);
       edgeCueShown = true;
     }
 #endif

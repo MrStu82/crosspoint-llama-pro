@@ -398,12 +398,14 @@ bool SdCardFontRegistry::discover() {
   scanRoot(FONTS_DIR_HIDDEN, families_);
   scanRoot(FONTS_DIR_VISIBLE, families_);
 #if FREEINK_DEVICE_PICCO
-  {
+  for (size_t fam = 0; fam < sizeof(CROSSPOINT_EMBEDDED_TTF_FAMILIES) / sizeof(CROSSPOINT_EMBEDDED_TTF_FAMILIES[0]);
+       ++fam) {
     SdCardFontFamilyInfo embedded;
-    embedded.name = CROSSPOINT_EMBEDDED_TTF_FAMILY;
+    embedded.name = CROSSPOINT_EMBEDDED_TTF_FAMILIES[fam].name;
     embedded.vector = true;
-    for (uint8_t style = 0; style < 4; ++style) {
-      embedded.files.push_back({std::string(CROSSPOINT_EMBEDDED_TTF_PREFIX) + char('0' + style), 0, style});
+    for (uint8_t style = 0; style < CROSSPOINT_EMBEDDED_TTF_FAMILIES[fam].styles; ++style) {
+      embedded.files.push_back(
+          {std::string(CROSSPOINT_EMBEDDED_TTF_PREFIX) + char('0' + fam) + char('0' + style), 0, style});
     }
     families_.push_back(std::move(embedded));
   }

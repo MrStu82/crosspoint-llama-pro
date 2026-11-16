@@ -2,6 +2,7 @@
 
 #include <BoardConfig.h>
 #include <GfxRenderer.h>
+#include <HalStorage.h>
 #include <Logging.h>
 #include <Memory.h>
 #include <WiFi.h>
@@ -32,6 +33,8 @@
 #include "StatusBarSettingsActivity.h"
 #include "TextSettingsActivity.h"
 #include "TouchZoneActivity.h"
+#include "PiccoFirmwareUpdateActivity.h"
+#include "network/PiccoUpdate.h"
 #include "activities/network/WifiSelectionActivity.h"
 #include "activities/util/IntervalSelectionActivity.h"
 #include "components/UITheme.h"
@@ -63,6 +66,7 @@ StrId hardcoverImportStatusString(const HardcoverTokenImport::Status status) {
 #if FREEINK_DEVICE_PICCO
 std::string settingName(const SettingInfo& setting) {
   if (setting.action == SettingAction::TouchZone) return "Touch Zone";
+  if (setting.action == SettingAction::PiccoFirmwareUpdate) return "Firmware update";
   return std::string(I18N.get(setting.nameId));
 }
 #endif
@@ -96,6 +100,11 @@ std::string settingValueText(const SettingInfo& setting) {
       valueText = std::to_string(SETTINGS.*(setting.valuePtr));
     }
   }
+#if FREEINK_DEVICE_PICCO
+  if (setting.action == SettingAction::PiccoFirmwareUpdate) {
+    valueText = Storage.exists(picco_update::FIRMWARE_PATH) ? "Available" : "None";
+  }
+#endif
   return valueText;
 }
 }  // namespace
@@ -158,6 +167,9 @@ void SettingsActivity::rebuildSettingsLists() {
 #if !FREEINK_DEVICE_PICCO
   // Picco has one app slot (stock partitions_picco.csv); SD flashing refuses.
   systemSettings.push_back(SettingInfo::Action(StrId::STR_SD_FIRMWARE_UPDATE, SettingAction::SdFirmwareUpdate));
+#else
+  // Label comes from settingName(); hands /update/firmware.bin to the stock safeboot installer.
+  systemSettings.push_back(SettingInfo::Action(StrId::STR_SD_FIRMWARE_UPDATE, SettingAction::PiccoFirmwareUpdate));
 #endif
   #ifndef SIMULATOR
   if (BoardConfig::hasUsbMassStorage()) {
@@ -543,6 +555,9 @@ void SettingsActivity::toggleCurrentSetting() {
 #if FREEINK_DEVICE_PICCO
       case SettingAction::TouchZone:
         startActivityForResult(std::make_unique<TouchZoneActivity>(renderer, mappedInput), resultHandler);
+        break;
+      case SettingAction::PiccoFirmwareUpdate:
+        startActivityForResult(std::make_unique<PiccoFirmwareUpdateActivity>(renderer, mappedInput), resultHandler);
         break;
 #endif
       case SettingAction::RemapFrontButtons:

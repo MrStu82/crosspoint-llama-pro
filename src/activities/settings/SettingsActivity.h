@@ -33,6 +33,7 @@ enum class SettingAction {
   DebugPanel,
 #if FREEINK_DEVICE_PICCO
   TouchZone,
+  PiccoFirmwareUpdate,
 #endif
 };
 

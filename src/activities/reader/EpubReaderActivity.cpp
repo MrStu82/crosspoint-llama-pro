@@ -574,7 +574,7 @@ void EpubReaderActivity::loop() {
     completionSaved = false;
   }
 
-  const auto touch = ReaderUtils::detectTouchPageTurn(renderer, mappedInput, /*middleMenu=*/true);
+  const auto touch = ReaderUtils::detectTouchPageTurn(renderer, mappedInput, /*zoneGrid=*/true);
   if (ReaderUtils::isPiccoMenuHold(touch)) {
     openReaderMenu();
     return;
@@ -663,7 +663,7 @@ void EpubReaderActivity::loop() {
   // Upward swipe from the bottom edge -> text settings directly. Global Quick
   // Settings owns the opposite top-edge/downward gesture, so they cannot collide.
 #if FREEINK_DEVICE_PICCO
-  const bool openTextSettings = ReaderUtils::isTouchMenuGesture(mappedInput) || touch.menu;
+  const bool openTextSettings = ReaderUtils::isTouchMenuGesture(mappedInput) || touch.textSettings;
 #else
   const bool openTextSettings = ReaderUtils::isTouchMenuGesture(mappedInput);
 #endif

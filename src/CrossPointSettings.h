@@ -329,6 +329,26 @@ class CrossPointSettings : public PersistableStore<CrossPointSettings> {
   uint8_t tiltPageTurn = TILT_OFF;
   // Touch screen reader zones/gestures on boards with a touch controller.
   uint8_t touchReaderControls = TOUCH_READER_ON;
+#if FREEINK_DEVICE_PICCO
+  // Picco reader 3x3 tap grid (Settings > Controls > Touch Zone), row-major cells.
+  enum TOUCH_ZONE_ACTION : uint8_t {
+    TOUCH_ZONE_NONE = 0,
+    TOUCH_ZONE_PREV_PAGE,
+    TOUCH_ZONE_NEXT_PAGE,
+    TOUCH_ZONE_TEXT_SETTINGS,
+    TOUCH_ZONE_READER_MENU,
+    TOUCH_ZONE_ACTION_COUNT
+  };
+  static constexpr uint8_t TOUCH_ZONE_CELLS = 9;
+  static constexpr uint8_t DEFAULT_TOUCH_ZONES[TOUCH_ZONE_CELLS] = {
+      TOUCH_ZONE_PREV_PAGE, TOUCH_ZONE_TEXT_SETTINGS, TOUCH_ZONE_NEXT_PAGE,
+      TOUCH_ZONE_PREV_PAGE, TOUCH_ZONE_TEXT_SETTINGS, TOUCH_ZONE_NEXT_PAGE,
+      TOUCH_ZONE_PREV_PAGE, TOUCH_ZONE_TEXT_SETTINGS, TOUCH_ZONE_NEXT_PAGE};
+  uint8_t touchZoneActions[TOUCH_ZONE_CELLS] = {
+      TOUCH_ZONE_PREV_PAGE, TOUCH_ZONE_TEXT_SETTINGS, TOUCH_ZONE_NEXT_PAGE,
+      TOUCH_ZONE_PREV_PAGE, TOUCH_ZONE_TEXT_SETTINGS, TOUCH_ZONE_NEXT_PAGE,
+      TOUCH_ZONE_PREV_PAGE, TOUCH_ZONE_TEXT_SETTINGS, TOUCH_ZONE_NEXT_PAGE};
+#endif
   // Language setting (Language enum index, default 0 = EN)
   uint8_t language = 0;
   // Quick Resume: keep current content visible with moon icon instead of showing a static sleep screen.

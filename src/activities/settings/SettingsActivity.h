@@ -31,6 +31,9 @@ enum class SettingAction {
   HardcoverImport,
   HardcoverForget,
   DebugPanel,
+#if FREEINK_DEVICE_PICCO
+  TouchZone,
+#endif
 };
 
 struct SettingInfo {

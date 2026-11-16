@@ -96,6 +96,11 @@ void CrossPointSettings::toJson(JsonDocument& doc) const {
   if (sdFontFamilyName[0] != '\0') {
     doc["sdFontFamilyName"] = sdFontFamilyName;
   }
+#if FREEINK_DEVICE_PICCO
+  // Touch Zone grid — managed by TouchZoneActivity, not in SettingsList.
+  JsonArray zones = doc["touchZoneActions"].to<JsonArray>();
+  for (const uint8_t action : touchZoneActions) zones.add(action);
+#endif
   // Dictionary folder name — uses dynamic getter/setter in SettingsList, save manually
   if (dictionaryName[0] != '\0') {
     doc["dictionaryName"] = dictionaryName;
@@ -218,6 +223,19 @@ bool CrossPointSettings::fromJson(JsonVariantConst doc) {
   const char* sfn = doc["sdFontFamilyName"] | "";
   strncpy(sdFontFamilyName, sfn, sizeof(sdFontFamilyName) - 1);
   sdFontFamilyName[sizeof(sdFontFamilyName) - 1] = '\0';
+#if FREEINK_DEVICE_PICCO
+  // Touch Zone grid: anything but 9 valid actions falls back to the default map.
+  {
+    JsonArrayConst zones = doc["touchZoneActions"].as<JsonArrayConst>();
+    bool valid = zones.size() == TOUCH_ZONE_CELLS;
+    for (size_t i = 0; valid && i < TOUCH_ZONE_CELLS; ++i) {
+      valid = zones[i].is<uint8_t>() && zones[i].as<uint8_t>() < TOUCH_ZONE_ACTION_COUNT;
+    }
+    for (size_t i = 0; i < TOUCH_ZONE_CELLS; ++i) {
+      touchZoneActions[i] = valid ? zones[i].as<uint8_t>() : DEFAULT_TOUCH_ZONES[i];
+    }
+  }
+#endif
   if (storedFontFamily == LEGACY_OPENDYSLEXIC && sdFontFamilyName[0] == '\0') {
     fontFamily = NOTOSERIF;
     strncpy(sdFontFamilyName, "OpenDyslexic", sizeof(sdFontFamilyName) - 1);

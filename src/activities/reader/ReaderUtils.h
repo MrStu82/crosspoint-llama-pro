@@ -1,6 +1,7 @@
 #pragma once
 
 #include <CrossPointSettings.h>
+#include <algorithm>
 #include <GfxRenderer.h>
 #include <HalGPIO.h>
 #include <HalTiltSensor.h>
@@ -20,7 +21,6 @@ constexpr unsigned long BOOKMARK_MESSAGE_DURATION_MS = 2500;
 
 enum ReaderTouchAction : freeink::ui::ActionId {
   READER_TOUCH_PREV = 1,
-  READER_TOUCH_MENU = 2,
   READER_TOUCH_NEXT = 3,
 };
 
@@ -74,7 +74,8 @@ struct TouchPageTurn {
   bool next;
   unsigned long heldMs;
 #if FREEINK_DEVICE_PICCO
-  bool menu = false;  // EPUB middle column: open text settings
+  bool textSettings = false;  // Touch Zone cell actions (EPUB reader only)
+  bool readerMenu = false;
 #endif
 };
 
@@ -86,16 +87,16 @@ inline bool shouldOpenReaderTools(const TouchPageTurn& touch) {
 // Picco has no Confirm key: a page hold (> SKIP_HOLD_MS) is its touch way into the reader menu.
 inline bool isPiccoMenuHold(const TouchPageTurn& touch) {
 #if FREEINK_DEVICE_PICCO
-  return (touch.prev || touch.next) && touch.heldMs > SKIP_HOLD_MS;
+  return touch.readerMenu || ((touch.prev || touch.next) && touch.heldMs > SKIP_HOLD_MS);
 #else
   (void)touch;
   return false;
 #endif
 }
 
-// middleMenu: on Picco the middle third opens text settings instead of turning forward.
+// zoneGrid: on Picco, map the tap through SETTINGS.touchZoneActions (3x3) instead of prev/next thirds.
 inline TouchPageTurn detectTouchPageTurn(GfxRenderer& renderer, const MappedInputManager& input,
-                                         bool middleMenu = false) {
+                                         bool zoneGrid = false) {
   TouchPageTurn result{false, false, 0};
   if (!SETTINGS.touchReaderControls || !input.hasTouch()) {
     return result;
@@ -109,31 +110,32 @@ inline TouchPageTurn detectTouchPageTurn(GfxRenderer& renderer, const MappedInpu
 
   const int16_t width = static_cast<int16_t>(renderer.getScreenWidth());
   const int16_t height = static_cast<int16_t>(renderer.getScreenHeight());
-  const int16_t previousZoneWidth = width / 3;
 #if FREEINK_DEVICE_PICCO
-  const int16_t menuZoneWidth = middleMenu ? previousZoneWidth : 0;
-  const int16_t nextZoneX = static_cast<int16_t>(previousZoneWidth + menuZoneWidth);
-  const freeink::ui::TapZone zones[] = {
-      {freeink::ui::Rect{0, 0, previousZoneWidth, height}, READER_TOUCH_PREV},
-      {freeink::ui::Rect{previousZoneWidth, 0, menuZoneWidth, height}, READER_TOUCH_MENU},  // zero width = no zone
-      {freeink::ui::Rect{nextZoneX, 0, static_cast<int16_t>(width - nextZoneX), height}, READER_TOUCH_NEXT},
-  };
+  if (zoneGrid) {
+    const int col = std::min(2, std::max(0, x * 3 / width));
+    const int row = std::min(2, std::max(0, y * 3 / height));
+    const uint8_t action = SETTINGS.touchZoneActions[row * 3 + col];
+    result.prev = action == CrossPointSettings::TOUCH_ZONE_PREV_PAGE;
+    result.next = action == CrossPointSettings::TOUCH_ZONE_NEXT_PAGE;
+    result.textSettings = action == CrossPointSettings::TOUCH_ZONE_TEXT_SETTINGS;
+    result.readerMenu = action == CrossPointSettings::TOUCH_ZONE_READER_MENU;
+    result.heldMs = gpio.lastTouchHeldMs();
+    return result;
+  }
 #else
-  (void)middleMenu;
+  (void)zoneGrid;
+#endif
+  const int16_t previousZoneWidth = width / 3;
   const freeink::ui::TapZone zones[] = {
       {freeink::ui::Rect{0, 0, previousZoneWidth, height}, READER_TOUCH_PREV},
       {freeink::ui::Rect{previousZoneWidth, 0, static_cast<int16_t>(width - previousZoneWidth), height},
        READER_TOUCH_NEXT},
   };
-#endif
 
   for (const auto& zone : zones) {
     if (!zone.enabled || !zone.rect.contains(static_cast<int16_t>(x), static_cast<int16_t>(y))) continue;
     result.prev = zone.action == READER_TOUCH_PREV;
     result.next = zone.action == READER_TOUCH_NEXT;
-#if FREEINK_DEVICE_PICCO
-    result.menu = zone.action == READER_TOUCH_MENU;
-#endif
     break;
   }
   result.heldMs = gpio.lastTouchHeldMs();

@@ -31,6 +31,7 @@
 #include "util/HardcoverTokenImport.h"
 #include "StatusBarSettingsActivity.h"
 #include "TextSettingsActivity.h"
+#include "TouchZoneActivity.h"
 #include "activities/network/WifiSelectionActivity.h"
 #include "activities/util/IntervalSelectionActivity.h"
 #include "components/UITheme.h"
@@ -57,6 +58,13 @@ StrId hardcoverImportStatusString(const HardcoverTokenImport::Status status) {
       break;
   }
   return StrId::STR_HARDCOVER_IMPORT_NO_FILE;
+}
+
+std::string settingName(const SettingInfo& setting) {
+#if FREEINK_DEVICE_PICCO
+  if (setting.action == SettingAction::TouchZone) return "Touch Zone";
+#endif
+  return std::string(I18N.get(setting.nameId));
 }
 
 std::string settingValueText(const SettingInfo& setting) {
@@ -135,6 +143,10 @@ void SettingsActivity::rebuildSettingsLists() {
     controlsSettings.insert(controlsSettings.begin(),
                             SettingInfo::Action(StrId::STR_REMAP_FRONT_BUTTONS, SettingAction::RemapFrontButtons));
   }
+#if FREEINK_DEVICE_PICCO
+  // Label comes from settingName(); the StrId is only a placeholder.
+  controlsSettings.push_back(SettingInfo::Action(StrId::STR_TOUCH_READER_CONTROLS, SettingAction::TouchZone));
+#endif
   systemSettings.push_back(SettingInfo::Action(StrId::STR_WIFI_NETWORKS, SettingAction::Network));
   systemSettings.push_back(SettingInfo::Action(StrId::STR_KOREADER_SYNC, SettingAction::KOReaderSync));
   systemSettings.push_back(SettingInfo::Action(StrId::STR_OPDS_SERVERS, SettingAction::OPDSBrowser));
@@ -528,6 +540,11 @@ void SettingsActivity::toggleCurrentSetting() {
     auto resultHandler = [this](const ActivityResult&) { SETTINGS.saveToFile(); };
 
     switch (setting.action) {
+#if FREEINK_DEVICE_PICCO
+      case SettingAction::TouchZone:
+        startActivityForResult(std::make_unique<TouchZoneActivity>(renderer, mappedInput), resultHandler);
+        break;
+#endif
       case SettingAction::RemapFrontButtons:
         startActivityForResult(std::make_unique<ButtonRemapActivity>(renderer, mappedInput), resultHandler);
         break;
@@ -719,7 +736,7 @@ void SettingsActivity::render(RenderLock&&) {
   GUI.drawList(
       renderer, listRect,
       settingsCount, selectedSettingIndex - 1,
-      [&settings](int index) { return std::string(I18N.get(settings[index].nameId)); }, nullptr, nullptr,
+      [&settings](int index) { return settingName(settings[index]); }, nullptr, nullptr,
       [&settings](int i) { return settingValueText(settings[i]); },
       true);
 
@@ -764,7 +781,7 @@ void SettingsActivity::renderInkPoint() {
   rows.count = settingsCount;
   rows.selected = selectedSettingIndex - 1;
   rows.pageItems = hardcoverStatus.empty() ? InkPointList::kPageItems : InkPointList::kNotePageItems;
-  rows.label = [&settings](const int i) { return std::string(I18N.get(settings[i].nameId)); };
+  rows.label = [&settings](const int i) { return settingName(settings[i]); };
   rows.value = [&settings](const int i) { return settingValueText(settings[i]); };
   InkPointList::draw(renderer, I18N.get(categoryNames[selectedCategoryIndex]), rows, status);
 

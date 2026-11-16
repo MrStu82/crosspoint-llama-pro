@@ -122,6 +122,8 @@ constexpr float BOTTOM_EDGE_BRIGHTNESS_SHEET_GESTURE_FRAC_Y = 0.14f;
 #if FREEINK_DEVICE_PICCO
 // Picco has no Back/Home keys: side-edge inward swipe = Back, bottom-edge upward swipe = Home.
 constexpr int PICCO_SIDE_EDGE_PX = 40;
+// Held travel before an edge swipe is recognised (InputManager's private TOUCH_SWIPE_MIN_PX).
+constexpr int PICCO_EDGE_TRACK_MIN_PX = 60;
 #endif
 constexpr unsigned long TOUCH_DOWN_SELECT_DELAY_MS = 90;
 constexpr unsigned long TOUCH_HELD_OVERRIDE_WINDOW_MS = 250;
@@ -245,7 +247,29 @@ MappedInputManager::RowTouch MappedInputManager::colTouch(int& col, const int le
 }
 
 #if FREEINK_DEVICE_PICCO
+namespace {
+// Edge-swipe classification shared by the release (flick) and held-tracking paths.
+MappedInputManager::EdgeSwipe classifyPiccoEdge(const GfxRenderer& renderer, int sx, int sy, int ex, int ey) {
+  using EdgeSwipe = MappedInputManager::EdgeSwipe;
+  const int dx = ex - sx;
+  const int dy = ey - sy;
+  const int w = renderer.getScreenWidth();
+  const int h = renderer.getScreenHeight();
+  if (std::abs(dy) > std::abs(dx)) {
+    const int bottomEdgeTop = static_cast<int>(h * (1.0f - BOTTOM_EDGE_BRIGHTNESS_SHEET_GESTURE_FRAC_Y));
+    return (dy < 0 && sy >= bottomEdgeTop) ? EdgeSwipe::Home : EdgeSwipe::None;
+  }
+  if ((sx <= PICCO_SIDE_EDGE_PX && dx > 0) || (sx >= w - PICCO_SIDE_EDGE_PX && dx < 0)) return EdgeSwipe::Back;
+  return EdgeSwipe::None;
+}
+}  // namespace
+
 MappedInputManager::EdgeSwipe MappedInputManager::piccoEdgeSwipe(int* startX, int* startY) const {
+  if (piccoReleased != EdgeSwipe::None) {
+    if (startX) *startX = piccoStartX;
+    if (startY) *startY = piccoStartY;
+    return piccoReleased;
+  }
   int sx = 0;
   int sy = 0;
   int ex = 0;
@@ -259,16 +283,43 @@ MappedInputManager::EdgeSwipe MappedInputManager::piccoEdgeSwipe(int* startX, in
   renderer.tapToLogical(nxe, nye, ex, ey);
   if (startX) *startX = sx;
   if (startY) *startY = sy;
-  const int dx = ex - sx;
-  const int dy = ey - sy;
-  const int w = renderer.getScreenWidth();
-  const int h = renderer.getScreenHeight();
-  if (std::abs(dy) > std::abs(dx)) {
-    const int bottomEdgeTop = static_cast<int>(h * (1.0f - BOTTOM_EDGE_BRIGHTNESS_SHEET_GESTURE_FRAC_Y));
-    return (dy < 0 && sy >= bottomEdgeTop) ? EdgeSwipe::Home : EdgeSwipe::None;
+  return classifyPiccoEdge(renderer, sx, sy, ex, ey);
+}
+
+void MappedInputManager::updatePiccoEdge() {
+  piccoReleased = EdgeSwipe::None;
+  int x = 0;
+  int y = 0;
+  float nx = 0.0f;
+  float ny = 0.0f;
+  if (gpio.wasTouchDown(nx, ny)) {
+    renderer.tapToLogical(nx, ny, x, y);
+    piccoDown = true;
+    piccoHeld = EdgeSwipe::None;
+    piccoStartX = x;
+    piccoStartY = y;
   }
-  if ((sx <= PICCO_SIDE_EDGE_PX && dx > 0) || (sx >= w - PICCO_SIDE_EDGE_PX && dx < 0)) return EdgeSwipe::Back;
-  return EdgeSwipe::None;
+  if (piccoDown && isScreenTouchHeld(x, y)) {
+    piccoX = x;
+    piccoY = y;
+    if (piccoHeld == EdgeSwipe::None &&
+        std::max(std::abs(x - piccoStartX), std::abs(y - piccoStartY)) >= PICCO_EDGE_TRACK_MIN_PX) {
+      piccoHeld = classifyPiccoEdge(renderer, piccoStartX, piccoStartY, x, y);
+    }
+    return;
+  }
+  if (piccoDown) {
+    piccoDown = false;
+    piccoReleased = piccoHeld;
+    piccoHeld = EdgeSwipe::None;
+  }
+}
+
+MappedInputManager::EdgeSwipe MappedInputManager::piccoEdgeHeld(int& x, int& y, int& startX) const {
+  x = piccoX;
+  y = piccoY;
+  startX = piccoStartX;
+  return piccoHeld;
 }
 #endif
 

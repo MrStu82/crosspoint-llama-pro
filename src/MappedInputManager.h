@@ -10,6 +10,12 @@ class MappedInputManager {
   enum class EdgeSwipe { None, Home, Back };
   // Edge swipe recognised this frame; optional out = swipe start (logical coords).
   EdgeSwipe piccoEdgeSwipe(int* startX = nullptr, int* startY = nullptr) const;
+  // Once per frame after gpio.update(): follows a held edge swipe and latches its
+  // release (any duration) as this frame's piccoEdgeSwipe().
+  void updatePiccoEdge();
+  // Edge swipe recognised with the finger still down; out = current finger and
+  // swipe start (logical coords).
+  EdgeSwipe piccoEdgeHeld(int& x, int& y, int& startX) const;
 #endif
   enum class Button {
     Back,
@@ -118,6 +124,15 @@ class MappedInputManager {
                          bool hasSubtitle) const;
   void rememberTouchHeldTime() const;
 
+#if FREEINK_DEVICE_PICCO
+  EdgeSwipe piccoHeld = EdgeSwipe::None;
+  EdgeSwipe piccoReleased = EdgeSwipe::None;
+  bool piccoDown = false;
+  int piccoStartX = 0;
+  int piccoStartY = 0;
+  int piccoX = 0;
+  int piccoY = 0;
+#endif
   mutable bool touchHeldOverrideValid = false;
   mutable unsigned long touchHeldOverrideMs = 0;
   mutable unsigned long touchHeldOverrideAt = 0;

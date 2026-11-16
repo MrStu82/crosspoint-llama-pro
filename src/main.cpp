@@ -706,6 +706,7 @@ void loop() {
   gpio.update();
 #if FREEINK_DEVICE_PICCO
   handleSlideSwitch();
+  mappedInputManager.updatePiccoEdge();
 #endif
   halTiltSensor.update(SETTINGS.tiltPageTurn, SETTINGS.orientation, activityManager.isReaderActivity());
 

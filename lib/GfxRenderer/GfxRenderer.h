@@ -254,6 +254,10 @@ class GfxRenderer {
   // rect doesn't produce a valid aligned region. Debug-only today — see
   // SettingsActivity's header-long-press panel-proof trigger.
   void displayWindow(int x, int y, int width, int height, bool turnOffScreen = false) const;
+#if FREEINK_DEVICE_PICCO
+  // Picco edge cue only: fast refresh of a logical rect; false = caller refreshes full.
+  bool displayPiccoWindow(int x, int y, int width, int height) const;
+#endif
   void invertScreen() const;
   void clearScreen(uint8_t color = 0xFF) const;
   void getOrientedViewableTRBL(int* outTop, int* outRight, int* outBottom, int* outLeft) const;

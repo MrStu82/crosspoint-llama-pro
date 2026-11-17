@@ -101,9 +101,21 @@ void PiccoFirmwareUpdateActivity::runFetch() {
   setState(manifest.version == CROSSPOINT_VERSION ? State::UP_TO_DATE : State::AVAILABLE);
 }
 
+// Redraw only when a new 10% step is reached; requestUpdate(true) just notifies the render
+// task, so a slow or failed draw never blocks or aborts the download.
+void PiccoFirmwareUpdateActivity::onDownloadProgress(void* ctx, const size_t received) {
+  auto* self = static_cast<PiccoFirmwareUpdateActivity*>(ctx);
+  const size_t total = self->manifest.size;
+  const int step = total ? static_cast<int>((static_cast<uint64_t>(received) * 10) / total) : 0;
+  if (step <= self->downloadStep.load()) return;
+  self->downloadStep.store(step > 10 ? 10 : step);
+  self->requestUpdate(true);
+}
+
 void PiccoFirmwareUpdateActivity::runDownload() {
+  downloadStep.store(0);
   requestUpdateAndWait();
-  if (const char* why = picco_update::download(manifest)) {
+  if (const char* why = picco_update::download(manifest, &onDownloadProgress, this)) {
     fail(why);
     return;
   }
@@ -296,6 +308,9 @@ void PiccoFirmwareUpdateActivity::render(RenderLock&&) {
   const Rect bounds{metrics.contentSidePadding, y, width - metrics.contentSidePadding * 2, height - y};
   UITheme::drawCenteredWrappedText(renderer, bounds, UI_12_FONT_ID, body.c_str(), 4, true, EpdFontFamily::REGULAR,
                                    UITheme::TextVerticalAlignment::TOP);
+  if (state == State::DOWNLOADING) {
+    GUI.drawProgressBar(renderer, Rect{bounds.x, y + lineHeight * 3, bounds.width, 20}, downloadStep.load(), 10);
+  }
 
   const int count = buttonCount();
   for (int i = 0; i < count; ++i) {

@@ -1,6 +1,7 @@
 #pragma once
 #if FREEINK_DEVICE_PICCO
 
+#include <atomic>
 #include <string>
 
 #include "activities/Activity.h"
@@ -27,6 +28,9 @@ class PiccoFirmwareUpdateActivity final : public Activity {
   bool tearDownWifi = false;
   std::string reason;
   picco_update::Manifest manifest;
+  std::atomic<int> downloadStep{0};  // 0..10 tenths received; written by the download, read by render
+
+  static void onDownloadProgress(void* ctx, size_t received);
 
   bool busy() const {
     return state == State::FETCHING || state == State::DOWNLOADING || state == State::CHECKING ||

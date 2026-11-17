@@ -33,6 +33,8 @@ const char* fetchManifest(Manifest& out);
 // Streams m.url to PART_PATH while hashing; requires byte count == m.size and
 // SHA-256 == m.sha256, then renames it to FIRMWARE_PATH. On any failure the .part
 // is deleted and nothing else is written. nullptr on success, else the reason.
-const char* download(const Manifest& m);
+// onProgress (optional) is told the byte count after each chunk; it cannot stop the download.
+using ProgressFn = void (*)(void* ctx, size_t received);
+const char* download(const Manifest& m, ProgressFn onProgress = nullptr, void* ctx = nullptr);
 
 }  // namespace picco_update

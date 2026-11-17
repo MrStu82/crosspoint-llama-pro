@@ -44,7 +44,7 @@ const char* fetchManifest(Manifest& out) {
   return nullptr;
 }
 
-const char* download(const Manifest& m) {
+const char* download(const Manifest& m, const ProgressFn onProgress, void* const ctx) {
   if (Storage.exists(PART_PATH)) Storage.remove(PART_PATH);
   HalFile file;
   if (!Storage.openFileForWrite("PUPD", PART_PATH, file) || !file) return "Could not write to SD card";
@@ -66,6 +66,7 @@ const char* download(const Manifest& m) {
     }
     mbedtls_sha256_update(&sha, data, len);
     count += len;
+    if (onProgress) onProgress(ctx, count);
     return true;
   });
   file.flush();

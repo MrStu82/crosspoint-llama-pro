@@ -48,15 +48,12 @@ class ActivityManager {
 #if FREEINK_DEVICE_PICCO
   // An edge cue is on glass; repaint once the gesture's action has settled.
   bool edgeCueShown = false;
-  // Held-swipe tracking: the cue follows the finger by windowed refresh of a
-  // 48px edge band, whose pixels under the cue are saved in edgeCueBand.
-  bool edgeCueTracked = false;
-  bool edgeCueFailed = false;  // band save or window path failed this gesture: release uses the one-shot cue
-  int edgeCueAlong = 0;
+  // The 48px edge band under the cue, saved before drawing it.
+  bool edgeCueSaved = false;
   int edgeCueRect[4] = {};
   const Activity* edgeCueActivity = nullptr;
   std::vector<uint8_t> edgeCueBand;
-  void trackPiccoEdgeCue();
+  void showPiccoEdgeCue(MappedInputManager::EdgeSwipe edge, int startX, int x, int y);
 #endif
 
   void exitActivity(const RenderLock& lock);

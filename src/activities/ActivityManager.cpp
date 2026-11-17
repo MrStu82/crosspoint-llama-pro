@@ -181,53 +181,28 @@ void drawPiccoEdgeCue(const GfxRenderer& r, MappedInputManager::EdgeSwipe edge, 
 }
 }  // namespace
 
-void ActivityManager::trackPiccoEdgeCue() {
-  // Moves closer than this are dropped, as are moves while a render holds the panel.
-  constexpr int kCueMoveMinPx = 8;
-  int fx = 0;
-  int fy = 0;
-  int sx = 0;
-  const auto edge = mappedInput.piccoEdgeHeld(fx, fy, sx);
-  if (edge == MappedInputManager::EdgeSwipe::None || edgeCueFailed || RenderLock::peek()) return;
+void ActivityManager::showPiccoEdgeCue(MappedInputManager::EdgeSwipe edge, int startX, int x, int y) {
   RenderLock lock;
   const int w = renderer.getScreenWidth();
   const int h = renderer.getScreenHeight();
   const bool home = edge == MappedInputManager::EdgeSwipe::Home;
-  const bool left = sx < w / 2;
-  const int half = piccoDomeHalf(kDomeRows - 1);
-  const int c = std::clamp(home ? fx : fy, half, (home ? w : h) - 1 - half);
-  if (edgeCueTracked && std::abs(c - edgeCueAlong) < kCueMoveMinPx) return;
+  const bool left = startX < w / 2;
   int* b = edgeCueRect;
-  if (!edgeCueTracked) {
-    b[0] = home ? 0 : (left ? 0 : w - kDomeRows);
-    b[1] = home ? h - kDomeRows : 0;
-    b[2] = home ? w : kDomeRows;
-    b[3] = home ? kDomeRows : h;
-    // Long side x (short side + 8-px alignment slack) bits.
-    edgeCueBand.resize(static_cast<size_t>(std::max(w, h)) * (kDomeRows + 8) / 8);
-    if (renderer.readFramebufferRegion(b[0], b[1], b[2], b[3], edgeCueBand.data(), edgeCueBand.size()) == 0) {
-      edgeCueFailed = true;
-      return;
-    }
-    edgeCueTracked = true;
-    edgeCueActivity = currentActivity.get();
-  } else {
-    renderer.writeFramebufferRegion(b[0], b[1], b[2], b[3], edgeCueBand.data());
-  }
+  b[0] = home ? 0 : (left ? 0 : w - kDomeRows);
+  b[1] = home ? h - kDomeRows : 0;
+  b[2] = home ? w : kDomeRows;
+  b[3] = home ? kDomeRows : h;
+  // Long side x (short side + 8-px alignment slack) bits; kept to restore the band if the screen stays.
+  edgeCueBand.resize(static_cast<size_t>(std::max(w, h)) * (kDomeRows + 8) / 8);
+  edgeCueSaved = renderer.readFramebufferRegion(b[0], b[1], b[2], b[3], edgeCueBand.data(), edgeCueBand.size()) != 0;
+  edgeCueActivity = currentActivity.get();
+  // Stock: the 144px cue is centred on the touch along the edge (coord - 72, clamped on glass).
+  constexpr int kCueHalfSpan = 72;
+  const int c = std::clamp(home ? x : y, kCueHalfSpan, (home ? w : h) - kCueHalfSpan);
   drawPiccoEdgeCue(renderer, edge, left, c);
-  // Band-only refresh, panel left powered until the gesture ends; synchronous, so moves made meanwhile are dropped.
   const unsigned long t0 = millis();
-  if (!renderer.displayPiccoWindow(b[0], b[1], b[2], b[3])) {
-    // Window path failed: power off, drop tracking; the release draws the one-shot cue full-frame.
-    renderer.endPiccoWindow();
-    renderer.writeFramebufferRegion(b[0], b[1], b[2], b[3], edgeCueBand.data());
-    edgeCueTracked = false;
-    edgeCueFailed = true;
-    LOG_ERR("ACT", "Picco edge cue window refresh failed");
-    return;
-  }
-  LOG_INF("ACT", "Picco edge cue at %d: window refresh %lu ms", c, millis() - t0);
-  edgeCueAlong = c;
+  renderer.displayBuffer(HalDisplay::FAST_REFRESH);
+  LOG_INF("ACT", "Picco edge cue at %d: refresh %lu ms", c, millis() - t0);
 }
 #endif
 
@@ -244,17 +219,13 @@ void ActivityManager::loop() {
 
   if (currentActivity) {
 #if FREEINK_DEVICE_PICCO
-    trackPiccoEdgeCue();
+    int edgeStartX = 0;
     int edgeX = 0;
-    const auto edge = mappedInput.piccoEdgeSwipe(&edgeX);
+    int edgeY = 0;
+    const auto edge = mappedInput.piccoEdgeSwipe(&edgeStartX, &edgeX, &edgeY);
     if (edge != MappedInputManager::EdgeSwipe::None) {
-      if (!edgeCueTracked) {  // flick, or the band save / window path failed: one-shot centred cue
-        RenderLock lock;
-        const bool home = edge == MappedInputManager::EdgeSwipe::Home;
-        drawPiccoEdgeCue(renderer, edge, edgeX < renderer.getScreenWidth() / 2,
-                         (home ? renderer.getScreenWidth() : renderer.getScreenHeight()) / 2);
-        renderer.displayBuffer(HalDisplay::FAST_REFRESH);
-      }
+      // One cue frame, then the action runs at once so the next screen's refresh follows straight behind.
+      showPiccoEdgeCue(edge, edgeStartX, edgeX, edgeY);
       edgeCueShown = true;
     }
 #endif
@@ -372,13 +343,8 @@ void ActivityManager::loop() {
   // cue never stays on glass (e.g. a Back the screen ignores).
   if (edgeCueShown && pendingAction == PendingAction::None) {
     edgeCueShown = false;
-    if (edgeCueTracked) {
-      // Gesture over: the one 0x02 before any normal (full-window, own-LUT) refresh.
-      RenderLock lock;
-      renderer.endPiccoWindow();
-    }
     // Same screen and nothing else to draw: put the saved band back and fast-refresh.
-    if (edgeCueTracked && currentActivity.get() == edgeCueActivity && !requestedUpdate) {
+    if (edgeCueSaved && currentActivity.get() == edgeCueActivity && !requestedUpdate) {
       RenderLock lock;
       const int* b = edgeCueRect;
       renderer.writeFramebufferRegion(b[0], b[1], b[2], b[3], edgeCueBand.data());
@@ -386,8 +352,7 @@ void ActivityManager::loop() {
     } else {
       requestedUpdate = true;
     }
-    edgeCueTracked = false;
-    edgeCueFailed = false;
+    edgeCueSaved = false;
   }
 #endif
   if (requestedUpdate.exchange(false)) {

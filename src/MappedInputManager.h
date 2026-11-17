@@ -8,14 +8,12 @@ class MappedInputManager {
  public:
 #if FREEINK_DEVICE_PICCO
   enum class EdgeSwipe { None, Home, Back };
-  // Edge swipe recognised this frame; optional out = swipe start (logical coords).
-  EdgeSwipe piccoEdgeSwipe(int* startX = nullptr, int* startY = nullptr) const;
-  // Once per frame after gpio.update(): follows a held edge swipe and latches its
-  // release (any duration) as this frame's piccoEdgeSwipe().
+  // Edge swipe recognised this frame; optional outs = swipe start x and the finger
+  // (or flick end) point it fired at (logical coords).
+  EdgeSwipe piccoEdgeSwipe(int* startX = nullptr, int* x = nullptr, int* y = nullptr) const;
+  // Once per frame after gpio.update(): fires a held edge swipe once, as this
+  // frame's piccoEdgeSwipe(), as soon as it passes the trigger travel.
   void updatePiccoEdge();
-  // Edge swipe recognised with the finger still down; out = current finger and
-  // swipe start (logical coords).
-  EdgeSwipe piccoEdgeHeld(int& x, int& y, int& startX) const;
 #endif
   enum class Button {
     Back,
@@ -125,9 +123,11 @@ class MappedInputManager {
   void rememberTouchHeldTime() const;
 
 #if FREEINK_DEVICE_PICCO
-  EdgeSwipe piccoHeld = EdgeSwipe::None;
-  EdgeSwipe piccoReleased = EdgeSwipe::None;
+  EdgeSwipe piccoFired = EdgeSwipe::None;
   bool piccoDown = false;
+  bool piccoConsumed = false;        // this touch already passed the trigger
+  bool piccoSwallowRelease = false;  // ... and fired, so its release is swallowed
+  bool piccoSwallow = false;         // this frame is that release
   int piccoStartX = 0;
   int piccoStartY = 0;
   int piccoX = 0;

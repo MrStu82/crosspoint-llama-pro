@@ -121,9 +121,9 @@ constexpr float TOP_EDGE_MENU_GESTURE_FRAC_Y = 0.14f;
 constexpr float BOTTOM_EDGE_BRIGHTNESS_SHEET_GESTURE_FRAC_Y = 0.14f;
 #if FREEINK_DEVICE_PICCO
 // Picco has no Back/Home keys: side-edge inward swipe = Back, bottom-edge upward swipe = Home.
-constexpr int PICCO_SIDE_EDGE_PX = 40;
-// Held travel before an edge swipe is recognised (InputManager's private TOUCH_SWIPE_MIN_PX).
-constexpr int PICCO_EDGE_TRACK_MIN_PX = 60;
+// Edge band and trigger travel match stock: band clamp(min(W,H)*8%, 20, 48) = 38px, travel 50px.
+constexpr int PICCO_EDGE_BAND_PX = 38;
+constexpr int PICCO_EDGE_TRIGGER_PX = 50;
 #endif
 constexpr unsigned long TOUCH_DOWN_SELECT_DELAY_MS = 90;
 constexpr unsigned long TOUCH_HELD_OVERRIDE_WINDOW_MS = 250;
@@ -256,20 +256,21 @@ MappedInputManager::EdgeSwipe classifyPiccoEdge(const GfxRenderer& renderer, int
   const int w = renderer.getScreenWidth();
   const int h = renderer.getScreenHeight();
   if (std::abs(dy) > std::abs(dx)) {
-    const int bottomEdgeTop = static_cast<int>(h * (1.0f - BOTTOM_EDGE_BRIGHTNESS_SHEET_GESTURE_FRAC_Y));
-    return (dy < 0 && sy >= bottomEdgeTop) ? EdgeSwipe::Home : EdgeSwipe::None;
+    return (dy < 0 && sy >= h - PICCO_EDGE_BAND_PX) ? EdgeSwipe::Home : EdgeSwipe::None;
   }
-  if ((sx <= PICCO_SIDE_EDGE_PX && dx > 0) || (sx >= w - PICCO_SIDE_EDGE_PX && dx < 0)) return EdgeSwipe::Back;
+  if ((sx < PICCO_EDGE_BAND_PX && dx > 0) || (sx >= w - PICCO_EDGE_BAND_PX && dx < 0)) return EdgeSwipe::Back;
   return EdgeSwipe::None;
 }
 }  // namespace
 
-MappedInputManager::EdgeSwipe MappedInputManager::piccoEdgeSwipe(int* startX, int* startY) const {
-  if (piccoReleased != EdgeSwipe::None) {
+MappedInputManager::EdgeSwipe MappedInputManager::piccoEdgeSwipe(int* startX, int* x, int* y) const {
+  if (piccoFired != EdgeSwipe::None) {
     if (startX) *startX = piccoStartX;
-    if (startY) *startY = piccoStartY;
-    return piccoReleased;
+    if (x) *x = piccoX;
+    if (y) *y = piccoY;
+    return piccoFired;
   }
+  if (piccoSwallow) return EdgeSwipe::None;
   int sx = 0;
   int sy = 0;
   int ex = 0;
@@ -282,12 +283,14 @@ MappedInputManager::EdgeSwipe MappedInputManager::piccoEdgeSwipe(int* startX, in
   renderer.tapToLogical(nxs, nys, sx, sy);
   renderer.tapToLogical(nxe, nye, ex, ey);
   if (startX) *startX = sx;
-  if (startY) *startY = sy;
+  if (x) *x = ex;
+  if (y) *y = ey;
   return classifyPiccoEdge(renderer, sx, sy, ex, ey);
 }
 
 void MappedInputManager::updatePiccoEdge() {
-  piccoReleased = EdgeSwipe::None;
+  piccoFired = EdgeSwipe::None;
+  piccoSwallow = false;
   int x = 0;
   int y = 0;
   float nx = 0.0f;
@@ -295,38 +298,34 @@ void MappedInputManager::updatePiccoEdge() {
   if (gpio.wasTouchDown(nx, ny)) {
     renderer.tapToLogical(nx, ny, x, y);
     piccoDown = true;
-    piccoHeld = EdgeSwipe::None;
+    piccoConsumed = false;
     piccoStartX = x;
     piccoStartY = y;
   }
   if (piccoDown && isScreenTouchHeld(x, y)) {
-    piccoX = x;
-    piccoY = y;
-    if (piccoHeld == EdgeSwipe::None &&
-        std::max(std::abs(x - piccoStartX), std::abs(y - piccoStartY)) >= PICCO_EDGE_TRACK_MIN_PX) {
-      piccoHeld = classifyPiccoEdge(renderer, piccoStartX, piccoStartY, x, y);
+    // Like stock, the edge swipe fires once, the moment travel passes the trigger, finger still down.
+    if (!piccoConsumed && std::max(std::abs(x - piccoStartX), std::abs(y - piccoStartY)) > PICCO_EDGE_TRIGGER_PX) {
+      piccoConsumed = true;
+      piccoX = x;
+      piccoY = y;
+      piccoFired = classifyPiccoEdge(renderer, piccoStartX, piccoStartY, x, y);
+      piccoSwallowRelease = piccoFired != EdgeSwipe::None;
     }
     return;
   }
   if (piccoDown) {
+    // The release of a gesture that already fired is not a swipe for anyone else.
     piccoDown = false;
-    piccoReleased = piccoHeld;
-    piccoHeld = EdgeSwipe::None;
+    piccoSwallow = piccoSwallowRelease;
+    piccoSwallowRelease = false;
   }
-}
-
-MappedInputManager::EdgeSwipe MappedInputManager::piccoEdgeHeld(int& x, int& y, int& startX) const {
-  x = piccoX;
-  y = piccoY;
-  startX = piccoStartX;
-  return piccoHeld;
 }
 #endif
 
 bool MappedInputManager::decodeSwipe(int& sx, int& sy, int& ex, int& ey) const {
 #if FREEINK_DEVICE_PICCO
   // Edge swipes are system navigation on Picco; no screen-level consumer sees them.
-  if (piccoEdgeSwipe() != EdgeSwipe::None) return false;
+  if (piccoSwallow || piccoEdgeSwipe() != EdgeSwipe::None) return false;
 #endif
   float nxs = 0.0f;
   float nys = 0.0f;

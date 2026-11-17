@@ -298,6 +298,7 @@ void HomeActivity::loadRecentCovers(int coverHeight) {
             book.coverBmpPath = "";
           }
           coverRendered = false;
+          greyCoverPath.clear();  // a regenerated thumb needs its own grey pass
           requestUpdate();
         } else if (FsHelpers::hasXtcExtension(book.path)) {
           // Handle XTC file
@@ -880,11 +881,10 @@ void HomeActivity::renderInkPointHome() {
 
   // Thumbnails are cached per requested height, and this layout asks for a
   // height the classic Home never requests, so the first InkPoint render has to
-  // generate them itself or the cover silently stays absent forever.
-  if (!firstRenderDone) {
-    firstRenderDone = true;
-    requestUpdate();
-  } else if (!recentsLoaded && !recentsLoading) {
+  // generate them itself or the cover silently stays absent forever. Done in
+  // place: a cached cover needs no second render (it would repaint the same frame).
+  firstRenderDone = true;
+  if (!recentsLoaded && !recentsLoading) {
     recentsLoading = true;
     loadRecentCovers(kInkCoverLane.height);
   }

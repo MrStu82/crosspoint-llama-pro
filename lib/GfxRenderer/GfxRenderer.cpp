@@ -1751,6 +1751,15 @@ void GfxRenderer::displayWindow(int x, int y, int width, int height, bool turnOf
 #endif
 }
 
+#if FREEINK_DEVICE_PICCO
+bool GfxRenderer::displayPiccoWindow(int x, int y, int width, int height) const {
+  const AlignedMemRect mem = screenRectToAlignedMemRect(orientation, x, y, width, height, panelWidth, panelHeight);
+  return mem.valid && display.displayPiccoWindow(mem.x, mem.y, mem.w, mem.h);
+}
+
+void GfxRenderer::endPiccoWindow() const { display.endPiccoWindow(); }
+#endif
+
 size_t GfxRenderer::readFramebufferRegion(int x, int y, int w, int h, uint8_t* dst, size_t dstCapacity) const {
   if (dst == nullptr || w <= 0 || h <= 0) return 0;
 

@@ -215,10 +215,18 @@ void ActivityManager::trackPiccoEdgeCue() {
     renderer.writeFramebufferRegion(b[0], b[1], b[2], b[3], edgeCueBand.data());
   }
   drawPiccoEdgeCue(renderer, edge, left, c);
-  // Same full-frame fast refresh as the one-shot cue; synchronous, so moves made meanwhile are dropped.
+  // Band-only refresh, panel left powered until the gesture ends; synchronous, so moves made meanwhile are dropped.
   const unsigned long t0 = millis();
-  renderer.displayBuffer(HalDisplay::FAST_REFRESH);
-  LOG_INF("ACT", "Picco edge cue at %d: fast refresh %lu ms", c, millis() - t0);
+  if (!renderer.displayPiccoWindow(b[0], b[1], b[2], b[3])) {
+    // Window path failed: power off, drop tracking; the release draws the one-shot cue full-frame.
+    renderer.endPiccoWindow();
+    renderer.writeFramebufferRegion(b[0], b[1], b[2], b[3], edgeCueBand.data());
+    edgeCueTracked = false;
+    edgeCueFailed = true;
+    LOG_ERR("ACT", "Picco edge cue window refresh failed");
+    return;
+  }
+  LOG_INF("ACT", "Picco edge cue at %d: window refresh %lu ms", c, millis() - t0);
   edgeCueAlong = c;
 }
 #endif
@@ -240,7 +248,7 @@ void ActivityManager::loop() {
     int edgeX = 0;
     const auto edge = mappedInput.piccoEdgeSwipe(&edgeX);
     if (edge != MappedInputManager::EdgeSwipe::None) {
-      if (!edgeCueTracked) {  // flick, or the band save failed: one-shot centred cue
+      if (!edgeCueTracked) {  // flick, or the band save / window path failed: one-shot centred cue
         RenderLock lock;
         const bool home = edge == MappedInputManager::EdgeSwipe::Home;
         drawPiccoEdgeCue(renderer, edge, edgeX < renderer.getScreenWidth() / 2,
@@ -364,6 +372,11 @@ void ActivityManager::loop() {
   // cue never stays on glass (e.g. a Back the screen ignores).
   if (edgeCueShown && pendingAction == PendingAction::None) {
     edgeCueShown = false;
+    if (edgeCueTracked) {
+      // Gesture over: the one 0x02 before any normal (full-window, own-LUT) refresh.
+      RenderLock lock;
+      renderer.endPiccoWindow();
+    }
     // Same screen and nothing else to draw: put the saved band back and fast-refresh.
     if (edgeCueTracked && currentActivity.get() == edgeCueActivity && !requestedUpdate) {
       RenderLock lock;
